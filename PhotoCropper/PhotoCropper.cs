@@ -37,12 +37,18 @@ public class PhotoCropper
         // Convert to grayscale
         Mat gray = new Mat();
         CvInvoke.CvtColor(Original, gray, ColorConversion.Bgr2Gray);
-        OriginalWithDetected = gray;
+
+        // Adjust the brightness of the grayscale image
+        Mat brightened = new Mat();
+        double alpha = 1.0; // Simple contrast control (1.0 - 3.0)
+        int beta = 50;     // Simple brightness control (0 - 100)
+        CvInvoke.ConvertScaleAbs(gray, brightened, alpha, beta);
 
         // Apply Gaussian blur
         Mat blurred = new Mat();
-        CvInvoke.GaussianBlur(gray, blurred, new Size(5, 5), 0);
+        CvInvoke.GaussianBlur(brightened, blurred, new Size(5, 5), 0);
 
+        OriginalWithDetected = blurred;
         // Use adaptive thresholding
         Mat thresh = new Mat();
         CvInvoke.AdaptiveThreshold(blurred, thresh, 255, AdaptiveThresholdType.GaussianC, ThresholdType.BinaryInv, 11, 2);
@@ -68,11 +74,11 @@ public class PhotoCropper
                     Rectangle boundingBox = CvInvoke.BoundingRectangle(approx);
                     double aspectRatio = (double)boundingBox.Width / boundingBox.Height;
 
-                    CvInvoke.Rectangle(OriginalWithDetected, boundingBox, new MCvScalar(0, 0, 255), 2);
-
                     // Filter for approximate squares or rectangles
-                    if (aspectRatio > 0 && aspectRatio < 500)
+                    if (aspectRatio > 0.8 && aspectRatio < 1.2)
                     {
+                        CvInvoke.Rectangle(OriginalWithDetected, boundingBox, new MCvScalar(0, 0, 255), 2);
+
                         Mat croppedImage = new Mat(Original, boundingBox);
 
                         // Ensure the cropped image is large enough
@@ -85,6 +91,7 @@ public class PhotoCropper
             }
         }
     }
+
 
     public void SaveDetectedPhotos()
     {
