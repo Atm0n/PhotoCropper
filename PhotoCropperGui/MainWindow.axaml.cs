@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using Emgu.CV;
+using System.IO;
 
 namespace PhotoCropperGui;
 
@@ -17,13 +19,13 @@ public partial class MainWindow : Window
         {
             var image = new Image
             {
-                Source = new Bitmap(photo.ToMemoryStream()),
+                Source = ConvertToAvaloniaBitmap(photo.ToBitmap()),
                 Stretch = Avalonia.Media.Stretch.UniformToFill
 
             };
             slides.Items.Add(image);
         }
-        img.Source = new Bitmap(OriginalPhoto.OriginalWithDetected.ToMemoryStream());
+        img.Source = ConvertToAvaloniaBitmap(OriginalPhoto.OriginalWithDetected.ToBitmap());
 
     }
 
@@ -56,13 +58,13 @@ public partial class MainWindow : Window
             {
                 var image = new Image
                 {
-                    Source = new Bitmap(photo.ToMemoryStream()),
+                    Source =  ConvertToAvaloniaBitmap(photo.ToBitmap()),
                     Stretch = Avalonia.Media.Stretch.UniformToFill
 
                 };
                 slides.Items.Add(image);
             }
-            img.Source = new Bitmap(OriginalPhoto.OriginalWithDetected.ToMemoryStream());
+            img.Source = ConvertToAvaloniaBitmap(OriginalPhoto.OriginalWithDetected.ToBitmap());
 
 
         }
@@ -93,6 +95,19 @@ public partial class MainWindow : Window
             case Avalonia.Input.Key.Right:
                 slides.Next();
                 break;
+        }
+    }
+
+    private static Bitmap ConvertToAvaloniaBitmap(System.Drawing.Bitmap systemBitmap)
+    {
+        // Save System.Drawing.Bitmap to a MemoryStream
+        using (MemoryStream memoryStream = new MemoryStream())
+        {
+            systemBitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
+            memoryStream.Seek(0, SeekOrigin.Begin);
+
+            // Convert MemoryStream to Avalonia Bitmap
+            return new Bitmap(memoryStream);
         }
     }
 }
