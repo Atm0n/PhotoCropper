@@ -5,6 +5,8 @@ VisualStudioVersion = 17.12.35707.178 d17.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoCropperGui", "PhotoCropperGui\PhotoCropperGui.csproj", "{D3BB32C9-6AD2-46A2-8DEE-4BD76134F391}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoCropper", "PhotoCropper\PhotoCropper.csproj", "{EDB92C37-B84F-4141-8158-72B297B8D5D6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{D3BB32C9-6AD2-46A2-8DEE-4BD76134F391}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D3BB32C9-6AD2-46A2-8DEE-4BD76134F391}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D3BB32C9-6AD2-46A2-8DEE-4BD76134F391}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EDB92C37-B84F-4141-8158-72B297B8D5D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDB92C37-B84F-4141-8158-72B297B8D5D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDB92C37-B84F-4141-8158-72B297B8D5D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDB92C37-B84F-4141-8158-72B297B8D5D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -4,6 +4,41 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PhotoCropperGui.MainWindow"
+		KeyDown="Window_KeyDown"
         Title="PhotoCropperGui">
-    Welcome to Avalonia!
+	<!--<Window.Resources>
+		<Style Selector="Image">
+			<Setter Property="Stretch" Value="UniformToFill"/>
+		</Style>
+	</Window.Resources>-->
+	<StackPanel Orientation="Vertical">
+		<StackPanel Orientation="Horizontal">
+			<Button x:Name="btnOpenFile" Click="Button_Click" Content="OpenFile"></Button>
+			<Button x:Name="btnSave" Content="SaveImages" Click="Button_Click_1"></Button>
+			<Button x:Name="btnNxt" Content="Crop" Click="Button_Click_2"></Button>
+		</StackPanel>
+		<StackPanel Orientation="Horizontal">
+			<Panel Width="400">
+				<Carousel x:Name="slides" >
+					<Carousel.PageTransition >
+						<CompositePageTransition>
+							<PageSlide Orientation="Horizontal" />
+						</CompositePageTransition>
+					</Carousel.PageTransition>
+				</Carousel>
+				<Panel Margin="20">
+					<Button Background="White" Click="Button_Click_2">&lt;</Button>
+					<Button Background="White" Click="Button_Click_3"
+							HorizontalAlignment="Right">&gt;</Button>
+				</Panel>
+			</Panel>
+			<Image x:Name="img" Width="400"  />
+			
+			
+		</StackPanel>
+		
+		
+
+	</StackPanel>
+
 </Window>
