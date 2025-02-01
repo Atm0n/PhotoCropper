@@ -1,17 +1,28 @@
-﻿using OpenCvSharp;
+﻿using Emgu.CV;
+using Emgu.CV.Structure;
+using Emgu.CV.CvEnum;
+using System.Drawing;
+using Emgu.CV.Util;
 
 namespace PhotoCropper;
 
 public class PhotoCropper
 {
-    private static readonly double MIN_AREA_THRESHOLD = 300; // Increase the threshold for larger areas
+    private static readonly double MIN_AREA_THRESHOLD = 150; // Increase the threshold for larger areas
     private readonly string originalFilePath;
 
     public PhotoCropper(string originalFilePath)
     {
         this.originalFilePath = originalFilePath;
-        Original = new Mat(originalFilePath, ImreadModes.Color);
-        
+        Original = CvInvoke.Imread(originalFilePath, ImreadModes.Color);
+
+        // Create a new Mat with larger dimensions by adding a border
+        int borderSize = 20; // Adjust the border size as needed
+        Mat largerImage = new Mat();
+        CvInvoke.CopyMakeBorder(Original, largerImage, borderSize, borderSize, borderSize, borderSize, BorderType.Constant, new MCvScalar(255, 255, 255)); // Set the border color to white
+
+        // Update the Original property to the new larger image
+        Original = largerImage;
 
         // Visualize the detected bounding boxes
         OriginalWithDetected = Original.Clone();
@@ -23,49 +34,49 @@ public class PhotoCropper
 
     public void DetectPhotos()
     {
-
         // Convert to grayscale
-        var grayImage = new Mat();
-        Cv2.CvtColor(Original, grayImage, ColorConversionCodes.BGR2GRAY);
+        Mat gray = new Mat();
+        CvInvoke.CvtColor(Original, gray, ColorConversion.Bgr2Gray);
+        OriginalWithDetected = gray;
 
-        // Apply Gaussian Blur
-        //Cv2.GaussianBlur(grayImage, grayImage, new OpenCvSharp.Size(5, 5), 0);
+        // Apply Gaussian blur
+        Mat blurred = new Mat();
+        CvInvoke.GaussianBlur(gray, blurred, new Size(5, 5), 0);
 
-        // Apply adaptive thresholding
-        var thresholdImage = new Mat();
-        Cv2.AdaptiveThreshold(grayImage, thresholdImage, 50, AdaptiveThresholdTypes.GaussianC, ThresholdTypes.BinaryInv, 11, 2);
-
-        // Apply edge detection
-        var edges = new Mat();
-        Cv2.Canny(thresholdImage, edges, 50, 150);
+        // Use adaptive thresholding
+        Mat thresh = new Mat();
+        CvInvoke.AdaptiveThreshold(blurred, thresh, 255, AdaptiveThresholdType.GaussianC, ThresholdType.BinaryInv, 11, 2);
 
         // Find contours
-        var contours = Cv2.FindContoursAsArray(edges, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        Mat hierarchy = new Mat();
+        VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint();
+        CvInvoke.FindContours(thresh, contours, hierarchy, RetrType.External, ChainApproxMethod.ChainApproxSimple);
 
-        // Combine small nearby contours
-        foreach (var contour in contours)
+        // Iterate through contours and save each detected photo
+        for (int i = 0; i < contours.Size; i++)
         {
-            var area = Cv2.ContourArea(contour);
+            double area = CvInvoke.ContourArea(contours[i]);
             if (area > MIN_AREA_THRESHOLD)
             {
                 // Approximate contour to polygon
-                var approx = Cv2.ApproxPolyDP(contour, 0.02 * Cv2.ArcLength(contour, true), true);
+                VectorOfPoint approx = new VectorOfPoint();
+                CvInvoke.ApproxPolyDP(contours[i], approx, 0.02 * CvInvoke.ArcLength(contours[i], true), true);
 
                 // Check if the polygon has 4 vertices (rectangle or square)
-                if (approx.Length == 4)
+                if (approx.Size == 4)
                 {
-                    var boundingBox = Cv2.BoundingRect(approx);
+                    Rectangle boundingBox = CvInvoke.BoundingRectangle(approx);
                     double aspectRatio = (double)boundingBox.Width / boundingBox.Height;
 
-                    Cv2.Rectangle(OriginalWithDetected, boundingBox, Scalar.Red, 2);
+                    CvInvoke.Rectangle(OriginalWithDetected, boundingBox, new MCvScalar(0, 0, 255), 2);
 
                     // Filter for approximate squares or rectangles
-                    if (aspectRatio > 0.8 && aspectRatio < 1.25)
+                    if (aspectRatio > 0 && aspectRatio < 500)
                     {
-                        var croppedImage = new Mat(Original, boundingBox);
+                        Mat croppedImage = new Mat(Original, boundingBox);
 
                         // Ensure the cropped image is large enough
-                        if (croppedImage.Width > 500 && croppedImage.Height > 500)
+                        if (croppedImage.Width > 200 && croppedImage.Height > 200)
                         {
                             DetectedPhotos.Add(croppedImage);
                         }
@@ -73,7 +84,6 @@ public class PhotoCropper
                 }
             }
         }
-
     }
 
     public void SaveDetectedPhotos()
@@ -81,7 +91,8 @@ public class PhotoCropper
         // Save the detected photos to the output directory
         foreach (var photo in DetectedPhotos)
         {
-            photo.SaveImage(Path.Combine(Path.GetDirectoryName(originalFilePath), Guid.NewGuid().ToString() + ".jpg"));
+            string fileName = Path.Combine(Path.GetDirectoryName(originalFilePath), Guid.NewGuid().ToString() + ".jpg");
+            photo.Save(fileName);
         }
     }
 }
