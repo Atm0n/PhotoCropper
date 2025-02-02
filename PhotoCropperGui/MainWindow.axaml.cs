@@ -9,8 +9,8 @@ namespace PhotoCropperGui;
 
 public partial class MainWindow : Window
 {
-    int currentIndex = 0;
-    List<PhotoCropper.PhotoCropper> OriginalPhotos = [];
+    private int currentIndex = 0;
+    private readonly List<PhotoCropper.PhotoCropper> OriginalPhotos = [];
     public MainWindow()
     {
         InitializeComponent();
@@ -110,13 +110,12 @@ public partial class MainWindow : Window
     private static Bitmap ConvertToAvaloniaBitmap(System.Drawing.Bitmap systemBitmap)
     {
         // Save System.Drawing.Bitmap to a MemoryStream
-        using (MemoryStream memoryStream = new())
-        {
-            systemBitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Jpeg);
-            memoryStream.Seek(0, SeekOrigin.Begin);
+        using MemoryStream memoryStream = new();
 
-            // Convert MemoryStream to Avalonia Bitmap
-            return new Bitmap(memoryStream);
-        }
+        systemBitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Jpeg);
+        memoryStream.Seek(0, SeekOrigin.Begin);
+
+        // Convert MemoryStream to Avalonia Bitmap
+        return new Bitmap(memoryStream);
     }
 }
