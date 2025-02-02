@@ -39,45 +39,64 @@ public class PhotoCropper
 
     public void DetectPhotos()
     {
-        // Convert the image to grayscale
+        Mat grayImage = ConvertToGrayscaleAndBlur(Original);
+        Mat binaryImage = ApplyThreshold(grayImage);
+        DetectAndExtractPhotos(binaryImage);
+    }
+
+    private Mat ConvertToGrayscaleAndBlur(Mat image)
+    {
         Mat grayImage = new Mat();
-        CvInvoke.CvtColor(Original, grayImage, ColorConversion.Bgr2Gray);
-
-        // Apply a GaussianBlur to reduce noise and improve contour detection
+        CvInvoke.CvtColor(image, grayImage, ColorConversion.Bgr2Gray);
         CvInvoke.GaussianBlur(grayImage, grayImage, new Size(5, 5), 1.5);
+        return grayImage;
+    }
 
-        // Apply a threshold to binarize the image
+    private Mat ApplyThreshold(Mat grayImage)
+    {
         Mat binaryImage = new Mat();
         CvInvoke.Threshold(grayImage, binaryImage, 200, 255, ThresholdType.BinaryInv);
+        return binaryImage;
+    }
 
-        // Find contours in the binary image
+    private void DetectAndExtractPhotos(Mat binaryImage)
+    {
         using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
         {
             CvInvoke.FindContours(binaryImage, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
 
-            // Filter contours based on area to detect smaller images
             for (int i = 0; i < contours.Size; i++)
             {
                 double area = CvInvoke.ContourArea(contours[i]);
                 if (area > MIN_AREA_THRESHOLD && area < MAX_AREA_THRESHOLD)
                 {
-                    // Get the bounding rectangle of the contour
-                    Rectangle boundingRect = CvInvoke.BoundingRectangle(contours[i]);
-
-                    // Extract the detected image
-                    Mat detectedImage = new Mat(Original, boundingRect);
-                    DetectedPhotos.Add(detectedImage);
-
-                    // Draw the bounding rectangle on the OriginalWithDetected image
-                    CvInvoke.Rectangle(OriginalWithDetected, boundingRect, new MCvScalar(0, 255, 0), 2);
+                    ExtractPhotoFromContour(contours[i]);
                 }
             }
         }
-        //grayImage.Save(Path.Combine(Path.GetDirectoryName(originalFilePath), "grayImage.jpg"));
-        //binaryImage.Save(Path.Combine(Path.GetDirectoryName(originalFilePath), "binaryImage.jpg"));
-        //OriginalWithDetected.Save(Path.Combine(Path.GetDirectoryName(originalFilePath), "OriginalWithDetected.jpg"));
     }
 
+    private void ExtractPhotoFromContour(VectorOfPoint contour)
+    {
+        RotatedRect minAreaRect = CvInvoke.MinAreaRect(contour);
+        double angle = minAreaRect.Angle;
+        if (Math.Abs(angle) > 45)
+        {
+            angle -= 90;
+        }
+
+        Mat rotationMatrix = new Mat();
+        CvInvoke.GetRotationMatrix2D(minAreaRect.Center, angle, 1.0, rotationMatrix);
+
+        Mat rotatedImage = new Mat();
+        CvInvoke.WarpAffine(Original, rotatedImage, rotationMatrix, Original.Size, Inter.Linear, Warp.Default, BorderType.Constant, new MCvScalar(255, 255, 255));
+
+        Rectangle boundingRect = minAreaRect.MinAreaRect();
+        Mat detectedImage = new Mat(rotatedImage, boundingRect);
+        DetectedPhotos.Add(detectedImage);
+
+        CvInvoke.Rectangle(OriginalWithDetected, boundingRect, new MCvScalar(0, 255, 0), 2);
+    }
 
     public void SaveDetectedPhotos()
     {
