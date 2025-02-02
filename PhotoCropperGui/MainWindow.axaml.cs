@@ -8,6 +8,11 @@ using System.IO;
 namespace PhotoCropperGui;
 
 public partial class MainWindow : Window
+//TODO: improve GUI and finish save feature
+//TODO: some way of discarding photos
+//TODO: configurable values
+//TODO: configure paths for generated files
+
 {
     private int currentIndex = 0;
     private readonly List<PhotoCropper.PhotoCropper> OriginalPhotos = [];

@@ -8,8 +8,9 @@ namespace PhotoCropper;
 
 public class PhotoCropper
 {
-    private static double MIN_AREA_THRESHOLD = 0; // Increase the threshold for larger areas
-    private static double MAX_AREA_THRESHOLD = 0; // Increase the threshold for larger areas
+
+    private static double MIN_AREA_THRESHOLD = 0; 
+    private static double MAX_AREA_THRESHOLD = 0; 
     private readonly string originalFilePath;
 
     public PhotoCropper(string originalFilePath)
@@ -18,6 +19,9 @@ public class PhotoCropper
         Original = CvInvoke.Imread(originalFilePath, ImreadModes.Color);
 
         // Create a new Mat with larger dimensions by adding a border
+
+        //TODO not sure id this border adding thing does somethnig useful
+
         int borderSize = 20; // Adjust the border size as needed
         Mat largerImage = new();
         CvInvoke.CopyMakeBorder(Original, largerImage, borderSize, borderSize, borderSize, borderSize, BorderType.Constant, new MCvScalar(255, 255, 255)); // Set the border color to white
@@ -73,7 +77,8 @@ public class PhotoCropper
         }
     }
 
-    private void ExtractPhotoFromContour(VectorOfPoint contour)
+    private void ExtractPhotoFromContour(VectorOfPoint contour) 
+        //TODO: i should do something to crop the white border of the detected photos
     {
         RotatedRect minAreaRect = CvInvoke.MinAreaRect(contour);
         double angle = minAreaRect.Angle;
@@ -98,7 +103,6 @@ public class PhotoCropper
 
     public void SaveDetectedPhotos()
     {
-        // Save the detected photos to the output directory
         foreach (var photo in DetectedPhotos)
         {
             string fileName = Path.Combine(Path.GetDirectoryName(originalFilePath), Guid.NewGuid().ToString() + ".jpg");
