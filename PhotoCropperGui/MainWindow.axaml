@@ -2,43 +2,42 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+		WindowState="Maximized"
         x:Class="PhotoCropperGui.MainWindow"
 		KeyDown="Window_KeyDown"
+		Background="Gray"
         Title="PhotoCropperGui">
-	<!--<Window.Resources>
-		<Style Selector="Image">
-			<Setter Property="Stretch" Value="UniformToFill"/>
-		</Style>
-	</Window.Resources>-->
 	<StackPanel Orientation="Vertical">
 		<StackPanel Orientation="Horizontal">
-			<Button x:Name="btnOpenFile" Click="Button_Click" Content="OpenFile"></Button>
-			<Button x:Name="btnSave" Content="SaveImages" Click="Button_Click_1"></Button>
-			<Button x:Name="btnNxt" Content="Crop" Click="Button_Click_2"></Button>
+			<Button x:Name="btnOpenFiles" Click="BtnOpenFiles_Click" Content="OpenFile"></Button>
+			<Button x:Name="btnSave" Content="SaveImages" Click="BtnSaveImages_Click"></Button>
 		</StackPanel>
-		<StackPanel Orientation="Horizontal">
-			<Panel Width="400">
+		<Grid>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="25*"/>
+				<ColumnDefinition Width="75*"/>
+			</Grid.ColumnDefinitions>
+			<Image x:Name="img"  Grid.Column="0"/>
+			<Panel Grid.Column="1">
 				<Carousel x:Name="slides" >
 					<Carousel.PageTransition >
 						<CompositePageTransition>
 							<PageSlide Orientation="Horizontal" />
 						</CompositePageTransition>
 					</Carousel.PageTransition>
+					<Carousel.ItemTemplate>
+						<DataTemplate>
+							<Image  Stretch="Uniform" Margin="2,2,2,2" Source="{Binding}"/>
+						</DataTemplate>
+					</Carousel.ItemTemplate>
 				</Carousel>
-				<Panel Margin="20">
-					<Button Background="White" Click="Button_Click_2">&lt;</Button>
-					<Button Background="White" Click="Button_Click_3"
-							HorizontalAlignment="Right">&gt;</Button>
+				<Panel>
+					<Button Background="White" Click="BtnPreviousCroppedImage_Click" Content="&lt;" />
+					<Button Background="White" Click="BtnNextCroppedImage_Click"
+							HorizontalAlignment="Right" Content="&gt;"/>
 				</Panel>
 			</Panel>
-			<Image x:Name="img" Width="400"  />
-			
-			
-		</StackPanel>
-		
-		
-
+		</Grid>
 	</StackPanel>
 
 </Window>
