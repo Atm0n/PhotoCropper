@@ -9,8 +9,8 @@ namespace PhotoCropper;
 public class PhotoCropper
 {
 
-    private static double MIN_AREA_THRESHOLD = 0; 
-    private static double MAX_AREA_THRESHOLD = 0; 
+    private static double MIN_AREA_THRESHOLD = 0;
+    private static double MAX_AREA_THRESHOLD = 0;
     private readonly string originalFilePath;
 
     public PhotoCropper(string originalFilePath)
@@ -22,12 +22,12 @@ public class PhotoCropper
 
         //TODO not sure id this border adding thing does somethnig useful
 
-        int borderSize = 20; // Adjust the border size as needed
-        Mat largerImage = new();
-        CvInvoke.CopyMakeBorder(Original, largerImage, borderSize, borderSize, borderSize, borderSize, BorderType.Constant, new MCvScalar(255, 255, 255)); // Set the border color to white
+        //int borderSize = 20; // Adjust the border size as needed
+        //Mat largerImage = new();
+        //CvInvoke.CopyMakeBorder(Original, largerImage, borderSize, borderSize, borderSize, borderSize, BorderType.Constant, new MCvScalar(255, 255, 255)); // Set the border color to white
 
-        // Update the Original property to the new larger image
-        Original = largerImage;
+        //// Update the Original property to the new larger image
+        //Original = largerImage;
 
         MIN_AREA_THRESHOLD = (Original.Width * Original.Height) * 0.10;
         MAX_AREA_THRESHOLD = (Original.Width * Original.Height) * 0.50;
@@ -44,7 +44,7 @@ public class PhotoCropper
     {
         Mat grayImage = ConvertToGrayscaleAndBlur(Original);
         Mat binaryImage = ApplyThreshold(grayImage);
-        DetectAndExtractPhotos(binaryImage);
+        DetectAndExtractPhotos(binaryImage, MAX_AREA_THRESHOLD, MIN_AREA_THRESHOLD);
     }
 
     private static Mat ConvertToGrayscaleAndBlur(Mat image)
@@ -62,23 +62,22 @@ public class PhotoCropper
         return binaryImage;
     }
 
-    private void DetectAndExtractPhotos(Mat binaryImage)
+    private void DetectAndExtractPhotos(Mat binaryImage, double maximumAreaDetected, double minimalAreaDetected)
     {
         using VectorOfVectorOfPoint contours = new();
-        CvInvoke.FindContours(binaryImage, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
+        CvInvoke.FindContours(binaryImage, contours, null, RetrType.Ccomp, ChainApproxMethod.ChainApproxSimple);
 
         for (int i = 0; i < contours.Size; i++)
         {
             double area = CvInvoke.ContourArea(contours[i]);
-            if (area > MIN_AREA_THRESHOLD && area < MAX_AREA_THRESHOLD)
+            if (area > minimalAreaDetected && area < maximumAreaDetected)
             {
-                ExtractPhotoFromContour(contours[i]);
+                DetectedPhotos.Add(ExtractPhotoFromContour(contours[i]));
             }
         }
     }
 
-    private void ExtractPhotoFromContour(VectorOfPoint contour) 
-        //TODO: i should do something to crop the white border of the detected photos
+    private Mat ExtractPhotoFromContour(VectorOfPoint contour)
     {
         RotatedRect minAreaRect = CvInvoke.MinAreaRect(contour);
         double angle = minAreaRect.Angle;
@@ -94,11 +93,38 @@ public class PhotoCropper
         CvInvoke.WarpAffine(Original, rotatedImage, rotationMatrix, Original.Size, Inter.Linear, Warp.Default, BorderType.Constant, new MCvScalar(255, 255, 255));
 
         Rectangle boundingRect = minAreaRect.MinAreaRect();
+        Mat detectedImage = new Mat(rotatedImage, boundingRect);
 
-        Mat detectedImage = new(rotatedImage, boundingRect);
-        DetectedPhotos.Add(detectedImage);
+        // Convert the detected image to grayscale and apply a binary threshold
+        Mat grayDetectedImage = new Mat();
+        CvInvoke.CvtColor(detectedImage, grayDetectedImage, ColorConversion.Bgr2Gray);
+        Mat binaryDetectedImage = new Mat();
+        CvInvoke.Threshold(grayDetectedImage, binaryDetectedImage, 200, 255, ThresholdType.BinaryInv);
 
+        // Find contours in the binary image
+        using VectorOfVectorOfPoint detectedContours = new();
+        CvInvoke.FindContours(binaryDetectedImage, detectedContours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
+
+        // Find the bounding box of the largest contour
+        Rectangle cropRect = Rectangle.Empty;
+        double maxArea = 0;
+        for (int i = 0; i < detectedContours.Size; i++)
+        {
+            double area = CvInvoke.ContourArea(detectedContours[i]);
+            if (area > maxArea)
+            {
+                maxArea = area;
+                cropRect = CvInvoke.BoundingRectangle(detectedContours[i]);
+            }
+        }
+
+        // Crop the detected image to the bounding box
+        Mat croppedImage = new Mat(detectedImage, cropRect);
+
+        // Draw the bounding box on the original image with detected bounding boxes
         CvInvoke.Rectangle(OriginalWithDetected, boundingRect, new MCvScalar(0, 255, 0), 2);
+
+        return croppedImage;
     }
 
     public void SaveDetectedPhotos()
