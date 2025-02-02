@@ -3,12 +3,14 @@ using Emgu.CV.Structure;
 using Emgu.CV.CvEnum;
 using System.Drawing;
 using Emgu.CV.Util;
+using System.ComponentModel.DataAnnotations;
 
 namespace PhotoCropper;
 
 public class PhotoCropper
 {
     private static double MIN_AREA_THRESHOLD = 300; // Increase the threshold for larger areas
+    private static double MAX_AREA_THRESHOLD = 300; // Increase the threshold for larger areas
     private readonly string originalFilePath;
 
     public PhotoCropper(string originalFilePath)
@@ -22,9 +24,10 @@ public class PhotoCropper
         CvInvoke.CopyMakeBorder(Original, largerImage, borderSize, borderSize, borderSize, borderSize, BorderType.Constant, new MCvScalar(255, 255, 255)); // Set the border color to white
 
         // Update the Original property to the new larger image
-        //Original = largerImage;
+        Original = largerImage;
 
-        MIN_AREA_THRESHOLD = (Original.Width * Original.Height) / 11;
+        MIN_AREA_THRESHOLD = (Original.Width * Original.Height) * 0.10;
+        MAX_AREA_THRESHOLD = (Original.Width * Original.Height) * 0.50;
 
         // Visualize the detected bounding boxes
         OriginalWithDetected = Original.Clone();
@@ -33,8 +36,6 @@ public class PhotoCropper
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
     public List<Mat> DetectedPhotos { get; set; } = new List<Mat>();
-
-
 
     public void DetectPhotos()
     {
@@ -58,7 +59,7 @@ public class PhotoCropper
             for (int i = 0; i < contours.Size; i++)
             {
                 double area = CvInvoke.ContourArea(contours[i]);
-                if (area > MIN_AREA_THRESHOLD)
+                if (area > MIN_AREA_THRESHOLD && area < MAX_AREA_THRESHOLD)
                 {
                     // Get the bounding rectangle of the contour
                     Rectangle boundingRect = CvInvoke.BoundingRectangle(contours[i]);
@@ -72,9 +73,9 @@ public class PhotoCropper
                 }
             }
         }
-        grayImage.Save(Path.Combine(Path.GetDirectoryName(originalFilePath), "grayImage.jpg"));
-        binaryImage.Save(Path.Combine(Path.GetDirectoryName(originalFilePath), "binaryImage.jpg"));
-        OriginalWithDetected.Save(Path.Combine(Path.GetDirectoryName(originalFilePath), "OriginalWithDetected.jpg"));
+        //grayImage.Save(Path.Combine(Path.GetDirectoryName(originalFilePath), "grayImage.jpg"));
+        //binaryImage.Save(Path.Combine(Path.GetDirectoryName(originalFilePath), "binaryImage.jpg"));
+        //OriginalWithDetected.Save(Path.Combine(Path.GetDirectoryName(originalFilePath), "OriginalWithDetected.jpg"));
     }
 
 
