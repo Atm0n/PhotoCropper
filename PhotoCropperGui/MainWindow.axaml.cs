@@ -40,7 +40,7 @@ public partial class MainWindow : Window
             ],
             AllowMultiple = true
         });
-        if(fileResult.Count > 0)
+        if (fileResult.Count > 0)
         {
             foreach (var file in fileResult)
             {
@@ -51,7 +51,7 @@ public partial class MainWindow : Window
             }
             LoadPhotosToGui();
         }
-        
+
     }
 
     private void LoadPhotosToGui()
@@ -63,7 +63,12 @@ public partial class MainWindow : Window
 
     private void BtnSaveImages_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        OriginalPhotos[currentIndex].SaveDetectedPhotos();
+        foreach (var originalPhoto in OriginalPhotos)
+        {
+
+            originalPhoto.SaveDetectedPhotos();
+        }
+
     }
 
     private void BtnPreviousCroppedImage_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -78,7 +83,7 @@ public partial class MainWindow : Window
 
     private void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
-        switch(e.Key)
+        switch (e.Key)
         {
             case Avalonia.Input.Key.Left:
                 slides.Previous();

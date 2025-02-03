@@ -129,9 +129,11 @@ public class PhotoCropper
 
     public void SaveDetectedPhotos()
     {
+        Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(originalFilePath), "cropped"));
+
         foreach (var photo in DetectedPhotos)
         {
-            string fileName = Path.Combine(Path.GetDirectoryName(originalFilePath), Guid.NewGuid().ToString() + ".jpg");
+            string fileName = Path.Combine(Path.GetDirectoryName(originalFilePath), "cropped\\", Guid.NewGuid().ToString() + ".jpg");
             photo.Save(fileName);
         }
     }
