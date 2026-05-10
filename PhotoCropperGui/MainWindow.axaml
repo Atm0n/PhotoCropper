@@ -8,9 +8,15 @@
 		Background="Gray"
         Title="PhotoCropperGui">
 	<StackPanel Orientation="Vertical">
-		<StackPanel Orientation="Horizontal">
+		<StackPanel Orientation="Horizontal" Margin="5" Spacing="10">
 			<Button x:Name="btnOpenFiles" Click="BtnOpenFiles_Click" Content="OpenFile"></Button>
 			<Button x:Name="btnSave" Content="SaveImages" Click="BtnSaveImages_Click"></Button>
+			<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="5">
+				<TextBlock Text="Detection Sensitivity:" VerticalAlignment="Center"/>
+				<Slider x:Name="sldSensitivity" Minimum="5" Maximum="80" Value="30" Width="150" 
+						PointerReleased="SldSensitivity_PointerReleased"/>
+				<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}'}" VerticalAlignment="Center"/>
+			</StackPanel>
 		</StackPanel>
 		<Grid>
 			<Grid.ColumnDefinitions>

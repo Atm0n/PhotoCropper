@@ -14,14 +14,16 @@ public class PhotoCropper : IDisposable
     private readonly string originalFilePath;
     private bool disposedValue;
 
+    public double BackgroundTolerance { get; set; } = 30;
+
     public PhotoCropper(string originalFilePath)
     {
         this.originalFilePath = originalFilePath;
         Original = CvInvoke.Imread(originalFilePath, ImreadModes.ColorRgb);
 
-        // Minimum 0.5% of scan, maximum 80% (to avoid picking up the whole page/scanner bed)
-        MIN_AREA_THRESHOLD = (Original.Width * Original.Height) * 0.005;
-        MAX_AREA_THRESHOLD = (Original.Width * Original.Height) * 0.80;
+        // Minimum 1% of scan, maximum 90%
+        MIN_AREA_THRESHOLD = (Original.Width * Original.Height) * 0.01;
+        MAX_AREA_THRESHOLD = (Original.Width * Original.Height) * 0.90;
 
         OriginalWithDetected = Original.Clone();
     }
@@ -38,68 +40,77 @@ public class PhotoCropper : IDisposable
         OriginalWithDetected?.Dispose();
         OriginalWithDetected = Original.Clone();
 
+        using Mat hsv = new();
+        CvInvoke.CvtColor(Original, hsv, ColorConversion.Bgr2Hsv);
+
+        // 1. Sample Background from 4 Corners
+        int s = 15;
+        var samples = new List<MCvScalar> {
+            CvInvoke.Mean(new Mat(hsv, new Rectangle(5, 5, s, s))),
+            CvInvoke.Mean(new Mat(hsv, new Rectangle(Original.Width - s - 5, 5, s, s))),
+            CvInvoke.Mean(new Mat(hsv, new Rectangle(5, Original.Height - s - 5, s, s))),
+            CvInvoke.Mean(new Mat(hsv, new Rectangle(Original.Width - s - 5, Original.Height - s - 5, s, s)))
+        };
+
+        double hAvg = samples.Average(x => x.V0);
+        double sAvg = samples.Average(x => x.V1);
+        double vAvg = samples.Average(x => x.V2);
+
+        // 2. Create Background Mask using Slider Sensitivity
+        double hTol = BackgroundTolerance * 0.4;
+        double sTol = BackgroundTolerance;
+        double vTol = BackgroundTolerance;
+        MCvScalar lower = new MCvScalar(Math.Max(0, hAvg - hTol), Math.Max(0, sAvg - sTol), Math.Max(0, vAvg - vTol));
+        MCvScalar upper = new MCvScalar(Math.Min(180, hAvg + hTol), Math.Min(255, sAvg + sTol), Math.Min(255, vAvg + vTol));
+
+        using Mat backgroundMask = new();
+        CvInvoke.InRange(hsv, new ScalarArray(lower), new ScalarArray(upper), backgroundMask);
+
+        // 3. Edge-Bridge (Canny) to catch subtle photo margins
         using Mat gray = new();
         CvInvoke.CvtColor(Original, gray, ColorConversion.Bgr2Gray);
-        
-        // 1. Moderate contrast enhancement
-        CvInvoke.Normalize(gray, gray, 0, 255, NormType.MinMax);
-
-        // 2. Edge Detection
         using Mat edges = new();
         CvInvoke.GaussianBlur(gray, edges, new Size(5, 5), 1.5);
-        CvInvoke.Canny(edges, edges, 30, 90);
+        CvInvoke.Canny(edges, edges, 20, 50);
 
-        // 3. Adaptive Thresholding (detects subtle brightness changes)
-        using Mat thresh = new();
-        CvInvoke.AdaptiveThreshold(gray, thresh, 255, AdaptiveThresholdType.GaussianC, ThresholdType.BinaryInv, 15, 4);
+        // 4. Combine: Not Background OR Edges
+        using Mat foreground = new();
+        CvInvoke.BitwiseNot(backgroundMask, foreground);
+        CvInvoke.BitwiseOr(foreground, edges, foreground);
 
-        // 4. Combine
-        using Mat combined = new();
-        CvInvoke.BitwiseOr(edges, thresh, combined);
+        // 5. Morphological Cleanup
+        using Mat kernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(11, 11), new Point(-1, -1));
+        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Close, kernel, new Point(-1, -1), 3, BorderType.Default, new MCvScalar());
+        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Open, kernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
 
-        // 5. Solidify shapes
-        using Mat kernel = CvInvoke.GetStructuringElement(Emgu.CV.CvEnum.MorphShapes.Rectangle, new Size(7, 7), new Point(-1, -1));
-        CvInvoke.MorphologyEx(combined, combined, MorphOp.Close, kernel, new Point(-1, -1), 2, BorderType.Default, new MCvScalar());
-
+        // 6. Find Contours
         using VectorOfVectorOfPoint contours = new();
-        CvInvoke.FindContours(combined, contours, null, RetrType.List, ChainApproxMethod.ChainApproxSimple);
+        CvInvoke.FindContours(foreground, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
 
         var candidates = new List<(Rectangle Rect, double Area, VectorOfPoint Contour)>();
-
         for (int i = 0; i < contours.Size; i++)
         {
             double area = CvInvoke.ContourArea(contours[i]);
-            // If it's within our 0.5% - 80% range
             if (area > MIN_AREA_THRESHOLD && area < MAX_AREA_THRESHOLD)
             {
-                Rectangle rect = CvInvoke.BoundingRectangle(contours[i]);
-                candidates.Add((rect, area, new VectorOfPoint(contours[i].ToArray())));
+                candidates.Add((CvInvoke.BoundingRectangle(contours[i]), area, new VectorOfPoint(contours[i].ToArray())));
             }
         }
 
-        // Sort by area DESCENDING (largest first)
-        var sortedCandidates = candidates.OrderByDescending(c => c.Area).ToList();
-        var acceptedRects = new List<Rectangle>();
+        // 7. Non-Maximum Suppression
+        var sorted = candidates.OrderByDescending(c => c.Area).ToList();
+        var accepted = new List<Rectangle>();
 
-        foreach (var candidate in sortedCandidates)
+        foreach (var cand in sorted)
         {
-            // If the center of this candidate is inside an already accepted (larger) rectangle, it's a sub-shape (skip it)
-            Point center = new Point(candidate.Rect.X + candidate.Rect.Width / 2, candidate.Rect.Y + candidate.Rect.Height / 2);
-            
-            if (acceptedRects.Any(r => r.Contains(center))) continue;
+            Point center = new Point(cand.Rect.X + cand.Rect.Width / 2, cand.Rect.Y + cand.Rect.Height / 2);
+            if (accepted.Any(r => r.Contains(center))) continue;
 
-            // Also check for significant overlap
-            if (acceptedRects.Any(r => {
-                Rectangle intersect = Rectangle.Intersect(r, candidate.Rect);
-                return intersect.Width * intersect.Height > candidate.Area * 0.5; // More than 50% overlap
-            })) continue;
-
-            acceptedRects.Add(candidate.Rect);
+            accepted.Add(cand.Rect);
+            CvInvoke.Rectangle(OriginalWithDetected, cand.Rect, new MCvScalar(0, 0, 255), 12);
             
-            CvInvoke.Rectangle(OriginalWithDetected, candidate.Rect, new MCvScalar(0, 0, 255), 12);
-            
-            var extracted = ExtractPhotoFromContour(candidate.Contour);
-            if (!extracted.IsEmpty)
+            var extracted = ExtractPhotoFromContour(cand.Contour);
+            if (extracted != null && !extracted.IsEmpty)
             {
                 DetectedPhotos.Add(extracted);
             }
@@ -123,35 +134,7 @@ public class PhotoCropper : IDisposable
         
         if (boundingRect.Width <= 10 || boundingRect.Height <= 10) return new Mat();
 
-        // Initial crop
-        using Mat cropped = new Mat(rotatedImage, boundingRect);
-        
-        // Refinement: Try to find a tighter crop inside to remove unnecessary white borders
-        using Mat grayCropped = new();
-        CvInvoke.CvtColor(cropped, grayCropped, ColorConversion.Bgr2Gray);
-        using Mat binaryCropped = new();
-        CvInvoke.Threshold(grayCropped, binaryCropped, 0, 255, ThresholdType.BinaryInv | ThresholdType.Otsu);
-
-        using VectorOfVectorOfPoint subContours = new();
-        CvInvoke.FindContours(binaryCropped, subContours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
-
-        Rectangle tightRect = Rectangle.Empty;
-        double maxArea = 0;
-        for (int j = 0; j < subContours.Size; j++)
-        {
-            double area = CvInvoke.ContourArea(subContours[j]);
-            if (area > maxArea)
-            {
-                maxArea = area;
-                tightRect = CvInvoke.BoundingRectangle(subContours[j]);
-            }
-        }
-
-        // If the tight crop is reasonable (not just a tiny speck), use it
-        if (tightRect.IsEmpty || tightRect.Width < cropped.Width * 0.6) 
-            return cropped.Clone();
-
-        return new Mat(cropped, tightRect).Clone();
+        return new Mat(rotatedImage, boundingRect).Clone();
     }
 
     public void SaveDetectedPhotos()

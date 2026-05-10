@@ -94,6 +94,16 @@ public partial class MainWindow : Window
         slides.Next();
     }
 
+    private void SldSensitivity_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
+    {
+        if (OriginalPhotos.Count > 0)
+        {
+            OriginalPhotos[currentIndex].BackgroundTolerance = sldSensitivity.Value;
+            OriginalPhotos[currentIndex].DetectPhotos();
+            LoadPhotosToGui();
+        }
+    }
+
     private void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
         if (OriginalPhotos.Count == 0) return;
