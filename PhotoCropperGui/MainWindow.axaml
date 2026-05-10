@@ -13,9 +13,9 @@
 			<Button x:Name="btnSave" Content="SaveImages" Click="BtnSaveImages_Click"></Button>
 			<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="5">
 				<TextBlock Text="Detection Sensitivity:" VerticalAlignment="Center"/>
-				<Slider x:Name="sldSensitivity" Minimum="5" Maximum="80" Value="30" Width="150" 
+				<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="50" Width="150" 
 						PointerReleased="SldSensitivity_PointerReleased"/>
-				<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}'}" VerticalAlignment="Center"/>
+				<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" VerticalAlignment="Center"/>
 			</StackPanel>
 		</StackPanel>
 		<Grid>

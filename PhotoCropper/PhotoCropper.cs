@@ -56,10 +56,14 @@ public class PhotoCropper : IDisposable
         double sAvg = samples.Average(x => x.V1);
         double vAvg = samples.Average(x => x.V2);
 
-        // 2. Create Background Mask using Slider Sensitivity
-        double hTol = BackgroundTolerance * 0.4;
-        double sTol = BackgroundTolerance;
-        double vTol = BackgroundTolerance;
+        // 2. Inverted Logic: Higher Slider Value (Sensitivity) = Lower Tolerance
+        // Range: 100 Sensitivity -> 0 Tolerance (Extreme detection)
+        // Range: 0 Sensitivity -> 60 Tolerance (Detect nothing)
+        double tolerance = 60 - (BackgroundTolerance * 0.6);
+        
+        double hTol = tolerance * 0.4;
+        double sTol = tolerance;
+        double vTol = tolerance;
         MCvScalar lower = new MCvScalar(Math.Max(0, hAvg - hTol), Math.Max(0, sAvg - sTol), Math.Max(0, vAvg - vTol));
         MCvScalar upper = new MCvScalar(Math.Min(180, hAvg + hTol), Math.Min(255, sAvg + sTol), Math.Min(255, vAvg + vTol));
 

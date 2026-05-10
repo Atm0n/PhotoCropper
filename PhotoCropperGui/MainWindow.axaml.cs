@@ -53,6 +53,8 @@ public partial class MainWindow : Window
             {
                 var filePath = file.Path.LocalPath;
                 var photo = new PhotoCropper.PhotoCropper(filePath);
+                // Synchronize new photos with the current slider value
+                photo.BackgroundTolerance = sldSensitivity.Value;
                 OriginalPhotos.Add(photo);
 
             }
@@ -139,11 +141,6 @@ public partial class MainWindow : Window
     private void LoadCroppedPhotosToSlider()
     {
         slides.Items.Clear();
-
-        if (OriginalPhotos[currentIndex].DetectedPhotos.Count == 0)
-        {
-            OriginalPhotos[currentIndex].DetectPhotos();
-        }
 
         foreach (var photo in OriginalPhotos[currentIndex].DetectedPhotos)
         {
