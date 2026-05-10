@@ -42,6 +42,13 @@ public partial class MainWindow : Window
         });
         if (fileResult.Count > 0)
         {
+            foreach (var photo in OriginalPhotos)
+            {
+                photo.Dispose();
+            }
+            OriginalPhotos.Clear();
+            currentIndex = 0;
+
             foreach (var file in fileResult)
             {
                 var filePath = file.Path.LocalPath;
@@ -56,7 +63,13 @@ public partial class MainWindow : Window
 
     private void LoadPhotosToGui()
     {
-        img.Source = ConvertToAvaloniaBitmap(OriginalPhotos[currentIndex].OriginalWithDetected.ToBitmap());
+        if (OriginalPhotos[currentIndex].DetectedPhotos.Count == 0)
+        {
+            OriginalPhotos[currentIndex].DetectPhotos();
+        }
+
+        using var bitmap = OriginalPhotos[currentIndex].OriginalWithDetected.ToBitmap();
+        img.Source = ConvertToAvaloniaBitmap(bitmap);
 
         LoadCroppedPhotosToSlider();
     }
@@ -83,6 +96,8 @@ public partial class MainWindow : Window
 
     private void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
+        if (OriginalPhotos.Count == 0) return;
+
         switch (e.Key)
         {
             case Avalonia.Input.Key.Left:
@@ -92,40 +107,46 @@ public partial class MainWindow : Window
                 slides.Next();
                 break;
             case Avalonia.Input.Key.Up:
-                currentIndex++;
-                if (currentIndex >= OriginalPhotos.Count)
-                {
-                    currentIndex = 0;
-                }
+                currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
+                LoadPhotosToGui();
+                break;
+            case Avalonia.Input.Key.Down:
+                currentIndex = (currentIndex - 1 + OriginalPhotos.Count) % OriginalPhotos.Count;
                 LoadPhotosToGui();
                 break;
         }
+    }
+
+    protected override void OnClosed(System.EventArgs e)
+    {
+        base.OnClosed(e);
+        foreach (var photo in OriginalPhotos)
+        {
+            photo.Dispose();
+        }
+        OriginalPhotos.Clear();
     }
     private void LoadCroppedPhotosToSlider()
     {
         slides.Items.Clear();
 
-        OriginalPhotos[currentIndex].DetectPhotos();
+        if (OriginalPhotos[currentIndex].DetectedPhotos.Count == 0)
+        {
+            OriginalPhotos[currentIndex].DetectPhotos();
+        }
 
         foreach (var photo in OriginalPhotos[currentIndex].DetectedPhotos)
         {
-            var image = new Image
-            {
-                Source = ConvertToAvaloniaBitmap(photo.ToBitmap()),
-            };
-            slides.Items.Add(image);
+            using var systemBitmap = photo.ToBitmap();
+            slides.Items.Add(ConvertToAvaloniaBitmap(systemBitmap));
         }
     }
 
     private static Bitmap ConvertToAvaloniaBitmap(System.Drawing.Bitmap systemBitmap)
     {
-        // Save System.Drawing.Bitmap to a MemoryStream
         using MemoryStream memoryStream = new();
-
-        systemBitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Jpeg);
+        systemBitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
         memoryStream.Seek(0, SeekOrigin.Begin);
-
-        // Convert MemoryStream to Avalonia Bitmap
         return new Bitmap(memoryStream);
     }
 }

@@ -14,11 +14,11 @@
 		</StackPanel>
 		<Grid>
 			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="25*"/>
-				<ColumnDefinition Width="75*"/>
+				<ColumnDefinition Width="2*"/>
+				<ColumnDefinition Width="3*"/>
 			</Grid.ColumnDefinitions>
-			<Image x:Name="img"  Grid.Column="0"/>
-			<Panel Grid.Column="1">
+			<Image x:Name="img" Grid.Column="0" Stretch="Uniform" Margin="10"/>
+			<Panel Grid.Column="1" Height="600">
 				<Carousel x:Name="slides" >
 					<Carousel.PageTransition >
 						<CompositePageTransition>
