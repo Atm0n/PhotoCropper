@@ -3,10 +3,6 @@ using Emgu.CV.Structure;
 using Emgu.CV.CvEnum;
 using System.Drawing;
 using Emgu.CV.Util;
-using System.Linq;
-using System;
-using System.Collections.Generic;
-using System.IO;
 
 namespace PhotoCropper;
 
