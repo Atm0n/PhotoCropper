@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Emgu.CV;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -101,9 +102,124 @@ public partial class MainWindow : Window
         lblStatus.Text = $"Successfully saved {totalSaved} photos to 'cropped' folders.";
     }
 
+    private Avalonia.Point startPoint;
+    private bool isDragging = false;
+
+    private void BtnDelete_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        DeleteCurrentPhoto();
+    }
+
+    private void DeleteCurrentPhoto()
+    {
+        if (OriginalPhotos.Count == 0 || slides == null) return;
+        int photoIndex = slides.SelectedIndex;
+        if (photoIndex < 0) return;
+
+        OriginalPhotos[currentIndex].DeletePhoto(photoIndex);
+
+        // Keep current position if possible, otherwise move back
+        int nextIndex = photoIndex;
+        if (nextIndex >= OriginalPhotos[currentIndex].DetectedPhotos.Count)
+        {
+            nextIndex = OriginalPhotos[currentIndex].DetectedPhotos.Count - 1;
+        }
+
+        LoadCroppedPhotosToSlider();
+        slides.SelectedIndex = nextIndex;
+        lblStatus.Text = "Photo deleted.";
+    }
+
     private void Slides_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         UpdatePhotoCounterLabel();
+    }
+
+    private void PnlOriginal_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    {
+        if (OriginalPhotos.Count == 0) return;
+        startPoint = e.GetPosition(pnlOriginal);
+        isDragging = true;
+        rectCrop.IsVisible = true;
+        Canvas.SetLeft(rectCrop, startPoint.X);
+        Canvas.SetTop(rectCrop, startPoint.Y);
+        rectCrop.Width = 0;
+        rectCrop.Height = 0;
+    }
+
+    private void PnlOriginal_PointerMoved(object? sender, Avalonia.Input.PointerEventArgs e)
+    {
+        if (!isDragging) return;
+        var currentPoint = e.GetPosition(pnlOriginal);
+        
+        double x = Math.Min(startPoint.X, currentPoint.X);
+        double y = Math.Min(startPoint.Y, currentPoint.Y);
+        double w = Math.Abs(startPoint.X - currentPoint.X);
+        double h = Math.Abs(startPoint.Y - currentPoint.Y);
+
+        Canvas.SetLeft(rectCrop, x);
+        Canvas.SetTop(rectCrop, y);
+        rectCrop.Width = w;
+        rectCrop.Height = h;
+    }
+
+    private void PnlOriginal_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
+    {
+        if (!isDragging) return;
+        isDragging = false;
+        rectCrop.IsVisible = false;
+
+        var endPoint = e.GetPosition(pnlOriginal);
+        var rect = new Avalonia.Rect(
+            Math.Min(startPoint.X, endPoint.X),
+            Math.Min(startPoint.Y, endPoint.Y),
+            Math.Abs(startPoint.X - endPoint.X),
+            Math.Abs(startPoint.Y - endPoint.Y)
+        );
+
+        if (rect.Width < 5 || rect.Height < 5) return;
+
+        ApplyManualCrop(rect);
+    }
+
+    private void ApplyManualCrop(Avalonia.Rect uiRect)
+    {
+        var photo = OriginalPhotos[currentIndex];
+        
+        // Map UI coordinates to actual Image pixels
+        var imageRect = GetImageRectInsideControl();
+        if (imageRect.Width <= 0 || imageRect.Height <= 0) return;
+
+        double scaleX = photo.Original.Width / imageRect.Width;
+        double scaleY = photo.Original.Height / imageRect.Height;
+
+        int x = (int)((uiRect.X - imageRect.X) * scaleX);
+        int y = (int)((uiRect.Y - imageRect.Y) * scaleY);
+        int w = (int)(uiRect.Width * scaleX);
+        int h = (int)(uiRect.Height * scaleY);
+
+        photo.AddManualCrop(new System.Drawing.Rectangle(x, y, w, h));
+        LoadCroppedPhotosToSlider();
+        slides.SelectedIndex = photo.DetectedPhotos.Count - 1;
+        lblStatus.Text = "Manual crop added.";
+    }
+
+    private Avalonia.Rect GetImageRectInsideControl()
+    {
+        if (img == null || img.Source == null) return new Avalonia.Rect();
+
+        var controlSize = pnlOriginal.Bounds.Size;
+        var imageSize = img.Source.Size;
+
+        double scale = Math.Min(controlSize.Width / imageSize.Width, controlSize.Height / imageSize.Height);
+        
+        // Add 10px margin from XAML
+        double w = imageSize.Width * scale;
+        double h = imageSize.Height * scale;
+        double x = (controlSize.Width - w) / 2;
+        double y = (controlSize.Height - h) / 2;
+
+        return new Avalonia.Rect(x, y, w, h);
     }
 
     private void UpdatePhotoCounterLabel()
@@ -190,6 +306,9 @@ public partial class MainWindow : Window
                 break;
             case Avalonia.Input.Key.R:
                 RotateCurrentPhoto();
+                break;
+            case Avalonia.Input.Key.X:
+                DeleteCurrentPhoto();
                 break;
         }
     }

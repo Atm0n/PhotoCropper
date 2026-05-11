@@ -49,7 +49,7 @@
 			<Grid ColumnDefinitions="*, Auto">
 				<StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0" Spacing="20">
 					<TextBlock x:Name="lblStatus" Text="Ready" VerticalAlignment="Center" FontSize="12" Foreground="#888888"/>
-					<TextBlock Text="Shortcuts: [↑/↓] Switch Scan | [←/→] Navigate Photos | [R] Rotate" 
+					<TextBlock Text="Shortcuts: [↑/↓] Switch Scan | [←/→] Navigate Photos | [R] Rotate | [X] Delete" 
 							   VerticalAlignment="Center" FontSize="11" Foreground="#555555"/>
 				</StackPanel>
 				<TextBlock Grid.Column="1" x:Name="lblPhotoInfo" Text="" Margin="10,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#3399ff"/>
@@ -61,8 +61,17 @@
 			<!-- Left: Original Scan -->
 			<Border Grid.Column="0" Margin="10" Background="#121212" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
 				<Grid RowDefinitions="Auto, *">
-					<TextBlock Grid.Row="0" Text="ORIGINAL SCAN (PREVIEW)" Margin="10,5" FontSize="10" FontWeight="Bold" Foreground="#555555"/>
-					<Image x:Name="img" Grid.Row="1" Stretch="Uniform" Margin="10"/>
+					<TextBlock Grid.Row="0" Text="ORIGINAL SCAN (CLICK &amp; DRAG TO MANUALLY CROP)" Margin="10,5" FontSize="10" FontWeight="Bold" Foreground="#555555"/>
+					<Panel Grid.Row="1" x:Name="pnlOriginal" Background="Transparent" 
+						   PointerPressed="PnlOriginal_PointerPressed" 
+						   PointerMoved="PnlOriginal_PointerMoved" 
+						   PointerReleased="PnlOriginal_PointerReleased">
+						<Image x:Name="img" Stretch="Uniform" Margin="10" 
+							   VerticalAlignment="Center" HorizontalAlignment="Center"/>
+						<Canvas x:Name="cnvCrop" Background="Transparent" IsHitTestVisible="False">
+							<Rectangle x:Name="rectCrop" Stroke="#3399ff" StrokeThickness="2" Fill="#333399ff" IsVisible="False"/>
+						</Canvas>
+					</Panel>
 				</Grid>
 			</Border>
 
@@ -71,31 +80,38 @@
 				<Grid RowDefinitions="Auto, *, Auto">
 					<TextBlock Grid.Row="0" Text="DETECTED PHOTOS" Margin="10,5" FontSize="10" FontWeight="Bold" Foreground="#555555"/>
 					
-					<Panel Grid.Row="1">
+					<Panel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="1000" MaxHeight="800">
 						<Carousel x:Name="slides" SelectionChanged="Slides_SelectionChanged">
 							<Carousel.PageTransition>
 								<PageSlide Duration="0:0:0.2" Orientation="Horizontal" />
 							</Carousel.PageTransition>
 							<Carousel.ItemTemplate>
 								<DataTemplate>
-									<Border Margin="20">
-										<Image Stretch="Uniform" Source="{Binding}"/>
+									<Border Margin="10" CornerRadius="4" ClipToBounds="True" Background="#000000">
+										<Image Stretch="Uniform" Source="{Binding}" 
+											   MaxHeight="700" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 									</Border>
 								</DataTemplate>
 							</Carousel.ItemTemplate>
 						</Carousel>
 						
 						<!-- Overlay Controls -->
-						<Button VerticalAlignment="Center" HorizontalAlignment="Left" Margin="5"
+						<Button VerticalAlignment="Center" HorizontalAlignment="Left" Margin="-15,0"
 								Click="BtnPreviousCroppedImage_Click" Content="&lt;" 
-								Background="#80000000" Width="40" Height="60" CornerRadius="4"/>
+								Background="#80000000" Width="40" Height="80" CornerRadius="4"/>
 						
-						<Button VerticalAlignment="Center" HorizontalAlignment="Right" Margin="5"
+						<Button VerticalAlignment="Center" HorizontalAlignment="Right" Margin="-15,0"
 								Click="BtnNextCroppedImage_Click" Content="&gt;" 
-								Background="#80000000" Width="40" Height="60" CornerRadius="4"/>
+								Background="#80000000" Width="40" Height="80" CornerRadius="4"/>
 					</Panel>
 
 					<StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15" Spacing="20">
+						<Button x:Name="btnDelete" Click="BtnDelete_Click" Padding="20,10" CornerRadius="20" Background="#442222">
+							<StackPanel Orientation="Horizontal" Spacing="10">
+								<TextBlock Text="✖" FontSize="18" VerticalAlignment="Center" Foreground="#ff4444"/>
+								<TextBlock Text="Delete" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
 						<Button x:Name="btnRotate" Click="BtnRotate_Click" Padding="20,10" CornerRadius="20" Background="#2d2d2d">
 							<StackPanel Orientation="Horizontal" Spacing="10">
 								<TextBlock Text="↻" FontSize="18" VerticalAlignment="Center"/>
