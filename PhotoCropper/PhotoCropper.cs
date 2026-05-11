@@ -59,7 +59,7 @@ public class PhotoCropper : IDisposable
         OriginalWithDetected = Original.Clone();
     }
 
-    private MCvScalar SampleBackgroundColor(Mat hsv)
+    private static MCvScalar SampleBackgroundColor(Mat hsv)
     {
         int s = 15; // sample size
         // Ensure we have enough space to sample corners
@@ -182,29 +182,30 @@ public class PhotoCropper : IDisposable
         float maxDim = Math.Max(rect.Size.Width, rect.Size.Height);
         int side = (int)(maxDim * 1.5);
         
-        Rectangle roi = new Rectangle(
+        Rectangle roi = new(
             (int)(rect.Center.X - side / 2.0),
             (int)(rect.Center.Y - side / 2.0),
             side,
             side
         );
         
-        Rectangle scanBounds = new Rectangle(Point.Empty, Original.Size);
+        Rectangle scanBounds = new(Point.Empty, Original.Size);
         Rectangle safeRoi = Rectangle.Intersect(roi, scanBounds);
 
         if (safeRoi.Width <= 10 || safeRoi.Height <= 10) return new Mat();
 
-        using Mat scanRoi = new Mat(Original, safeRoi);
-        using Mat squareCanvas = new Mat(side, side, DepthType.Cv8U, 3);
+        using Mat scanRoi = new(Original, safeRoi);
+        using Mat squareCanvas = new(side, side, DepthType.Cv8U, 3);
         squareCanvas.SetTo(new MCvScalar(255, 255, 255)); // White fill
         
         int destX = Math.Max(0, safeRoi.X - roi.X);
         int destY = Math.Max(0, safeRoi.Y - roi.Y);
-        Rectangle destRect = new Rectangle(destX, destY, safeRoi.Width, safeRoi.Height);
+        Rectangle rectangle = new(destX, destY, safeRoi.Width, safeRoi.Height);
+        Rectangle destRect = rectangle;
         scanRoi.CopyTo(new Mat(squareCanvas, destRect));
 
         // 3. Rotate the square canvas
-        PointF localCenter = new PointF(side / 2.0f, side / 2.0f);
+        PointF localCenter = new(side / 2.0f, side / 2.0f);
         using Mat rotationMatrix = new();
         CvInvoke.GetRotationMatrix2D(localCenter, angle, 1.0, rotationMatrix);
 
@@ -226,7 +227,7 @@ public class PhotoCropper : IDisposable
         Rectangle snugRect = CvInvoke.BoundingRectangle(contentMask);
         
         // Predicted area based on detection (as a sanity boundary)
-        Rectangle predictedRect = new Rectangle(
+        Rectangle predictedRect = new(
             (int)Math.Max(0, Math.Round(localCenter.X - size.Width / 2.0)),
             (int)Math.Max(0, Math.Round(localCenter.Y - size.Height / 2.0)),
             (int)Math.Round(size.Width),
@@ -317,7 +318,7 @@ public class PhotoCropper : IDisposable
         int w = Math.Max(10, contentBox.Width);
         int h = Math.Max(10, contentBox.Height);
         
-        Rectangle finalRect = new Rectangle(x, y, w, h);
+        Rectangle finalRect = new(x, y, w, h);
         finalRect.Intersect(new Rectangle(Point.Empty, photo.Size));
 
         return finalRect;
@@ -338,12 +339,12 @@ public class PhotoCropper : IDisposable
 
     public void AddManualCrop(Rectangle rect)
     {
-        Rectangle searchRoi = new Rectangle(rect.X - 20, rect.Y - 20, rect.Width + 40, rect.Height + 40);
+        Rectangle searchRoi = new(rect.X - 20, rect.Y - 20, rect.Width + 40, rect.Height + 40);
         searchRoi.Intersect(new Rectangle(Point.Empty, Original.Size));
 
         if (searchRoi.Width <= 10 || searchRoi.Height <= 10) return;
 
-        using Mat roiMat = new Mat(Original, searchRoi);
+        using Mat roiMat = new(Original, searchRoi);
         using Mat hsv = new();
         CvInvoke.CvtColor(roiMat, hsv, ColorConversion.Bgr2Hsv);
 
@@ -384,7 +385,7 @@ public class PhotoCropper : IDisposable
                 points[i].X += searchRoi.X;
                 points[i].Y += searchRoi.Y;
             }
-            using VectorOfPoint globalHull = new VectorOfPoint(points);
+            using VectorOfPoint globalHull = new(points);
 
             var extracted = ExtractPhotoFromContour(globalHull);
             if (extracted != null && !extracted.IsEmpty)
@@ -418,7 +419,11 @@ public class PhotoCropper : IDisposable
         {
             if (DetectedPhotos[i].IsEmpty || DiscardedFlags[i]) continue;
             string fileName = Path.Combine(outputFolder, $"{baseFileName}_{saveCounter++}.jpg");
-            DetectedPhotos[i].Save(fileName);
+            
+            // Convert RGB back to BGR for saving, otherwise OpenCV saves it with swapped channels (bluish effect)
+            using Mat bgrPhoto = new();
+            CvInvoke.CvtColor(DetectedPhotos[i], bgrPhoto, ColorConversion.Rgb2Bgr);
+            bgrPhoto.Save(fileName);
         }
     }
 
