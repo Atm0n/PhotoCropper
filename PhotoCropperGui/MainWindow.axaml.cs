@@ -145,24 +145,29 @@ public partial class MainWindow : Window
         lblStatus.Text = "Photo deleted.";
     }
 
-    private void BtnRotate_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private async void BtnRotate_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        RotateCurrentPhoto();
+        await RotateCurrentPhotoAsync();
     }
 
-    private void RotateCurrentPhoto()
+    private async Task RotateCurrentPhotoAsync()
     {
         if (OriginalPhotos.Count == 0) return;
 
         int photoIndex = slides.SelectedIndex;
         if (photoIndex < 0) return;
 
-        OriginalPhotos[currentIndex].RotatePhoto(photoIndex);
+        pnlLoadingOverlay.IsVisible = true;
+        lblStatus.Text = "Rotating photo...";
 
-        // Save current index to restore it after reloading
+        await Task.Run(() => OriginalPhotos[currentIndex].RotatePhoto(photoIndex));
+
         int savedIndex = photoIndex;
         LoadCroppedPhotosToSlider();
         slides.SelectedIndex = savedIndex;
+
+        pnlLoadingOverlay.IsVisible = false;
+        lblStatus.Text = "Photo rotated.";
     }
 
     #endregion
@@ -174,10 +179,11 @@ public partial class MainWindow : Window
         if (OriginalPhotos.Count > 0)
         {
             OriginalPhotos[currentIndex].BackgroundTolerance = sldSensitivity.Value;
-            // Since DetectPhotos is synchronous in PhotoCropper.cs, we run it in Task.Run here if it takes too long,
-            // but LoadPhotosToGuiAsync already does this if DetectedPhotos.Count == 0. 
-            // Wait, DetectPhotos resets the state, so Count becomes 0.
-            OriginalPhotos[currentIndex].DetectPhotos(); // We should move this to the background too!
+            
+            pnlLoadingOverlay.IsVisible = true;
+            lblStatus.Text = "Reprocessing scan with new sensitivity...";
+            
+            await Task.Run(() => OriginalPhotos[currentIndex].DetectPhotos());
             await LoadPhotosToGuiAsync();
         }
     }
@@ -260,7 +266,7 @@ public partial class MainWindow : Window
                 await LoadPhotosToGuiAsync();
                 break;
             case Avalonia.Input.Key.R:
-                RotateCurrentPhoto();
+                await RotateCurrentPhotoAsync();
                 break;
             case Avalonia.Input.Key.X:
                 DeleteCurrentPhoto();
@@ -322,7 +328,7 @@ public partial class MainWindow : Window
         ApplyManualCrop(rect);
     }
 
-    private void ApplyManualCrop(Avalonia.Rect uiRect)
+    private async void ApplyManualCrop(Avalonia.Rect uiRect)
     {
         var photo = OriginalPhotos[currentIndex];
 
@@ -338,9 +344,17 @@ public partial class MainWindow : Window
         int w = (int)(uiRect.Width * scaleX);
         int h = (int)(uiRect.Height * scaleY);
 
-        photo.AddManualCrop(new System.Drawing.Rectangle(x, y, w, h));
+        var rect = new System.Drawing.Rectangle(x, y, w, h);
+        
+        pnlLoadingOverlay.IsVisible = true;
+        lblStatus.Text = "Extracting manual crop...";
+        
+        await Task.Run(() => photo.AddManualCrop(rect));
+
         LoadCroppedPhotosToSlider();
         slides.SelectedIndex = photo.DetectedPhotos.Count - 1;
+        
+        pnlLoadingOverlay.IsVisible = false;
         lblStatus.Text = "Manual crop added.";
     }
 
@@ -527,18 +541,24 @@ public partial class MainWindow : Window
         RejectRefine();
     }
 
-    private void AcceptRefine()
+    private async void AcceptRefine()
     {
         if (!isRefining) return;
 
         int photoIndex = slides.SelectedIndex;
-        OriginalPhotos[currentIndex].ApplyCropToPhoto(photoIndex, currentRefineRect);
+        
+        pnlLoadingOverlay.IsVisible = true;
+        lblStatus.Text = "Applying refinement...";
+
+        await Task.Run(() => OriginalPhotos[currentIndex].ApplyCropToPhoto(photoIndex, currentRefineRect));
 
         CloseRefineMode();
 
         int savedIndex = photoIndex;
         LoadCroppedPhotosToSlider();
         slides.SelectedIndex = savedIndex;
+        
+        pnlLoadingOverlay.IsVisible = false;
         lblStatus.Text = "Crop refined successfully.";
     }
 

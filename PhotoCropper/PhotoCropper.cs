@@ -92,20 +92,28 @@ public class PhotoCropper : IDisposable
     private MCvScalar SampleBackgroundColor(Mat hsv)
     {
         int s = 15; // sample size
-        // Ensure we have enough space to sample corners
         if (hsv.Width < s * 2 + 10 || hsv.Height < s * 2 + 10) return new MCvScalar();
 
-        var samples = new List<MCvScalar> {
-            CvInvoke.Mean(new Mat(hsv, new Rectangle(5, 5, s, s))),
-            CvInvoke.Mean(new Mat(hsv, new Rectangle(hsv.Width - s - 5, 5, s, s))),
-            CvInvoke.Mean(new Mat(hsv, new Rectangle(5, hsv.Height - s - 5, s, s))),
-            CvInvoke.Mean(new Mat(hsv, new Rectangle(hsv.Width - s - 5, hsv.Height - s - 5, s, s)))
-        };
+        // Sample 4 corners efficiently using ROI without creating new Mat objects
+        var r1 = new Rectangle(5, 5, s, s);
+        var r2 = new Rectangle(hsv.Width - s - 5, 5, s, s);
+        var r3 = new Rectangle(5, hsv.Height - s - 5, s, s);
+        var r4 = new Rectangle(hsv.Width - s - 5, hsv.Height - s - 5, s, s);
+
+        using Mat m1 = new(hsv, r1);
+        using Mat m2 = new(hsv, r2);
+        using Mat m3 = new(hsv, r3);
+        using Mat m4 = new(hsv, r4);
+
+        var s1 = CvInvoke.Mean(m1);
+        var s2 = CvInvoke.Mean(m2);
+        var s3 = CvInvoke.Mean(m3);
+        var s4 = CvInvoke.Mean(m4);
 
         return new MCvScalar(
-            samples.Average(x => x.V0),
-            samples.Average(x => x.V1),
-            samples.Average(x => x.V2)
+            (s1.V0 + s2.V0 + s3.V0 + s4.V0) / 4.0,
+            (s1.V1 + s2.V1 + s3.V1 + s4.V1) / 4.0,
+            (s1.V2 + s2.V2 + s3.V2 + s4.V2) / 4.0
         );
     }
 
@@ -167,17 +175,19 @@ public class PhotoCropper : IDisposable
         }
 
         var sorted = candidates.OrderByDescending(c => c.Area).ToList();
-        var accepted = new List<Rectangle>();
+        var acceptedHulls = new List<VectorOfPoint>();
+        var acceptedRects = new List<Rectangle>();
 
         foreach (var (Rect, Area, Contour) in sorted)
         {
             Point center = new(Rect.X + Rect.Width / 2, Rect.Y + Rect.Height / 2);
-            if (accepted.Any(r => r.Contains(center))) continue;
+            if (acceptedRects.Any(r => r.Contains(center))) continue;
 
-            accepted.Add(Rect);
-
-            using VectorOfPoint hull = new();
+            acceptedRects.Add(Rect);
+            
+            VectorOfPoint hull = new();
             CvInvoke.ConvexHull(Contour, hull);
+            acceptedHulls.Add(hull);
 
             RotatedRect rr = CvInvoke.MinAreaRect(hull);
             PointF[] vertices = rr.GetVertices();
@@ -185,11 +195,21 @@ public class PhotoCropper : IDisposable
             {
                 CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), new MCvScalar(0, 0, 255), 12);
             }
+        }
 
-            var extracted = ExtractPhotoFromContour(hull);
-            if (extracted != null && !extracted.IsEmpty)
+        // Parallel extraction: Rotate and crop each photo on different CPU cores
+        Mat?[] results = new Mat[acceptedHulls.Count];
+        Parallel.For(0, acceptedHulls.Count, i => 
+        {
+            results[i] = ExtractPhotoFromContour(acceptedHulls[i]);
+            acceptedHulls[i].Dispose();
+        });
+
+        foreach (var mat in results)
+        {
+            if (mat != null && !mat.IsEmpty)
             {
-                DetectedPhotos.Add(extracted);
+                DetectedPhotos.Add(mat);
             }
         }
     }
@@ -200,14 +220,12 @@ public class PhotoCropper : IDisposable
         float angle = rect.Angle;
         SizeF size = rect.Size;
 
-        // 1. Normalize angle and swap dimensions if needed
         if (size.Width < size.Height)
         {
             angle += 90;
             (size.Height, size.Width) = (size.Width, size.Height);
         }
 
-        // 2. Extract a large SQUARE ROI to prevent clipping during rotation
         float maxDim = Math.Max(rect.Size.Width, rect.Size.Height);
         int side = (int)(maxDim * 1.5);
         
@@ -230,31 +248,26 @@ public class PhotoCropper : IDisposable
         int destX = Math.Max(0, safeRoi.X - roi.X);
         int destY = Math.Max(0, safeRoi.Y - roi.Y);
         Rectangle destRect = new(destX, destY, safeRoi.Width, safeRoi.Height);
-        scanRoi.CopyTo(new Mat(squareCanvas, destRect));
+        
+        // Use a sub-mat for direct copy without overhead
+        using Mat canvasRoi = new(squareCanvas, destRect);
+        scanRoi.CopyTo(canvasRoi);
 
-        // 3. Rotate the square canvas
         PointF localCenter = new(side / 2.0f, side / 2.0f);
         using Mat rotationMatrix = new();
         CvInvoke.GetRotationMatrix2D(localCenter, angle, 1.0, rotationMatrix);
 
-        using Mat rotatedCanvas = new();
-        // Use Inter.Cubic for much smoother, professional-grade rotation edges
+        Mat rotatedCanvas = new();
         CvInvoke.WarpAffine(squareCanvas, rotatedCanvas, rotationMatrix, squareCanvas.Size, Inter.Cubic, Warp.Default, BorderType.Constant, new MCvScalar(255, 255, 255));
 
-        // 4. THE "EDGE-SNAP" REFINEMENT
-        // Instead of guessing with a shave, we find the exact pixel where the photo starts.
         using Mat gray = new();
         CvInvoke.CvtColor(rotatedCanvas, gray, ColorConversion.Bgr2Gray);
         
         using Mat contentMask = new();
-        // Threshold at 253 (very near white) to find every single non-background pixel.
-        // This is extremely sensitive and will see the faintest edge of a photo.
         CvInvoke.Threshold(gray, contentMask, 253, 255, ThresholdType.BinaryInv);
         
-        // Find the bounding box of the actual detected pixels
         Rectangle snugRect = CvInvoke.BoundingRectangle(contentMask);
         
-        // Predicted area based on detection (as a sanity boundary)
         Rectangle predictedRect = new(
             (int)Math.Max(0, Math.Round(localCenter.X - size.Width / 2.0)),
             (int)Math.Max(0, Math.Round(localCenter.Y - size.Height / 2.0)),
@@ -262,16 +275,19 @@ public class PhotoCropper : IDisposable
             (int)Math.Round(size.Height)
         );
         
-        // Snap the crop box to the content, but stay within the predicted photo area.
         Rectangle finalCrop = Rectangle.Intersect(snugRect, predictedRect);
-        
-        // Final safety intersection with canvas
         finalCrop.Intersect(new Rectangle(Point.Empty, rotatedCanvas.Size));
 
-        if (finalCrop.Width <= 10 || finalCrop.Height <= 10) return new Mat();
+        if (finalCrop.Width <= 10 || finalCrop.Height <= 10) 
+        {
+            rotatedCanvas.Dispose();
+            return new Mat();
+        }
 
-        // NO SHAVING: We crop exactly to the detected pixels.
-        return new Mat(rotatedCanvas, finalCrop).Clone();
+        // Return a fresh copy of the region and dispose the large rotated canvas
+        Mat final = new Mat(rotatedCanvas, finalCrop).Clone();
+        rotatedCanvas.Dispose();
+        return final;
     }
 
     #endregion

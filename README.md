@@ -4,6 +4,10 @@ An intelligent, cross-platform .NET 10 desktop application designed to automatic
 
 ## Key Features
 
+- **High-Performance Architecture:**
+  - **Direct Memory Rendering:** Skips slow PNG encoding/decoding by using a pointer-based pipeline directly from OpenCV to Avalonia's UI.
+  - **Parallel Extraction:** Utilizes all CPU cores to simultaneously rotate and process multiple photos from a single scan.
+  - **Asynchronous Processing:** All heavy operations (detection, rotation, refinement) run in background threads, keeping the UI silky smooth even with high-DPI scans.
 - **Intelligent Auto-Detection:** Automatically finds photos on a scanner bed using HSV background profiling and morphological edge detection.
 - **Zero-Loss Straightening:** Uses a "Local ROI" rotation with Cubic interpolation to perfectly straighten tilted photos without clipping edges or causing pixel displacement.
 - **Interactive Refinement Mode:** An advanced overlay mode (Shortcut: `Ñ` or `N`) that uses Adaptive Border Trimming to perfectly shrink-wrap the crop box around the photo, removing stubborn white scanner margins.
