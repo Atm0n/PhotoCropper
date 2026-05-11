@@ -67,6 +67,11 @@ public partial class MainWindow : Window
 
     private void LoadPhotosToGui()
     {
+        if (OriginalPhotos.Count == 0) return;
+
+        string fileName = Path.GetFileName(OriginalPhotos[currentIndex].OriginalFilePath);
+        lblStatus.Text = $"Processing: {fileName}...";
+        
         if (OriginalPhotos[currentIndex].DetectedPhotos.Count == 0)
         {
             OriginalPhotos[currentIndex].DetectPhotos();
@@ -75,17 +80,52 @@ public partial class MainWindow : Window
         using var bitmap = OriginalPhotos[currentIndex].OriginalWithDetected.ToBitmap();
         img.Source = ConvertToAvaloniaBitmap(bitmap);
 
+        txtFileCounter.Text = $"Scan {currentIndex + 1} of {OriginalPhotos.Count}";
+        lblStatus.Text = $"Loaded {fileName}";
+        
         LoadCroppedPhotosToSlider();
+        UpdatePhotoCounterLabel();
     }
 
     private void BtnSaveImages_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (OriginalPhotos.Count == 0) return;
+
+        int totalSaved = 0;
         foreach (var originalPhoto in OriginalPhotos)
         {
-
             originalPhoto.SaveDetectedPhotos();
+            totalSaved += originalPhoto.DetectedPhotos.Count;
         }
 
+        lblStatus.Text = $"Successfully saved {totalSaved} photos to 'cropped' folders.";
+    }
+
+    private void Slides_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        UpdatePhotoCounterLabel();
+    }
+
+    private void UpdatePhotoCounterLabel()
+    {
+        if (lblPhotoInfo == null || slides == null || OriginalPhotos == null) return;
+
+        if (currentIndex < 0 || currentIndex >= OriginalPhotos.Count)
+        {
+            lblPhotoInfo.Text = "";
+            return;
+        }
+
+        var currentPhoto = OriginalPhotos[currentIndex];
+        if (currentPhoto == null || currentPhoto.DetectedPhotos == null || currentPhoto.DetectedPhotos.Count == 0)
+        {
+            lblPhotoInfo.Text = "";
+            return;
+        }
+
+        int current = slides.SelectedIndex + 1;
+        int total = currentPhoto.DetectedPhotos.Count;
+        lblPhotoInfo.Text = $"PHOTO {current} OF {total}";
     }
 
     private void BtnPreviousCroppedImage_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

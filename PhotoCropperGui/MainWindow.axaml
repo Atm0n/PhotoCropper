@@ -5,49 +5,106 @@
 		WindowState="Maximized"
         x:Class="PhotoCropperGui.MainWindow"
 		KeyDown="Window_KeyDown"
-		Background="Gray"
-        Title="PhotoCropperGui">
-	<StackPanel Orientation="Vertical">
-		<StackPanel Orientation="Horizontal" Margin="5" Spacing="10">
-			<Button x:Name="btnOpenFiles" Click="BtnOpenFiles_Click" Content="OpenFile"></Button>
-			<Button x:Name="btnSave" Content="SaveImages" Click="BtnSaveImages_Click"></Button>
-			<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="5">
-				<TextBlock Text="Detection Sensitivity:" VerticalAlignment="Center"/>
-				<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="50" Width="150" 
-						PointerReleased="SldSensitivity_PointerReleased"/>
-				<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" VerticalAlignment="Center"/>
-			</StackPanel>
-		</StackPanel>
-		<Grid>
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="2*"/>
-				<ColumnDefinition Width="3*"/>
-			</Grid.ColumnDefinitions>
-			<Image x:Name="img" Grid.Column="0" Stretch="Uniform" Margin="10"/>
-			<Panel Grid.Column="1" Height="600">
-				<Carousel x:Name="slides" >
-					<Carousel.PageTransition >
-						<CompositePageTransition>
-							<PageSlide Orientation="Horizontal" />
-						</CompositePageTransition>
-					</Carousel.PageTransition>
-					<Carousel.ItemTemplate>
-						<DataTemplate>
-							<Image  Stretch="Uniform" Margin="2,2,2,2" Source="{Binding}"/>
-						</DataTemplate>
-					</Carousel.ItemTemplate>
-				</Carousel>
-				<Panel>
-					<Button Background="White" Click="BtnPreviousCroppedImage_Click" Content="&lt;" />
-					<Button Background="White" Click="BtnNextCroppedImage_Click"
-							HorizontalAlignment="Right" Content="&gt;"/>
-					<Button x:Name="btnRotate" Background="White" Click="BtnRotate_Click" 
-							HorizontalAlignment="Center" VerticalAlignment="Bottom"
-							Margin="0,0,0,10" Padding="10" CornerRadius="20"
-							Content="↻" FontSize="20" FontWeight="Bold"/>
-				</Panel>
-			</Panel>
-		</Grid>
-	</StackPanel>
+		Background="#1e1e1e"
+		Foreground="White"
+        Title="PhotoCropper - Intelligent Photo Extractor">
 
+	<DockPanel>
+		<!-- Header / Toolbar -->
+		<Border DockPanel.Dock="Top" Background="#2d2d2d" Height="60" BorderBrush="#3f3f3f" BorderThickness="0,0,0,1">
+			<Grid ColumnDefinitions="Auto, *, Auto">
+				<StackPanel Grid.Column="0" Orientation="Horizontal" Margin="15,0" Spacing="10">
+					<Button x:Name="btnOpenFiles" Click="BtnOpenFiles_Click" Padding="15,8" Background="#3399ff" Foreground="White">
+						<StackPanel Orientation="Horizontal" Spacing="8">
+							<TextBlock Text="📁"/>
+							<TextBlock Text="Open Scans"/>
+						</StackPanel>
+					</Button>
+					<Button x:Name="btnSave" Click="BtnSaveImages_Click" Padding="15,8">
+						<StackPanel Orientation="Horizontal" Spacing="8">
+							<TextBlock Text="💾"/>
+							<TextBlock Text="Save All Results"/>
+						</StackPanel>
+					</Button>
+				</StackPanel>
+
+				<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
+					<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+						<TextBlock Text="Detection Sensitivity" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#aaaaaa"/>
+						<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="50" Width="200" 
+								PointerReleased="SldSensitivity_PointerReleased" VerticalAlignment="Center"/>
+						<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" 
+								   VerticalAlignment="Center" Width="40" FontWeight="Bold"/>
+					</StackPanel>
+				</StackPanel>
+
+				<StackPanel Grid.Column="2" Orientation="Horizontal" Margin="15,0" VerticalAlignment="Center">
+					<TextBlock x:Name="txtFileCounter" Text="No files loaded" Foreground="#888888" VerticalAlignment="Center"/>
+				</StackPanel>
+			</Grid>
+		</Border>
+
+		<!-- Footer / Status Bar -->
+		<Border DockPanel.Dock="Bottom" Background="#252525" Height="30" BorderBrush="#3f3f3f" BorderThickness="0,1,0,0">
+			<Grid ColumnDefinitions="*, Auto">
+				<StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0" Spacing="20">
+					<TextBlock x:Name="lblStatus" Text="Ready" VerticalAlignment="Center" FontSize="12" Foreground="#888888"/>
+					<TextBlock Text="Shortcuts: [↑/↓] Switch Scan | [←/→] Navigate Photos | [R] Rotate" 
+							   VerticalAlignment="Center" FontSize="11" Foreground="#555555"/>
+				</StackPanel>
+				<TextBlock Grid.Column="1" x:Name="lblPhotoInfo" Text="" Margin="10,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#3399ff"/>
+			</Grid>
+		</Border>
+
+		<!-- Main Workspace -->
+		<Grid ColumnDefinitions="*, *">
+			<!-- Left: Original Scan -->
+			<Border Grid.Column="0" Margin="10" Background="#121212" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
+				<Grid RowDefinitions="Auto, *">
+					<TextBlock Grid.Row="0" Text="ORIGINAL SCAN (PREVIEW)" Margin="10,5" FontSize="10" FontWeight="Bold" Foreground="#555555"/>
+					<Image x:Name="img" Grid.Row="1" Stretch="Uniform" Margin="10"/>
+				</Grid>
+			</Border>
+
+			<!-- Right: Cropped Results -->
+			<Border Grid.Column="1" Margin="10" Background="#121212" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
+				<Grid RowDefinitions="Auto, *, Auto">
+					<TextBlock Grid.Row="0" Text="DETECTED PHOTOS" Margin="10,5" FontSize="10" FontWeight="Bold" Foreground="#555555"/>
+					
+					<Panel Grid.Row="1">
+						<Carousel x:Name="slides" SelectionChanged="Slides_SelectionChanged">
+							<Carousel.PageTransition>
+								<PageSlide Duration="0:0:0.2" Orientation="Horizontal" />
+							</Carousel.PageTransition>
+							<Carousel.ItemTemplate>
+								<DataTemplate>
+									<Border Margin="20">
+										<Image Stretch="Uniform" Source="{Binding}"/>
+									</Border>
+								</DataTemplate>
+							</Carousel.ItemTemplate>
+						</Carousel>
+						
+						<!-- Overlay Controls -->
+						<Button VerticalAlignment="Center" HorizontalAlignment="Left" Margin="5"
+								Click="BtnPreviousCroppedImage_Click" Content="&lt;" 
+								Background="#80000000" Width="40" Height="60" CornerRadius="4"/>
+						
+						<Button VerticalAlignment="Center" HorizontalAlignment="Right" Margin="5"
+								Click="BtnNextCroppedImage_Click" Content="&gt;" 
+								Background="#80000000" Width="40" Height="60" CornerRadius="4"/>
+					</Panel>
+
+					<StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15" Spacing="20">
+						<Button x:Name="btnRotate" Click="BtnRotate_Click" Padding="20,10" CornerRadius="20" Background="#2d2d2d">
+							<StackPanel Orientation="Horizontal" Spacing="10">
+								<TextBlock Text="↻" FontSize="18" VerticalAlignment="Center"/>
+								<TextBlock Text="Rotate 90°" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
+					</StackPanel>
+				</Grid>
+			</Border>
+		</Grid>
+	</DockPanel>
 </Window>

@@ -11,14 +11,14 @@ public class PhotoCropper : IDisposable
 {
     private readonly double MIN_AREA_THRESHOLD = 0;
     private readonly double MAX_AREA_THRESHOLD = 0;
-    private readonly string originalFilePath;
     private bool disposedValue;
 
+    public string OriginalFilePath { get; }
     public double BackgroundTolerance { get; set; } = 30;
 
     public PhotoCropper(string originalFilePath)
     {
-        this.originalFilePath = originalFilePath;
+        this.OriginalFilePath = originalFilePath;
         Original = CvInvoke.Imread(originalFilePath, ImreadModes.ColorRgb);
 
         // Minimum 1% of scan, maximum 90%
@@ -225,13 +225,13 @@ public class PhotoCropper : IDisposable
 
     public void SaveDetectedPhotos()
     {
-        string? directory = Path.GetDirectoryName(originalFilePath);
+        string? directory = Path.GetDirectoryName(OriginalFilePath);
         if (string.IsNullOrEmpty(directory)) return;
 
         string outputFolder = Path.Combine(directory, "cropped");
         Directory.CreateDirectory(outputFolder);
 
-        string baseFileName = Path.GetFileNameWithoutExtension(originalFilePath);
+        string baseFileName = Path.GetFileNameWithoutExtension(OriginalFilePath);
 
         for (int i = 0; i < DetectedPhotos.Count; i++)
         {
