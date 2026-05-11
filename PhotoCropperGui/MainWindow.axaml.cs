@@ -52,9 +52,11 @@ public partial class MainWindow : Window
             foreach (var file in fileResult)
             {
                 var filePath = file.Path.LocalPath;
-                var photo = new PhotoCropper.PhotoCropper(filePath);
-                // Synchronize new photos with the current slider value
-                photo.BackgroundTolerance = sldSensitivity.Value;
+                var photo = new PhotoCropper.PhotoCropper(filePath)
+                {
+                    // Synchronize new photos with the current slider value
+                    BackgroundTolerance = sldSensitivity.Value
+                };
                 OriginalPhotos.Add(photo);
 
             }
