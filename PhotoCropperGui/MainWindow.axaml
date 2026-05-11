@@ -32,9 +32,17 @@
 				<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
 					<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
 						<TextBlock Text="Detection Sensitivity" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#aaaaaa"/>
-						<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="50" Width="200" 
+						<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="50" Width="150" 
 								PointerReleased="SldSensitivity_PointerReleased" VerticalAlignment="Center"/>
 						<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" 
+								   VerticalAlignment="Center" Width="40" FontWeight="Bold"/>
+					</StackPanel>
+
+					<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+						<TextBlock Text="Zoom" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#aaaaaa"/>
+						<Slider x:Name="sldZoom" Minimum="1" Maximum="10" Value="1" Width="150" 
+								PropertyChanged="SldZoom_PropertyChanged" VerticalAlignment="Center"/>
+						<TextBlock Text="{Binding #sldZoom.Value, StringFormat='{}{0:0}x'}" 
 								   VerticalAlignment="Center" Width="40" FontWeight="Bold"/>
 					</StackPanel>
 				</StackPanel>
@@ -63,16 +71,25 @@
 			<Border Grid.Column="0" Margin="10" Background="#121212" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
 				<Grid RowDefinitions="Auto, *">
 					<TextBlock Grid.Row="0" Text="ORIGINAL SCAN (CLICK &amp; DRAG TO MANUALLY CROP)" Margin="10,5" FontSize="10" FontWeight="Bold" Foreground="#555555"/>
-					<Panel Grid.Row="1" x:Name="pnlOriginal" Background="Transparent" 
-						   PointerPressed="PnlOriginal_PointerPressed" 
-						   PointerMoved="PnlOriginal_PointerMoved" 
-						   PointerReleased="PnlOriginal_PointerReleased">
-						<Image x:Name="img" Stretch="Uniform" Margin="10" 
-							   VerticalAlignment="Center" HorizontalAlignment="Center"/>
-						<Canvas x:Name="cnvCrop" Background="Transparent" IsHitTestVisible="False">
-							<Rectangle x:Name="rectCrop" Stroke="#3399ff" StrokeThickness="2" Fill="#333399ff" IsVisible="False"/>
-						</Canvas>
-					</Panel>
+					<ScrollViewer Grid.Row="1" x:Name="scrollOriginal" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" 
+								  SizeChanged="ScrollOriginal_SizeChanged">
+						<Panel x:Name="pnlOriginal" Background="Transparent" 
+							   PointerPressed="PnlOriginal_PointerPressed" 
+							   PointerMoved="PnlOriginal_PointerMoved" 
+							   PointerReleased="PnlOriginal_PointerReleased"
+							   PointerWheelChanged="ScrollOriginal_PointerWheelChanged"
+							   HorizontalAlignment="Center" VerticalAlignment="Center">
+							<LayoutTransformControl x:Name="ltcOriginal" HorizontalAlignment="Center" VerticalAlignment="Center">
+								<LayoutTransformControl.LayoutTransform>
+									<ScaleTransform ScaleX="{Binding #sldZoom.Value}" ScaleY="{Binding #sldZoom.Value}"/>
+								</LayoutTransformControl.LayoutTransform>
+								<Image x:Name="img" Stretch="Uniform"/>
+							</LayoutTransformControl>
+							<Canvas x:Name="cnvCrop" Background="Transparent" IsHitTestVisible="False">
+								<Rectangle x:Name="rectCrop" Stroke="#3399ff" StrokeThickness="2" Fill="#333399ff" IsVisible="False"/>
+							</Canvas>
+						</Panel>
+					</ScrollViewer>
 				</Grid>
 			</Border>
 

@@ -1,6 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
@@ -276,6 +278,85 @@ public partial class MainWindow : Window
 
     #endregion
 
+    private void ScrollOriginal_SizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        UpdateCropCanvasSize();
+    }
+
+    private void SldZoom_PropertyChanged(object? sender, Avalonia.AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property.Name == "Value")
+        {
+            UpdateCropCanvasSize();
+        }
+    }
+
+    private void ScrollOriginal_PointerWheelChanged(object? sender, Avalonia.Input.PointerWheelEventArgs e)
+    {
+        if (e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Control))
+        {
+            // 1. Capture relative position before zoom
+            var relativePos = e.GetPosition(pnlOriginal);
+            double oldZoom = sldZoom.Value;
+
+            // 2. Calculate new zoom
+            double delta = e.Delta.Y > 0 ? 1.1 : 0.9;
+            double newZoom = Math.Clamp(oldZoom * delta, sldZoom.Minimum, sldZoom.Maximum);
+            
+            if (newZoom != oldZoom)
+            {
+                sldZoom.Value = newZoom;
+
+                // 3. Adjust scroll offset to keep the cursor over the same part of the image
+                // This prevents the "jumping" effect and keeps scrollbars stable relative to the cursor.
+                double multiplier = newZoom / oldZoom;
+                var newOffset = new Avalonia.Vector(
+                    (scrollOriginal.Offset.X + e.GetPosition(scrollOriginal).X) * multiplier - e.GetPosition(scrollOriginal).X,
+                    (scrollOriginal.Offset.Y + e.GetPosition(scrollOriginal).Y) * multiplier - e.GetPosition(scrollOriginal).Y
+                );
+
+                scrollOriginal.Offset = newOffset;
+            }
+
+            e.Handled = true;
+        }
+    }
+
+    private void UpdateCropCanvasSize()
+    {
+        if (img == null || scrollOriginal == null || cnvCrop == null || pnlOriginal == null) return;
+
+        // 1. Calculate the 'Base' size (Fit to Screen)
+        double availableW = scrollOriginal.Viewport.Width - 20;
+        double availableH = scrollOriginal.Viewport.Height - 20;
+
+        if (availableW <= 0 || availableH <= 0) return;
+
+        // Set the image base size to fit the viewport
+        img.Width = availableW;
+        img.Height = availableH;
+
+        // 2. Tightly wrap the Panel around the zoomed image
+        // LayoutTransformControl scales the image, but we want the Panel to match that size exactly
+        // to prevent excessive scrolling space.
+        double zoom = sldZoom.Value;
+        
+        // Use the actual rendered bounds of the image (Uniform stretch) multiplied by zoom
+        // This ensures the container is exactly the size of the visible image.
+        double zoomedW = img.Bounds.Width * zoom;
+        double zoomedH = img.Bounds.Height * zoom;
+
+        if (zoomedW > 0 && zoomedH > 0)
+        {
+            pnlOriginal.Width = zoomedW;
+            pnlOriginal.Height = zoomedH;
+        }
+
+        // 3. Sync the cropping canvas
+        cnvCrop.Width = pnlOriginal.Width;
+        cnvCrop.Height = pnlOriginal.Height;
+    }
+
     #region Manual Crop on Original
 
     private Avalonia.Point startPoint;
@@ -284,6 +365,7 @@ public partial class MainWindow : Window
     private void PnlOriginal_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
         if (OriginalPhotos.Count == 0) return;
+        UpdateCropCanvasSize();
         startPoint = e.GetPosition(pnlOriginal);
         isDragging = true;
         rectCrop.IsVisible = true;
@@ -336,6 +418,7 @@ public partial class MainWindow : Window
         var imageRect = GetImageRectInsideControl();
         if (imageRect.Width <= 0 || imageRect.Height <= 0) return;
 
+        // Coordinates are relative to pnlOriginal, which includes the zoom transform
         double scaleX = photo.Original.Width / imageRect.Width;
         double scaleY = photo.Original.Height / imageRect.Height;
 
@@ -360,18 +443,17 @@ public partial class MainWindow : Window
 
     private Avalonia.Rect GetImageRectInsideControl()
     {
-        if (img == null || img.Source == null) return new Avalonia.Rect();
+        if (img == null || img.Source == null || pnlOriginal == null) return new Avalonia.Rect();
 
-        var controlSize = pnlOriginal.Bounds.Size;
-        var imageSize = img.Source.Size;
+        // Manual calculation of the image boundaries inside the centered panel
+        // img.Bounds gives the 'Fit' size, sldZoom.Value gives the scaling factor.
+        double zoom = sldZoom.Value;
+        double w = img.Bounds.Width * zoom;
+        double h = img.Bounds.Height * zoom;
 
-        double scale = Math.Min(controlSize.Width / imageSize.Width, controlSize.Height / imageSize.Height);
-
-        // Add 10px margin from XAML
-        double w = imageSize.Width * scale;
-        double h = imageSize.Height * scale;
-        double x = (controlSize.Width - w) / 2;
-        double y = (controlSize.Height - h) / 2;
+        // Since the LayoutTransformControl is centered in pnlOriginal
+        double x = (pnlOriginal.Bounds.Width - w) / 2;
+        double y = (pnlOriginal.Bounds.Height - h) / 2;
 
         return new Avalonia.Rect(x, y, w, h);
     }
