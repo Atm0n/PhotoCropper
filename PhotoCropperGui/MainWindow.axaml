@@ -41,6 +41,10 @@
 					<Button Background="White" Click="BtnPreviousCroppedImage_Click" Content="&lt;" />
 					<Button Background="White" Click="BtnNextCroppedImage_Click"
 							HorizontalAlignment="Right" Content="&gt;"/>
+					<Button x:Name="btnRotate" Background="White" Click="BtnRotate_Click" 
+							HorizontalAlignment="Center" VerticalAlignment="Bottom"
+							Margin="0,0,0,10" Padding="10" CornerRadius="20"
+							Content="↻" FontSize="20" FontWeight="Bold"/>
 				</Panel>
 			</Panel>
 		</Grid>

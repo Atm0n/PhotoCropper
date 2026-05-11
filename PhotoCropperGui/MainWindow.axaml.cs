@@ -98,6 +98,26 @@ public partial class MainWindow : Window
         slides.Next();
     }
 
+    private void BtnRotate_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        RotateCurrentPhoto();
+    }
+
+    private void RotateCurrentPhoto()
+    {
+        if (OriginalPhotos.Count == 0) return;
+
+        int photoIndex = slides.SelectedIndex;
+        if (photoIndex < 0) return;
+
+        OriginalPhotos[currentIndex].RotatePhoto(photoIndex);
+
+        // Save current index to restore it after reloading
+        int savedIndex = photoIndex;
+        LoadCroppedPhotosToSlider();
+        slides.SelectedIndex = savedIndex;
+    }
+
     private void SldSensitivity_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
     {
         if (OriginalPhotos.Count > 0)
@@ -127,6 +147,9 @@ public partial class MainWindow : Window
             case Avalonia.Input.Key.Down:
                 currentIndex = (currentIndex - 1 + OriginalPhotos.Count) % OriginalPhotos.Count;
                 LoadPhotosToGui();
+                break;
+            case Avalonia.Input.Key.R:
+                RotateCurrentPhoto();
                 break;
         }
     }

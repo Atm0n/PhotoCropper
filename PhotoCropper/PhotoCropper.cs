@@ -3,6 +3,7 @@ using Emgu.CV.Structure;
 using Emgu.CV.CvEnum;
 using System.Drawing;
 using Emgu.CV.Util;
+using System.Linq;
 
 namespace PhotoCropper;
 
@@ -108,9 +109,13 @@ public class PhotoCropper : IDisposable
 
     private static void RefineForegroundMap(Mat foreground)
     {
-        using Mat kernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(5, 5), new Point(-1, -1));
-        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Close, kernel, new Point(-1, -1), 2, BorderType.Default, new MCvScalar());
-        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Erode, kernel, new Point(-1, -1), 2, BorderType.Default, new MCvScalar());
+        // 1. Open to remove small dust/noise without rounding off main corners
+        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(5, 5), new Point(-1, -1));
+        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+
+        // 2. Close to solidify the photo and keep edges straight
+        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(11, 11), new Point(-1, -1));
+        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Close, closeKernel, new Point(-1, -1), 2, BorderType.Default, new MCvScalar());
     }
 
     private void ProcessContours(Mat foregroundMap)
@@ -131,15 +136,28 @@ public class PhotoCropper : IDisposable
         var sorted = candidates.OrderByDescending(c => c.Area).ToList();
         var accepted = new List<Rectangle>();
 
-        foreach (var (rect, area, contour) in sorted)
+        foreach (var (Rect, Area, Contour) in sorted)
         {
-            Point center = new(rect.X + rect.Width / 2, rect.Y + rect.Height / 2);
+            Point center = new(Rect.X + Rect.Width / 2, Rect.Y + Rect.Height / 2);
             if (accepted.Any(r => r.Contains(center))) continue;
 
-            accepted.Add(rect);
-            CvInvoke.Rectangle(OriginalWithDetected, rect, new MCvScalar(0, 0, 255), 12);
+            accepted.Add(Rect);
 
-            var extracted = ExtractPhotoFromContour(contour);
+            // Use Convex Hull for a much more stable angle calculation
+            using VectorOfPoint hull = new();
+            CvInvoke.ConvexHull(Contour, hull);
+
+            // 1. Get the perfect mathematical rectangle (with angle)
+            RotatedRect rr = CvInvoke.MinAreaRect(hull);
+
+            // 2. Draw the visual marker as 4 tilted lines
+            PointF[] vertices = rr.GetVertices();
+            for (int j = 0; j < 4; j++)
+            {
+                CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), new MCvScalar(0, 0, 255), 12);
+            }
+
+            var extracted = ExtractPhotoFromContour(hull);
             if (extracted != null && !extracted.IsEmpty)
             {
                 DetectedPhotos.Add(extracted);
@@ -147,18 +165,62 @@ public class PhotoCropper : IDisposable
         }
     }
 
-    private Mat ExtractPhotoFromContour(VectorOfPoint contour)
+    private Mat ExtractPhotoFromContour(VectorOfPoint hull)
     {
-        // NO ROTATION: We perform a direct upright crop on the original scan
-        Rectangle rect = CvInvoke.BoundingRectangle(contour);
-        
-        // Ensure we stay inside the physical image pixels
-        rect.Intersect(new Rectangle(Point.Empty, Original.Size));
-        
-        if (rect.Width <= 10 || rect.Height <= 10) return new Mat();
+        // 1. Identify the exact angle and size of the tilted photo using the hull
+        RotatedRect rect = CvInvoke.MinAreaRect(hull);
+        float angle = rect.Angle;
+        SizeF size = rect.Size;
 
-        // Return a direct copy of that area from the scan
-        return new Mat(Original, rect).Clone();
+        // 2. Normalize the angle to ensure the photo is upright
+        // OpenCV angles can be tricky; we ensure the wider side is horizontal
+        if (size.Width < size.Height)
+        {
+            angle += 90;
+            (size.Height, size.Width) = (size.Width, size.Height);
+        }
+
+        // --- THE "SHAVE" ---
+        // Mathematically shrink the final cut by 6 pixels on all sides (12 total)
+        // to cleanly remove the scanner shadow margin without distorting the angle.
+        size.Width = Math.Max(10, size.Width - 12);
+        size.Height = Math.Max(10, size.Height - 12);
+
+        // 3. Mathematical Rotation
+        // We create a 'Rotation Matrix' centered on the photo
+        using Mat rotationMatrix = new();
+        CvInvoke.GetRotationMatrix2D(rect.Center, angle, 1.0, rotationMatrix);
+
+        // 4. Transform the entire scan to straighten this specific photo
+        using Mat rotatedFullImage = new();
+        CvInvoke.WarpAffine(Original, rotatedFullImage, rotationMatrix, Original.Size, Inter.Linear, Warp.Default, BorderType.Constant, new MCvScalar(255, 255, 255));
+
+        // 5. Clean Crop
+        Rectangle cropArea = new(
+            (int)(rect.Center.X - size.Width / 2.0),
+            (int)(rect.Center.Y - size.Height / 2.0),
+            (int)size.Width,
+            (int)size.Height
+        );
+
+        // Safety intersection with image boundaries
+        cropArea.Intersect(new Rectangle(Point.Empty, rotatedFullImage.Size));
+
+        if (cropArea.Width <= 10 || cropArea.Height <= 10) return new Mat();
+
+        return new Mat(rotatedFullImage, cropArea).Clone();
+    }
+
+    public void RotatePhoto(int index)
+    {
+        if (index < 0 || index >= DetectedPhotos.Count) return;
+
+        Mat rotated = new();
+        CvInvoke.Rotate(DetectedPhotos[index], rotated, RotateFlags.Rotate90Clockwise);
+        
+        // Dispose old and replace with new
+        DetectedPhotos[index].Dispose();
+        DetectedPhotos[index] = rotated;
     }
 
     public void SaveDetectedPhotos()
