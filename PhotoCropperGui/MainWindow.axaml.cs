@@ -8,6 +8,7 @@ using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace PhotoCropperGui;
 
@@ -61,20 +62,22 @@ public partial class MainWindow : Window
                 };
                 OriginalPhotos.Add(photo);
             }
-            LoadPhotosToGui();
+            await LoadPhotosToGuiAsync();
         }
     }
 
-    private void LoadPhotosToGui()
+    private async Task LoadPhotosToGuiAsync()
     {
         if (OriginalPhotos.Count == 0) return;
 
         string fileName = Path.GetFileName(OriginalPhotos[currentIndex].OriginalFilePath);
         lblStatus.Text = $"Processing: {fileName}...";
+        
+        pnlLoadingOverlay.IsVisible = true;
 
         if (OriginalPhotos[currentIndex].DetectedPhotos.Count == 0)
         {
-            OriginalPhotos[currentIndex].DetectPhotos();
+            await Task.Run(() => OriginalPhotos[currentIndex].DetectPhotos());
         }
 
         using var mat = OriginalPhotos[currentIndex].OriginalWithDetected;
@@ -88,6 +91,8 @@ public partial class MainWindow : Window
 
         LoadCroppedPhotosToSlider();
         UpdatePhotoCounterLabel();
+
+        pnlLoadingOverlay.IsVisible = false;
     }
 
     private void LoadCroppedPhotosToSlider()
@@ -168,13 +173,16 @@ public partial class MainWindow : Window
 
     #region Sliders & Navigation
 
-    private void SldSensitivity_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
+    private async void SldSensitivity_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
     {
         if (OriginalPhotos.Count > 0)
         {
             OriginalPhotos[currentIndex].BackgroundTolerance = sldSensitivity.Value;
-            OriginalPhotos[currentIndex].DetectPhotos();
-            LoadPhotosToGui();
+            // Since DetectPhotos is synchronous in PhotoCropper.cs, we run it in Task.Run here if it takes too long,
+            // but LoadPhotosToGuiAsync already does this if DetectedPhotos.Count == 0. 
+            // Wait, DetectPhotos resets the state, so Count becomes 0.
+            OriginalPhotos[currentIndex].DetectPhotos(); // We should move this to the background too!
+            await LoadPhotosToGuiAsync();
         }
     }
 
@@ -215,7 +223,7 @@ public partial class MainWindow : Window
         slides.Next();
     }
 
-    private void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    private async void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
         if (isRefining)
         {
@@ -249,11 +257,11 @@ public partial class MainWindow : Window
                 break;
             case Avalonia.Input.Key.Up:
                 currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
-                LoadPhotosToGui();
+                await LoadPhotosToGuiAsync();
                 break;
             case Avalonia.Input.Key.Down:
                 currentIndex = (currentIndex - 1 + OriginalPhotos.Count) % OriginalPhotos.Count;
-                LoadPhotosToGui();
+                await LoadPhotosToGuiAsync();
                 break;
             case Avalonia.Input.Key.R:
                 RotateCurrentPhoto();

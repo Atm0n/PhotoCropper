@@ -42,7 +42,6 @@ public class PhotoCropper : IDisposable
     {
         foreach (var photo in DetectedPhotos) photo.Dispose();
         DetectedPhotos.Clear();
-        DiscardedFlags.Clear();
 
         OriginalWithDetected?.Dispose();
         OriginalWithDetected = Original.Clone();
@@ -191,7 +190,6 @@ public class PhotoCropper : IDisposable
             if (extracted != null && !extracted.IsEmpty)
             {
                 DetectedPhotos.Add(extracted);
-                DiscardedFlags.Add(false);
             }
         }
     }
@@ -295,7 +293,6 @@ public class PhotoCropper : IDisposable
         if (index < 0 || index >= DetectedPhotos.Count) return;
         DetectedPhotos[index].Dispose();
         DetectedPhotos.RemoveAt(index);
-        DiscardedFlags.RemoveAt(index);
     }
 
     public System.Drawing.Rectangle GetRefinedCropRect(int index)
@@ -425,7 +422,6 @@ public class PhotoCropper : IDisposable
             if (extracted != null && !extracted.IsEmpty)
             {
                 DetectedPhotos.Add(extracted);
-                DiscardedFlags.Add(false);
                 return;
             }
         }
@@ -434,7 +430,6 @@ public class PhotoCropper : IDisposable
         if (rect.Width > 10 && rect.Height > 10)
         {
             DetectedPhotos.Add(new Mat(Original, rect).Clone());
-            DiscardedFlags.Add(false);
         }
     }
 
@@ -455,7 +450,7 @@ public class PhotoCropper : IDisposable
         int saveCounter = 1;
         for (int i = 0; i < DetectedPhotos.Count; i++)
         {
-            if (DetectedPhotos[i].IsEmpty || DiscardedFlags[i]) continue;
+            if (DetectedPhotos[i].IsEmpty) continue;
             string fileName = Path.Combine(outputFolder, $"{baseFileName}_{saveCounter++}.jpg");
             
             // Convert RGB back to BGR for saving, otherwise OpenCV saves it with swapped channels (bluish effect)
