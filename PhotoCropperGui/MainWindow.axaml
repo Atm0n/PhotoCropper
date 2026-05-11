@@ -156,5 +156,13 @@
 				</StackPanel>
 			</Grid>
 		</Panel>
+		<!-- Loading Overlay -->
+		<Panel x:Name="pnlLoadingOverlay" Background="#80000000" IsVisible="False" ZIndex="200">
+			<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="20">
+				<ProgressBar IsIndeterminate="True" Width="200" Height="20" Foreground="#3399ff"/>
+				<TextBlock Text="Processing Scan..." FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+			</StackPanel>
+		</Panel>
+
 	</Grid>
 </Window>
