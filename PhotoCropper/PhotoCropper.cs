@@ -3,8 +3,6 @@ using Emgu.CV.Structure;
 using Emgu.CV.CvEnum;
 using System.Drawing;
 using Emgu.CV.Util;
-using System.Linq;
-using System;
 
 namespace PhotoCropper;
 
@@ -81,11 +79,12 @@ public class PhotoCropper : IDisposable
         );
     }
 
-    private Mat CreateBackgroundMask(Mat hsv, MCvScalar avgColor)
+    private Mat CreateBackgroundMask(Mat hsv, MCvScalar avgColor, double? toleranceOverride = null)
     {
-        double hTol = BackgroundTolerance * 0.4;
-        double sTol = BackgroundTolerance;
-        double vTol = BackgroundTolerance;
+        double tol = toleranceOverride ?? BackgroundTolerance;
+        double hTol = tol * 0.4;
+        double sTol = tol;
+        double vTol = tol;
 
         MCvScalar lower = new(Math.Max(0, avgColor.V0 - hTol), Math.Max(0, avgColor.V1 - sTol), Math.Max(0, avgColor.V2 - vTol));
         MCvScalar upper = new(Math.Min(180, avgColor.V0 + hTol), Math.Min(255, avgColor.V1 + sTol), Math.Min(255, avgColor.V2 + vTol));
@@ -179,13 +178,7 @@ public class PhotoCropper : IDisposable
             (size.Height, size.Width) = (size.Width, size.Height);
         }
 
-        // --- THE "EXPAND" ---
-        // Add a 2-pixel safety margin
-        size.Width += 4;
-        size.Height += 4;
-
-        // 2. Extract a SQUARE ROI to prevent clipping during rotation
-        // A square with side = Max(Width, Height) * 1.5 ensures plenty of room for any rotation
+        // 2. Extract a large SQUARE ROI to prevent clipping during rotation
         float maxDim = Math.Max(rect.Size.Width, rect.Size.Height);
         int side = (int)(maxDim * 1.5);
         
@@ -196,17 +189,12 @@ public class PhotoCropper : IDisposable
             side
         );
         
-        // Safety intersection with original scan boundaries
         Rectangle scanBounds = new Rectangle(Point.Empty, Original.Size);
         Rectangle safeRoi = Rectangle.Intersect(roi, scanBounds);
 
         if (safeRoi.Width <= 10 || safeRoi.Height <= 10) return new Mat();
 
-        // Create the local piece from the scan
         using Mat scanRoi = new Mat(Original, safeRoi);
-        
-        // Create a perfectly square canvas and paste the scanRoi into it
-        // This ensures the photo is centered in a large enough square to rotate 360 degrees
         using Mat squareCanvas = new Mat(side, side, DepthType.Cv8U, 3);
         squareCanvas.SetTo(new MCvScalar(255, 255, 255)); // White fill
         
@@ -215,28 +203,46 @@ public class PhotoCropper : IDisposable
         Rectangle destRect = new Rectangle(destX, destY, safeRoi.Width, safeRoi.Height);
         scanRoi.CopyTo(new Mat(squareCanvas, destRect));
 
-        // 3. Local pivot is exactly the center of our square canvas
+        // 3. Rotate the square canvas
         PointF localCenter = new PointF(side / 2.0f, side / 2.0f);
-
-        // 4. Rotate the square canvas
         using Mat rotationMatrix = new();
         CvInvoke.GetRotationMatrix2D(localCenter, angle, 1.0, rotationMatrix);
 
         using Mat rotatedCanvas = new();
-        CvInvoke.WarpAffine(squareCanvas, rotatedCanvas, rotationMatrix, squareCanvas.Size, Inter.Linear, Warp.Default, BorderType.Constant, new MCvScalar(255, 255, 255));
+        // Use Inter.Cubic for much smoother, professional-grade rotation edges
+        CvInvoke.WarpAffine(squareCanvas, rotatedCanvas, rotationMatrix, squareCanvas.Size, Inter.Cubic, Warp.Default, BorderType.Constant, new MCvScalar(255, 255, 255));
 
-        // 5. Final straight crop
-        int x = (int)Math.Max(0, Math.Round(localCenter.X - size.Width / 2.0));
-        int y = (int)Math.Max(0, Math.Round(localCenter.Y - size.Height / 2.0));
-        int w = (int)Math.Round(size.Width);
-        int h = (int)Math.Round(size.Height);
+        // 4. THE "EDGE-SNAP" REFINEMENT
+        // Instead of guessing with a shave, we find the exact pixel where the photo starts.
+        using Mat gray = new();
+        CvInvoke.CvtColor(rotatedCanvas, gray, ColorConversion.Bgr2Gray);
         
-        Rectangle cropArea = new Rectangle(x, y, w, h);
-        cropArea.Intersect(new Rectangle(Point.Empty, rotatedCanvas.Size));
+        using Mat contentMask = new();
+        // Threshold at 253 (very near white) to find every single non-background pixel.
+        // This is extremely sensitive and will see the faintest edge of a photo.
+        CvInvoke.Threshold(gray, contentMask, 253, 255, ThresholdType.BinaryInv);
+        
+        // Find the bounding box of the actual detected pixels
+        Rectangle snugRect = CvInvoke.BoundingRectangle(contentMask);
+        
+        // Predicted area based on detection (as a sanity boundary)
+        Rectangle predictedRect = new Rectangle(
+            (int)Math.Max(0, Math.Round(localCenter.X - size.Width / 2.0)),
+            (int)Math.Max(0, Math.Round(localCenter.Y - size.Height / 2.0)),
+            (int)Math.Round(size.Width),
+            (int)Math.Round(size.Height)
+        );
+        
+        // Snap the crop box to the content, but stay within the predicted photo area.
+        Rectangle finalCrop = Rectangle.Intersect(snugRect, predictedRect);
+        
+        // Final safety intersection with canvas
+        finalCrop.Intersect(new Rectangle(Point.Empty, rotatedCanvas.Size));
 
-        if (cropArea.Width <= 10 || cropArea.Height <= 10) return new Mat();
+        if (finalCrop.Width <= 10 || finalCrop.Height <= 10) return new Mat();
 
-        return new Mat(rotatedCanvas, cropArea).Clone();
+        // NO SHAVING: We crop exactly to the detected pixels.
+        return new Mat(rotatedCanvas, finalCrop).Clone();
     }
 
     public void RotatePhoto(int index)
@@ -255,6 +261,79 @@ public class PhotoCropper : IDisposable
         DetectedPhotos[index].Dispose();
         DetectedPhotos.RemoveAt(index);
         DiscardedFlags.RemoveAt(index);
+    }
+
+    public System.Drawing.Rectangle GetRefinedCropRect(int index)
+    {
+        if (index < 0 || index >= DetectedPhotos.Count) return System.Drawing.Rectangle.Empty;
+
+        Mat photo = DetectedPhotos[index];
+        using Mat gray = new();
+        CvInvoke.CvtColor(photo, gray, ColorConversion.Bgr2Gray);
+        
+        // 1. Determine the background color by sampling the 4 extreme corners.
+        int s = 5;
+        if (gray.Width <= s * 2 || gray.Height <= s * 2) return new Rectangle(0, 0, photo.Width, photo.Height);
+
+        var tl = CvInvoke.Mean(new Mat(gray, new Rectangle(0, 0, s, s))).V0;
+        var tr = CvInvoke.Mean(new Mat(gray, new Rectangle(gray.Width - s, 0, s, s))).V0;
+        var bl = CvInvoke.Mean(new Mat(gray, new Rectangle(0, gray.Height - s, s, s))).V0;
+        var br = CvInvoke.Mean(new Mat(gray, new Rectangle(gray.Width - s, gray.Height - s, s, s))).V0;
+
+        // Average of corners to find the margin's specific shade of grey
+        double bgGray = (tl + tr + bl + br) / 4.0;
+
+        using Mat mask = new();
+        // Tolerance of 20 shades of grey to catch shadows/gradients in the scanner margin
+        double lower = Math.Max(0, bgGray - 20);
+        double upper = Math.Min(255, bgGray + 20);
+
+        CvInvoke.InRange(gray, new ScalarArray(lower), new ScalarArray(upper), mask);
+        
+        // Invert: Photo is white (255), background margin is black (0)
+        CvInvoke.BitwiseNot(mask, mask);
+
+        // Remove scanner noise/dust from the black margin
+        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(7, 7), new Point(-1, -1));
+        CvInvoke.MorphologyEx(mask, mask, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+
+        // Solidify the photo area
+        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(21, 21), new Point(-1, -1));
+        CvInvoke.MorphologyEx(mask, mask, MorphOp.Close, closeKernel, new Point(-1, -1), 3, BorderType.Default, new MCvScalar());
+
+        Rectangle contentBox = CvInvoke.BoundingRectangle(mask);
+        
+        // Safety: We lower the abort threshold to 20% to allow aggressive trimming of thick borders
+        if (contentBox.Width < photo.Width * 0.2 || contentBox.Height < photo.Height * 0.2)
+        {
+            return new Rectangle(0, 0, photo.Width, photo.Height);
+        }
+
+        // Shave 2 pixels to guarantee we cut inside the gradient edge of the margin
+        contentBox.Inflate(-2, -2);
+        
+        int x = Math.Max(0, contentBox.X);
+        int y = Math.Max(0, contentBox.Y);
+        int w = Math.Max(10, contentBox.Width);
+        int h = Math.Max(10, contentBox.Height);
+        
+        Rectangle finalRect = new Rectangle(x, y, w, h);
+        finalRect.Intersect(new Rectangle(Point.Empty, photo.Size));
+
+        return finalRect;
+    }
+
+    public void ApplyCropToPhoto(int index, System.Drawing.Rectangle rect)
+    {
+        if (index < 0 || index >= DetectedPhotos.Count) return;
+        
+        Mat photo = DetectedPhotos[index];
+        rect.Intersect(new System.Drawing.Rectangle(Point.Empty, photo.Size));
+        if (rect.Width <= 10 || rect.Height <= 10) return;
+
+        Mat cropped = new Mat(photo, rect).Clone();
+        DetectedPhotos[index].Dispose();
+        DetectedPhotos[index] = cropped;
     }
 
     public void AddManualCrop(Rectangle rect)

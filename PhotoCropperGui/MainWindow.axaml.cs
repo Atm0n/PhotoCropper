@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Emgu.CV;
+using Emgu.CV.Structure;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -72,7 +73,7 @@ public partial class MainWindow : Window
 
         string fileName = Path.GetFileName(OriginalPhotos[currentIndex].OriginalFilePath);
         lblStatus.Text = $"Processing: {fileName}...";
-        
+
         if (OriginalPhotos[currentIndex].DetectedPhotos.Count == 0)
         {
             OriginalPhotos[currentIndex].DetectPhotos();
@@ -83,7 +84,7 @@ public partial class MainWindow : Window
 
         txtFileCounter.Text = $"Scan {currentIndex + 1} of {OriginalPhotos.Count}";
         lblStatus.Text = $"Loaded {fileName}";
-        
+
         LoadCroppedPhotosToSlider();
         UpdatePhotoCounterLabel();
     }
@@ -151,7 +152,7 @@ public partial class MainWindow : Window
     {
         if (!isDragging) return;
         var currentPoint = e.GetPosition(pnlOriginal);
-        
+
         double x = Math.Min(startPoint.X, currentPoint.X);
         double y = Math.Min(startPoint.Y, currentPoint.Y);
         double w = Math.Abs(startPoint.X - currentPoint.X);
@@ -185,7 +186,7 @@ public partial class MainWindow : Window
     private void ApplyManualCrop(Avalonia.Rect uiRect)
     {
         var photo = OriginalPhotos[currentIndex];
-        
+
         // Map UI coordinates to actual Image pixels
         var imageRect = GetImageRectInsideControl();
         if (imageRect.Width <= 0 || imageRect.Height <= 0) return;
@@ -212,7 +213,7 @@ public partial class MainWindow : Window
         var imageSize = img.Source.Size;
 
         double scale = Math.Min(controlSize.Width / imageSize.Width, controlSize.Height / imageSize.Height);
-        
+
         // Add 10px margin from XAML
         double w = imageSize.Width * scale;
         double h = imageSize.Height * scale;
@@ -274,6 +275,181 @@ public partial class MainWindow : Window
         slides.SelectedIndex = savedIndex;
     }
 
+    private bool isRefining = false;
+    private System.Drawing.Rectangle currentRefineRect;
+    private Avalonia.Point startRefinePoint;
+    private bool isRefineDragging = false;
+
+    private void UpdateRefinePreview()
+    {
+        if (OriginalPhotos.Count == 0 || slides == null) return;
+        int photoIndex = slides.SelectedIndex;
+        if (photoIndex < 0) return;
+
+        var photoCropper = OriginalPhotos[currentIndex];
+        Mat previewMat = photoCropper.DetectedPhotos[photoIndex].Clone();
+
+        System.Drawing.Rectangle drawRect = currentRefineRect;
+        int thickness = 8;
+        drawRect.Inflate(-thickness / 2, -thickness / 2);
+
+        CvInvoke.Rectangle(previewMat, drawRect, new MCvScalar(0, 0, 255), thickness);
+
+        using var systemBitmap = previewMat.ToBitmap();
+        imgRefine.Source = ConvertToAvaloniaBitmap(systemBitmap);
+        previewMat.Dispose();
+    }
+
+    private void BtnRefine_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        StartRefineMode();
+    }
+
+    private void StartRefineMode()
+    {
+        if (OriginalPhotos.Count == 0 || slides == null) return;
+        int photoIndex = slides.SelectedIndex;
+        if (photoIndex < 0) return;
+
+        var photoCropper = OriginalPhotos[currentIndex];
+        currentRefineRect = photoCropper.GetRefinedCropRect(photoIndex);
+
+        if (currentRefineRect.IsEmpty || currentRefineRect.Width <= 10 || currentRefineRect.Height <= 10)
+        {
+            // If it failed to find a good auto-crop, default to full image so user can manually crop it.
+            currentRefineRect = new System.Drawing.Rectangle(0, 0, photoCropper.DetectedPhotos[photoIndex].Width, photoCropper.DetectedPhotos[photoIndex].Height);
+        }
+
+        isRefining = true;
+        pnlRefineOverlay.IsVisible = true;
+        lblStatus.Text = "Refinement mode: Draw to manual crop, Enter to Accept, Backspace to Reject.";
+
+        UpdateRefinePreview();
+    }
+
+    private void PnlRefine_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    {
+        if (!isRefining) return;
+        startRefinePoint = e.GetPosition(pnlRefineImage);
+        isRefineDragging = true;
+        rectRefineCrop.IsVisible = true;
+        Canvas.SetLeft(rectRefineCrop, startRefinePoint.X);
+        Canvas.SetTop(rectRefineCrop, startRefinePoint.Y);
+        rectRefineCrop.Width = 0;
+        rectRefineCrop.Height = 0;
+    }
+
+    private void PnlRefine_PointerMoved(object? sender, Avalonia.Input.PointerEventArgs e)
+    {
+        if (!isRefineDragging) return;
+        var currentPoint = e.GetPosition(pnlRefineImage);
+        
+        double x = Math.Min(startRefinePoint.X, currentPoint.X);
+        double y = Math.Min(startRefinePoint.Y, currentPoint.Y);
+        double w = Math.Abs(startRefinePoint.X - currentPoint.X);
+        double h = Math.Abs(startRefinePoint.Y - currentPoint.Y);
+
+        Canvas.SetLeft(rectRefineCrop, x);
+        Canvas.SetTop(rectRefineCrop, y);
+        rectRefineCrop.Width = w;
+        rectRefineCrop.Height = h;
+    }
+
+    private void PnlRefine_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
+    {
+        if (!isRefineDragging) return;
+        isRefineDragging = false;
+        rectRefineCrop.IsVisible = false;
+
+        var endPoint = e.GetPosition(pnlRefineImage);
+        var uiRect = new Avalonia.Rect(
+            Math.Min(startRefinePoint.X, endPoint.X),
+            Math.Min(startRefinePoint.Y, endPoint.Y),
+            Math.Abs(startRefinePoint.X - endPoint.X),
+            Math.Abs(startRefinePoint.Y - endPoint.Y)
+        );
+
+        if (uiRect.Width < 5 || uiRect.Height < 5) return;
+
+        var imageRect = GetRefineImageRectInsideControl();
+        if (imageRect.Width <= 0 || imageRect.Height <= 0) return;
+
+        int photoIndex = slides.SelectedIndex;
+        var photo = OriginalPhotos[currentIndex].DetectedPhotos[photoIndex];
+
+        double scaleX = photo.Width / imageRect.Width;
+        double scaleY = photo.Height / imageRect.Height;
+
+        int x = (int)((uiRect.X - imageRect.X) * scaleX);
+        int y = (int)((uiRect.Y - imageRect.Y) * scaleY);
+        int w = (int)(uiRect.Width * scaleX);
+        int h = (int)(uiRect.Height * scaleY);
+
+        currentRefineRect = new System.Drawing.Rectangle(x, y, w, h);
+        currentRefineRect.Intersect(new System.Drawing.Rectangle(System.Drawing.Point.Empty, photo.Size));
+        
+        UpdateRefinePreview();
+    }
+
+    private Avalonia.Rect GetRefineImageRectInsideControl()
+    {
+        if (imgRefine == null || imgRefine.Source == null) return new Avalonia.Rect();
+
+        var controlSize = pnlRefineImage.Bounds.Size;
+        var imageSize = imgRefine.Source.Size;
+
+        double availableWidth = controlSize.Width - 40; // 20 margin each side
+        double availableHeight = controlSize.Height - 40;
+
+        double scale = Math.Min(availableWidth / imageSize.Width, availableHeight / imageSize.Height);
+        
+        double w = imageSize.Width * scale;
+        double h = imageSize.Height * scale;
+        double x = 20 + (availableWidth - w) / 2;
+        double y = 20 + (availableHeight - h) / 2;
+
+        return new Avalonia.Rect(x, y, w, h);
+    }
+
+    private void BtnAcceptRefine_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        AcceptRefine();
+    }
+
+    private void BtnRejectRefine_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        RejectRefine();
+    }
+
+    private void AcceptRefine()
+    {
+        if (!isRefining) return;
+
+        int photoIndex = slides.SelectedIndex;
+        OriginalPhotos[currentIndex].ApplyCropToPhoto(photoIndex, currentRefineRect);
+
+        CloseRefineMode();
+
+        int savedIndex = photoIndex;
+        LoadCroppedPhotosToSlider();
+        slides.SelectedIndex = savedIndex;
+        lblStatus.Text = "Crop refined successfully.";
+    }
+
+    private void RejectRefine()
+    {
+        if (!isRefining) return;
+        CloseRefineMode();
+        lblStatus.Text = "Refinement cancelled.";
+    }
+
+    private void CloseRefineMode()
+    {
+        isRefining = false;
+        pnlRefineOverlay.IsVisible = false;
+        imgRefine.Source = null;
+    }
+
     private void SldSensitivity_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
     {
         if (OriginalPhotos.Count > 0)
@@ -286,7 +462,27 @@ public partial class MainWindow : Window
 
     private void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
+        if (isRefining)
+        {
+            if (e.Key == Avalonia.Input.Key.Enter)
+            {
+                AcceptRefine();
+            }
+            else if (e.Key == Avalonia.Input.Key.Back || e.Key == Avalonia.Input.Key.Escape)
+            {
+                RejectRefine();
+            }
+            return;
+        }
+
         if (OriginalPhotos.Count == 0) return;
+
+        // Catch N or OemTilde (usually Ñ on Spanish keyboards)
+        if (e.Key == Avalonia.Input.Key.N || e.Key == Avalonia.Input.Key.OemTilde || e.Key == Avalonia.Input.Key.Oem3)
+        {
+            StartRefineMode();
+            return;
+        }
 
         switch (e.Key)
         {
