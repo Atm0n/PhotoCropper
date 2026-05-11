@@ -3,17 +3,32 @@ using Emgu.CV.Structure;
 using Emgu.CV.CvEnum;
 using System.Drawing;
 using Emgu.CV.Util;
+using System.Linq;
+using System;
+using System.Collections.Generic;
+using System.IO;
 
 namespace PhotoCropper;
 
 public class PhotoCropper : IDisposable
 {
+    #region Fields & Properties
+
     private readonly double MIN_AREA_THRESHOLD = 0;
     private readonly double MAX_AREA_THRESHOLD = 0;
     private bool disposedValue;
 
     public string OriginalFilePath { get; }
     public double BackgroundTolerance { get; set; } = 30;
+
+    public Mat Original { get; set; }
+    public Mat OriginalWithDetected { get; set; }
+    public List<Mat> DetectedPhotos { get; set; } = [];
+    public List<bool> DiscardedFlags { get; set; } = [];
+
+    #endregion
+
+    #region Initialization & Disposal
 
     public PhotoCropper(string originalFilePath)
     {
@@ -27,10 +42,40 @@ public class PhotoCropper : IDisposable
         OriginalWithDetected = Original.Clone();
     }
 
-    public Mat Original { get; set; }
-    public Mat OriginalWithDetected { get; set; }
-    public List<Mat> DetectedPhotos { get; set; } = [];
-    public List<bool> DiscardedFlags { get; set; } = [];
+    private void ResetState()
+    {
+        foreach (var photo in DetectedPhotos) photo.Dispose();
+        DetectedPhotos.Clear();
+        DiscardedFlags.Clear();
+
+        OriginalWithDetected?.Dispose();
+        OriginalWithDetected = Original.Clone();
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                Original?.Dispose();
+                OriginalWithDetected?.Dispose();
+                foreach (var photo in DetectedPhotos) photo.Dispose();
+                DetectedPhotos.Clear();
+            }
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    #endregion
+
+    #region Detection & Extraction
 
     public void DetectPhotos()
     {
@@ -49,17 +94,7 @@ public class PhotoCropper : IDisposable
         ProcessContours(foreground);
     }
 
-    private void ResetState()
-    {
-        foreach (var photo in DetectedPhotos) photo.Dispose();
-        DetectedPhotos.Clear();
-        DiscardedFlags.Clear();
-
-        OriginalWithDetected?.Dispose();
-        OriginalWithDetected = Original.Clone();
-    }
-
-    private static MCvScalar SampleBackgroundColor(Mat hsv)
+    private MCvScalar SampleBackgroundColor(Mat hsv)
     {
         int s = 15; // sample size
         // Ensure we have enough space to sample corners
@@ -200,8 +235,7 @@ public class PhotoCropper : IDisposable
         
         int destX = Math.Max(0, safeRoi.X - roi.X);
         int destY = Math.Max(0, safeRoi.Y - roi.Y);
-        Rectangle rectangle = new(destX, destY, safeRoi.Width, safeRoi.Height);
-        Rectangle destRect = rectangle;
+        Rectangle destRect = new(destX, destY, safeRoi.Width, safeRoi.Height);
         scanRoi.CopyTo(new Mat(squareCanvas, destRect));
 
         // 3. Rotate the square canvas
@@ -245,6 +279,10 @@ public class PhotoCropper : IDisposable
         // NO SHAVING: We crop exactly to the detected pixels.
         return new Mat(rotatedCanvas, finalCrop).Clone();
     }
+
+    #endregion
+
+    #region Manual Edits & Refinement
 
     public void RotatePhoto(int index)
     {
@@ -404,6 +442,10 @@ public class PhotoCropper : IDisposable
         }
     }
 
+    #endregion
+
+    #region File Operations
+
     public void SaveDetectedPhotos()
     {
         string? directory = Path.GetDirectoryName(OriginalFilePath);
@@ -427,24 +469,5 @@ public class PhotoCropper : IDisposable
         }
     }
 
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!disposedValue)
-        {
-            if (disposing)
-            {
-                Original?.Dispose();
-                OriginalWithDetected?.Dispose();
-                foreach (var photo in DetectedPhotos) photo.Dispose();
-                DetectedPhotos.Clear();
-            }
-            disposedValue = true;
-        }
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
+    #endregion
 }
