@@ -20,7 +20,6 @@ public class PhotoCropper : IDisposable
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
     public List<Mat> DetectedPhotos { get; set; } = [];
-    public List<bool> DiscardedFlags { get; set; } = [];
 
     #endregion
 
