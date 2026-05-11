@@ -13,14 +13,16 @@ public partial class MainWindow : Window
 {
     private int currentIndex = 0;
     private readonly List<PhotoCropper.PhotoCropper> OriginalPhotos = [];
+    
     public MainWindow()
     {
         InitializeComponent();
     }
 
+    #region UI Initialization & File Handling
+
     private async void BtnOpenFiles_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.StorageProvider == null)
         {
@@ -37,6 +39,7 @@ public partial class MainWindow : Window
             ],
             AllowMultiple = true
         });
+
         if (fileResult.Count > 0)
         {
             foreach (var photo in OriginalPhotos)
@@ -55,11 +58,9 @@ public partial class MainWindow : Window
                     BackgroundTolerance = sldSensitivity.Value
                 };
                 OriginalPhotos.Add(photo);
-
             }
             LoadPhotosToGui();
         }
-
     }
 
     private void LoadPhotosToGui()
@@ -84,6 +85,21 @@ public partial class MainWindow : Window
         UpdatePhotoCounterLabel();
     }
 
+    private void LoadCroppedPhotosToSlider()
+    {
+        slides.Items.Clear();
+
+        foreach (var photo in OriginalPhotos[currentIndex].DetectedPhotos)
+        {
+            using var systemBitmap = photo.ToBitmap();
+            slides.Items.Add(ConvertToAvaloniaBitmap(systemBitmap));
+        }
+    }
+
+    #endregion
+
+    #region Actions (Rotate, Delete, Save)
+
     private void BtnSaveImages_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (OriginalPhotos.Count == 0) return;
@@ -97,9 +113,6 @@ public partial class MainWindow : Window
 
         lblStatus.Text = $"Successfully saved {totalSaved} photos to 'cropped' folders.";
     }
-
-    private Avalonia.Point startPoint;
-    private bool isDragging = false;
 
     private void BtnDelete_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -126,10 +139,132 @@ public partial class MainWindow : Window
         lblStatus.Text = "Photo deleted.";
     }
 
+    private void BtnRotate_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        RotateCurrentPhoto();
+    }
+
+    private void RotateCurrentPhoto()
+    {
+        if (OriginalPhotos.Count == 0) return;
+
+        int photoIndex = slides.SelectedIndex;
+        if (photoIndex < 0) return;
+
+        OriginalPhotos[currentIndex].RotatePhoto(photoIndex);
+
+        // Save current index to restore it after reloading
+        int savedIndex = photoIndex;
+        LoadCroppedPhotosToSlider();
+        slides.SelectedIndex = savedIndex;
+    }
+
+    #endregion
+
+    #region Sliders & Navigation
+
+    private void SldSensitivity_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
+    {
+        if (OriginalPhotos.Count > 0)
+        {
+            OriginalPhotos[currentIndex].BackgroundTolerance = sldSensitivity.Value;
+            OriginalPhotos[currentIndex].DetectPhotos();
+            LoadPhotosToGui();
+        }
+    }
+
     private void Slides_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         UpdatePhotoCounterLabel();
     }
+
+    private void UpdatePhotoCounterLabel()
+    {
+        if (lblPhotoInfo == null || slides == null || OriginalPhotos == null) return;
+
+        if (currentIndex < 0 || currentIndex >= OriginalPhotos.Count)
+        {
+            lblPhotoInfo.Text = "";
+            return;
+        }
+
+        var currentPhoto = OriginalPhotos[currentIndex];
+        if (currentPhoto == null || currentPhoto.DetectedPhotos == null || currentPhoto.DetectedPhotos.Count == 0)
+        {
+            lblPhotoInfo.Text = "";
+            return;
+        }
+
+        int current = slides.SelectedIndex + 1;
+        int total = currentPhoto.DetectedPhotos.Count;
+        lblPhotoInfo.Text = $"PHOTO {current} OF {total}";
+    }
+
+    private void BtnPreviousCroppedImage_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        slides.Previous();
+    }
+
+    private void BtnNextCroppedImage_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        slides.Next();
+    }
+
+    private void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (isRefining)
+        {
+            if (e.Key == Avalonia.Input.Key.Enter)
+            {
+                AcceptRefine();
+            }
+            else if (e.Key == Avalonia.Input.Key.Back || e.Key == Avalonia.Input.Key.Escape)
+            {
+                RejectRefine();
+            }
+            return;
+        }
+
+        if (OriginalPhotos.Count == 0) return;
+
+        // Catch N or OemTilde (usually Ñ on Spanish keyboards)
+        if (e.Key == Avalonia.Input.Key.N || e.Key == Avalonia.Input.Key.OemTilde || e.Key == Avalonia.Input.Key.Oem3)
+        {
+            StartRefineMode();
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Avalonia.Input.Key.Left:
+                slides.Previous();
+                break;
+            case Avalonia.Input.Key.Right:
+                slides.Next();
+                break;
+            case Avalonia.Input.Key.Up:
+                currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
+                LoadPhotosToGui();
+                break;
+            case Avalonia.Input.Key.Down:
+                currentIndex = (currentIndex - 1 + OriginalPhotos.Count) % OriginalPhotos.Count;
+                LoadPhotosToGui();
+                break;
+            case Avalonia.Input.Key.R:
+                RotateCurrentPhoto();
+                break;
+            case Avalonia.Input.Key.X:
+                DeleteCurrentPhoto();
+                break;
+        }
+    }
+
+    #endregion
+
+    #region Manual Crop on Original
+
+    private Avalonia.Point startPoint;
+    private bool isDragging = false;
 
     private void PnlOriginal_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
@@ -218,82 +353,14 @@ public partial class MainWindow : Window
         return new Avalonia.Rect(x, y, w, h);
     }
 
-    private void UpdatePhotoCounterLabel()
-    {
-        if (lblPhotoInfo == null || slides == null || OriginalPhotos == null) return;
+    #endregion
 
-        if (currentIndex < 0 || currentIndex >= OriginalPhotos.Count)
-        {
-            lblPhotoInfo.Text = "";
-            return;
-        }
-
-        var currentPhoto = OriginalPhotos[currentIndex];
-        if (currentPhoto == null || currentPhoto.DetectedPhotos == null || currentPhoto.DetectedPhotos.Count == 0)
-        {
-            lblPhotoInfo.Text = "";
-            return;
-        }
-
-        int current = slides.SelectedIndex + 1;
-        int total = currentPhoto.DetectedPhotos.Count;
-        lblPhotoInfo.Text = $"PHOTO {current} OF {total}";
-    }
-
-    private void BtnPreviousCroppedImage_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        slides.Previous();
-    }
-
-    private void BtnNextCroppedImage_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        slides.Next();
-    }
-
-    private void BtnRotate_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        RotateCurrentPhoto();
-    }
-
-    private void RotateCurrentPhoto()
-    {
-        if (OriginalPhotos.Count == 0) return;
-
-        int photoIndex = slides.SelectedIndex;
-        if (photoIndex < 0) return;
-
-        OriginalPhotos[currentIndex].RotatePhoto(photoIndex);
-
-        // Save current index to restore it after reloading
-        int savedIndex = photoIndex;
-        LoadCroppedPhotosToSlider();
-        slides.SelectedIndex = savedIndex;
-    }
+    #region Interactive Refinement Overlay
 
     private bool isRefining = false;
     private System.Drawing.Rectangle currentRefineRect;
     private Avalonia.Point startRefinePoint;
     private bool isRefineDragging = false;
-
-    private void UpdateRefinePreview()
-    {
-        if (OriginalPhotos.Count == 0 || slides == null) return;
-        int photoIndex = slides.SelectedIndex;
-        if (photoIndex < 0) return;
-
-        var photoCropper = OriginalPhotos[currentIndex];
-        Mat previewMat = photoCropper.DetectedPhotos[photoIndex].Clone();
-
-        System.Drawing.Rectangle drawRect = currentRefineRect;
-        int thickness = 8;
-        drawRect.Inflate(-thickness / 2, -thickness / 2);
-
-        CvInvoke.Rectangle(previewMat, drawRect, new MCvScalar(0, 0, 255), thickness);
-
-        using var systemBitmap = previewMat.ToBitmap();
-        imgRefine.Source = ConvertToAvaloniaBitmap(systemBitmap);
-        previewMat.Dispose();
-    }
 
     private void BtnRefine_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -320,6 +387,26 @@ public partial class MainWindow : Window
         lblStatus.Text = "Refinement mode: Draw to manual crop, Enter to Accept, Backspace to Reject.";
 
         UpdateRefinePreview();
+    }
+
+    private void UpdateRefinePreview()
+    {
+        if (OriginalPhotos.Count == 0 || slides == null) return;
+        int photoIndex = slides.SelectedIndex;
+        if (photoIndex < 0) return;
+
+        var photoCropper = OriginalPhotos[currentIndex];
+        Mat previewMat = photoCropper.DetectedPhotos[photoIndex].Clone();
+
+        System.Drawing.Rectangle drawRect = currentRefineRect;
+        int thickness = 8;
+        drawRect.Inflate(-thickness / 2, -thickness / 2);
+
+        CvInvoke.Rectangle(previewMat, drawRect, new MCvScalar(0, 0, 255), thickness);
+
+        using var systemBitmap = previewMat.ToBitmap();
+        imgRefine.Source = ConvertToAvaloniaBitmap(systemBitmap);
+        previewMat.Dispose();
     }
 
     private void PnlRefine_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
@@ -445,64 +532,9 @@ public partial class MainWindow : Window
         imgRefine.Source = null;
     }
 
-    private void SldSensitivity_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
-    {
-        if (OriginalPhotos.Count > 0)
-        {
-            OriginalPhotos[currentIndex].BackgroundTolerance = sldSensitivity.Value;
-            OriginalPhotos[currentIndex].DetectPhotos();
-            LoadPhotosToGui();
-        }
-    }
+    #endregion
 
-    private void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
-    {
-        if (isRefining)
-        {
-            if (e.Key == Avalonia.Input.Key.Enter)
-            {
-                AcceptRefine();
-            }
-            else if (e.Key == Avalonia.Input.Key.Back || e.Key == Avalonia.Input.Key.Escape)
-            {
-                RejectRefine();
-            }
-            return;
-        }
-
-        if (OriginalPhotos.Count == 0) return;
-
-        // Catch N or OemTilde (usually Ñ on Spanish keyboards)
-        if (e.Key == Avalonia.Input.Key.N || e.Key == Avalonia.Input.Key.OemTilde || e.Key == Avalonia.Input.Key.Oem3)
-        {
-            StartRefineMode();
-            return;
-        }
-
-        switch (e.Key)
-        {
-            case Avalonia.Input.Key.Left:
-                slides.Previous();
-                break;
-            case Avalonia.Input.Key.Right:
-                slides.Next();
-                break;
-            case Avalonia.Input.Key.Up:
-                currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
-                LoadPhotosToGui();
-                break;
-            case Avalonia.Input.Key.Down:
-                currentIndex = (currentIndex - 1 + OriginalPhotos.Count) % OriginalPhotos.Count;
-                LoadPhotosToGui();
-                break;
-            case Avalonia.Input.Key.R:
-                RotateCurrentPhoto();
-                break;
-            case Avalonia.Input.Key.X:
-                DeleteCurrentPhoto();
-                break;
-        }
-    }
+    #region Utility Methods
 
     protected override void OnClosed(System.EventArgs e)
     {
@@ -513,16 +545,6 @@ public partial class MainWindow : Window
         }
         OriginalPhotos.Clear();
     }
-    private void LoadCroppedPhotosToSlider()
-    {
-        slides.Items.Clear();
-
-        foreach (var photo in OriginalPhotos[currentIndex].DetectedPhotos)
-        {
-            using var systemBitmap = photo.ToBitmap();
-            slides.Items.Add(ConvertToAvaloniaBitmap(systemBitmap));
-        }
-    }
 
     private static Bitmap ConvertToAvaloniaBitmap(System.Drawing.Bitmap systemBitmap)
     {
@@ -531,4 +553,6 @@ public partial class MainWindow : Window
         memoryStream.Seek(0, SeekOrigin.Begin);
         return new Bitmap(memoryStream);
     }
+
+    #endregion
 }
