@@ -21,7 +21,8 @@ A .NET tool to detect and extract multiple photos from a single scanned image us
 
 ## Technical Details
 
-- **High-Performance Rendering Pipeline**: Replaced SkiaSharp/PNG encoding with a direct **Pointer-to-Bitmap** copy. Uses Avalonia's native `Bitmap` constructor with `IntPtr` and `Rgba8888` pixel format for near-instant rendering of high-res scans.
+- **High-Performance Rendering Pipeline**: Replaced SkiaSharp/PNG encoding with a direct **Pointer-to-Bitmap** copy. Uses Avalonia's native `Bitmap` constructor with `IntPtr` and `Bgra8888` pixel format for near-instant rendering of high-res scans.
+- **Color Space Management**: Standardized on **BGR** internally (OpenCV default). The UI performs a single `Bgr2Bgra` conversion for display. This eliminates redundant channel swaps and ensures 100% color accuracy for both previews and saved files.
 - **Parallel Extraction Engine**: Uses `Parallel.For` to process, rotate, and refine multiple detected photos simultaneously across all CPU cores.
 - **Asynchronous UI Architecture**: All heavy image processing (detection, rotation, refinement, manual cropping) is offloaded to background threads using `Task.Run` to prevent UI freezing.
 - **Local ROI Rotation Engine**: Instead of rotating the entire scan, the engine extracts a large padded square around the specific photo and rotates only that piece using `Inter.Cubic` interpolation.

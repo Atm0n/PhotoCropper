@@ -29,7 +29,7 @@ public class PhotoCropper : IDisposable
     public PhotoCropper(string originalFilePath)
     {
         this.OriginalFilePath = originalFilePath;
-        Original = CvInvoke.Imread(originalFilePath, ImreadModes.ColorRgb);
+        Original = CvInvoke.Imread(originalFilePath, ImreadModes.AnyColor);
 
         // Minimum 1% of scan, maximum 90%
         MIN_AREA_THRESHOLD = (Original.Width * Original.Height) * 0.01;
@@ -469,10 +469,7 @@ public class PhotoCropper : IDisposable
             if (DetectedPhotos[i].IsEmpty) continue;
             string fileName = Path.Combine(outputFolder, $"{baseFileName}_{saveCounter++}.jpg");
             
-            // Convert RGB back to BGR for saving, otherwise OpenCV saves it with swapped channels (bluish effect)
-            using Mat bgrPhoto = new();
-            CvInvoke.CvtColor(DetectedPhotos[i], bgrPhoto, ColorConversion.Rgb2Bgr);
-            bgrPhoto.Save(fileName);
+            DetectedPhotos[i].Save(fileName);
         }
     }
 

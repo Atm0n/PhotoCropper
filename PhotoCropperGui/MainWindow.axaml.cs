@@ -432,20 +432,20 @@ public partial class MainWindow : Window
 
     private static Bitmap ConvertMatToAvaloniaBitmap(Mat mat)
     {
-        // 1. Ensure the image is in a format Avalonia understands (RGBA is standard)
-        // We create a temporary Mat for the conversion
-        using Mat rgbaMat = new();
-        CvInvoke.CvtColor(mat, rgbaMat, ColorConversion.Bgr2Rgba);
+        // 1. Convert BGR to BGRA (adds an alpha channel without swapping colors)
+        // This is often more efficient and avoids R/B swap confusion
+        using Mat bgraMat = new();
+        CvInvoke.CvtColor(mat, bgraMat, ColorConversion.Bgr2Bgra);
 
         // 2. Create Avalonia Bitmap directly from the Mat's data pointer
-        // This constructor performs a fast memory copy.
+        // We use Bgra8888 which matches the output of Bgr2Bgra
         return new Bitmap(
-            Avalonia.Platform.PixelFormat.Rgba8888,
+            Avalonia.Platform.PixelFormat.Bgra8888,
             Avalonia.Platform.AlphaFormat.Premul,
-            rgbaMat.DataPointer,
-            new Avalonia.PixelSize(rgbaMat.Width, rgbaMat.Height),
+            bgraMat.DataPointer,
+            new Avalonia.PixelSize(bgraMat.Width, bgraMat.Height),
             new Avalonia.Vector(96, 96),
-            rgbaMat.Step);
+            bgraMat.Step);
     }
     private void PnlRefine_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
