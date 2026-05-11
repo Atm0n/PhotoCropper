@@ -56,14 +56,10 @@ public class PhotoCropper : IDisposable
         double sAvg = samples.Average(x => x.V1);
         double vAvg = samples.Average(x => x.V2);
 
-        // 2. Inverted Logic: Higher Slider Value (Sensitivity) = Lower Tolerance
-        // Range: 100 Sensitivity -> 0 Tolerance (Extreme detection)
-        // Range: 0 Sensitivity -> 60 Tolerance (Detect nothing)
-        double tolerance = 60 - (BackgroundTolerance * 0.6);
-        
-        double hTol = tolerance * 0.4;
-        double sTol = tolerance;
-        double vTol = tolerance;
+        // 2. Background Mask using Slider Sensitivity
+        double hTol = BackgroundTolerance * 0.4;
+        double sTol = BackgroundTolerance;
+        double vTol = BackgroundTolerance;
         MCvScalar lower = new MCvScalar(Math.Max(0, hAvg - hTol), Math.Max(0, sAvg - sTol), Math.Max(0, vAvg - vTol));
         MCvScalar upper = new MCvScalar(Math.Min(180, hAvg + hTol), Math.Min(255, sAvg + sTol), Math.Min(255, vAvg + vTol));
 
@@ -83,9 +79,9 @@ public class PhotoCropper : IDisposable
         CvInvoke.BitwiseOr(foreground, edges, foreground);
 
         // 5. Morphological Cleanup
-        using Mat kernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(11, 11), new Point(-1, -1));
-        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Close, kernel, new Point(-1, -1), 3, BorderType.Default, new MCvScalar());
-        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Open, kernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+        using Mat kernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(5, 5), new Point(-1, -1));
+        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Close, kernel, new Point(-1, -1), 2, BorderType.Default, new MCvScalar());
+        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Erode, kernel, new Point(-1, -1), 2, BorderType.Default, new MCvScalar());
 
         // 6. Find Contours
         using VectorOfVectorOfPoint contours = new();
@@ -111,6 +107,8 @@ public class PhotoCropper : IDisposable
             if (accepted.Any(r => r.Contains(center))) continue;
 
             accepted.Add(cand.Rect);
+            
+            // Draw standard upright box
             CvInvoke.Rectangle(OriginalWithDetected, cand.Rect, new MCvScalar(0, 0, 255), 12);
             
             var extracted = ExtractPhotoFromContour(cand.Contour);
@@ -123,22 +121,16 @@ public class PhotoCropper : IDisposable
 
     private Mat ExtractPhotoFromContour(VectorOfPoint contour)
     {
-        RotatedRect minAreaRect = CvInvoke.MinAreaRect(contour);
-        double angle = minAreaRect.Angle;
-        if (Math.Abs(angle) > 45) angle -= 90;
-
-        using Mat rotationMatrix = new();
-        CvInvoke.GetRotationMatrix2D(minAreaRect.Center, angle, 1.0, rotationMatrix);
-
-        using Mat rotatedImage = new();
-        CvInvoke.WarpAffine(Original, rotatedImage, rotationMatrix, Original.Size, Inter.Linear, Warp.Default, BorderType.Constant, new MCvScalar(255, 255, 255));
-
-        Rectangle boundingRect = minAreaRect.MinAreaRect();
-        boundingRect.Intersect(new Rectangle(Point.Empty, rotatedImage.Size));
+        // NO ROTATION: We perform a direct upright crop on the original scan
+        Rectangle rect = CvInvoke.BoundingRectangle(contour);
         
-        if (boundingRect.Width <= 10 || boundingRect.Height <= 10) return new Mat();
+        // Ensure we stay inside the physical image pixels
+        rect.Intersect(new Rectangle(Point.Empty, Original.Size));
+        
+        if (rect.Width <= 10 || rect.Height <= 10) return new Mat();
 
-        return new Mat(rotatedImage, boundingRect).Clone();
+        // Return a direct copy of that area from the scan
+        return new Mat(Original, rect).Clone();
     }
 
     public void SaveDetectedPhotos()
