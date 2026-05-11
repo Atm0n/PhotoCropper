@@ -5,39 +5,156 @@
 		WindowState="Maximized"
         x:Class="PhotoCropperGui.MainWindow"
 		KeyDown="Window_KeyDown"
-		Background="Gray"
-        Title="PhotoCropperGui">
-	<StackPanel Orientation="Vertical">
-		<StackPanel Orientation="Horizontal">
-			<Button x:Name="btnOpenFiles" Click="BtnOpenFiles_Click" Content="OpenFile"></Button>
-			<Button x:Name="btnSave" Content="SaveImages" Click="BtnSaveImages_Click"></Button>
-		</StackPanel>
-		<Grid>
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="25*"/>
-				<ColumnDefinition Width="75*"/>
-			</Grid.ColumnDefinitions>
-			<Image x:Name="img"  Grid.Column="0"/>
-			<Panel Grid.Column="1">
-				<Carousel x:Name="slides" >
-					<Carousel.PageTransition >
-						<CompositePageTransition>
-							<PageSlide Orientation="Horizontal" />
-						</CompositePageTransition>
-					</Carousel.PageTransition>
-					<Carousel.ItemTemplate>
-						<DataTemplate>
-							<Image  Stretch="Uniform" Margin="2,2,2,2" Source="{Binding}"/>
-						</DataTemplate>
-					</Carousel.ItemTemplate>
-				</Carousel>
-				<Panel>
-					<Button Background="White" Click="BtnPreviousCroppedImage_Click" Content="&lt;" />
-					<Button Background="White" Click="BtnNextCroppedImage_Click"
-							HorizontalAlignment="Right" Content="&gt;"/>
-				</Panel>
-			</Panel>
-		</Grid>
-	</StackPanel>
+		Background="#1e1e1e"
+		Foreground="White"
+        Title="PhotoCropper - Intelligent Photo Extractor">
 
+	<Grid>
+		<DockPanel>
+			<!-- Header / Toolbar -->
+		<Border DockPanel.Dock="Top" Background="#2d2d2d" Height="60" BorderBrush="#3f3f3f" BorderThickness="0,0,0,1">
+			<Grid ColumnDefinitions="Auto, *, Auto">
+				<StackPanel Grid.Column="0" Orientation="Horizontal" Margin="15,0" Spacing="10">
+					<Button x:Name="btnOpenFiles" Click="BtnOpenFiles_Click" Padding="15,8" Background="#3399ff" Foreground="White">
+						<StackPanel Orientation="Horizontal" Spacing="8">
+							<TextBlock Text="📁"/>
+							<TextBlock Text="Open Scans"/>
+						</StackPanel>
+					</Button>
+					<Button x:Name="btnSave" Click="BtnSaveImages_Click" Padding="15,8">
+						<StackPanel Orientation="Horizontal" Spacing="8">
+							<TextBlock Text="💾"/>
+							<TextBlock Text="Save All Results"/>
+						</StackPanel>
+					</Button>
+				</StackPanel>
+
+				<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
+					<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+						<TextBlock Text="Detection Sensitivity" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#aaaaaa"/>
+						<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="50" Width="200" 
+								PointerReleased="SldSensitivity_PointerReleased" VerticalAlignment="Center"/>
+						<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" 
+								   VerticalAlignment="Center" Width="40" FontWeight="Bold"/>
+					</StackPanel>
+				</StackPanel>
+
+				<StackPanel Grid.Column="2" Orientation="Horizontal" Margin="15,0" VerticalAlignment="Center">
+					<TextBlock x:Name="txtFileCounter" Text="No files loaded" Foreground="#888888" VerticalAlignment="Center"/>
+				</StackPanel>
+			</Grid>
+		</Border>
+
+		<!-- Footer / Status Bar -->
+		<Border DockPanel.Dock="Bottom" Background="#252525" Height="30" BorderBrush="#3f3f3f" BorderThickness="0,1,0,0">
+			<Grid ColumnDefinitions="*, Auto">
+				<StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0" Spacing="20">
+					<TextBlock x:Name="lblStatus" Text="Ready" VerticalAlignment="Center" FontSize="12" Foreground="#888888"/>
+					<TextBlock Text="Shortcuts: [↑/↓] Switch Scan | [←/→] Navigate Photos | [R] Rotate | [X] Delete" 
+							   VerticalAlignment="Center" FontSize="11" Foreground="#555555"/>
+				</StackPanel>
+				<TextBlock Grid.Column="1" x:Name="lblPhotoInfo" Text="" Margin="10,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#3399ff"/>
+			</Grid>
+		</Border>
+
+		<!-- Main Workspace -->
+		<Grid ColumnDefinitions="*, *">
+			<!-- Left: Original Scan -->
+			<Border Grid.Column="0" Margin="10" Background="#121212" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
+				<Grid RowDefinitions="Auto, *">
+					<TextBlock Grid.Row="0" Text="ORIGINAL SCAN (CLICK &amp; DRAG TO MANUALLY CROP)" Margin="10,5" FontSize="10" FontWeight="Bold" Foreground="#555555"/>
+					<Panel Grid.Row="1" x:Name="pnlOriginal" Background="Transparent" 
+						   PointerPressed="PnlOriginal_PointerPressed" 
+						   PointerMoved="PnlOriginal_PointerMoved" 
+						   PointerReleased="PnlOriginal_PointerReleased">
+						<Image x:Name="img" Stretch="Uniform" Margin="10" 
+							   VerticalAlignment="Center" HorizontalAlignment="Center"/>
+						<Canvas x:Name="cnvCrop" Background="Transparent" IsHitTestVisible="False">
+							<Rectangle x:Name="rectCrop" Stroke="#3399ff" StrokeThickness="2" Fill="#333399ff" IsVisible="False"/>
+						</Canvas>
+					</Panel>
+				</Grid>
+			</Border>
+
+			<!-- Right: Cropped Results -->
+			<Border Grid.Column="1" Margin="10" Background="#121212" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
+				<Grid RowDefinitions="Auto, *, Auto">
+					<TextBlock Grid.Row="0" Text="DETECTED PHOTOS" Margin="10,5" FontSize="10" FontWeight="Bold" Foreground="#555555"/>
+					
+					<Panel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="1000" MaxHeight="800">
+						<Carousel x:Name="slides" SelectionChanged="Slides_SelectionChanged">
+							<Carousel.PageTransition>
+								<PageSlide Duration="0:0:0.2" Orientation="Horizontal" />
+							</Carousel.PageTransition>
+							<Carousel.ItemTemplate>
+								<DataTemplate>
+									<Border Margin="10" CornerRadius="4" ClipToBounds="True" Background="#000000">
+										<Image Stretch="Uniform" Source="{Binding}" 
+											   MaxHeight="700" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+									</Border>
+								</DataTemplate>
+							</Carousel.ItemTemplate>
+						</Carousel>
+						
+						<!-- Overlay Controls -->
+						<Button VerticalAlignment="Center" HorizontalAlignment="Left" Margin="-15,0"
+								Click="BtnPreviousCroppedImage_Click" Content="&lt;" 
+								Background="#80000000" Width="40" Height="80" CornerRadius="4"/>
+						
+						<Button VerticalAlignment="Center" HorizontalAlignment="Right" Margin="-15,0"
+								Click="BtnNextCroppedImage_Click" Content="&gt;" 
+								Background="#80000000" Width="40" Height="80" CornerRadius="4"/>
+					</Panel>
+
+					<StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15" Spacing="10">
+						<Button x:Name="btnDelete" Click="BtnDelete_Click" Padding="15,10" CornerRadius="20" Background="#442222">
+							<StackPanel Orientation="Horizontal" Spacing="5">
+								<TextBlock Text="✖" FontSize="16" VerticalAlignment="Center" Foreground="#ff4444"/>
+								<TextBlock Text="Delete" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
+						<Button x:Name="btnRotate" Click="BtnRotate_Click" Padding="15,10" CornerRadius="20" Background="#2d2d2d">
+							<StackPanel Orientation="Horizontal" Spacing="5">
+								<TextBlock Text="↻" FontSize="16" VerticalAlignment="Center"/>
+								<TextBlock Text="Rotate 90°" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
+						<Button x:Name="btnRefine" Click="BtnRefine_Click" Padding="15,10" CornerRadius="20" Background="#2d2d2d" ToolTip.Tip="Shortcut: Ñ or N">
+							<StackPanel Orientation="Horizontal" Spacing="5">
+								<TextBlock Text="✨" FontSize="16" VerticalAlignment="Center"/>
+								<TextBlock Text="Refine Edges" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
+					</StackPanel>
+				</Grid>
+			</Border>
+		</Grid>
+		</DockPanel>
+
+		<!-- Refine Overlay -->
+		<Panel x:Name="pnlRefineOverlay" Background="#E0000000" IsVisible="False" ZIndex="100">
+			<Grid RowDefinitions="*, Auto" Margin="50">
+				<Border Grid.Row="0" Margin="20" CornerRadius="8" ClipToBounds="True" Background="#111111" BorderBrush="#333333" BorderThickness="1">
+					<Panel x:Name="pnlRefineImage" Background="Transparent"
+						   PointerPressed="PnlRefine_PointerPressed"
+						   PointerMoved="PnlRefine_PointerMoved"
+						   PointerReleased="PnlRefine_PointerReleased">
+						<Image x:Name="imgRefine" Stretch="Uniform" Margin="20"
+							   VerticalAlignment="Center" HorizontalAlignment="Center"/>
+						<Canvas x:Name="cnvRefineCrop" Background="Transparent" IsHitTestVisible="False">
+							<Rectangle x:Name="rectRefineCrop" Stroke="#3399ff" StrokeThickness="2" Fill="#333399ff" IsVisible="False"/>
+						</Canvas>
+					</Panel>
+				</Border>
+				<StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="30" Margin="20">
+					<Button x:Name="btnAcceptRefine" Click="BtnAcceptRefine_Click" Padding="40,15" CornerRadius="8" Background="#2d882d">
+						<TextBlock Text="Accept (Enter)" FontSize="18" FontWeight="Bold"/>
+					</Button>
+					<Button x:Name="btnRejectRefine" Click="BtnRejectRefine_Click" Padding="40,15" CornerRadius="8" Background="#882d2d">
+						<TextBlock Text="Reject (Backspace)" FontSize="18" FontWeight="Bold"/>
+					</Button>
+				</StackPanel>
+			</Grid>
+		</Panel>
+	</Grid>
 </Window>
