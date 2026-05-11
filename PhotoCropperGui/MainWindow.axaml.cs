@@ -4,7 +4,6 @@ using Avalonia.Platform.Storage;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -80,11 +79,9 @@ public partial class MainWindow : Window
             await Task.Run(() => OriginalPhotos[currentIndex].DetectPhotos());
         }
 
-        using var mat = OriginalPhotos[currentIndex].OriginalWithDetected;
+        var mat = OriginalPhotos[currentIndex].OriginalWithDetected;
 
-        using var systemBitmap = EmguMatToSkia(mat);
-
-        img.Source = ConvertToAvaloniaBitmap(systemBitmap);
+        img.Source = ConvertMatToAvaloniaBitmap(mat);
 
         txtFileCounter.Text = $"Scan {currentIndex + 1} of {OriginalPhotos.Count}";
         lblStatus.Text = $"Loaded {fileName}";
@@ -101,8 +98,7 @@ public partial class MainWindow : Window
 
         foreach (var photo in OriginalPhotos[currentIndex].DetectedPhotos)
         {
-            using var systemBitmap = EmguMatToSkia(photo);
-            slides.Items.Add(ConvertToAvaloniaBitmap(systemBitmap));
+            slides.Items.Add(ConvertMatToAvaloniaBitmap(photo));
         }
     }
 
@@ -409,7 +405,7 @@ public partial class MainWindow : Window
         if (photoIndex < 0) return;
 
         var photoCropper = OriginalPhotos[currentIndex];
-        Mat previewMat = photoCropper.DetectedPhotos[photoIndex].Clone();
+        using Mat previewMat = photoCropper.DetectedPhotos[photoIndex].Clone();
 
         System.Drawing.Rectangle drawRect = currentRefineRect;
         int thickness = 8;
@@ -417,32 +413,25 @@ public partial class MainWindow : Window
 
         CvInvoke.Rectangle(previewMat, drawRect, new MCvScalar(0, 0, 255), thickness);
 
-        using var systemBitmap = EmguMatToSkia(previewMat);
-        imgRefine.Source = ConvertToAvaloniaBitmap(systemBitmap);
-        previewMat.Dispose();
+        imgRefine.Source = ConvertMatToAvaloniaBitmap(previewMat);
     }
-    public static SKBitmap EmguMatToSkia(Mat mat)
+
+    private static Bitmap ConvertMatToAvaloniaBitmap(Mat mat)
     {
-        // 1. Ensure the image is in a format Skia understands (BGRA is standard)
+        // 1. Ensure the image is in a format Avalonia understands (RGBA is standard)
         // We create a temporary Mat for the conversion
-        using Mat bgraMat = new();
-        CvInvoke.CvtColor(mat, bgraMat, ColorConversion.Bgr2Bgra);
+        using Mat rgbaMat = new();
+        CvInvoke.CvtColor(mat, rgbaMat, ColorConversion.Bgr2Rgba);
 
-        // 2. Define the Skia Image Info
-        // Note: Emgu.CV Mat.Step is the 'RowBytes' in Skia terms
-        var info = new SKImageInfo(
-            bgraMat.Width,
-            bgraMat.Height,
-            SKColorType.Bgra8888,
-            SKAlphaType.Premul);
-
-        // 3. Create the SKBitmap and set the pixels directly from the Mat's data pointer
-        var bitmap = new SKBitmap();
-        bitmap.InstallPixels(info, bgraMat.DataPointer, bgraMat.Step);
-
-        // 4. IMPORTANT: Since InstallPixels uses the Mat's memory, 
-        // we must create a full copy if the 'bgraMat' is about to be disposed.
-        return bitmap.Copy();
+        // 2. Create Avalonia Bitmap directly from the Mat's data pointer
+        // This constructor performs a fast memory copy.
+        return new Bitmap(
+            Avalonia.Platform.PixelFormat.Rgba8888,
+            Avalonia.Platform.AlphaFormat.Premul,
+            rgbaMat.DataPointer,
+            new Avalonia.PixelSize(rgbaMat.Width, rgbaMat.Height),
+            new Avalonia.Vector(96, 96),
+            rgbaMat.Step);
     }
     private void PnlRefine_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
@@ -579,15 +568,6 @@ public partial class MainWindow : Window
             photo.Dispose();
         }
         OriginalPhotos.Clear();
-    }
-
-    private static Bitmap ConvertToAvaloniaBitmap(SKBitmap systemBitmap)
-    {
-        using MemoryStream memoryStream = new();
-        systemBitmap.Encode(memoryStream, SKEncodedImageFormat.Png, 100);
-        memoryStream.Seek(0, SeekOrigin.Begin);
-        return new Bitmap(memoryStream);
-
     }
 
     #endregion
