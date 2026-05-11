@@ -2,7 +2,9 @@ using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Emgu.CV;
+using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,7 +15,7 @@ public partial class MainWindow : Window
 {
     private int currentIndex = 0;
     private readonly List<PhotoCropper.PhotoCropper> OriginalPhotos = [];
-    
+
     public MainWindow()
     {
         InitializeComponent();
@@ -75,8 +77,11 @@ public partial class MainWindow : Window
             OriginalPhotos[currentIndex].DetectPhotos();
         }
 
-        using var bitmap = OriginalPhotos[currentIndex].OriginalWithDetected.ToBitmap();
-        img.Source = ConvertToAvaloniaBitmap(bitmap);
+        using var mat = OriginalPhotos[currentIndex].OriginalWithDetected;
+
+        using var systemBitmap = EmguMatToSkia(mat);
+
+        img.Source = ConvertToAvaloniaBitmap(systemBitmap);
 
         txtFileCounter.Text = $"Scan {currentIndex + 1} of {OriginalPhotos.Count}";
         lblStatus.Text = $"Loaded {fileName}";
@@ -91,7 +96,7 @@ public partial class MainWindow : Window
 
         foreach (var photo in OriginalPhotos[currentIndex].DetectedPhotos)
         {
-            using var systemBitmap = photo.ToBitmap();
+            using var systemBitmap = EmguMatToSkia(photo);
             slides.Items.Add(ConvertToAvaloniaBitmap(systemBitmap));
         }
     }
@@ -404,11 +409,33 @@ public partial class MainWindow : Window
 
         CvInvoke.Rectangle(previewMat, drawRect, new MCvScalar(0, 0, 255), thickness);
 
-        using var systemBitmap = previewMat.ToBitmap();
+        using var systemBitmap = EmguMatToSkia(previewMat);
         imgRefine.Source = ConvertToAvaloniaBitmap(systemBitmap);
         previewMat.Dispose();
     }
+    public static SKBitmap EmguMatToSkia(Mat mat)
+    {
+        // 1. Ensure the image is in a format Skia understands (BGRA is standard)
+        // We create a temporary Mat for the conversion
+        using Mat bgraMat = new();
+        CvInvoke.CvtColor(mat, bgraMat, ColorConversion.Bgr2Bgra);
 
+        // 2. Define the Skia Image Info
+        // Note: Emgu.CV Mat.Step is the 'RowBytes' in Skia terms
+        var info = new SKImageInfo(
+            bgraMat.Width,
+            bgraMat.Height,
+            SKColorType.Bgra8888,
+            SKAlphaType.Premul);
+
+        // 3. Create the SKBitmap and set the pixels directly from the Mat's data pointer
+        var bitmap = new SKBitmap();
+        bitmap.InstallPixels(info, bgraMat.DataPointer, bgraMat.Step);
+
+        // 4. IMPORTANT: Since InstallPixels uses the Mat's memory, 
+        // we must create a full copy if the 'bgraMat' is about to be disposed.
+        return bitmap.Copy();
+    }
     private void PnlRefine_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
         if (!isRefining) return;
@@ -425,7 +452,7 @@ public partial class MainWindow : Window
     {
         if (!isRefineDragging) return;
         var currentPoint = e.GetPosition(pnlRefineImage);
-        
+
         double x = Math.Min(startRefinePoint.X, currentPoint.X);
         double y = Math.Min(startRefinePoint.Y, currentPoint.Y);
         double w = Math.Abs(startRefinePoint.X - currentPoint.X);
@@ -469,7 +496,7 @@ public partial class MainWindow : Window
 
         currentRefineRect = new System.Drawing.Rectangle(x, y, w, h);
         currentRefineRect.Intersect(new System.Drawing.Rectangle(System.Drawing.Point.Empty, photo.Size));
-        
+
         UpdateRefinePreview();
     }
 
@@ -484,7 +511,7 @@ public partial class MainWindow : Window
         double availableHeight = controlSize.Height - 40;
 
         double scale = Math.Min(availableWidth / imageSize.Width, availableHeight / imageSize.Height);
-        
+
         double w = imageSize.Width * scale;
         double h = imageSize.Height * scale;
         double x = 20 + (availableWidth - w) / 2;
@@ -546,12 +573,13 @@ public partial class MainWindow : Window
         OriginalPhotos.Clear();
     }
 
-    private static Bitmap ConvertToAvaloniaBitmap(System.Drawing.Bitmap systemBitmap)
+    private static Bitmap ConvertToAvaloniaBitmap(SKBitmap systemBitmap)
     {
         using MemoryStream memoryStream = new();
-        systemBitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
+        systemBitmap.Encode(memoryStream, SKEncodedImageFormat.Png, 100);
         memoryStream.Seek(0, SeekOrigin.Begin);
         return new Bitmap(memoryStream);
+
     }
 
     #endregion
