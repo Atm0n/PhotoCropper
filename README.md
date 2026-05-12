@@ -13,7 +13,17 @@ An intelligent, cross-platform .NET 10 desktop application designed to automatic
 - **Interactive Refinement Mode:** An advanced overlay mode (Shortcut: `Ñ` or `N`) that uses Adaptive Border Trimming to perfectly shrink-wrap the crop box around the photo, removing stubborn white scanner margins.
 - **Manual Cropping:** Draw directly on the original scan to extract custom regions. You can also manually draw refinement boxes in the Refinement Mode.
 - **True Color Saving:** Automatically manages RGB-to-BGR color space conversion to guarantee saved JPEG files retain 100% of their original color accuracy without bluish artifacts.
+- **Multi-Language Support:** Automatically detects system language. Supported: English, Spanish (Castellano), and Catalan (Català).
 - **Professional Dark GUI:** A sleek, fully responsive dark theme interface with intuitive carousels, status updates, and constraint-based image scaling.
+
+## Quality & Stability
+
+The project includes a comprehensive **xUnit test suite** for the core engine (`PhotoCropper.Tests`). These tests cover:
+- Automatic detection accuracy.
+- Intelligent manual cropping and edge-snapping.
+- Advanced edge refinement (margin removal).
+- File saving operations and directory management.
+- 90° rotation logic and dimension swapping.
 
 ## Keyboard Shortcuts
 

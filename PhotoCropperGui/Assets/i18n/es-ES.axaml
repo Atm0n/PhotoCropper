@@ -25,5 +25,14 @@
 	<sys:String x:Key="MsgSaved">Se han guardado {0} fotos con éxito.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocesando con nuevos ajustes...</sys:String>
 	<sys:String x:Key="MsgDetectionComplete">Detección finalizada. Encontradas {0} fotos.</sys:String>
+	<sys:String x:Key="MsgPhotoDeleted">Foto eliminada.</sys:String>
+	<sys:String x:Key="MsgRotating">Rotando foto...</sys:String>
+	<sys:String x:Key="MsgPhotoRotated">Foto rotada.</sys:String>
+	<sys:String x:Key="MsgExtractingCrop">Extrayendo recorte manual...</sys:String>
+	<sys:String x:Key="MsgManualCropAdded">Recorte manual añadido.</sys:String>
+	<sys:String x:Key="MsgRefineModeHelp">Modo ajuste: Dibuja para recortar, Enter para Aceptar, Retroceso para Cancelar.</sys:String>
+	<sys:String x:Key="MsgApplyingRefine">Aplicando ajuste...</sys:String>
+	<sys:String x:Key="MsgRefineSuccess">Recorte ajustado con éxito.</sys:String>
+	<sys:String x:Key="MsgRefineCancelled">Ajuste cancelado.</sys:String>
 	<sys:String x:Key="MenuLanguage">Idioma</sys:String>
 </ResourceDictionary>
