@@ -2,8 +2,6 @@ using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using System.Drawing;
-using PhotoCropper = PhotoCropper.PhotoCropper;
-using Xunit;
 
 namespace PhotoCropper.Tests;
 
