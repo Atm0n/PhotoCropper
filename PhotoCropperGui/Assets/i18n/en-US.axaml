@@ -1,0 +1,29 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+	<sys:String x:Key="BtnOpenScans">Open Scans</sys:String>
+	<sys:String x:Key="BtnSaveResults">Save All Results</sys:String>
+	<sys:String x:Key="LblDetectionSensitivity">Detection Sensitivity</sys:String>
+	<sys:String x:Key="LblZoom">Zoom</sys:String>
+	<sys:String x:Key="BtnAdvanced">Advanced</sys:String>
+	<sys:String x:Key="LblMinPhotoSize">Min Photo Size</sys:String>
+	<sys:String x:Key="LblMaxPhotoSize">Max Photo Size</sys:String>
+	<sys:String x:Key="LblEdgeThreshold">Edge Threshold</sys:String>
+	<sys:String x:Key="TxtNoFiles">No files loaded</sys:String>
+	<sys:String x:Key="HeaderOriginal">ORIGINAL SCAN (CLICK &amp; DRAG TO MANUALLY CROP)</sys:String>
+	<sys:String x:Key="HeaderDetected">DETECTED PHOTOS</sys:String>
+	<sys:String x:Key="BtnDelete">Delete</sys:String>
+	<sys:String x:Key="BtnRotate">Rotate 90°</sys:String>
+	<sys:String x:Key="BtnRefine">Refine Edges</sys:String>
+	<sys:String x:Key="BtnAccept">Accept (Enter)</sys:String>
+	<sys:String x:Key="BtnReject">Reject (Backspace)</sys:String>
+	<sys:String x:Key="StatusReady">Ready</sys:String>
+	<sys:String x:Key="StatusShortcuts">Shortcuts: [↑/↓] Switch Scan | [←/→] Navigate Photos | [R] Rotate | [X] Delete</sys:String>
+	<sys:String x:Key="PhotoCounter">PHOTO {0} OF {1}</sys:String>
+	<sys:String x:Key="ScanCounter">Scan {0} of {1}</sys:String>
+	<sys:String x:Key="ProcessingScan">Processing Scan...</sys:String>
+	<sys:String x:Key="MsgSaved">Successfully saved {0} photos to 'cropped' folders.</sys:String>
+	<sys:String x:Key="MsgReprocessing">Reprocessing scan with new settings...</sys:String>
+	<sys:String x:Key="MsgDetectionComplete">Detection complete. Found {0} photos.</sys:String>
+	<sys:String x:Key="MenuLanguage">Language</sys:String>
+</ResourceDictionary>

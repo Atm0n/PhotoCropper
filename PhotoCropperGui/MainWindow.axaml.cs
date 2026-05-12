@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using Avalonia.VisualTree;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
@@ -21,6 +20,30 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        PopulateLanguageMenu();
+    }
+
+    private void PopulateLanguageMenu()
+    {
+        if (menuLanguage == null) return;
+
+        var languages = LocalizationManager.GetAvailableLanguages();
+        foreach (var lang in languages)
+        {
+            var item = new MenuItem
+            {
+                Header = lang.Name,
+                Tag = lang.Code
+            };
+            item.Click += (s, e) =>
+            {
+                if (s is MenuItem mi && mi.Tag is string code)
+                {
+                    LocalizationManager.SetLanguage(code);
+                }
+            };
+            menuLanguage.Items.Add(item);
+        }
     }
 
     #region UI Initialization & File Handling
@@ -36,7 +59,7 @@ public partial class MainWindow : Window
         var storageProvider = topLevel.StorageProvider;
         var fileResult = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Select Files",
+            Title = Application.Current?.FindResource("BtnOpenScans")?.ToString() ?? "Select Files",
             FileTypeFilter =
             [
                 FilePickerFileTypes.ImageAll,
@@ -76,7 +99,8 @@ public partial class MainWindow : Window
         if (OriginalPhotos.Count == 0) return;
 
         string fileName = Path.GetFileName(OriginalPhotos[currentIndex].OriginalFilePath);
-        lblStatus.Text = $"Processing: {fileName}...";
+        string processingMsg = Application.Current?.FindResource("ProcessingScan")?.ToString() ?? "Processing...";
+        lblStatus.Text = $"{processingMsg} {fileName}";
         
         pnlLoadingOverlay.IsVisible = true;
 
@@ -89,8 +113,9 @@ public partial class MainWindow : Window
 
         img.Source = ConvertMatToAvaloniaBitmap(mat);
 
-        txtFileCounter.Text = $"Scan {currentIndex + 1} of {OriginalPhotos.Count}";
-        lblStatus.Text = $"Loaded {fileName}";
+        string scanCounterFormat = Application.Current?.FindResource("ScanCounter")?.ToString() ?? "Scan {0} of {1}";
+        txtFileCounter.Text = string.Format(scanCounterFormat, currentIndex + 1, OriginalPhotos.Count);
+        lblStatus.Text = fileName;
 
         LoadCroppedPhotosToSlider();
         UpdatePhotoCounterLabel();
@@ -100,16 +125,6 @@ public partial class MainWindow : Window
 
     private void LoadCroppedPhotosToSlider()
     {
-        // Dispose old bitmaps to prevent memory leaks
-        foreach (var item in slides.Items)
-        {
-            if (item is Bitmap bmp)
-            {
-                // Avalonia Bitmaps don't have a public Dispose, but they wrap native resources.
-                // In modern Avalonia, they are cleaned up by GC, but we can help by clearing references.
-            }
-        }
-        
         slides.Items.Clear();
 
         foreach (var photo in OriginalPhotos[currentIndex].DetectedPhotos)
@@ -138,7 +153,8 @@ public partial class MainWindow : Window
             totalSaved += originalPhoto.DetectedPhotos.Count;
         }
 
-        lblStatus.Text = $"Successfully saved {totalSaved} photos to 'cropped' folders.";
+        string msgFormat = Application.Current?.FindResource("MsgSaved")?.ToString() ?? "Successfully saved {0} photos.";
+        lblStatus.Text = string.Format(msgFormat, totalSaved);
     }
 
     private void BtnDelete_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -321,8 +337,6 @@ public partial class MainWindow : Window
     {
         if (e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Control))
         {
-            // 1. Capture relative position before zoom
-            var relativePos = e.GetPosition(pnlOriginal);
             double oldZoom = sldZoom.Value;
 
             // 2. Calculate new zoom

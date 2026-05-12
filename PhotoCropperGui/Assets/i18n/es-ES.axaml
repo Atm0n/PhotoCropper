@@ -1,0 +1,29 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+	<sys:String x:Key="BtnOpenScans">Abrir Escaneos</sys:String>
+	<sys:String x:Key="BtnSaveResults">Guardar Todo</sys:String>
+	<sys:String x:Key="LblDetectionSensitivity">Sensibilidad</sys:String>
+	<sys:String x:Key="LblZoom">Zoom</sys:String>
+	<sys:String x:Key="BtnAdvanced">Avanzado</sys:String>
+	<sys:String x:Key="LblMinPhotoSize">Tamaño Mínimo</sys:String>
+	<sys:String x:Key="LblMaxPhotoSize">Tamaño Máximo</sys:String>
+	<sys:String x:Key="LblEdgeThreshold">Umbral de Bordes</sys:String>
+	<sys:String x:Key="TxtNoFiles">Sin archivos</sys:String>
+	<sys:String x:Key="HeaderOriginal">ESCANEO ORIGINAL (CLIC Y ARRASTRAR PARA RECORTAR)</sys:String>
+	<sys:String x:Key="HeaderDetected">FOTOS DETECTADAS</sys:String>
+	<sys:String x:Key="BtnDelete">Eliminar</sys:String>
+	<sys:String x:Key="BtnRotate">Rotar 90°</sys:String>
+	<sys:String x:Key="BtnRefine">Ajustar Bordes</sys:String>
+	<sys:String x:Key="BtnAccept">Aceptar (Enter)</sys:String>
+	<sys:String x:Key="BtnReject">Rechazar (Retroceso)</sys:String>
+	<sys:String x:Key="StatusReady">Listo</sys:String>
+	<sys:String x:Key="StatusShortcuts">Atajos: [↑/↓] Cambiar Escaneo | [←/→] Navegar Fotos | [R] Rotar | [X] Borrar</sys:String>
+	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
+	<sys:String x:Key="ScanCounter">Escaneo {0} de {1}</sys:String>
+	<sys:String x:Key="ProcessingScan">Procesando...</sys:String>
+	<sys:String x:Key="MsgSaved">Se han guardado {0} fotos con éxito.</sys:String>
+	<sys:String x:Key="MsgReprocessing">Reprocesando con nuevos ajustes...</sys:String>
+	<sys:String x:Key="MsgDetectionComplete">Detección finalizada. Encontradas {0} fotos.</sys:String>
+	<sys:String x:Key="MenuLanguage">Idioma</sys:String>
+</ResourceDictionary>
