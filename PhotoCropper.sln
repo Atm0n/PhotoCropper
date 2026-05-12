@@ -1,13 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.12.35707.178
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11723.231 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoCropperGui", "PhotoCropperGui\PhotoCropperGui.csproj", "{D3BB32C9-6AD2-46A2-8DEE-4BD76134F391}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoCropper", "PhotoCropper\PhotoCropper.csproj", "{EDB92C37-B84F-4141-8158-72B297B8D5D6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoCropper.Tests", "PhotoCropper.Tests\PhotoCropper.Tests.csproj", "{980E37D9-E064-4C11-BDC5-0E699DC2BC2D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{5835A948-60DA-42BB-8D02-79D683CF4295}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -58,5 +60,11 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{980E37D9-E064-4C11-BDC5-0E699DC2BC2D} = {5835A948-60DA-42BB-8D02-79D683CF4295}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {059E2A87-112D-4CA1-B86F-E2705A252618}
 	EndGlobalSection
 EndGlobal
