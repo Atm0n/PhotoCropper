@@ -52,4 +52,10 @@
 	<sys:String x:Key="HelpShortcutRefine">[N] o [Ñ] Entrar en modo de ajuste</sys:String>
 	<sys:String x:Key="HelpShortcutClose">[ESC] Cerrar Ventana</sys:String>
 	<sys:String x:Key="TipRefine">Atajo: N o Ñ</sys:String>
+	<sys:String x:Key="HelpAboutTitle">Acerca de PhotoCropper</sys:String>
+	<sys:String x:Key="HelpAboutDescription">Extractor inteligente de fotos de alto rendimiento. Diseñado para una digitalización rápida y precisa de álbumes antiguos.</sys:String>
+	<sys:String x:Key="HelpVersion">Versión 1.1.0</sys:String>
+	<sys:String x:Key="HelpAuthor">Desarrollado por Nil Riera</sys:String>
+	<sys:String x:Key="HelpPoweredBy">Impulsado por Emgu.CV (wrapper de OpenCV)</sys:String>
+	<sys:String x:Key="HelpCopyright">© 2026 Nil Riera. Licencia GPLv3.</sys:String>
 </ResourceDictionary>

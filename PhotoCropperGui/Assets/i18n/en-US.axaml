@@ -52,4 +52,10 @@
 	<sys:String x:Key="HelpShortcutRefine">[N] or [Ñ] Enter refinement mode</sys:String>
 	<sys:String x:Key="HelpShortcutClose">[ESC] Close Overlay</sys:String>
 	<sys:String x:Key="TipRefine">Shortcut: N</sys:String>
+	<sys:String x:Key="HelpAboutTitle">About PhotoCropper</sys:String>
+	<sys:String x:Key="HelpAboutDescription">High-performance intelligent photo extractor. Designed for fast and precise digitization of old photo albums.</sys:String>
+	<sys:String x:Key="HelpVersion">Version 1.1.0</sys:String>
+	<sys:String x:Key="HelpAuthor">Developed by Nil Riera</sys:String>
+	<sys:String x:Key="HelpPoweredBy">Powered by Emgu.CV (OpenCV wrapper)</sys:String>
+	<sys:String x:Key="HelpCopyright">© 2026 Nil Riera. Licensed under GPLv3.</sys:String>
 </ResourceDictionary>

@@ -42,7 +42,9 @@ The project includes a comprehensive **xUnit test suite** for the core engine (`
 
 ## Deployment
 
-To publish the application for Windows and Linux without manual configuration, run the provided PowerShell script:
+The application is fully cross-platform and supports **Windows** and **Ubuntu/Linux**.
+
+To publish the application without manual configuration, run the provided PowerShell script:
 
 ```powershell
 ./publish.ps1
@@ -52,4 +54,4 @@ This will create a `publish/` folder containing **self-contained, single-file ex
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.

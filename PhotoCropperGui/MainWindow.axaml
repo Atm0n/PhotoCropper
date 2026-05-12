@@ -272,6 +272,17 @@
 						</StackPanel>
 					</Border>
 
+					<StackPanel Spacing="5" HorizontalAlignment="Center">
+						<TextBlock Text="{DynamicResource HelpAboutTitle}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#3399ff"/>
+						<TextBlock Text="{DynamicResource HelpAboutDescription}" HorizontalAlignment="Center" Foreground="#aaaaaa" TextAlignment="Center"/>
+						<StackPanel Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center" Margin="0,10,0,0">
+							<TextBlock Text="{DynamicResource HelpVersion}" Foreground="#888888" FontSize="12"/>
+							<TextBlock Text="{DynamicResource HelpAuthor}" Foreground="#888888" FontSize="12" FontWeight="Bold"/>
+						</StackPanel>
+						<TextBlock Text="{DynamicResource HelpPoweredBy}" Foreground="#888888" FontSize="11" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+						<TextBlock Text="{DynamicResource HelpCopyright}" Foreground="#555555" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+					</StackPanel>
+
 					<Button x:Name="btnCloseHelp" Click="BtnCloseHelp_Click" HorizontalAlignment="Center" Padding="40,15" CornerRadius="8" Background="#3399ff">
 						<TextBlock Text="{DynamicResource BtnClose}" FontSize="18" FontWeight="Bold" Foreground="White"/>
 					</Button>
