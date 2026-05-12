@@ -52,9 +52,15 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         ls -R PhotoCropper.Tests/bin/Release/net10.0/
+        ldd PhotoCropper.Tests/bin/Release/net10.0/libcvextern.so
 
     - name: Test
-      run: dotnet test --no-build -c Release --verbosity normal
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/PhotoCropper.Tests/bin/Release/net10.0/
+        fi
+        dotnet test --no-build -c Release --verbosity normal
+      shell: bash
 
     - name: Publish
       run: |
