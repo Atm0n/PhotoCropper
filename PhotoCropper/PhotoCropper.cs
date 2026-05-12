@@ -88,7 +88,7 @@ public class PhotoCropper : IDisposable
         ProcessContours(foreground);
     }
 
-    private MCvScalar SampleBackgroundColor(Mat hsv)
+    private static MCvScalar SampleBackgroundColor(Mat hsv)
     {
         int s = 15; // sample size
         if (hsv.Width < s * 2 + 10 || hsv.Height < s * 2 + 10) return new MCvScalar();
@@ -314,9 +314,9 @@ public class PhotoCropper : IDisposable
         DetectedPhotos.RemoveAt(index);
     }
 
-    public System.Drawing.Rectangle GetRefinedCropRect(int index)
+    public Rectangle GetRefinedCropRect(int index)
     {
-        if (index < 0 || index >= DetectedPhotos.Count) return System.Drawing.Rectangle.Empty;
+        if (index < 0 || index >= DetectedPhotos.Count) return Rectangle.Empty;
 
         Mat photo = DetectedPhotos[index];
         using Mat gray = new();
@@ -374,12 +374,12 @@ public class PhotoCropper : IDisposable
         return finalRect;
     }
 
-    public void ApplyCropToPhoto(int index, System.Drawing.Rectangle rect)
+    public void ApplyCropToPhoto(int index, Rectangle rect)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return;
         
         Mat photo = DetectedPhotos[index];
-        rect.Intersect(new System.Drawing.Rectangle(Point.Empty, photo.Size));
+        rect.Intersect(new Rectangle(Point.Empty, photo.Size));
         if (rect.Width <= 10 || rect.Height <= 10) return;
 
         Mat cropped = new Mat(photo, rect).Clone();

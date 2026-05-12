@@ -25,5 +25,14 @@
 	<sys:String x:Key="MsgSaved">Successfully saved {0} photos to 'cropped' folders.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessing scan with new settings...</sys:String>
 	<sys:String x:Key="MsgDetectionComplete">Detection complete. Found {0} photos.</sys:String>
+	<sys:String x:Key="MsgPhotoDeleted">Photo deleted.</sys:String>
+	<sys:String x:Key="MsgRotating">Rotating photo...</sys:String>
+	<sys:String x:Key="MsgPhotoRotated">Photo rotated.</sys:String>
+	<sys:String x:Key="MsgExtractingCrop">Extracting manual crop...</sys:String>
+	<sys:String x:Key="MsgManualCropAdded">Manual crop added.</sys:String>
+	<sys:String x:Key="MsgRefineModeHelp">Refinement mode: Draw to manual crop, Enter to Accept, Backspace to Reject.</sys:String>
+	<sys:String x:Key="MsgApplyingRefine">Applying refinement...</sys:String>
+	<sys:String x:Key="MsgRefineSuccess">Crop refined successfully.</sys:String>
+	<sys:String x:Key="MsgRefineCancelled">Refinement cancelled.</sys:String>
 	<sys:String x:Key="MenuLanguage">Language</sys:String>
 </ResourceDictionary>

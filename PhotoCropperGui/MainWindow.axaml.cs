@@ -179,7 +179,7 @@ public partial class MainWindow : Window
 
         LoadCroppedPhotosToSlider();
         slides.SelectedIndex = nextIndex;
-        lblStatus.Text = "Photo deleted.";
+        lblStatus.Text = Application.Current?.FindResource("MsgPhotoDeleted")?.ToString() ?? "Photo deleted.";
     }
 
     private async void BtnRotate_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -195,7 +195,7 @@ public partial class MainWindow : Window
         if (photoIndex < 0) return;
 
         pnlLoadingOverlay.IsVisible = true;
-        lblStatus.Text = "Rotating photo...";
+        lblStatus.Text = Application.Current?.FindResource("MsgRotating")?.ToString() ?? "Rotating...";
 
         await Task.Run(() => OriginalPhotos[currentIndex].RotatePhoto(photoIndex));
 
@@ -204,7 +204,7 @@ public partial class MainWindow : Window
         slides.SelectedIndex = savedIndex;
 
         pnlLoadingOverlay.IsVisible = false;
-        lblStatus.Text = "Photo rotated.";
+        lblStatus.Text = Application.Current?.FindResource("MsgPhotoRotated")?.ToString() ?? "Photo rotated.";
     }
 
     #endregion
@@ -223,12 +223,13 @@ public partial class MainWindow : Window
             photo.CannyHighThreshold = sldEdge.Value * 2.5;
             
             pnlLoadingOverlay.IsVisible = true;
-            lblStatus.Text = "Reprocessing scan with new settings...";
+            lblStatus.Text = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
             
             await Task.Run(() => photo.DetectPhotos());
             await LoadPhotosToGuiAsync();
             
-            lblStatus.Text = $"Detection complete. Found {photo.DetectedPhotos.Count} photos.";
+            string msgFormat = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
+            lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
         }
     }
 
@@ -256,7 +257,8 @@ public partial class MainWindow : Window
 
         int current = slides.SelectedIndex + 1;
         int total = currentPhoto.DetectedPhotos.Count;
-        lblPhotoInfo.Text = $"PHOTO {current} OF {total}";
+        string format = Application.Current?.FindResource("PhotoCounter")?.ToString() ?? "PHOTO {0} OF {1}";
+        lblPhotoInfo.Text = string.Format(format, current, total);
     }
 
     private void BtnPreviousCroppedImage_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -470,7 +472,7 @@ public partial class MainWindow : Window
         var rect = new System.Drawing.Rectangle(x, y, w, h);
         
         pnlLoadingOverlay.IsVisible = true;
-        lblStatus.Text = "Extracting manual crop...";
+        lblStatus.Text = Application.Current?.FindResource("MsgExtractingCrop")?.ToString() ?? "Extracting manual crop...";
         
         await Task.Run(() => photo.AddManualCrop(rect));
 
@@ -478,7 +480,7 @@ public partial class MainWindow : Window
         slides.SelectedIndex = photo.DetectedPhotos.Count - 1;
         
         pnlLoadingOverlay.IsVisible = false;
-        lblStatus.Text = "Manual crop added.";
+        lblStatus.Text = Application.Current?.FindResource("MsgManualCropAdded")?.ToString() ?? "Manual crop added.";
     }
 
     private Avalonia.Rect GetImageRectInsideControl()
@@ -529,7 +531,7 @@ public partial class MainWindow : Window
 
         isRefining = true;
         pnlRefineOverlay.IsVisible = true;
-        lblStatus.Text = "Refinement mode: Draw to manual crop, Enter to Accept, Backspace to Reject.";
+        lblStatus.Text = Application.Current?.FindResource("MsgRefineModeHelp")?.ToString() ?? "Refinement mode active.";
 
         UpdateRefinePreview();
     }
@@ -670,7 +672,7 @@ public partial class MainWindow : Window
         int photoIndex = slides.SelectedIndex;
         
         pnlLoadingOverlay.IsVisible = true;
-        lblStatus.Text = "Applying refinement...";
+        lblStatus.Text = Application.Current?.FindResource("MsgApplyingRefine")?.ToString() ?? "Applying refinement...";
 
         await Task.Run(() => OriginalPhotos[currentIndex].ApplyCropToPhoto(photoIndex, currentRefineRect));
 
@@ -681,14 +683,14 @@ public partial class MainWindow : Window
         slides.SelectedIndex = savedIndex;
         
         pnlLoadingOverlay.IsVisible = false;
-        lblStatus.Text = "Crop refined successfully.";
+        lblStatus.Text = Application.Current?.FindResource("MsgRefineSuccess")?.ToString() ?? "Crop refined successfully.";
     }
 
     private void RejectRefine()
     {
         if (!isRefining) return;
         CloseRefineMode();
-        lblStatus.Text = "Refinement cancelled.";
+        lblStatus.Text = Application.Current?.FindResource("MsgRefineCancelled")?.ToString() ?? "Refinement cancelled.";
     }
 
     private void CloseRefineMode()

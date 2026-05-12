@@ -25,5 +25,14 @@
 	<sys:String x:Key="MsgSaved">S'han guardat {0} fotos correctament.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessant amb nous ajustos...</sys:String>
 	<sys:String x:Key="MsgDetectionComplete">Detecció finalitzada. Trobades {0} fotos.</sys:String>
+	<sys:String x:Key="MsgPhotoDeleted">Foto esborrada.</sys:String>
+	<sys:String x:Key="MsgRotating">Girant foto...</sys:String>
+	<sys:String x:Key="MsgPhotoRotated">Foto girada.</sys:String>
+	<sys:String x:Key="MsgExtractingCrop">Extraient retall manual...</sys:String>
+	<sys:String x:Key="MsgManualCropAdded">Retall manual afegit.</sys:String>
+	<sys:String x:Key="MsgRefineModeHelp">Modo ajust: Dibuixa per retallar, Enter per Acceptar, Retrocés per Cancel·lar.</sys:String>
+	<sys:String x:Key="MsgApplyingRefine">Aplicant ajust...</sys:String>
+	<sys:String x:Key="MsgRefineSuccess">Retall ajustat correctament.</sys:String>
+	<sys:String x:Key="MsgRefineCancelled">Ajust cancel·lat.</sys:String>
 	<sys:String x:Key="MenuLanguage">Idioma</sys:String>
 </ResourceDictionary>
