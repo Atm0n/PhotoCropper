@@ -35,4 +35,21 @@
 	<sys:String x:Key="MsgRefineSuccess">Crop refined successfully.</sys:String>
 	<sys:String x:Key="MsgRefineCancelled">Refinement cancelled.</sys:String>
 	<sys:String x:Key="MenuLanguage">Language</sys:String>
+	<sys:String x:Key="BtnHelp">Help</sys:String>
+	<sys:String x:Key="BtnClose">Close</sys:String>
+	<sys:String x:Key="HeaderHelp">Controls &amp; Shortcuts</sys:String>
+	<sys:String x:Key="HelpOpenScans">Load multiple images or scans at once from your computer.</sys:String>
+	<sys:String x:Key="HelpSaveResults">Saves all currently detected and refined photos into a 'cropped' subfolder next to each original scan.</sys:String>
+	<sys:String x:Key="HelpSensitivity">Adjust how aggressively the engine looks for photo boundaries. Higher values find more faint borders but may include noise.</sys:String>
+	<sys:String x:Key="HelpManualCrop">Click and drag on the original scan (left) to manually define a photo area if it wasn't detected automatically.</sys:String>
+	<sys:String x:Key="HelpRefine">Enter a specialized mode to fine-tune a photo's edges. Ideal for removing white scanner margins or correcting slight misalignments.</sys:String>
+	<sys:String x:Key="HelpZoom">Use the slider or CTRL + Mouse Wheel to zoom into high-res scans for precise manual cropping.</sys:String>
+	<sys:String x:Key="HelpShortcutsTitle">Keyboard Shortcuts</sys:String>
+	<sys:String x:Key="HelpShortcutRotate">[R] Rotate current photo 90°</sys:String>
+	<sys:String x:Key="HelpShortcutDelete">[X] or [Delete] Discard current photo</sys:String>
+	<sys:String x:Key="HelpShortcutNextScan">[PageUp / PageDown] Switch between scans</sys:String>
+	<sys:String x:Key="HelpShortcutNextPhoto">[Left / Right] Navigate detected photos</sys:String>
+	<sys:String x:Key="HelpShortcutRefine">[N] or [Ñ] Enter refinement mode</sys:String>
+	<sys:String x:Key="HelpShortcutClose">[ESC] Close Overlay</sys:String>
+	<sys:String x:Key="TipRefine">Shortcut: N</sys:String>
 </ResourceDictionary>

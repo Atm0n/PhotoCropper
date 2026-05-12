@@ -140,6 +140,20 @@ public partial class MainWindow : Window
 
     #endregion
 
+    private async void BtnPrevScan_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (OriginalPhotos.Count == 0) return;
+        currentIndex = (currentIndex - 1 + OriginalPhotos.Count) % OriginalPhotos.Count;
+        await LoadPhotosToGuiAsync();
+    }
+
+    private async void BtnNextScan_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (OriginalPhotos.Count == 0) return;
+        currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
+        await LoadPhotosToGuiAsync();
+    }
+
     #region Actions (Rotate, Delete, Save)
 
     private void BtnSaveImages_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -209,6 +223,20 @@ public partial class MainWindow : Window
 
     #endregion
 
+    #region Help Panel
+
+    private void BtnHelp_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        pnlHelpOverlay.IsVisible = true;
+    }
+
+    private void BtnCloseHelp_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        pnlHelpOverlay.IsVisible = false;
+    }
+
+    #endregion
+
     #region Sliders & Navigation
 
     private async void SldSensitivity_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
@@ -273,49 +301,101 @@ public partial class MainWindow : Window
 
     private async void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
+        // 1. Modifier-based Shortcuts
+        if (e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Control) && e.Key == Avalonia.Input.Key.S)
+        {
+            BtnSaveImages_Click(null, new Avalonia.Interactivity.RoutedEventArgs());
+            e.Handled = true;
+            return;
+        }
+
+        // 2. Overlay Closures
+        if (pnlHelpOverlay.IsVisible && e.Key == Avalonia.Input.Key.Escape)
+        {
+            pnlHelpOverlay.IsVisible = false;
+            e.Handled = true;
+            return;
+        }
+
+        // 3. Refinement Mode Logic
         if (isRefining)
         {
-            if (e.Key == Avalonia.Input.Key.Enter)
+            switch (e.Key)
             {
-                AcceptRefine();
-            }
-            else if (e.Key == Avalonia.Input.Key.Back || e.Key == Avalonia.Input.Key.Escape)
-            {
-                RejectRefine();
+                case Avalonia.Input.Key.Enter:
+                case Avalonia.Input.Key.A:
+                    AcceptRefine();
+                    e.Handled = true;
+                    break;
+                case Avalonia.Input.Key.Back:
+                case Avalonia.Input.Key.Escape:
+                case Avalonia.Input.Key.C:
+                    RejectRefine();
+                    e.Handled = true;
+                    break;
             }
             return;
         }
 
         if (OriginalPhotos.Count == 0) return;
 
-        // Catch N or OemTilde (usually Ñ on Spanish keyboards)
-        if (e.Key == Avalonia.Input.Key.N || e.Key == Avalonia.Input.Key.OemTilde || e.Key == Avalonia.Input.Key.Oem3)
-        {
-            StartRefineMode();
-            return;
-        }
+        // 3. Main Navigation & Actions
+        // Normalize keys to avoid duplicate switch cases (e.g. Add and OemPlus are often the same value)
+        var key = e.Key;
+        if (key == Avalonia.Input.Key.OemPlus) key = Avalonia.Input.Key.Add;
+        if (key == Avalonia.Input.Key.OemMinus) key = Avalonia.Input.Key.Subtract;
+        if (key == Avalonia.Input.Key.OemTilde || key == Avalonia.Input.Key.Oem3) key = Avalonia.Input.Key.N;
 
-        switch (e.Key)
+        switch (key)
         {
-            case Avalonia.Input.Key.Left:
-                slides.Previous();
-                break;
-            case Avalonia.Input.Key.Right:
-                slides.Next();
-                break;
             case Avalonia.Input.Key.Up:
-                currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
-                await LoadPhotosToGuiAsync();
-                break;
-            case Avalonia.Input.Key.Down:
+            case Avalonia.Input.Key.PageUp:
                 currentIndex = (currentIndex - 1 + OriginalPhotos.Count) % OriginalPhotos.Count;
                 await LoadPhotosToGuiAsync();
+                e.Handled = true;
                 break;
+
+            case Avalonia.Input.Key.Down:
+            case Avalonia.Input.Key.PageDown:
+                currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
+                await LoadPhotosToGuiAsync();
+                e.Handled = true;
+                break;
+
+            case Avalonia.Input.Key.Left:
+                slides.Previous();
+                e.Handled = true;
+                break;
+
+            case Avalonia.Input.Key.Right:
+                slides.Next();
+                e.Handled = true;
+                break;
+
+            case Avalonia.Input.Key.Add:
+                sldZoom.Value = Math.Clamp(sldZoom.Value + 0.5, sldZoom.Minimum, sldZoom.Maximum);
+                e.Handled = true;
+                break;
+
+            case Avalonia.Input.Key.Subtract:
+                sldZoom.Value = Math.Clamp(sldZoom.Value - 0.5, sldZoom.Minimum, sldZoom.Maximum);
+                e.Handled = true;
+                break;
+
             case Avalonia.Input.Key.R:
                 await RotateCurrentPhotoAsync();
+                e.Handled = true;
                 break;
+
             case Avalonia.Input.Key.X:
+            case Avalonia.Input.Key.Delete:
                 DeleteCurrentPhoto();
+                e.Handled = true;
+                break;
+
+            case Avalonia.Input.Key.N:
+                StartRefineMode();
+                e.Handled = true;
                 break;
         }
     }
