@@ -1,0 +1,29 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+	<sys:String x:Key="BtnOpenScans">Obrir Escanejos</sys:String>
+	<sys:String x:Key="BtnSaveResults">Guardar Tot</sys:String>
+	<sys:String x:Key="LblDetectionSensitivity">Sensibilitat</sys:String>
+	<sys:String x:Key="LblZoom">Zoom</sys:String>
+	<sys:String x:Key="BtnAdvanced">Avançat</sys:String>
+	<sys:String x:Key="LblMinPhotoSize">Mida Mínima</sys:String>
+	<sys:String x:Key="LblMaxPhotoSize">Mida Màxima</sys:String>
+	<sys:String x:Key="LblEdgeThreshold">Llindar de Vores</sys:String>
+	<sys:String x:Key="TxtNoFiles">Sense fitxers</sys:String>
+	<sys:String x:Key="HeaderOriginal">ESCANEIG ORIGINAL (CLIC I ARROSSEGAR PER RETALLAR)</sys:String>
+	<sys:String x:Key="HeaderDetected">FOTOS DETECTADES</sys:String>
+	<sys:String x:Key="BtnDelete">Eliminar</sys:String>
+	<sys:String x:Key="BtnRotate">Girar 90°</sys:String>
+	<sys:String x:Key="BtnRefine">Ajustar Vores</sys:String>
+	<sys:String x:Key="BtnAccept">Acceptar (Enter)</sys:String>
+	<sys:String x:Key="BtnReject">Rebutjar (Retrocés)</sys:String>
+	<sys:String x:Key="StatusReady">Llest</sys:String>
+	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [R] Girar | [X] Esborrar</sys:String>
+	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
+	<sys:String x:Key="ScanCounter">Escaneig {0} de {1}</sys:String>
+	<sys:String x:Key="ProcessingScan">Processant...</sys:String>
+	<sys:String x:Key="MsgSaved">S'han guardat {0} fotos correctament.</sys:String>
+	<sys:String x:Key="MsgReprocessing">Reprocessant amb nous ajustos...</sys:String>
+	<sys:String x:Key="MsgDetectionComplete">Detecció finalitzada. Trobades {0} fotos.</sys:String>
+	<sys:String x:Key="MenuLanguage">Idioma</sys:String>
+</ResourceDictionary>
