@@ -12,9 +12,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-latest]
+        os: [ubuntu-24.04, windows-latest]
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             runtime: linux-x64
             artifact: PhotoCropper-Linux
           - os: windows-latest
@@ -35,7 +35,11 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update --fix-missing
-        sudo apt-get install -y libgomp1 libgl1 libtbb2 libglib2.0-0 libicu-dev libatlas-base-dev libjpeg-dev libx11-6
+        sudo apt-get install -y \
+          libgomp1 libgl1 libtbb12 libglib2.0-0 libicu-dev libatlas-base-dev libjpeg-dev libx11-6 \
+          libgeotiff-dev libhdf5-dev libvtk9-dev \
+          libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
+          libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 
     - name: Restore dependencies
       run: dotnet restore
