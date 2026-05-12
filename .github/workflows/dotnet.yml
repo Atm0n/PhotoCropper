@@ -35,13 +35,18 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update --fix-missing
-        sudo apt-get install -y libgomp1 libgl1 libtbb2 libglib2.0-0 libicu-dev libatlas-base-dev libjpeg-dev
+        sudo apt-get install -y libgomp1 libgl1 libtbb2 libglib2.0-0 libicu-dev libatlas-base-dev libjpeg-dev libx11-6
 
     - name: Restore dependencies
       run: dotnet restore
 
     - name: Build
       run: dotnet build --no-restore -c Release
+
+    - name: Fix Native Libraries (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        cp PhotoCropper.Tests/bin/Release/net10.0/runtimes/ubuntu-x64/native/* PhotoCropper.Tests/bin/Release/net10.0/
 
     - name: List Test Assets (Linux Debug)
       if: runner.os == 'Linux'
