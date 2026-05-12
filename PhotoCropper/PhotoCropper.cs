@@ -10,12 +10,16 @@ public class PhotoCropper : IDisposable
 {
     #region Fields & Properties
 
-    private readonly double MIN_AREA_THRESHOLD = 0;
-    private readonly double MAX_AREA_THRESHOLD = 0;
     private bool disposedValue;
 
     public string OriginalFilePath { get; }
+    
+    // Configurable Detection Parameters
     public double BackgroundTolerance { get; set; } = 30;
+    public double MinAreaFactor { get; set; } = 0.01; // 1% of scan
+    public double MaxAreaFactor { get; set; } = 0.90; // 90% of scan
+    public double CannyLowThreshold { get; set; } = 20;
+    public double CannyHighThreshold { get; set; } = 50;
 
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
@@ -29,10 +33,6 @@ public class PhotoCropper : IDisposable
     {
         this.OriginalFilePath = originalFilePath;
         Original = CvInvoke.Imread(originalFilePath, ImreadModes.AnyColor);
-
-        // Minimum 1% of scan, maximum 90%
-        MIN_AREA_THRESHOLD = (Original.Width * Original.Height) * 0.01;
-        MAX_AREA_THRESHOLD = (Original.Width * Original.Height) * 0.90;
 
         OriginalWithDetected = Original.Clone();
     }
@@ -88,7 +88,7 @@ public class PhotoCropper : IDisposable
         ProcessContours(foreground);
     }
 
-    private MCvScalar SampleBackgroundColor(Mat hsv)
+    private static MCvScalar SampleBackgroundColor(Mat hsv)
     {
         int s = 15; // sample size
         if (hsv.Width < s * 2 + 10 || hsv.Height < s * 2 + 10) return new MCvScalar();
@@ -137,7 +137,7 @@ public class PhotoCropper : IDisposable
         CvInvoke.CvtColor(Original, gray, ColorConversion.Bgr2Gray);
         Mat edges = new();
         CvInvoke.GaussianBlur(gray, edges, new Size(5, 5), 1.5);
-        CvInvoke.Canny(edges, edges, 20, 50);
+        CvInvoke.Canny(edges, edges, CannyLowThreshold, CannyHighThreshold);
         return edges;
     }
 
@@ -163,11 +163,15 @@ public class PhotoCropper : IDisposable
         using VectorOfVectorOfPoint contours = new();
         CvInvoke.FindContours(foregroundMap, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
 
+        double totalArea = Original.Width * Original.Height;
+        double minArea = totalArea * MinAreaFactor;
+        double maxArea = totalArea * MaxAreaFactor;
+
         var candidates = new List<(Rectangle Rect, double Area, VectorOfPoint Contour)>();
         for (int i = 0; i < contours.Size; i++)
         {
             double area = CvInvoke.ContourArea(contours[i]);
-            if (area > MIN_AREA_THRESHOLD && area < MAX_AREA_THRESHOLD)
+            if (area > minArea && area < maxArea)
             {
                 candidates.Add((CvInvoke.BoundingRectangle(contours[i]), area, new VectorOfPoint(contours[i].ToArray())));
             }
@@ -310,9 +314,9 @@ public class PhotoCropper : IDisposable
         DetectedPhotos.RemoveAt(index);
     }
 
-    public System.Drawing.Rectangle GetRefinedCropRect(int index)
+    public Rectangle GetRefinedCropRect(int index)
     {
-        if (index < 0 || index >= DetectedPhotos.Count) return System.Drawing.Rectangle.Empty;
+        if (index < 0 || index >= DetectedPhotos.Count) return Rectangle.Empty;
 
         Mat photo = DetectedPhotos[index];
         using Mat gray = new();
@@ -370,12 +374,12 @@ public class PhotoCropper : IDisposable
         return finalRect;
     }
 
-    public void ApplyCropToPhoto(int index, System.Drawing.Rectangle rect)
+    public void ApplyCropToPhoto(int index, Rectangle rect)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return;
         
         Mat photo = DetectedPhotos[index];
-        rect.Intersect(new System.Drawing.Rectangle(Point.Empty, photo.Size));
+        rect.Intersect(new Rectangle(Point.Empty, photo.Size));
         if (rect.Width <= 10 || rect.Height <= 10) return;
 
         Mat cropped = new Mat(photo, rect).Clone();

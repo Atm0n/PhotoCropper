@@ -13,6 +13,8 @@ namespace PhotoCropperGui
 
         public override void OnFrameworkInitializationCompleted()
         {
+            LocalizationManager.Initialize();
+
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 desktop.MainWindow = new MainWindow();
