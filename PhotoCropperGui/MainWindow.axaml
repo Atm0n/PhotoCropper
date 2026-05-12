@@ -32,6 +32,10 @@
 						<Menu Background="Transparent" VerticalAlignment="Center" Margin="5,0">
 							<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuLanguage"/>
 						</Menu>
+
+						<Button x:Name="btnHelp" Click="BtnHelp_Click" Padding="10,8" Background="Transparent" BorderThickness="0">
+							<TextBlock Text="❓" FontSize="18"/>
+						</Button>
 					</StackPanel>
 
 					<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
@@ -176,7 +180,7 @@
 								<TextBlock Text="{DynamicResource BtnRotate}" VerticalAlignment="Center"/>
 							</StackPanel>
 						</Button>
-						<Button x:Name="btnRefine" Click="BtnRefine_Click" Padding="15,10" CornerRadius="20" Background="#2d2d2d" ToolTip.Tip="Shortcut: Ñ or N">
+						<Button x:Name="btnRefine" Click="BtnRefine_Click" Padding="15,10" CornerRadius="20" Background="#2d2d2d" ToolTip.Tip="{DynamicResource TipRefine}">
 							<StackPanel Orientation="Horizontal" Spacing="5">
 								<TextBlock Text="✨" FontSize="16" VerticalAlignment="Center"/>
 								<TextBlock Text="{DynamicResource BtnRefine}" VerticalAlignment="Center"/>
@@ -219,6 +223,60 @@
 				<ProgressBar IsIndeterminate="True" Width="200" Height="20" Foreground="#3399ff"/>
 				<TextBlock Text="{DynamicResource ProcessingScan}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
 			</StackPanel>
+		</Panel>
+
+		<!-- Help Overlay -->
+		<Panel x:Name="pnlHelpOverlay" Background="#F0121212" IsVisible="False" ZIndex="300">
+			<ScrollViewer VerticalScrollBarVisibility="Auto">
+				<StackPanel Margin="50" MaxWidth="800" Spacing="30">
+					<TextBlock Text="{DynamicResource HeaderHelp}" FontSize="32" FontWeight="Bold" Foreground="#3399ff" HorizontalAlignment="Center"/>
+					
+					<Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto, Auto" Margin="0,20">
+						<StackPanel Grid.Row="0" Grid.Column="0" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource BtnOpenScans}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpOpenScans}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
+						<StackPanel Grid.Row="0" Grid.Column="1" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource BtnSaveResults}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpSaveResults}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
+						<StackPanel Grid.Row="1" Grid.Column="0" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource LblDetectionSensitivity}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpSensitivity}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
+						<StackPanel Grid.Row="1" Grid.Column="1" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource HeaderOriginal}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpManualCrop}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
+						<StackPanel Grid.Row="2" Grid.Column="0" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource BtnRefine}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpRefine}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
+						<StackPanel Grid.Row="2" Grid.Column="1" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource LblZoom}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpZoom}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
+					</Grid>
+
+					<Border Background="#1e1e1e" Padding="20" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
+						<StackPanel Spacing="15">
+							<TextBlock Text="{DynamicResource HelpShortcutsTitle}" FontSize="20" FontWeight="Bold"/>
+							<UniformGrid Columns="2">
+								<TextBlock Text="{DynamicResource HelpShortcutRotate}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutDelete}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutNextScan}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutNextPhoto}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutRefine}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutClose}" Margin="5"/>
+							</UniformGrid>
+						</StackPanel>
+					</Border>
+
+					<Button x:Name="btnCloseHelp" Click="BtnCloseHelp_Click" HorizontalAlignment="Center" Padding="40,15" CornerRadius="8" Background="#3399ff">
+						<TextBlock Text="{DynamicResource BtnClose}" FontSize="18" FontWeight="Bold" Foreground="White"/>
+					</Button>
+				</StackPanel>
+			</ScrollViewer>
 		</Panel>
 
 	</Grid>

@@ -223,6 +223,20 @@ public partial class MainWindow : Window
 
     #endregion
 
+    #region Help Panel
+
+    private void BtnHelp_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        pnlHelpOverlay.IsVisible = true;
+    }
+
+    private void BtnCloseHelp_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        pnlHelpOverlay.IsVisible = false;
+    }
+
+    #endregion
+
     #region Sliders & Navigation
 
     private async void SldSensitivity_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
@@ -295,7 +309,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        // 2. Refinement Mode Logic
+        // 2. Overlay Closures
+        if (pnlHelpOverlay.IsVisible && e.Key == Avalonia.Input.Key.Escape)
+        {
+            pnlHelpOverlay.IsVisible = false;
+            e.Handled = true;
+            return;
+        }
+
+        // 3. Refinement Mode Logic
         if (isRefining)
         {
             switch (e.Key)
@@ -326,12 +348,14 @@ public partial class MainWindow : Window
 
         switch (key)
         {
+            case Avalonia.Input.Key.Up:
             case Avalonia.Input.Key.PageUp:
                 currentIndex = (currentIndex - 1 + OriginalPhotos.Count) % OriginalPhotos.Count;
                 await LoadPhotosToGuiAsync();
                 e.Handled = true;
                 break;
 
+            case Avalonia.Input.Key.Down:
             case Avalonia.Input.Key.PageDown:
                 currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
                 await LoadPhotosToGuiAsync();
@@ -364,6 +388,7 @@ public partial class MainWindow : Window
                 break;
 
             case Avalonia.Input.Key.X:
+            case Avalonia.Input.Key.Delete:
                 DeleteCurrentPhoto();
                 e.Handled = true;
                 break;

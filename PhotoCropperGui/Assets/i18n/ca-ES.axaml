@@ -35,4 +35,21 @@
 	<sys:String x:Key="MsgRefineSuccess">Retall ajustat correctament.</sys:String>
 	<sys:String x:Key="MsgRefineCancelled">Ajust cancel·lat.</sys:String>
 	<sys:String x:Key="MenuLanguage">Idioma</sys:String>
+	<sys:String x:Key="BtnHelp">Ajuda</sys:String>
+	<sys:String x:Key="BtnClose">Tancar</sys:String>
+	<sys:String x:Key="HeaderHelp">Controls i Dreceres</sys:String>
+	<sys:String x:Key="HelpOpenScans">Carrega múltiples imatges o escanejos a la vegada des del teu ordinador.</sys:String>
+	<sys:String x:Key="HelpSaveResults">Guarda totes les fotos detectades i ajustades en una subcarpeta 'cropped' al costat de cada escaneig original.</sys:String>
+	<sys:String x:Key="HelpSensitivity">Ajusta l'agressivitat amb què el motor busca les vores de les fotos. Valors alts troben vores tènues però poden incloure soroll.</sys:String>
+	<sys:String x:Key="HelpManualCrop">Fes clic i arrossega sobre l'escaneig original (esquerra) per definir manualment l'àrea d'una foto si no ha estat detectada.</sys:String>
+	<sys:String x:Key="HelpRefine">Entra en un mode especialitzat per ajustar les vores d'una foto. Ideal per eliminar marges blancs de l'escàner.</sys:String>
+	<sys:String x:Key="HelpZoom">Fes servir el lliscador o CTRL + Roda del ratolí per ampliar escanejos d'alta resolució i retallar amb precisió.</sys:String>
+	<sys:String x:Key="HelpShortcutsTitle">Dreceres de Teclat</sys:String>
+	<sys:String x:Key="HelpShortcutRotate">[R] Girar foto actual 90°</sys:String>
+	<sys:String x:Key="HelpShortcutDelete">[X] o [Supr] Descartar foto actual</sys:String>
+	<sys:String x:Key="HelpShortcutNextScan">[Re Pàg / Av Pàg] Canviar entre escanejos</sys:String>
+	<sys:String x:Key="HelpShortcutNextPhoto">[Esquerra / Dreta] Navegar per les fotos detectades</sys:String>
+	<sys:String x:Key="HelpShortcutRefine">[N] o [Ñ] Entrar en mode d'ajust</sys:String>
+	<sys:String x:Key="HelpShortcutClose">[ESC] Tancar Finestra</sys:String>
+	<sys:String x:Key="TipRefine">Drecera: N o Ñ</sys:String>
 </ResourceDictionary>
