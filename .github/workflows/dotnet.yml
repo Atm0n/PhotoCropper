@@ -10,6 +10,7 @@ jobs:
   build:
     name: Build & Test (${{ matrix.os }})
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-22.04, windows-latest]
         include:
@@ -34,7 +35,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update --fix-missing
-        sudo apt-get install -y libgomp1 libgl1 libtbb2
+        sudo apt-get install -y libgomp1 libgl1 libtbb2 libglib2.0-0
 
     - name: Restore dependencies
       run: dotnet restore
