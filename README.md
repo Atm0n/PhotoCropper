@@ -40,6 +40,16 @@ The project includes a comprehensive **xUnit test suite** for the core engine (`
 | `Ctrl + Mouse Wheel` | Zoom in/out on the original scan |
 | `Ctrl + S` | Save all results |
 
+## Deployment
+
+To publish the application for Windows and Linux without manual configuration, run the provided PowerShell script:
+
+```powershell
+./publish.ps1
+```
+
+This will create a `publish/` folder containing **self-contained, single-file executables** for both platforms. No .NET runtime installation is required on the target machines.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
