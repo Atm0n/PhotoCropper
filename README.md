@@ -30,9 +30,16 @@ The project includes a comprehensive **xUnit test suite** for the core engine (`
 | Shortcut | Action |
 |----------|--------|
 | `Left / Right` | Navigate between cropped photos |
-| `Up / Down` | Switch between original loaded scans |
+| `Up / Down` / `PageUp / PageDown` | Switch between original loaded scans |
 | `R` | Rotate the current cropped photo 90° clockwise |
-| `X` | Permanently delete the currently selected photo |
-| `Ñ` or `N` | Enter Interactive Refinement Mode |
-| `Enter` | Accept Refinement (while in Refinement Mode) |
-| `Backspace` or `Esc` | Reject Refinement (while in Refinement Mode) |
+| `X` / `Delete` | Permanently delete the currently selected photo |
+| `N` / `Ñ` | Enter Interactive Refinement Mode |
+| `Enter` / `A` | Accept Refinement (while in Refinement Mode) |
+| `Backspace` / `Esc` / `C` | Reject Refinement (while in Refinement Mode) |
+| `Esc` | Close Help or Refinement overlays |
+| `Ctrl + Mouse Wheel` | Zoom in/out on the original scan |
+| `Ctrl + S` | Save all results |
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
