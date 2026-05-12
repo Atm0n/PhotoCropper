@@ -54,8 +54,14 @@
 						<ToggleButton x:Name="tglAdvanced" Content="{DynamicResource BtnAdvanced}" Margin="10,0" Padding="10,5" VerticalAlignment="Center"/>
 					</StackPanel>
 
-					<StackPanel Grid.Column="2" Orientation="Horizontal" Margin="15,0" VerticalAlignment="Center">
-						<TextBlock x:Name="txtFileCounter" Text="{DynamicResource TxtNoFiles}" Foreground="#888888" VerticalAlignment="Center"/>
+					<StackPanel Grid.Column="2" Orientation="Horizontal" Margin="15,0" VerticalAlignment="Center" Spacing="8">
+						<Button x:Name="btnPrevScan" Click="BtnPrevScan_Click" Padding="8,4" Background="#333333">
+							<TextBlock Text="◀" FontSize="10"/>
+						</Button>
+						<TextBlock x:Name="txtFileCounter" Text="{DynamicResource TxtNoFiles}" Foreground="#888888" VerticalAlignment="Center" Margin="5,0"/>
+						<Button x:Name="btnNextScan" Click="BtnNextScan_Click" Padding="8,4" Background="#333333">
+							<TextBlock Text="▶" FontSize="10"/>
+						</Button>
 					</StackPanel>
 				</Grid>
 
