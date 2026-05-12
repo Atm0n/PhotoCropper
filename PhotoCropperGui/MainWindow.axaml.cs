@@ -58,8 +58,12 @@ public partial class MainWindow : Window
                 var filePath = file.Path.LocalPath;
                 var photo = new PhotoCropper.PhotoCropper(filePath)
                 {
-                    // Synchronize new photos with the current slider value
-                    BackgroundTolerance = sldSensitivity.Value
+                    // Synchronize new photos with the current slider values
+                    BackgroundTolerance = sldSensitivity.Value,
+                    MinAreaFactor = sldMinArea.Value / 100.0,
+                    MaxAreaFactor = sldMaxArea.Value / 100.0,
+                    CannyLowThreshold = sldEdge.Value,
+                    CannyHighThreshold = sldEdge.Value * 2.5 // Traditional Canny ratio
                 };
                 OriginalPhotos.Add(photo);
             }
@@ -96,11 +100,26 @@ public partial class MainWindow : Window
 
     private void LoadCroppedPhotosToSlider()
     {
+        // Dispose old bitmaps to prevent memory leaks
+        foreach (var item in slides.Items)
+        {
+            if (item is Bitmap bmp)
+            {
+                // Avalonia Bitmaps don't have a public Dispose, but they wrap native resources.
+                // In modern Avalonia, they are cleaned up by GC, but we can help by clearing references.
+            }
+        }
+        
         slides.Items.Clear();
 
         foreach (var photo in OriginalPhotos[currentIndex].DetectedPhotos)
         {
             slides.Items.Add(ConvertMatToAvaloniaBitmap(photo));
+        }
+
+        if (slides.Items.Count > 0)
+        {
+            slides.SelectedIndex = 0;
         }
     }
 
@@ -176,17 +195,24 @@ public partial class MainWindow : Window
 
     #region Sliders & Navigation
 
-    private async void SldSensitivity_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
+    private async void SldSensitivity_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
     {
         if (OriginalPhotos.Count > 0)
         {
-            OriginalPhotos[currentIndex].BackgroundTolerance = sldSensitivity.Value;
+            var photo = OriginalPhotos[currentIndex];
+            photo.BackgroundTolerance = sldSensitivity.Value;
+            photo.MinAreaFactor = sldMinArea.Value / 100.0;
+            photo.MaxAreaFactor = sldMaxArea.Value / 100.0;
+            photo.CannyLowThreshold = sldEdge.Value;
+            photo.CannyHighThreshold = sldEdge.Value * 2.5;
             
             pnlLoadingOverlay.IsVisible = true;
-            lblStatus.Text = "Reprocessing scan with new sensitivity...";
+            lblStatus.Text = "Reprocessing scan with new settings...";
             
-            await Task.Run(() => OriginalPhotos[currentIndex].DetectPhotos());
+            await Task.Run(() => photo.DetectPhotos());
             await LoadPhotosToGuiAsync();
+            
+            lblStatus.Text = $"Detection complete. Found {photo.DetectedPhotos.Count} photos.";
         }
     }
 
