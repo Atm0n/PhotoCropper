@@ -16,6 +16,7 @@ public partial class MainWindow : Window
 {
     private int currentIndex = 0;
     private readonly List<PhotoCropper.PhotoCropper> OriginalPhotos = [];
+    private bool isLoading = false;
 
     public MainWindow()
     {
@@ -126,30 +127,38 @@ public partial class MainWindow : Window
     private async Task LoadPhotosToGuiAsync()
     {
         if (OriginalPhotos.Count == 0) return;
+        if (isLoading) return;
+        isLoading = true;
 
-        string fileName = Path.GetFileName(OriginalPhotos[currentIndex].OriginalFilePath);
-        string processingMsg = Application.Current?.FindResource("ProcessingScan")?.ToString() ?? "Processing...";
-        lblStatus.Text = $"{processingMsg} {fileName}";
-        
-        pnlLoadingOverlay.IsVisible = true;
-
-        if (OriginalPhotos[currentIndex].DetectedPhotos.Count == 0)
+        try
         {
-            await Task.Run(() => OriginalPhotos[currentIndex].DetectPhotos());
+            string fileName = Path.GetFileName(OriginalPhotos[currentIndex].OriginalFilePath);
+            string processingMsg = Application.Current?.FindResource("ProcessingScan")?.ToString() ?? "Processing...";
+            lblStatus.Text = $"{processingMsg} {fileName}";
+            
+            pnlLoadingOverlay.IsVisible = true;
+
+            if (OriginalPhotos[currentIndex].DetectedPhotos.Count == 0)
+            {
+                await Task.Run(() => OriginalPhotos[currentIndex].DetectPhotos());
+            }
+
+            var mat = OriginalPhotos[currentIndex].OriginalWithDetected;
+
+            img.Source = ConvertMatToAvaloniaBitmap(mat);
+
+            string scanCounterFormat = Application.Current?.FindResource("ScanCounter")?.ToString() ?? "Scan {0} of {1}";
+            txtFileCounter.Text = string.Format(scanCounterFormat, currentIndex + 1, OriginalPhotos.Count);
+            lblStatus.Text = fileName;
+
+            LoadCroppedPhotosToSlider();
+            UpdatePhotoCounterLabel();
         }
-
-        var mat = OriginalPhotos[currentIndex].OriginalWithDetected;
-
-        img.Source = ConvertMatToAvaloniaBitmap(mat);
-
-        string scanCounterFormat = Application.Current?.FindResource("ScanCounter")?.ToString() ?? "Scan {0} of {1}";
-        txtFileCounter.Text = string.Format(scanCounterFormat, currentIndex + 1, OriginalPhotos.Count);
-        lblStatus.Text = fileName;
-
-        LoadCroppedPhotosToSlider();
-        UpdatePhotoCounterLabel();
-
-        pnlLoadingOverlay.IsVisible = false;
+        finally
+        {
+            pnlLoadingOverlay.IsVisible = false;
+            isLoading = false;
+        }
     }
 
     private void LoadCroppedPhotosToSlider()
@@ -171,14 +180,14 @@ public partial class MainWindow : Window
 
     private async void BtnPrevScan_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (OriginalPhotos.Count == 0) return;
+        if (isLoading || OriginalPhotos.Count == 0) return;
         currentIndex = (currentIndex - 1 + OriginalPhotos.Count) % OriginalPhotos.Count;
         await LoadPhotosToGuiAsync();
     }
 
     private async void BtnNextScan_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (OriginalPhotos.Count == 0) return;
+        if (isLoading || OriginalPhotos.Count == 0) return;
         currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
         await LoadPhotosToGuiAsync();
     }
@@ -187,7 +196,7 @@ public partial class MainWindow : Window
 
     private void BtnSaveImages_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (OriginalPhotos.Count == 0) return;
+        if (isLoading || OriginalPhotos.Count == 0) return;
 
         var settings = SettingsManager.Instance.Settings;
         int totalSaved = 0;
@@ -203,12 +212,13 @@ public partial class MainWindow : Window
 
     private void BtnDelete_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (isLoading) return;
         DeleteCurrentPhoto();
     }
 
     private void DeleteCurrentPhoto()
     {
-        if (OriginalPhotos.Count == 0 || slides == null) return;
+        if (isLoading || OriginalPhotos.Count == 0 || slides == null) return;
         int photoIndex = slides.SelectedIndex;
         if (photoIndex < 0) return;
 
@@ -228,12 +238,13 @@ public partial class MainWindow : Window
 
     private async void BtnRotate_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (isLoading) return;
         await RotateCurrentPhotoAsync();
     }
 
     private async Task RotateCurrentPhotoAsync()
     {
-        if (OriginalPhotos.Count == 0) return;
+        if (isLoading || OriginalPhotos.Count == 0) return;
 
         int photoIndex = slides.SelectedIndex;
         if (photoIndex < 0) return;
@@ -271,6 +282,8 @@ public partial class MainWindow : Window
 
     private async void SldSensitivity_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
     {
+        if (isLoading || OriginalPhotos.Count == 0) return;
+
         // Update persistent settings
         var settings = SettingsManager.Instance.Settings;
         settings.BackgroundTolerance = sldSensitivity.Value;
@@ -379,16 +392,24 @@ public partial class MainWindow : Window
 
     private void BtnPreviousCroppedImage_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (isLoading) return;
         slides.Previous();
     }
 
     private void BtnNextCroppedImage_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (isLoading) return;
         slides.Next();
     }
 
     private async void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
+        if (isLoading)
+        {
+            e.Handled = true;
+            return;
+        }
+
         // 1. Modifier-based Shortcuts
         if (e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Control) && e.Key == Avalonia.Input.Key.S)
         {
@@ -880,6 +901,8 @@ public partial class MainWindow : Window
 
     private async void BtnResetDefaults_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (isLoading) return;
+
         SettingsManager.Instance.ResetDetectionDefaults();
         
         // Apply settings back to UI (visual update)
