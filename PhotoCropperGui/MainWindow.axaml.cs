@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using Avalonia.Interactivity;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
@@ -9,18 +10,53 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using PhotoCropper;
 
 namespace PhotoCropperGui;
 
-public partial class MainWindow : Window
+internal sealed partial class MainWindow : Window
 {
-    private int currentIndex = 0;
-    private readonly List<PhotoCropper.PhotoCropper> OriginalPhotos = [];
+    private int currentIndex;
+    private readonly List<PhotoCropperEngine> OriginalPhotos = [];
+    private bool isLoading;
 
     public MainWindow()
     {
         InitializeComponent();
+
+        // Register key down handler in the Tunnel phase to prevent focused controls from hijacking keys
+        AddHandler(KeyDownEvent, Window_KeyDown, RoutingStrategies.Tunnel);
+
         PopulateLanguageMenu();
+        ApplySettingsToUi();
+    }
+
+    private void ApplySettingsToUi()
+    {
+        var settings = SettingsManager.Instance.Settings;
+        sldSensitivity.Value = settings.BackgroundTolerance;
+        sldZoom.Value = settings.ZoomLevel;
+        sldMinArea.Value = settings.MinAreaFactor;
+        sldMaxArea.Value = settings.MaxAreaFactor;
+        sldEdge.Value = settings.CannyLowThreshold;
+        tglAdvanced.IsChecked = settings.AdvancedVisible;
+
+        if (cbFormat != null)
+        {
+            cbFormat.SelectedIndex = string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        }
+        if (sldJpegQuality != null)
+        {
+            sldJpegQuality.Value = settings.JpegQuality;
+        }
+        if (txtOutputDir != null)
+        {
+            txtOutputDir.Text = settings.CustomOutputDirectory ?? "";
+        }
+        if (pnlJpegQuality != null)
+        {
+            pnlJpegQuality.IsVisible = !string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     private void PopulateLanguageMenu()
@@ -79,7 +115,7 @@ public partial class MainWindow : Window
             foreach (var file in fileResult)
             {
                 var filePath = file.Path.LocalPath;
-                var photo = new PhotoCropper.PhotoCropper(filePath)
+                var photo = new PhotoCropperEngine(filePath)
                 {
                     // Synchronize new photos with the current slider values
                     BackgroundTolerance = sldSensitivity.Value,
@@ -97,30 +133,43 @@ public partial class MainWindow : Window
     private async Task LoadPhotosToGuiAsync()
     {
         if (OriginalPhotos.Count == 0) return;
+        if (isLoading) return;
+        isLoading = true;
 
-        string fileName = Path.GetFileName(OriginalPhotos[currentIndex].OriginalFilePath);
-        string processingMsg = Application.Current?.FindResource("ProcessingScan")?.ToString() ?? "Processing...";
-        lblStatus.Text = $"{processingMsg} {fileName}";
-        
-        pnlLoadingOverlay.IsVisible = true;
-
-        if (OriginalPhotos[currentIndex].DetectedPhotos.Count == 0)
+        try
         {
-            await Task.Run(() => OriginalPhotos[currentIndex].DetectPhotos());
+            string fileName = Path.GetFileName(OriginalPhotos[currentIndex].OriginalFilePath);
+            string processingMsg = Application.Current?.FindResource("ProcessingScan")?.ToString() ?? "Processing...";
+            lblStatus.Text = $"{processingMsg} {fileName}";
+            
+            pnlLoadingOverlay.IsVisible = true;
+
+            if (OriginalPhotos[currentIndex].DetectedPhotos.Count == 0)
+            {
+                await Task.Run(() => OriginalPhotos[currentIndex].DetectPhotos());
+            }
+
+            var mat = OriginalPhotos[currentIndex].OriginalWithDetected;
+
+            img.Source = ConvertMatToAvaloniaBitmap(mat);
+
+            string scanCounterFormat = Application.Current?.FindResource("ScanCounter")?.ToString() ?? "Scan {0} of {1}";
+            txtFileCounter.Text = string.Format(scanCounterFormat, currentIndex + 1, OriginalPhotos.Count);
+            lblStatus.Text = fileName;
+
+            LoadCroppedPhotosToSlider();
+            UpdatePhotoCounterLabel();
+
+            if (btnResetBackground != null)
+            {
+                btnResetBackground.IsEnabled = OriginalPhotos[currentIndex].CustomBackgroundColorHsv != null;
+            }
         }
-
-        var mat = OriginalPhotos[currentIndex].OriginalWithDetected;
-
-        img.Source = ConvertMatToAvaloniaBitmap(mat);
-
-        string scanCounterFormat = Application.Current?.FindResource("ScanCounter")?.ToString() ?? "Scan {0} of {1}";
-        txtFileCounter.Text = string.Format(scanCounterFormat, currentIndex + 1, OriginalPhotos.Count);
-        lblStatus.Text = fileName;
-
-        LoadCroppedPhotosToSlider();
-        UpdatePhotoCounterLabel();
-
-        pnlLoadingOverlay.IsVisible = false;
+        finally
+        {
+            pnlLoadingOverlay.IsVisible = false;
+            isLoading = false;
+        }
     }
 
     private void LoadCroppedPhotosToSlider()
@@ -142,14 +191,14 @@ public partial class MainWindow : Window
 
     private async void BtnPrevScan_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (OriginalPhotos.Count == 0) return;
+        if (isLoading || OriginalPhotos.Count == 0) return;
         currentIndex = (currentIndex - 1 + OriginalPhotos.Count) % OriginalPhotos.Count;
         await LoadPhotosToGuiAsync();
     }
 
     private async void BtnNextScan_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (OriginalPhotos.Count == 0) return;
+        if (isLoading || OriginalPhotos.Count == 0) return;
         currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
         await LoadPhotosToGuiAsync();
     }
@@ -158,12 +207,13 @@ public partial class MainWindow : Window
 
     private void BtnSaveImages_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (OriginalPhotos.Count == 0) return;
+        if (isLoading || OriginalPhotos.Count == 0) return;
 
+        var settings = SettingsManager.Instance.Settings;
         int totalSaved = 0;
         foreach (var originalPhoto in OriginalPhotos)
         {
-            originalPhoto.SaveDetectedPhotos();
+            originalPhoto.SaveDetectedPhotos(settings.CustomOutputDirectory, settings.PreferredFormat, settings.JpegQuality);
             totalSaved += originalPhoto.DetectedPhotos.Count;
         }
 
@@ -173,12 +223,13 @@ public partial class MainWindow : Window
 
     private void BtnDelete_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (isLoading) return;
         DeleteCurrentPhoto();
     }
 
     private void DeleteCurrentPhoto()
     {
-        if (OriginalPhotos.Count == 0 || slides == null) return;
+        if (isLoading || OriginalPhotos.Count == 0 || slides == null) return;
         int photoIndex = slides.SelectedIndex;
         if (photoIndex < 0) return;
 
@@ -198,12 +249,13 @@ public partial class MainWindow : Window
 
     private async void BtnRotate_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (isLoading) return;
         await RotateCurrentPhotoAsync();
     }
 
     private async Task RotateCurrentPhotoAsync()
     {
-        if (OriginalPhotos.Count == 0) return;
+        if (isLoading || OriginalPhotos.Count == 0) return;
 
         int photoIndex = slides.SelectedIndex;
         if (photoIndex < 0) return;
@@ -241,6 +293,16 @@ public partial class MainWindow : Window
 
     private async void SldSensitivity_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
     {
+        if (isLoading || OriginalPhotos.Count == 0) return;
+
+        // Update persistent settings
+        var settings = SettingsManager.Instance.Settings;
+        settings.BackgroundTolerance = sldSensitivity.Value;
+        settings.MinAreaFactor = sldMinArea.Value;
+        settings.MaxAreaFactor = sldMaxArea.Value;
+        settings.CannyLowThreshold = sldEdge.Value;
+        SettingsManager.Instance.Save();
+
         if (OriginalPhotos.Count > 0)
         {
             var photo = OriginalPhotos[currentIndex];
@@ -259,6 +321,56 @@ public partial class MainWindow : Window
             string msgFormat = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
             lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
         }
+    }
+
+    private void CbFormat_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (cbFormat == null || pnlJpegQuality == null) return;
+
+        bool isJpeg = cbFormat.SelectedIndex == 0;
+        pnlJpegQuality.IsVisible = isJpeg;
+
+        var settings = SettingsManager.Instance.Settings;
+        settings.PreferredFormat = isJpeg ? "JPEG" : "PNG";
+        SettingsManager.Instance.Save();
+    }
+
+    private void SldJpegQuality_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
+    {
+        if (sldJpegQuality == null) return;
+        var settings = SettingsManager.Instance.Settings;
+        settings.JpegQuality = (int)sldJpegQuality.Value;
+        SettingsManager.Instance.Save();
+    }
+
+    private async void BtnBrowseDir_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider == null) return;
+
+        var folderResult = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = Application.Current?.FindResource("LblOutputDir")?.ToString() ?? "Select Export Folder",
+            AllowMultiple = false
+        });
+
+        if (folderResult != null && folderResult.Count > 0)
+        {
+            var path = folderResult[0].Path.LocalPath;
+            txtOutputDir.Text = path;
+            var settings = SettingsManager.Instance.Settings;
+            settings.CustomOutputDirectory = path;
+            SettingsManager.Instance.Save();
+        }
+    }
+
+    private void BtnClearOutputDir_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (txtOutputDir == null) return;
+        txtOutputDir.Text = "";
+        var settings = SettingsManager.Instance.Settings;
+        settings.CustomOutputDirectory = null;
+        SettingsManager.Instance.Save();
     }
 
     private void Slides_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -291,16 +403,24 @@ public partial class MainWindow : Window
 
     private void BtnPreviousCroppedImage_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (isLoading) return;
         slides.Previous();
     }
 
     private void BtnNextCroppedImage_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (isLoading) return;
         slides.Next();
     }
 
     private async void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
+        if (isLoading)
+        {
+            e.Handled = true;
+            return;
+        }
+
         // 1. Modifier-based Shortcuts
         if (e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Control) && e.Key == Avalonia.Input.Key.S)
         {
@@ -412,6 +532,12 @@ public partial class MainWindow : Window
         if (e.Property.Name == "Value")
         {
             UpdateCropCanvasSize();
+
+            if (sldZoom != null)
+            {
+                SettingsManager.Instance.Settings.ZoomLevel = sldZoom.Value;
+                SettingsManager.Instance.Save();
+            }
         }
     }
 
@@ -482,11 +608,19 @@ public partial class MainWindow : Window
     #region Manual Crop on Original
 
     private Avalonia.Point startPoint;
-    private bool isDragging = false;
+    private bool isDragging;
 
     private void PnlOriginal_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
         if (OriginalPhotos.Count == 0) return;
+
+        if (tglColorPicker != null && tglColorPicker.IsChecked == true)
+        {
+            e.Handled = true;
+            SampleBackgroundColorAtPointer(e.GetPosition(pnlOriginal));
+            return;
+        }
+
         UpdateCropCanvasSize();
         startPoint = e.GetPosition(pnlOriginal);
         isDragging = true;
@@ -584,10 +718,10 @@ public partial class MainWindow : Window
 
     #region Interactive Refinement Overlay
 
-    private bool isRefining = false;
+    private bool isRefining;
     private System.Drawing.Rectangle currentRefineRect;
     private Avalonia.Point startRefinePoint;
-    private bool isRefineDragging = false;
+    private bool isRefineDragging;
 
     private void BtnRefine_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -784,8 +918,131 @@ public partial class MainWindow : Window
 
     #region Utility Methods
 
+    private async void BtnResetDefaults_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (isLoading) return;
+
+        SettingsManager.Instance.ResetDetectionDefaults();
+        
+        // Apply settings back to UI (visual update)
+        var settings = SettingsManager.Instance.Settings;
+        sldSensitivity.Value = settings.BackgroundTolerance;
+        sldMinArea.Value = settings.MinAreaFactor;
+        sldMaxArea.Value = settings.MaxAreaFactor;
+        sldEdge.Value = settings.CannyLowThreshold;
+
+        // Re-process current scan if loaded
+        if (OriginalPhotos.Count > 0)
+        {
+            var photo = OriginalPhotos[currentIndex];
+            photo.BackgroundTolerance = settings.BackgroundTolerance;
+            photo.MinAreaFactor = settings.MinAreaFactor / 100.0;
+            photo.MaxAreaFactor = settings.MaxAreaFactor / 100.0;
+            photo.CannyLowThreshold = settings.CannyLowThreshold;
+            photo.CannyHighThreshold = settings.CannyLowThreshold * 2.5;
+
+            pnlLoadingOverlay.IsVisible = true;
+            lblStatus.Text = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
+
+            await Task.Run(() => photo.DetectPhotos());
+            await LoadPhotosToGuiAsync();
+
+            string msgFormat = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
+            lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
+        }
+    }
+
+    #region Background Color Picker
+
+    private void TglColorPicker_Click(object? sender, RoutedEventArgs e)
+    {
+        if (pnlOriginal == null || tglColorPicker == null) return;
+        pnlOriginal.Cursor = tglColorPicker.IsChecked == true 
+            ? new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Cross) 
+            : Avalonia.Input.Cursor.Default;
+    }
+
+    private async void SampleBackgroundColorAtPointer(Avalonia.Point uiPoint)
+    {
+        if (OriginalPhotos.Count == 0 || tglColorPicker == null || btnResetBackground == null) return;
+        var photo = OriginalPhotos[currentIndex];
+
+        var imageRect = GetImageRectInsideControl();
+        if (imageRect.Width <= 0 || imageRect.Height <= 0) return;
+
+        // Map display coordinate to original physical scan pixels
+        double scaleX = photo.Original.Width / imageRect.Width;
+        double scaleY = photo.Original.Height / imageRect.Height;
+
+        int x = (int)((uiPoint.X - imageRect.X) * scaleX);
+        int y = (int)((uiPoint.Y - imageRect.Y) * scaleY);
+
+        // Reset cursor and toggle
+        pnlOriginal.Cursor = Avalonia.Input.Cursor.Default;
+        tglColorPicker.IsChecked = false;
+
+        pnlLoadingOverlay.IsVisible = true;
+        lblStatus.Text = Application.Current?.FindResource("MsgClickToSample")?.ToString() ?? "Sampling background color...";
+
+        await Task.Run(() =>
+        {
+            photo.SetCustomBackgroundFromPixel(x, y);
+            photo.DetectPhotos();
+        });
+
+        btnResetBackground.IsEnabled = true;
+
+        await LoadPhotosToGuiAsync();
+
+        string completeMsg = Application.Current?.FindResource("MsgBackgroundSampled")?.ToString() ?? "Custom background color applied.";
+        lblStatus.Text = completeMsg;
+    }
+
+    private async void BtnResetBackground_Click(object? sender, RoutedEventArgs e)
+    {
+        if (OriginalPhotos.Count == 0 || btnResetBackground == null) return;
+        var photo = OriginalPhotos[currentIndex];
+
+        photo.CustomBackgroundColorHsv = null;
+        btnResetBackground.IsEnabled = false;
+
+        pnlLoadingOverlay.IsVisible = true;
+        lblStatus.Text = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing with automatic background...";
+
+        await Task.Run(() => photo.DetectPhotos());
+        await LoadPhotosToGuiAsync();
+
+        lblStatus.Text = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete.";
+    }
+
+    #endregion
+
     protected override void OnClosed(System.EventArgs e)
     {
+        // Capture final UI state to settings before exiting
+        var settings = SettingsManager.Instance.Settings;
+        settings.BackgroundTolerance = sldSensitivity.Value;
+        settings.ZoomLevel = sldZoom.Value;
+        settings.MinAreaFactor = sldMinArea.Value;
+        settings.MaxAreaFactor = sldMaxArea.Value;
+        settings.CannyLowThreshold = sldEdge.Value;
+        settings.AdvancedVisible = tglAdvanced.IsChecked ?? false;
+
+        if (cbFormat != null)
+        {
+            settings.PreferredFormat = cbFormat.SelectedIndex == 1 ? "PNG" : "JPEG";
+        }
+        if (sldJpegQuality != null)
+        {
+            settings.JpegQuality = (int)sldJpegQuality.Value;
+        }
+        if (txtOutputDir != null)
+        {
+            settings.CustomOutputDirectory = string.IsNullOrEmpty(txtOutputDir.Text) ? null : txtOutputDir.Text;
+        }
+
+        SettingsManager.Instance.Save();
+
         base.OnClosed(e);
         foreach (var photo in OriginalPhotos)
         {

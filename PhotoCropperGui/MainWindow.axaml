@@ -4,10 +4,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		WindowState="Maximized"
         x:Class="PhotoCropperGui.MainWindow"
-		KeyDown="Window_KeyDown"
 		Background="#1e1e1e"
 		Foreground="White"
-        Title="PhotoCropper - Intelligent Photo Extractor">
+        Title="PhotoCropper - Intelligent Photo Extractor"
+        Icon="avares://PhotoCropperGui/Assets/app_icon.png">
 
 	<Grid>
 		<DockPanel>
@@ -16,16 +16,29 @@
 			<StackPanel>
 				<Grid ColumnDefinitions="Auto, *, Auto" Height="60">
 					<StackPanel Grid.Column="0" Orientation="Horizontal" Margin="15,0" Spacing="10">
-						<Button x:Name="btnOpenFiles" Click="BtnOpenFiles_Click" Padding="15,8" Background="#3399ff" Foreground="White">
+						<Button x:Name="btnOpenFiles" Click="BtnOpenFiles_Click" Padding="15,8" Background="#3399ff" Foreground="White" Focusable="False">
 							<StackPanel Orientation="Horizontal" Spacing="8">
 								<TextBlock Text="📁"/>
 								<TextBlock Text="{DynamicResource BtnOpenScans}"/>
 							</StackPanel>
 						</Button>
-						<Button x:Name="btnSave" Click="BtnSaveImages_Click" Padding="15,8">
+						<Button x:Name="btnSave" Click="BtnSaveImages_Click" Padding="15,8" Focusable="False">
 							<StackPanel Orientation="Horizontal" Spacing="8">
 								<TextBlock Text="💾"/>
 								<TextBlock Text="{DynamicResource BtnSaveResults}"/>
+							</StackPanel>
+						</Button>
+
+						<ToggleButton x:Name="tglColorPicker" Click="TglColorPicker_Click" Padding="15,8" Focusable="False">
+							<StackPanel Orientation="Horizontal" Spacing="8">
+								<TextBlock Text="🎨"/>
+								<TextBlock Text="{DynamicResource BtnSampleBackground}"/>
+							</StackPanel>
+						</ToggleButton>
+						<Button x:Name="btnResetBackground" Click="BtnResetBackground_Click" Padding="15,8" Focusable="False" IsEnabled="False">
+							<StackPanel Orientation="Horizontal" Spacing="8">
+								<TextBlock Text="🔄"/>
+								<TextBlock Text="{DynamicResource BtnResetBackground}"/>
 							</StackPanel>
 						</Button>
 
@@ -33,7 +46,7 @@
 							<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuLanguage"/>
 						</Menu>
 
-						<Button x:Name="btnHelp" Click="BtnHelp_Click" Padding="10,8" Background="Transparent" BorderThickness="0">
+						<Button x:Name="btnHelp" Click="BtnHelp_Click" Padding="10,8" Background="Transparent" BorderThickness="0" Focusable="False">
 							<TextBlock Text="❓" FontSize="18"/>
 						</Button>
 					</StackPanel>
@@ -42,7 +55,7 @@
 						<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
 							<TextBlock Text="{DynamicResource LblDetectionSensitivity}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#aaaaaa"/>
 							<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="50" Width="150" 
-									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center"/>
+									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
 							<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" 
 									   VerticalAlignment="Center" Width="40" FontWeight="Bold"/>
 						</StackPanel>
@@ -50,20 +63,20 @@
 						<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
 							<TextBlock Text="{DynamicResource LblZoom}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#aaaaaa"/>
 							<Slider x:Name="sldZoom" Minimum="1" Maximum="10" Value="1" Width="150" 
-									PropertyChanged="SldZoom_PropertyChanged" VerticalAlignment="Center"/>
+									PropertyChanged="SldZoom_PropertyChanged" VerticalAlignment="Center" Focusable="False"/>
 							<TextBlock Text="{Binding #sldZoom.Value, StringFormat='{}{0:0}x'}" 
 									   VerticalAlignment="Center" Width="40" FontWeight="Bold"/>
 						</StackPanel>
 
-						<ToggleButton x:Name="tglAdvanced" Content="{DynamicResource BtnAdvanced}" Margin="10,0" Padding="10,5" VerticalAlignment="Center"/>
+						<ToggleButton x:Name="tglAdvanced" Content="{DynamicResource BtnAdvanced}" Margin="10,0" Padding="10,5" VerticalAlignment="Center" Focusable="False"/>
 					</StackPanel>
 
 					<StackPanel Grid.Column="2" Orientation="Horizontal" Margin="15,0" VerticalAlignment="Center" Spacing="8">
-						<Button x:Name="btnPrevScan" Click="BtnPrevScan_Click" Padding="8,4" Background="#333333">
+						<Button x:Name="btnPrevScan" Click="BtnPrevScan_Click" Padding="8,4" Background="#333333" Focusable="False">
 							<TextBlock Text="◀" FontSize="10"/>
 						</Button>
 						<TextBlock x:Name="txtFileCounter" Text="{DynamicResource TxtNoFiles}" Foreground="#888888" VerticalAlignment="Center" Margin="5,0"/>
-						<Button x:Name="btnNextScan" Click="BtnNextScan_Click" Padding="8,4" Background="#333333">
+						<Button x:Name="btnNextScan" Click="BtnNextScan_Click" Padding="8,4" Background="#333333" Focusable="False">
 							<TextBlock Text="▶" FontSize="10"/>
 						</Button>
 					</StackPanel>
@@ -71,26 +84,62 @@
 
 				<!-- Advanced Settings Row -->
 				<Border Background="#252525" IsVisible="{Binding #tglAdvanced.IsChecked}" BorderBrush="#333333" BorderThickness="0,1,0,0">
-					<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10" Spacing="30">
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<TextBlock Text="{DynamicResource LblMinPhotoSize}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
-							<Slider x:Name="sldMinArea" Minimum="0" Maximum="50" Value="1" Width="100" 
-									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center"/>
-							<TextBlock Text="{Binding #sldMinArea.Value, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Width="30"/>
+					<StackPanel Orientation="Vertical" Margin="10" Spacing="10">
+						<!-- Row 1: Detection Settings -->
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="30">
+							<StackPanel Orientation="Horizontal" Spacing="10">
+								<TextBlock Text="{DynamicResource LblMinPhotoSize}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
+								<Slider x:Name="sldMinArea" Minimum="0" Maximum="50" Value="1" Width="100" 
+										PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
+								<TextBlock Text="{Binding #sldMinArea.Value, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Width="30"/>
+							</StackPanel>
+
+							<StackPanel Orientation="Horizontal" Spacing="10">
+								<TextBlock Text="{DynamicResource LblMaxPhotoSize}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
+								<Slider x:Name="sldMaxArea" Minimum="50" Maximum="100" Value="90" Width="100" 
+										PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
+								<TextBlock Text="{Binding #sldMaxArea.Value, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Width="30"/>
+							</StackPanel>
+
+							<StackPanel Orientation="Horizontal" Spacing="10">
+								<TextBlock Text="{DynamicResource LblEdgeThreshold}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
+								<Slider x:Name="sldEdge" Minimum="1" Maximum="100" Value="20" Width="100" 
+										PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
+								<TextBlock Text="{Binding #sldEdge.Value, StringFormat='{}{0:0}'}" FontSize="11" VerticalAlignment="Center" Width="30"/>
+							</StackPanel>
+
+							<Button x:Name="btnResetDefaults" Click="BtnResetDefaults_Click" Padding="10,5" FontSize="11" Background="#444444" VerticalAlignment="Center" Margin="15,0,0,0" Focusable="False">
+								<TextBlock Text="{DynamicResource BtnReset}"/>
+							</Button>
 						</StackPanel>
 
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<TextBlock Text="{DynamicResource LblMaxPhotoSize}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
-							<Slider x:Name="sldMaxArea" Minimum="50" Maximum="100" Value="90" Width="100" 
-									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center"/>
-							<TextBlock Text="{Binding #sldMaxArea.Value, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Width="30"/>
-						</StackPanel>
+						<!-- Row 2: Export Settings -->
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="30">
+							<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+								<TextBlock Text="{DynamicResource LblFormat}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
+								<ComboBox x:Name="cbFormat" SelectedIndex="0" Width="90" SelectionChanged="CbFormat_SelectionChanged" Focusable="False">
+									<ComboBoxItem Content="JPEG"/>
+									<ComboBoxItem Content="PNG"/>
+								</ComboBox>
+							</StackPanel>
 
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<TextBlock Text="{DynamicResource LblEdgeThreshold}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
-							<Slider x:Name="sldEdge" Minimum="1" Maximum="100" Value="20" Width="100" 
-									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center"/>
-							<TextBlock Text="{Binding #sldEdge.Value, StringFormat='{}{0:0}'}" FontSize="11" VerticalAlignment="Center" Width="30"/>
+							<StackPanel x:Name="pnlJpegQuality" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+								<TextBlock Text="{DynamicResource LblQuality}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
+								<Slider x:Name="sldJpegQuality" Minimum="10" Maximum="100" Value="90" Width="100" 
+										PointerCaptureLost="SldJpegQuality_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
+								<TextBlock Text="{Binding #sldJpegQuality.Value, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Width="35"/>
+							</StackPanel>
+
+							<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+								<TextBlock Text="{DynamicResource LblOutputDir}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
+								<TextBox x:Name="txtOutputDir" Width="220" IsReadOnly="True" PlaceholderText="{DynamicResource WatermarkSameDir}" FontSize="11" VerticalAlignment="Center" Background="#1a1a1a" BorderBrush="#3f3f3f" Focusable="False"/>
+								<Button x:Name="btnBrowseDir" Click="BtnBrowseDir_Click" Padding="10,4" FontSize="11" Background="#444444" VerticalAlignment="Center" Focusable="False">
+									<TextBlock Text="..."/>
+								</Button>
+								<Button x:Name="btnClearOutputDir" Click="BtnClearOutputDir_Click" Padding="8,4" FontSize="11" Background="#442222" VerticalAlignment="Center" ToolTip.Tip="{DynamicResource TipClearDir}" Focusable="False">
+									<TextBlock Text="✖" Foreground="#ff4444"/>
+								</Button>
+							</StackPanel>
 						</StackPanel>
 					</StackPanel>
 				</Border>
@@ -160,27 +209,27 @@
 						<!-- Overlay Controls -->
 						<Button VerticalAlignment="Center" HorizontalAlignment="Left" Margin="-15,0"
 								Click="BtnPreviousCroppedImage_Click" Content="&lt;" 
-								Background="#80000000" Width="40" Height="80" CornerRadius="4"/>
+								Background="#80000000" Width="40" Height="80" CornerRadius="4" Focusable="False"/>
 						
 						<Button VerticalAlignment="Center" HorizontalAlignment="Right" Margin="-15,0"
 								Click="BtnNextCroppedImage_Click" Content="&gt;" 
-								Background="#80000000" Width="40" Height="80" CornerRadius="4"/>
+								Background="#80000000" Width="40" Height="80" CornerRadius="4" Focusable="False"/>
 					</Panel>
 
 					<StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15" Spacing="10">
-						<Button x:Name="btnDelete" Click="BtnDelete_Click" Padding="15,10" CornerRadius="20" Background="#442222">
+						<Button x:Name="btnDelete" Click="BtnDelete_Click" Padding="15,10" CornerRadius="20" Background="#442222" Focusable="False">
 							<StackPanel Orientation="Horizontal" Spacing="5">
 								<TextBlock Text="✖" FontSize="16" VerticalAlignment="Center" Foreground="#ff4444"/>
 								<TextBlock Text="{DynamicResource BtnDelete}" VerticalAlignment="Center"/>
 							</StackPanel>
 						</Button>
-						<Button x:Name="btnRotate" Click="BtnRotate_Click" Padding="15,10" CornerRadius="20" Background="#2d2d2d">
+						<Button x:Name="btnRotate" Click="BtnRotate_Click" Padding="15,10" CornerRadius="20" Background="#2d2d2d" Focusable="False">
 							<StackPanel Orientation="Horizontal" Spacing="5">
 								<TextBlock Text="↻" FontSize="16" VerticalAlignment="Center"/>
 								<TextBlock Text="{DynamicResource BtnRotate}" VerticalAlignment="Center"/>
 							</StackPanel>
 						</Button>
-						<Button x:Name="btnRefine" Click="BtnRefine_Click" Padding="15,10" CornerRadius="20" Background="#2d2d2d" ToolTip.Tip="{DynamicResource TipRefine}">
+						<Button x:Name="btnRefine" Click="BtnRefine_Click" Padding="15,10" CornerRadius="20" Background="#2d2d2d" ToolTip.Tip="{DynamicResource TipRefine}" Focusable="False">
 							<StackPanel Orientation="Horizontal" Spacing="5">
 								<TextBlock Text="✨" FontSize="16" VerticalAlignment="Center"/>
 								<TextBlock Text="{DynamicResource BtnRefine}" VerticalAlignment="Center"/>
@@ -208,10 +257,10 @@
 					</Panel>
 				</Border>
 				<StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="30" Margin="20">
-					<Button x:Name="btnAcceptRefine" Click="BtnAcceptRefine_Click" Padding="40,15" CornerRadius="8" Background="#2d882d">
+					<Button x:Name="btnAcceptRefine" Click="BtnAcceptRefine_Click" Padding="40,15" CornerRadius="8" Background="#2d882d" Focusable="False">
 						<TextBlock Text="{DynamicResource BtnAccept}" FontSize="18" FontWeight="Bold"/>
 					</Button>
-					<Button x:Name="btnRejectRefine" Click="BtnRejectRefine_Click" Padding="40,15" CornerRadius="8" Background="#882d2d">
+					<Button x:Name="btnRejectRefine" Click="BtnRejectRefine_Click" Padding="40,15" CornerRadius="8" Background="#882d2d" Focusable="False">
 						<TextBlock Text="{DynamicResource BtnReject}" FontSize="18" FontWeight="Bold"/>
 					</Button>
 				</StackPanel>
@@ -283,7 +332,7 @@
 						<TextBlock Text="{DynamicResource HelpCopyright}" Foreground="#555555" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,0"/>
 					</StackPanel>
 
-					<Button x:Name="btnCloseHelp" Click="BtnCloseHelp_Click" HorizontalAlignment="Center" Padding="40,15" CornerRadius="8" Background="#3399ff">
+					<Button x:Name="btnCloseHelp" Click="BtnCloseHelp_Click" HorizontalAlignment="Center" Padding="40,15" CornerRadius="8" Background="#3399ff" Focusable="False">
 						<TextBlock Text="{DynamicResource BtnClose}" FontSize="18" FontWeight="Bold" Foreground="White"/>
 					</Button>
 				</StackPanel>

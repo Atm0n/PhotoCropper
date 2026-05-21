@@ -5,7 +5,7 @@ using System.Drawing;
 
 namespace PhotoCropper.Tests;
 
-public class PhotoCropperTests : IDisposable
+public sealed class PhotoCropperTests : IDisposable
 {
     private readonly string _testImagePath;
     private readonly string _tempDir;
@@ -42,7 +42,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void Constructor_ShouldLoadImage()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         Assert.False(cropper.Original.IsEmpty);
         Assert.Equal(2000, cropper.Original.Width);
     }
@@ -50,7 +50,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void DetectPhotos_ShouldFindTwoPhotos()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         Assert.True(cropper.DetectedPhotos.Count >= 2);
     }
@@ -58,7 +58,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void SaveDetectedPhotos_ShouldCreateFiles()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         int count = cropper.DetectedPhotos.Count;
 
@@ -71,6 +71,39 @@ public class PhotoCropperTests : IDisposable
         Assert.Equal(count, files.Length);
     }
 
+    [Fact]
+    public void SaveDetectedPhotos_PNG_ShouldCreateLosslessFiles()
+    {
+        using var cropper = new PhotoCropperEngine(_testImagePath);
+        cropper.DetectPhotos();
+        int count = cropper.DetectedPhotos.Count;
+
+        cropper.SaveDetectedPhotos(null, "PNG");
+
+        string outputDir = Path.Combine(_tempDir, "cropped");
+        Assert.True(Directory.Exists(outputDir));
+        
+        var files = Directory.GetFiles(outputDir, "*.png");
+        Assert.Equal(count, files.Length);
+    }
+
+    [Fact]
+    public void SaveDetectedPhotos_CustomDir_ShouldCreateFiles()
+    {
+        using var cropper = new PhotoCropperEngine(_testImagePath);
+        cropper.DetectPhotos();
+        int count = cropper.DetectedPhotos.Count;
+
+        string customDir = Path.Combine(_tempDir, $"custom_export_{Guid.NewGuid()}");
+
+        cropper.SaveDetectedPhotos(customDir, "JPEG", 85);
+
+        Assert.True(Directory.Exists(customDir));
+        
+        var files = Directory.GetFiles(customDir, "*.jpg");
+        Assert.Equal(count, files.Length);
+    }
+
     [Theory]
     [InlineData(1500, 1500, 100, 100, true)]  // Valid background crop
     [InlineData(1950, 1950, 200, 200, true)]  // Partially out of bounds (should be clamped)
@@ -78,7 +111,7 @@ public class PhotoCropperTests : IDisposable
     [InlineData(80, 80, 450, 450, true)]      // Overlaps Photo 1 (should snap to photo)
     public void AddManualCrop_VariousCases(int x, int y, int w, int h, bool expectedAdded)
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.AddManualCrop(new Rectangle(x, y, w, h));
 
         if (expectedAdded)
@@ -94,7 +127,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void GetRefinedCropRect_ShouldRemoveMargins()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         
         // 1. Manually create a "messy" Mat: 400x400 total, but with a 200x200 black square in the middle of white.
         using Mat messy = new(400, 400, DepthType.Cv8U, 3);
@@ -121,7 +154,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void RotatePhoto_ShouldSwapDimensions()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         
         var photo = cropper.DetectedPhotos[0];
@@ -137,7 +170,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void RotatePhoto_FourTimes_ShouldRestoreDimensions()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         
         int w = cropper.DetectedPhotos[0].Width;
@@ -152,7 +185,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void DeletePhoto_ShouldDecreaseCount()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         int initialCount = cropper.DetectedPhotos.Count;
 
@@ -164,7 +197,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void DeletePhoto_InvalidIndex_ShouldNotCrash()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         int count = cropper.DetectedPhotos.Count;
 
@@ -173,6 +206,115 @@ public class PhotoCropperTests : IDisposable
         cropper.DeletePhoto(999);
 
         Assert.Equal(count, cropper.DetectedPhotos.Count);
+    }
+
+    [Fact]
+    public void DetectPhotos_ShouldDetectSuccessfully_WithPhotoInCorner()
+    {
+        string cornerImgPath = Path.Combine(_tempDir, "corner_scan.jpg");
+        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(255, 255, 255)); // White background
+            
+            // Photo 1 in the middle
+            CvInvoke.Rectangle(scan, new Rectangle(800, 800, 400, 400), new MCvScalar(0, 0, 0), -1);
+
+            // A solid dark photo in the bottom-right corner (which previously would corrupt background sampling)
+            CvInvoke.Rectangle(scan, new Rectangle(1700, 1700, 300, 300), new MCvScalar(20, 20, 20), -1);
+
+            scan.Save(cornerImgPath);
+        }
+
+        using var cropper = new PhotoCropperEngine(cornerImgPath);
+        cropper.DetectPhotos();
+        
+        // Both the middle photo and the corner photo should be detected successfully because the 8-point median
+        // perimeter sampling rejects the corner photo outlier and correctly identifies the white background!
+        Assert.True(cropper.DetectedPhotos.Count >= 2);
+    }
+
+    [Fact]
+    public void DetectPhotos_ShouldDetectSuccessfully_OnHighResolutionScans()
+    {
+        string highResImgPath = Path.Combine(_tempDir, "highres_scan.jpg");
+        using (Mat scan = new(5000, 5000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(255, 255, 255)); // White background
+            
+            // Large Photo in the middle
+            CvInvoke.Rectangle(scan, new Rectangle(1000, 1000, 3000, 3000), new MCvScalar(0, 0, 0), -1);
+
+            scan.Save(highResImgPath);
+        }
+
+        using var cropper = new PhotoCropperEngine(highResImgPath);
+        cropper.DetectPhotos();
+        
+        // The photo should be detected successfully because the morphological kernel scales with resolution
+        Assert.NotEmpty(cropper.DetectedPhotos);
+    }
+
+    [Fact]
+    public void DetectPhotos_ShouldDetectTiltedAdjacentPhotosWithoutOverlapConflict()
+    {
+        string testPath = Path.Combine(_tempDir, "tilted_adjacent_scan.jpg");
+        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(255, 255, 255)); // White background
+            
+            // Photo 1: Large diamond shape (tilted square) centered at (1000, 1000)
+            Point[] points1 = [
+                new Point(1000, 646),
+                new Point(1354, 1000),
+                new Point(1000, 1354),
+                new Point(646, 1000)
+            ];
+            using (var vp1 = new Emgu.CV.Util.VectorOfPoint(points1))
+            {
+                CvInvoke.FillConvexPoly(scan, vp1, new MCvScalar(50, 50, 50), LineType.AntiAlias);
+            }
+
+            // Photo 2: A square 220x220 centered at (660, 660), which puts its center (660, 660)
+            // inside the axis-aligned bounding box of Photo 1 [646, 1354] x [646, 1354],
+            // but completely outside the actual tilted polygon.
+            CvInvoke.Rectangle(scan, new Rectangle(550, 550, 220, 220), new MCvScalar(20, 20, 20), -1);
+
+            scan.Save(testPath);
+        }
+
+        using var cropper = new PhotoCropperEngine(testPath);
+        cropper.DetectPhotos();
+
+        // Under the old overlap check (which checked bounding box containment), the second photo 
+        // would be rejected because its center (660, 660) is inside Photo 1's AABB.
+        // Under the new CvInvoke.PointPolygonTest convex hull check, both are correctly detected!
+        Assert.Equal(2, cropper.DetectedPhotos.Count);
+    }
+
+    [Fact]
+    public void SetCustomBackgroundFromPixel_ShouldSampleCorrectlyAndOverrideBackground()
+    {
+        using var cropper = new PhotoCropperEngine(_testImagePath);
+        
+        // Sample at 0, 0 (white background)
+        cropper.SetCustomBackgroundFromPixel(0, 0);
+        Assert.NotNull(cropper.CustomBackgroundColorHsv);
+        var whiteHsv = cropper.CustomBackgroundColorHsv.Value;
+        // White in HSV: S should be close to 0, V should be close to 255
+        Assert.InRange(whiteHsv.V0, 0, 10); // H
+        Assert.InRange(whiteHsv.V1, 0, 10); // S
+        Assert.InRange(whiteHsv.V2, 245, 256); // V
+
+        // Sample at 200, 200 (black photo, BGR = 0,0,0)
+        cropper.SetCustomBackgroundFromPixel(200, 200);
+        Assert.NotNull(cropper.CustomBackgroundColorHsv);
+        var blackHsv = cropper.CustomBackgroundColorHsv.Value;
+        // Black in HSV: V should be close to 0
+        Assert.InRange(blackHsv.V2, 0, 10);
+
+        // Reset
+        cropper.CustomBackgroundColorHsv = null;
+        Assert.Null(cropper.CustomBackgroundColorHsv);
     }
 
     public void Dispose()

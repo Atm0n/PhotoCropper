@@ -4,7 +4,7 @@ using Avalonia.Markup.Xaml;
 
 namespace PhotoCropperGui
 {
-    public partial class App : Application
+    internal sealed partial class App : Application
     {
         public override void Initialize()
         {
@@ -13,7 +13,11 @@ namespace PhotoCropperGui
 
         public override void OnFrameworkInitializationCompleted()
         {
-            LocalizationManager.Initialize();
+            // Load persistent user settings
+            SettingsManager.Instance.Load();
+
+            // Initialize localization with preferred language
+            LocalizationManager.Initialize(SettingsManager.Instance.Settings.Language);
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {

@@ -58,4 +58,14 @@
 	<sys:String x:Key="HelpAuthor">Desarrollado por Nil Riera</sys:String>
 	<sys:String x:Key="HelpPoweredBy">Impulsado por Emgu.CV (wrapper de OpenCV)</sys:String>
 	<sys:String x:Key="HelpCopyright">© 2026 Nil Riera. Licencia GPLv3.</sys:String>
+	<sys:String x:Key="BtnReset">Restablecer valores</sys:String>
+	<sys:String x:Key="LblFormat">Formato de salida</sys:String>
+	<sys:String x:Key="LblQuality">Calidad JPEG</sys:String>
+	<sys:String x:Key="LblOutputDir">Carpeta de salida</sys:String>
+	<sys:String x:Key="WatermarkSameDir">Misma que el original (cropped/)</sys:String>
+	<sys:String x:Key="TipClearDir">Restablecer a la carpeta original</sys:String>
+	<sys:String x:Key="BtnSampleBackground">Muestrear Fondo</sys:String>
+	<sys:String x:Key="BtnResetBackground">Fondo Automático</sys:String>
+	<sys:String x:Key="MsgClickToSample">Haga clic en cualquier parte del fondo del escaneo para muestrear su color...</sys:String>
+	<sys:String x:Key="MsgBackgroundSampled">Color de fondo personalizado aplicado.</sys:String>
 </ResourceDictionary>

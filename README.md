@@ -2,28 +2,47 @@
 
 An intelligent, cross-platform .NET 10 desktop application designed to automatically detect, straighten, and extract multiple photos from a single scanner bed image. Built with Avalonia UI and Emgu.CV (OpenCV).
 
-## Key Features
+## Project Structure
 
-- **High-Performance Architecture:**
-  - **Direct Memory Rendering:** Skips slow PNG encoding/decoding by using a pointer-based pipeline directly from OpenCV to Avalonia's UI.
-  - **Parallel Extraction:** Utilizes all CPU cores to simultaneously rotate and process multiple photos from a single scan.
-  - **Asynchronous Processing:** All heavy operations (detection, rotation, refinement) run in background threads, keeping the UI silky smooth even with high-DPI scans.
-- **Intelligent Auto-Detection:** Automatically finds photos on a scanner bed using HSV background profiling and morphological edge detection.
-- **Zero-Loss Straightening:** Uses a "Local ROI" rotation with Cubic interpolation to perfectly straighten tilted photos without clipping edges or causing pixel displacement.
-- **Interactive Refinement Mode:** An advanced overlay mode (Shortcut: `Ñ` or `N`) that uses Adaptive Border Trimming to perfectly shrink-wrap the crop box around the photo, removing stubborn white scanner margins.
-- **Manual Cropping:** Draw directly on the original scan to extract custom regions. You can also manually draw refinement boxes in the Refinement Mode.
-- **True Color Saving:** Automatically manages RGB-to-BGR color space conversion to guarantee saved JPEG files retain 100% of their original color accuracy without bluish artifacts.
-- **Multi-Language Support:** Automatically detects system language. Supported: English, Spanish (Castellano), and Catalan (Català).
-- **Professional Dark GUI:** A sleek, fully responsive dark theme interface with intuitive carousels, status updates, and constraint-based image scaling.
+The solution consists of three main projects:
+- **`PhotoCropper` (Core Library):** Contains the core image-processing and detection logic, encapsulated inside the robust `PhotoCropperEngine` class.
+- **`PhotoCropperGui` (Avalonia Desktop App):** A high-performance GUI using a modern dark theme and custom-drawn interactive canvas widgets.
+- **`PhotoCropper.Tests` (xUnit Test Suite):** Comprehensive unit tests checking algorithm correctness, boundary constraints, and edge cases.
 
-## Quality & Stability
+---
 
-The project includes a comprehensive **xUnit test suite** for the core engine (`PhotoCropper.Tests`). These tests cover:
-- Automatic detection accuracy.
-- Intelligent manual cropping and edge-snapping.
-- Advanced edge refinement (margin removal).
-- File saving operations and directory management.
-- 90° rotation logic and dimension swapping.
+## Technical Highlights
+
+### 1. High-Performance Rendering Pipeline
+- **Direct Pointer-to-Bitmap Transfer:** Replaced slow PNG/JPEG encoding and decoding with direct memory copies. By constructing Avalonia `Bitmap` instances using native pointers (`IntPtr`) and the `Bgra8888` pixel format, the application renders high-DPI scanner scans instantly without UI lag.
+- **Unified BGR Color Management:** Standardized internally on OpenCV's native BGR layout. The UI performs a single `Bgr2Bgra` conversion purely for display, avoiding redundant color conversions and correcting the "blue-tint" saving artifact perfectly.
+
+### 2. Intelligent Auto-Detection Engine
+- **8-Point Median Background Profiling:** Rejects corner-photo anomalies by sampling HSV values at 8 distinct points around the scan perimeter (corners and edge centers) to compute median saturation, hue, and brightness.
+- **Resolution-Aware Morphology:** Morphological opening and closing kernels dynamically scale according to the scan's resolution, ensuring identical edge-detection performance whether processing 150 DPI or 1200 DPI scans.
+- **Adaptive Shadow Tolerance:** Brightness thresholds are scaled dynamically for light backgrounds, allowing the engine to absorb scanner lid gradients and shadows while preserving photo integrity.
+- **Convex Hull Overlap Verification:** Rather than checking basic axis-aligned bounding rectangles, the engine uses OpenCV's convex hull polygon testing (`PointPolygonTest`) to separate tilted adjacent photos.
+- **Interactive Background Color Picker:** Allows manual background sampling via a noise-resistant 5x5 average neighborhood in HSV space directly from any clicked zoom/pan pixel, giving the user control when scanner grain or irregular gradients confound the auto-detector.
+
+### 3. Smart Manual & Refinement Operations
+- **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm. It automatically detects and removes the scanner's white canvas borders.
+- **Local ROI Rotation:** Instead of rotating the entire giant scan, only the region of interest is padded, extracted, rotated, and tightly cropped using Cubic interpolation, saving substantial memory and processing overhead.
+
+### 4. Focus-Defeat & Keyboard Event Tunneling
+- **Global Key Event Tunneling:** Uses Avalonia's tunneling event routing (`RoutingStrategies.Tunnel`) for key-down events. This intercepts keyboard navigation events at the Window level before they can reach child controls.
+- **Non-Focusable Controls:** Sidebar controls, sliders, combo boxes, and buttons are explicitly configured as `Focusable="False"`. This prevents active UI controls from stealing focus, ensuring key-based navigation (like arrow keys) remains fully responsive at all times.
+
+---
+
+## Clean Code & Analysis Standards
+
+The codebase strictly enforces the highest standard of static analysis and memory hygiene:
+- **Warnings-as-Errors Policy:** Enforced solution-wide via `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<AnalysisLevel>latest-All</AnalysisLevel>` inside `Directory.Build.props`.
+- **Zero-Warning Success:** Compiles with `0 Warnings` and `0 Errors` across both Debug and Release configurations.
+- **OpenCV Memory Safety (CA2000):** Implements explicit `using` statements, unmanaged resource trackers, and try-finally ownership transfer patterns to prevent native memory leaks during parallel contour processing.
+- **Encapsulation & Security:** Core internal helper elements are marked as `internal sealed`, exposing APIs through read-only interfaces (`IReadOnlyList`, `Collection<T>`) to guarantee architectural robustness.
+
+---
 
 ## Keyboard Shortcuts
 
@@ -40,6 +59,30 @@ The project includes a comprehensive **xUnit test suite** for the core engine (`
 | `Ctrl + Mouse Wheel` | Zoom in/out on the original scan |
 | `Ctrl + S` | Save all results |
 
+---
+
+## How to Build & Run
+
+### Restore and Build
+To restore dependencies and build the entire solution:
+```bash
+dotnet build
+```
+
+### Run GUI
+To run the desktop application:
+```bash
+dotnet run --project PhotoCropperGui
+```
+
+### Run Tests
+To execute all 22 unit tests:
+```bash
+dotnet test
+```
+
+---
+
 ## Deployment
 
 The application is fully cross-platform and supports **Windows** and **Ubuntu/Linux**.
@@ -51,6 +94,8 @@ To publish the application without manual configuration, run the provided PowerS
 ```
 
 This will create a `publish/` folder containing **self-contained, single-file executables** for both platforms. No .NET runtime installation is required on the target machines.
+
+---
 
 ## License
 
