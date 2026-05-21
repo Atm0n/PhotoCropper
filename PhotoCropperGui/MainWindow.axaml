@@ -92,6 +92,10 @@
 									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center"/>
 							<TextBlock Text="{Binding #sldEdge.Value, StringFormat='{}{0:0}'}" FontSize="11" VerticalAlignment="Center" Width="30"/>
 						</StackPanel>
+
+						<Button x:Name="btnResetDefaults" Click="BtnResetDefaults_Click" Padding="10,5" FontSize="11" Background="#444444" VerticalAlignment="Center" Margin="15,0,0,0">
+							<TextBlock Text="{DynamicResource BtnReset}"/>
+						</Button>
 					</StackPanel>
 				</Border>
 			</StackPanel>

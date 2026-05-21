@@ -21,6 +21,18 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         PopulateLanguageMenu();
+        ApplySettingsToUi();
+    }
+
+    private void ApplySettingsToUi()
+    {
+        var settings = SettingsManager.Instance.Settings;
+        sldSensitivity.Value = settings.BackgroundTolerance;
+        sldZoom.Value = settings.ZoomLevel;
+        sldMinArea.Value = settings.MinAreaFactor;
+        sldMaxArea.Value = settings.MaxAreaFactor;
+        sldEdge.Value = settings.CannyLowThreshold;
+        tglAdvanced.IsChecked = settings.AdvancedVisible;
     }
 
     private void PopulateLanguageMenu()
@@ -241,6 +253,14 @@ public partial class MainWindow : Window
 
     private async void SldSensitivity_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
     {
+        // Update persistent settings
+        var settings = SettingsManager.Instance.Settings;
+        settings.BackgroundTolerance = sldSensitivity.Value;
+        settings.MinAreaFactor = sldMinArea.Value;
+        settings.MaxAreaFactor = sldMaxArea.Value;
+        settings.CannyLowThreshold = sldEdge.Value;
+        SettingsManager.Instance.Save();
+
         if (OriginalPhotos.Count > 0)
         {
             var photo = OriginalPhotos[currentIndex];
@@ -412,6 +432,12 @@ public partial class MainWindow : Window
         if (e.Property.Name == "Value")
         {
             UpdateCropCanvasSize();
+
+            if (sldZoom != null)
+            {
+                SettingsManager.Instance.Settings.ZoomLevel = sldZoom.Value;
+                SettingsManager.Instance.Save();
+            }
         }
     }
 
@@ -784,8 +810,50 @@ public partial class MainWindow : Window
 
     #region Utility Methods
 
+    private async void BtnResetDefaults_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SettingsManager.Instance.ResetDetectionDefaults();
+        
+        // Apply settings back to UI (visual update)
+        var settings = SettingsManager.Instance.Settings;
+        sldSensitivity.Value = settings.BackgroundTolerance;
+        sldMinArea.Value = settings.MinAreaFactor;
+        sldMaxArea.Value = settings.MaxAreaFactor;
+        sldEdge.Value = settings.CannyLowThreshold;
+
+        // Re-process current scan if loaded
+        if (OriginalPhotos.Count > 0)
+        {
+            var photo = OriginalPhotos[currentIndex];
+            photo.BackgroundTolerance = settings.BackgroundTolerance;
+            photo.MinAreaFactor = settings.MinAreaFactor / 100.0;
+            photo.MaxAreaFactor = settings.MaxAreaFactor / 100.0;
+            photo.CannyLowThreshold = settings.CannyLowThreshold;
+            photo.CannyHighThreshold = settings.CannyLowThreshold * 2.5;
+
+            pnlLoadingOverlay.IsVisible = true;
+            lblStatus.Text = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
+
+            await Task.Run(() => photo.DetectPhotos());
+            await LoadPhotosToGuiAsync();
+
+            string msgFormat = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
+            lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
+        }
+    }
+
     protected override void OnClosed(System.EventArgs e)
     {
+        // Capture final UI state to settings before exiting
+        var settings = SettingsManager.Instance.Settings;
+        settings.BackgroundTolerance = sldSensitivity.Value;
+        settings.ZoomLevel = sldZoom.Value;
+        settings.MinAreaFactor = sldMinArea.Value;
+        settings.MaxAreaFactor = sldMaxArea.Value;
+        settings.CannyLowThreshold = sldEdge.Value;
+        settings.AdvancedVisible = tglAdvanced.IsChecked ?? false;
+        SettingsManager.Instance.Save();
+
         base.OnClosed(e);
         foreach (var photo in OriginalPhotos)
         {

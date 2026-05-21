@@ -13,7 +13,11 @@ namespace PhotoCropperGui
 
         public override void OnFrameworkInitializationCompleted()
         {
-            LocalizationManager.Initialize();
+            // Load persistent user settings
+            SettingsManager.Instance.Load();
+
+            // Initialize localization with preferred language
+            LocalizationManager.Initialize(SettingsManager.Instance.Settings.Language);
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {

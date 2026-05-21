@@ -58,4 +58,5 @@
 	<sys:String x:Key="HelpAuthor">Developed by Nil Riera</sys:String>
 	<sys:String x:Key="HelpPoweredBy">Powered by Emgu.CV (OpenCV wrapper)</sys:String>
 	<sys:String x:Key="HelpCopyright">© 2026 Nil Riera. Licensed under GPLv3.</sys:String>
+	<sys:String x:Key="BtnReset">Reset Defaults</sys:String>
 </ResourceDictionary>

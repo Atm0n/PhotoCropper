@@ -40,10 +40,23 @@ public static class LocalizationManager
         });
 
         CurrentLanguage = languageCode;
+
+        // Persist language setting
+        if (SettingsManager.Instance.Settings.Language != languageCode)
+        {
+            SettingsManager.Instance.Settings.Language = languageCode;
+            SettingsManager.Instance.Save();
+        }
     }
 
-    public static void Initialize()
+    public static void Initialize(string? preferredLanguage = null)
     {
+        if (!string.IsNullOrEmpty(preferredLanguage) && AvailableLanguages.ContainsKey(preferredLanguage))
+        {
+            SetLanguage(preferredLanguage);
+            return;
+        }
+
         string localCulture = CultureInfo.CurrentCulture.Name;
         
         // Try to match specific culture (es-ES) or general language (es)
