@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using Avalonia.Interactivity;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
@@ -22,6 +23,10 @@ internal sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        // Register key down handler in the Tunnel phase to prevent focused controls from hijacking keys
+        AddHandler(KeyDownEvent, Window_KeyDown, RoutingStrategies.Tunnel);
+
         PopulateLanguageMenu();
         ApplySettingsToUi();
     }

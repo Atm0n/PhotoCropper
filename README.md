@@ -27,6 +27,10 @@ The solution consists of three main projects:
 - **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm. It automatically detects and removes the scanner's white canvas borders.
 - **Local ROI Rotation:** Instead of rotating the entire giant scan, only the region of interest is padded, extracted, rotated, and tightly cropped using Cubic interpolation, saving substantial memory and processing overhead.
 
+### 4. Focus-Defeat & Keyboard Event Tunneling
+- **Global Key Event Tunneling:** Uses Avalonia's tunneling event routing (`RoutingStrategies.Tunnel`) for key-down events. This intercepts keyboard navigation events at the Window level before they can reach child controls.
+- **Non-Focusable Controls:** Sidebar controls, sliders, combo boxes, and buttons are explicitly configured as `Focusable="False"`. This prevents active UI controls from stealing focus, ensuring key-based navigation (like arrow keys) remains fully responsive at all times.
+
 ---
 
 ## Clean Code & Analysis Standards
