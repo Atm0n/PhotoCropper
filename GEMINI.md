@@ -47,6 +47,6 @@ A .NET tool to detect and extract multiple photos from a single scanned image us
 - [x] **Quality**: **XUnit Test Project** for engine validation.
 - [x] **Fix**: Correct image displacement and white clipping during rotation.
 - [x] **Fix**: Convert RGB to BGR before saving to disk to fix blue tint.
-- [ ] **Feature**: Persistent user settings (JSON config).
-- [ ] **Feature**: Custom output directory selection.
-- [ ] **Feature**: Lossless PNG save option.
+- [x] **Feature**: Persistent user settings (JSON config).
+- [x] **Feature**: Custom output directory selection.
+- [x] **Feature**: Lossless PNG save option.
