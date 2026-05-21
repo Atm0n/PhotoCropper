@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace PhotoCropperGui;
 
-public static class LocalizationManager
+internal static class LocalizationManager
 {
     private static readonly Dictionary<string, string> AvailableLanguages = new()
     {
@@ -27,7 +27,7 @@ public static class LocalizationManager
 
         var translations = Application.Current?.Resources.MergedDictionaries
             .OfType<ResourceInclude>()
-            .FirstOrDefault(d => d.Source?.ToString().Contains("i18n") == true);
+            .FirstOrDefault(d => d.Source?.ToString().Contains("i18n", StringComparison.Ordinal) == true);
 
         if (translations != null)
         {
@@ -66,7 +66,7 @@ public static class LocalizationManager
         SetLanguage(match ?? "en-US");
     }
 
-    public static List<(string Code, string Name)> GetAvailableLanguages()
+    public static IReadOnlyList<(string Code, string Name)> GetAvailableLanguages()
     {
         return AvailableLanguages.Select(kv => (kv.Key, kv.Value)).ToList();
     }

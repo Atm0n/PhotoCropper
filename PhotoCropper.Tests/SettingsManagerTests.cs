@@ -5,7 +5,7 @@ using Xunit;
 
 namespace PhotoCropper.Tests;
 
-public class SettingsManagerTests : IDisposable
+public sealed class SettingsManagerTests : IDisposable
 {
     private readonly string _tempDirectory;
     private readonly string _tempSettingsPath;

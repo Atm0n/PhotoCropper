@@ -3,10 +3,11 @@ using Emgu.CV.Structure;
 using Emgu.CV.CvEnum;
 using System.Drawing;
 using Emgu.CV.Util;
+using System.Collections.ObjectModel;
 
 namespace PhotoCropper;
 
-public class PhotoCropper : IDisposable
+public class PhotoCropperEngine : IDisposable
 {
     #region Fields & Properties
 
@@ -23,13 +24,13 @@ public class PhotoCropper : IDisposable
 
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
-    public List<Mat> DetectedPhotos { get; set; } = [];
+    public Collection<Mat> DetectedPhotos { get; } = [];
 
     #endregion
 
     #region Initialization & Disposal
 
-    public PhotoCropper(string originalFilePath)
+    public PhotoCropperEngine(string originalFilePath)
     {
         this.OriginalFilePath = originalFilePath;
         Original = CvInvoke.Imread(originalFilePath, ImreadModes.AnyColor);
@@ -175,7 +176,9 @@ public class PhotoCropper : IDisposable
         MCvScalar upper = new(Math.Min(180, avgColor.V0 + hTol), Math.Min(255, avgColor.V1 + sTol), Math.Min(255, avgColor.V2 + vTol));
 
         Mat mask = new();
-        CvInvoke.InRange(hsv, new ScalarArray(lower), new ScalarArray(upper), mask);
+        using ScalarArray lowerArray = new(lower);
+        using ScalarArray upperArray = new(upper);
+        CvInvoke.InRange(hsv, lowerArray, upperArray, mask);
         return mask;
     }
 
@@ -304,24 +307,22 @@ public class PhotoCropper : IDisposable
         using Mat rotationMatrix = new();
         CvInvoke.GetRotationMatrix2D(localCenter, angle, 1.0, rotationMatrix);
 
-        Mat rotatedCanvas = new();
+        using Mat rotatedCanvas = new();
         CvInvoke.WarpAffine(squareCanvas, rotatedCanvas, rotationMatrix, squareCanvas.Size, Inter.Cubic, Warp.Default, BorderType.Constant, new MCvScalar(255, 255, 255));
 
         Rectangle finalCrop = GetSnugCropRectangle(rotatedCanvas, size, localCenter);
 
         if (finalCrop.Width <= 10 || finalCrop.Height <= 10) 
         {
-            rotatedCanvas.Dispose();
             return new Mat();
         }
 
         // Return a fresh copy of the region and dispose the large rotated canvas
-        Mat final = new Mat(rotatedCanvas, finalCrop).Clone();
-        rotatedCanvas.Dispose();
-        return final;
+        using Mat subMat = new(rotatedCanvas, finalCrop);
+        return subMat.Clone();
     }
 
-    private Rectangle GetSnugCropRectangle(Mat rotatedCanvas, SizeF minAreaSize, PointF localCenter)
+    private static Rectangle GetSnugCropRectangle(Mat rotatedCanvas, SizeF minAreaSize, PointF localCenter)
     {
         using Mat gray = new();
         CvInvoke.CvtColor(rotatedCanvas, gray, ColorConversion.Bgr2Gray);
@@ -401,7 +402,7 @@ public class PhotoCropper : IDisposable
         return finalRect;
     }
 
-    private double EstimateAverageBackgroundShade(Mat grayImage)
+    private static double EstimateAverageBackgroundShade(Mat grayImage)
     {
         int s = 5;
         if (grayImage.Width <= s * 2 || grayImage.Height <= s * 2) return 255.0;
@@ -419,7 +420,7 @@ public class PhotoCropper : IDisposable
         return (tl + tr + bl + br) / 4.0;
     }
 
-    private Mat BuildRefinementMask(Mat grayImage, double bgGray)
+    private static Mat BuildRefinementMask(Mat grayImage, double bgGray)
     {
         Mat mask = new();
         // Tolerance of 20 shades of grey to catch shadows/gradients in the scanner margin
@@ -452,7 +453,8 @@ public class PhotoCropper : IDisposable
         rect.Intersect(new Rectangle(Point.Empty, photo.Size));
         if (rect.Width <= 10 || rect.Height <= 10) return;
 
-        Mat cropped = new Mat(photo, rect).Clone();
+        using Mat subMat = new(photo, rect);
+        Mat cropped = subMat.Clone();
         DetectedPhotos[index].Dispose();
         DetectedPhotos[index] = cropped;
     }
@@ -470,50 +472,54 @@ public class PhotoCropper : IDisposable
         using VectorOfVectorOfPoint contours = new();
         CvInvoke.FindContours(foreground, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
 
-        VectorOfPoint? bestHull = null;
-        try
+        int bestContourIndex = -1;
+        double maxArea = 0;
+
+        for (int i = 0; i < contours.Size; i++)
         {
-            double maxArea = 0;
-
-            for (int i = 0; i < contours.Size; i++)
+            double area = CvInvoke.ContourArea(contours[i]);
+            if (area > maxArea)
             {
-                double area = CvInvoke.ContourArea(contours[i]);
-                if (area > maxArea)
-                {
-                    maxArea = area;
-                    bestHull?.Dispose(); // Free the previous smaller hull allocation
-                    bestHull = new VectorOfPoint();
-                    CvInvoke.ConvexHull(contours[i], bestHull);
-                }
+                maxArea = area;
+                bestContourIndex = i;
             }
+        }
 
-            if (bestHull != null)
+        if (bestContourIndex >= 0)
+        {
+            using VectorOfPoint bestHull = new();
+            CvInvoke.ConvexHull(contours[bestContourIndex], bestHull);
+
+            Point[] points = bestHull.ToArray();
+            for (int i = 0; i < points.Length; i++)
             {
-                Point[] points = bestHull.ToArray();
-                for (int i = 0; i < points.Length; i++)
-                {
-                    points[i].X += searchRoi.X;
-                    points[i].Y += searchRoi.Y;
-                }
-                using VectorOfPoint globalHull = new(points);
+                points[i].X += searchRoi.X;
+                points[i].Y += searchRoi.Y;
+            }
+            using VectorOfPoint globalHull = new(points);
 
-                var extracted = ExtractPhotoFromContour(globalHull);
-                if (extracted != null && !extracted.IsEmpty)
+            Mat? extracted = null;
+            try
+            {
+                extracted = ExtractPhotoFromContour(globalHull);
+                if (!extracted.IsEmpty)
                 {
                     DetectedPhotos.Add(extracted);
+                    extracted = null; // Transfer ownership
                     return;
                 }
             }
-        }
-        finally
-        {
-            bestHull?.Dispose();
+            finally
+            {
+                extracted?.Dispose();
+            }
         }
 
         rect.Intersect(new Rectangle(Point.Empty, Original.Size));
         if (rect.Width > 10 && rect.Height > 10)
         {
-            DetectedPhotos.Add(new Mat(Original, rect).Clone());
+            using Mat subMat = new(Original, rect);
+            DetectedPhotos.Add(subMat.Clone());
         }
     }
 
@@ -523,6 +529,7 @@ public class PhotoCropper : IDisposable
 
     public void SaveDetectedPhotos(string? customOutputFolder = null, string format = "JPEG", int jpegQuality = 90)
     {
+        ArgumentNullException.ThrowIfNull(format);
         string outputFolder;
         if (!string.IsNullOrEmpty(customOutputFolder))
         {
@@ -538,7 +545,7 @@ public class PhotoCropper : IDisposable
         Directory.CreateDirectory(outputFolder);
 
         string baseFileName = Path.GetFileNameWithoutExtension(OriginalFilePath);
-        string extension = format.ToUpper() == "PNG" ? ".png" : ".jpg";
+        string extension = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
 
         int saveCounter = 1;
         for (int i = 0; i < DetectedPhotos.Count; i++)
@@ -546,14 +553,14 @@ public class PhotoCropper : IDisposable
             if (DetectedPhotos[i].IsEmpty) continue;
             string fileName = Path.Combine(outputFolder, $"{baseFileName}_{saveCounter++}{extension}");
             
-            if (format.ToUpper() == "PNG")
+            if (string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase))
             {
                 DetectedPhotos[i].Save(fileName);
             }
             else
             {
-                System.Collections.Generic.KeyValuePair<ImwriteFlags, int>[] parameters = [
-                    new System.Collections.Generic.KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegQuality, jpegQuality)
+                KeyValuePair<ImwriteFlags, int>[] parameters = [
+                    new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegQuality, jpegQuality)
                 ];
                 CvInvoke.Imwrite(fileName, DetectedPhotos[i], parameters);
             }

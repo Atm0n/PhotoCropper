@@ -1,10 +1,13 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("PhotoCropper.Tests")]
 
 namespace PhotoCropperGui;
 
-public class UserSettings
+internal sealed class UserSettings
 {
     public string Language { get; set; } = "en-US";
     public double BackgroundTolerance { get; set; } = 50;
@@ -12,13 +15,13 @@ public class UserSettings
     public double MaxAreaFactor { get; set; } = 90; // 90%
     public double CannyLowThreshold { get; set; } = 20;
     public double ZoomLevel { get; set; } = 1;
-    public bool AdvancedVisible { get; set; } = false;
-    public string? CustomOutputDirectory { get; set; } = null;
+    public bool AdvancedVisible { get; set; }
+    public string? CustomOutputDirectory { get; set; }
     public string PreferredFormat { get; set; } = "JPEG"; // JPEG or PNG
     public int JpegQuality { get; set; } = 90; // 1-100
 }
 
-public class SettingsManager
+internal sealed class SettingsManager
 {
     private static readonly Lazy<SettingsManager> _instance = new(() => new SettingsManager());
     public static SettingsManager Instance => _instance.Value;
@@ -64,7 +67,7 @@ public class SettingsManager
                 }
             }
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
         {
             // Fail gracefully - fall through to defaults
         }
@@ -85,7 +88,7 @@ public class SettingsManager
             string json = JsonSerializer.Serialize(Settings, _jsonOptions);
             File.WriteAllText(_settingsFilePath, json);
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
         {
             // Fail silently or handle appropriately
         }

@@ -9,14 +9,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using PhotoCropper;
 
 namespace PhotoCropperGui;
 
-public partial class MainWindow : Window
+internal sealed partial class MainWindow : Window
 {
-    private int currentIndex = 0;
-    private readonly List<PhotoCropper.PhotoCropper> OriginalPhotos = [];
-    private bool isLoading = false;
+    private int currentIndex;
+    private readonly List<PhotoCropperEngine> OriginalPhotos = [];
+    private bool isLoading;
 
     public MainWindow()
     {
@@ -37,7 +38,7 @@ public partial class MainWindow : Window
 
         if (cbFormat != null)
         {
-            cbFormat.SelectedIndex = settings.PreferredFormat.ToUpper() == "PNG" ? 1 : 0;
+            cbFormat.SelectedIndex = string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         }
         if (sldJpegQuality != null)
         {
@@ -49,7 +50,7 @@ public partial class MainWindow : Window
         }
         if (pnlJpegQuality != null)
         {
-            pnlJpegQuality.IsVisible = settings.PreferredFormat.ToUpper() != "PNG";
+            pnlJpegQuality.IsVisible = !string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -109,7 +110,7 @@ public partial class MainWindow : Window
             foreach (var file in fileResult)
             {
                 var filePath = file.Path.LocalPath;
-                var photo = new PhotoCropper.PhotoCropper(filePath)
+                var photo = new PhotoCropperEngine(filePath)
                 {
                     // Synchronize new photos with the current slider values
                     BackgroundTolerance = sldSensitivity.Value,
@@ -597,7 +598,7 @@ public partial class MainWindow : Window
     #region Manual Crop on Original
 
     private Avalonia.Point startPoint;
-    private bool isDragging = false;
+    private bool isDragging;
 
     private void PnlOriginal_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
@@ -699,10 +700,10 @@ public partial class MainWindow : Window
 
     #region Interactive Refinement Overlay
 
-    private bool isRefining = false;
+    private bool isRefining;
     private System.Drawing.Rectangle currentRefineRect;
     private Avalonia.Point startRefinePoint;
-    private bool isRefineDragging = false;
+    private bool isRefineDragging;
 
     private void BtnRefine_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {

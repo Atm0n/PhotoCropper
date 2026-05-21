@@ -5,7 +5,7 @@ using System.Drawing;
 
 namespace PhotoCropper.Tests;
 
-public class PhotoCropperTests : IDisposable
+public sealed class PhotoCropperTests : IDisposable
 {
     private readonly string _testImagePath;
     private readonly string _tempDir;
@@ -42,7 +42,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void Constructor_ShouldLoadImage()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         Assert.False(cropper.Original.IsEmpty);
         Assert.Equal(2000, cropper.Original.Width);
     }
@@ -50,7 +50,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void DetectPhotos_ShouldFindTwoPhotos()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         Assert.True(cropper.DetectedPhotos.Count >= 2);
     }
@@ -58,7 +58,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void SaveDetectedPhotos_ShouldCreateFiles()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         int count = cropper.DetectedPhotos.Count;
 
@@ -74,7 +74,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void SaveDetectedPhotos_PNG_ShouldCreateLosslessFiles()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         int count = cropper.DetectedPhotos.Count;
 
@@ -90,7 +90,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void SaveDetectedPhotos_CustomDir_ShouldCreateFiles()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         int count = cropper.DetectedPhotos.Count;
 
@@ -111,7 +111,7 @@ public class PhotoCropperTests : IDisposable
     [InlineData(80, 80, 450, 450, true)]      // Overlaps Photo 1 (should snap to photo)
     public void AddManualCrop_VariousCases(int x, int y, int w, int h, bool expectedAdded)
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.AddManualCrop(new Rectangle(x, y, w, h));
 
         if (expectedAdded)
@@ -127,7 +127,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void GetRefinedCropRect_ShouldRemoveMargins()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         
         // 1. Manually create a "messy" Mat: 400x400 total, but with a 200x200 black square in the middle of white.
         using Mat messy = new(400, 400, DepthType.Cv8U, 3);
@@ -154,7 +154,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void RotatePhoto_ShouldSwapDimensions()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         
         var photo = cropper.DetectedPhotos[0];
@@ -170,7 +170,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void RotatePhoto_FourTimes_ShouldRestoreDimensions()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         
         int w = cropper.DetectedPhotos[0].Width;
@@ -185,7 +185,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void DeletePhoto_ShouldDecreaseCount()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         int initialCount = cropper.DetectedPhotos.Count;
 
@@ -197,7 +197,7 @@ public class PhotoCropperTests : IDisposable
     [Fact]
     public void DeletePhoto_InvalidIndex_ShouldNotCrash()
     {
-        using var cropper = new PhotoCropper(_testImagePath);
+        using var cropper = new PhotoCropperEngine(_testImagePath);
         cropper.DetectPhotos();
         int count = cropper.DetectedPhotos.Count;
 
@@ -225,7 +225,7 @@ public class PhotoCropperTests : IDisposable
             scan.Save(cornerImgPath);
         }
 
-        using var cropper = new PhotoCropper(cornerImgPath);
+        using var cropper = new PhotoCropperEngine(cornerImgPath);
         cropper.DetectPhotos();
         
         // Both the middle photo and the corner photo should be detected successfully because the 8-point median
@@ -247,7 +247,7 @@ public class PhotoCropperTests : IDisposable
             scan.Save(highResImgPath);
         }
 
-        using var cropper = new PhotoCropper(highResImgPath);
+        using var cropper = new PhotoCropperEngine(highResImgPath);
         cropper.DetectPhotos();
         
         // The photo should be detected successfully because the morphological kernel scales with resolution
@@ -282,7 +282,7 @@ public class PhotoCropperTests : IDisposable
             scan.Save(testPath);
         }
 
-        using var cropper = new PhotoCropper(testPath);
+        using var cropper = new PhotoCropperEngine(testPath);
         cropper.DetectPhotos();
 
         // Under the old overlap check (which checked bounding box containment), the second photo 
