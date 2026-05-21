@@ -96,10 +96,15 @@ public class PhotoCropper : IDisposable
         CvInvoke.BitwiseNot(backgroundMask, foreground);
         CvInvoke.BitwiseOr(foreground, edges, foreground);
 
-        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(5, 5), new Point(-1, -1));
+        // Dynamically scale morphology kernels based on scan resolution/dimensions
+        int minDim = Math.Min(source.Width, source.Height);
+        int openSize = Math.Max(3, (minDim / 400) | 1);  // Ensure odd integer, min 3
+        int closeSize = Math.Max(5, (minDim / 180) | 1); // Ensure odd integer, min 5
+
+        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(openSize, openSize), new Point(-1, -1));
         CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
 
-        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(11, 11), new Point(-1, -1));
+        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(closeSize, closeSize), new Point(-1, -1));
         CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Close, closeKernel, new Point(-1, -1), 2, BorderType.Default, new MCvScalar());
 
         return foreground;
@@ -108,29 +113,46 @@ public class PhotoCropper : IDisposable
     private static MCvScalar SampleBackgroundColor(Mat hsv)
     {
         int s = 15; // sample size
-        if (hsv.Width < s * 2 + 10 || hsv.Height < s * 2 + 10) return new MCvScalar();
+        if (hsv.Width < s * 3 + 20 || hsv.Height < s * 3 + 20) return new MCvScalar();
 
-        // Sample 4 corners efficiently using ROI without creating new Mat objects
-        var r1 = new Rectangle(5, 5, s, s);
-        var r2 = new Rectangle(hsv.Width - s - 5, 5, s, s);
-        var r3 = new Rectangle(5, hsv.Height - s - 5, s, s);
-        var r4 = new Rectangle(hsv.Width - s - 5, hsv.Height - s - 5, s, s);
+        int halfW = hsv.Width / 2;
+        int halfH = hsv.Height / 2;
 
-        using Mat m1 = new(hsv, r1);
-        using Mat m2 = new(hsv, r2);
-        using Mat m3 = new(hsv, r3);
-        using Mat m4 = new(hsv, r4);
+        var rects = new Rectangle[]
+        {
+            new(5, 5, s, s),                               // Top-Left
+            new(halfW - s / 2, 5, s, s),                   // Top-Center
+            new(hsv.Width - s - 5, 5, s, s),               // Top-Right
+            new(5, halfH - s / 2, s, s),                   // Middle-Left
+            new(hsv.Width - s - 5, halfH - s / 2, s, s),   // Middle-Right
+            new(5, hsv.Height - s - 5, s, s),              // Bottom-Left
+            new(halfW - s / 2, hsv.Height - s - 5, s, s),  // Bottom-Center
+            new(hsv.Width - s - 5, hsv.Height - s - 5, s, s) // Bottom-Right
+        };
 
-        var s1 = CvInvoke.Mean(m1);
-        var s2 = CvInvoke.Mean(m2);
-        var s3 = CvInvoke.Mean(m3);
-        var s4 = CvInvoke.Mean(m4);
+        var hVals = new List<double>();
+        var sVals = new List<double>();
+        var vVals = new List<double>();
 
-        return new MCvScalar(
-            (s1.V0 + s2.V0 + s3.V0 + s4.V0) / 4.0,
-            (s1.V1 + s2.V1 + s3.V1 + s4.V1) / 4.0,
-            (s1.V2 + s2.V2 + s3.V2 + s4.V2) / 4.0
-        );
+        foreach (var r in rects)
+        {
+            using Mat m = new(hsv, r);
+            var mean = CvInvoke.Mean(m);
+            hVals.Add(mean.V0);
+            sVals.Add(mean.V1);
+            vVals.Add(mean.V2);
+        }
+
+        hVals.Sort();
+        sVals.Sort();
+        vVals.Sort();
+
+        // Calculate median for Hue, Saturation, and Value to robustly reject outliers
+        double medianH = (hVals[3] + hVals[4]) / 2.0;
+        double medianS = (sVals[3] + sVals[4]) / 2.0;
+        double medianV = (vVals[3] + vVals[4]) / 2.0;
+
+        return new MCvScalar(medianH, medianS, medianV);
     }
 
     private Mat CreateBackgroundMask(Mat hsv, MCvScalar avgColor, double? toleranceOverride = null)
@@ -138,7 +160,9 @@ public class PhotoCropper : IDisposable
         double tol = toleranceOverride ?? BackgroundTolerance;
         double hTol = tol * 0.4;
         double sTol = tol;
-        double vTol = tol;
+        
+        // Widen Value (V) tolerance slightly to absorb scanner lid shadow gradients if the background is light
+        double vTol = avgColor.V2 > 128 ? tol * 1.5 : tol;
 
         MCvScalar lower = new(Math.Max(0, avgColor.V0 - hTol), Math.Max(0, avgColor.V1 - sTol), Math.Max(0, avgColor.V2 - vTol));
         MCvScalar upper = new(Math.Min(180, avgColor.V0 + hTol), Math.Min(255, avgColor.V1 + sTol), Math.Min(255, avgColor.V2 + vTol));

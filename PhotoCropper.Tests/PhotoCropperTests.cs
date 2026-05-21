@@ -208,6 +208,52 @@ public class PhotoCropperTests : IDisposable
         Assert.Equal(count, cropper.DetectedPhotos.Count);
     }
 
+    [Fact]
+    public void DetectPhotos_ShouldDetectSuccessfully_WithPhotoInCorner()
+    {
+        string cornerImgPath = Path.Combine(_tempDir, "corner_scan.jpg");
+        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(255, 255, 255)); // White background
+            
+            // Photo 1 in the middle
+            CvInvoke.Rectangle(scan, new Rectangle(800, 800, 400, 400), new MCvScalar(0, 0, 0), -1);
+
+            // A solid dark photo in the bottom-right corner (which previously would corrupt background sampling)
+            CvInvoke.Rectangle(scan, new Rectangle(1700, 1700, 300, 300), new MCvScalar(20, 20, 20), -1);
+
+            scan.Save(cornerImgPath);
+        }
+
+        using var cropper = new PhotoCropper(cornerImgPath);
+        cropper.DetectPhotos();
+        
+        // Both the middle photo and the corner photo should be detected successfully because the 8-point median
+        // perimeter sampling rejects the corner photo outlier and correctly identifies the white background!
+        Assert.True(cropper.DetectedPhotos.Count >= 2);
+    }
+
+    [Fact]
+    public void DetectPhotos_ShouldDetectSuccessfully_OnHighResolutionScans()
+    {
+        string highResImgPath = Path.Combine(_tempDir, "highres_scan.jpg");
+        using (Mat scan = new(5000, 5000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(255, 255, 255)); // White background
+            
+            // Large Photo in the middle
+            CvInvoke.Rectangle(scan, new Rectangle(1000, 1000, 3000, 3000), new MCvScalar(0, 0, 0), -1);
+
+            scan.Save(highResImgPath);
+        }
+
+        using var cropper = new PhotoCropper(highResImgPath);
+        cropper.DetectPhotos();
+        
+        // The photo should be detected successfully because the morphological kernel scales with resolution
+        Assert.NotEmpty(cropper.DetectedPhotos);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
