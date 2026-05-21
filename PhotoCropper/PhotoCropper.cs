@@ -92,12 +92,19 @@ public class PhotoCropper : IDisposable
         CvInvoke.GaussianBlur(gray, edges, new Size(5, 5), 1.5);
         CvInvoke.Canny(edges, edges, lowThreshold, highThreshold);
 
+        int minDim = Math.Min(source.Width, source.Height);
+
+        // Seal faint low-contrast borders (e.g. white photo borders) using dynamic Adaptive Thresholding
+        int adaptiveBlockSize = Math.Max(5, (minDim / 150) | 1); // Resolution-aware block size
+        using Mat adaptive = new();
+        CvInvoke.AdaptiveThreshold(gray, adaptive, 255, AdaptiveThresholdType.GaussianC, ThresholdType.BinaryInv, adaptiveBlockSize, 7);
+        CvInvoke.BitwiseOr(edges, adaptive, edges);
+
         Mat foreground = new();
         CvInvoke.BitwiseNot(backgroundMask, foreground);
         CvInvoke.BitwiseOr(foreground, edges, foreground);
 
         // Dynamically scale morphology kernels based on scan resolution/dimensions
-        int minDim = Math.Min(source.Width, source.Height);
         int openSize = Math.Max(3, (minDim / 400) | 1);  // Ensure odd integer, min 3
         int closeSize = Math.Max(5, (minDim / 180) | 1); // Ensure odd integer, min 5
 
@@ -196,14 +203,22 @@ public class PhotoCropper : IDisposable
             }
 
             var sorted = candidates.OrderByDescending(c => c.Area).ToList();
-            var acceptedRects = new List<Rectangle>();
 
             foreach (var (Rect, Area, Contour) in sorted)
             {
                 Point center = new(Rect.X + Rect.Width / 2, Rect.Y + Rect.Height / 2);
-                if (acceptedRects.Any(r => r.Contains(center))) continue;
-
-                acceptedRects.Add(Rect);
+                
+                // Precise OpenCV convex hull polygon overlap test
+                bool insideAny = false;
+                foreach (var acceptedHull in acceptedHulls)
+                {
+                    if (CvInvoke.PointPolygonTest(acceptedHull, center, false) >= 0)
+                    {
+                        insideAny = true;
+                        break;
+                    }
+                }
+                if (insideAny) continue;
                 
                 VectorOfPoint hull = new();
                 CvInvoke.ConvexHull(Contour, hull);

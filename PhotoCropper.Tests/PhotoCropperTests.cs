@@ -254,6 +254,43 @@ public class PhotoCropperTests : IDisposable
         Assert.NotEmpty(cropper.DetectedPhotos);
     }
 
+    [Fact]
+    public void DetectPhotos_ShouldDetectTiltedAdjacentPhotosWithoutOverlapConflict()
+    {
+        string testPath = Path.Combine(_tempDir, "tilted_adjacent_scan.jpg");
+        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(255, 255, 255)); // White background
+            
+            // Photo 1: Large diamond shape (tilted square) centered at (1000, 1000)
+            Point[] points1 = [
+                new Point(1000, 646),
+                new Point(1354, 1000),
+                new Point(1000, 1354),
+                new Point(646, 1000)
+            ];
+            using (var vp1 = new Emgu.CV.Util.VectorOfPoint(points1))
+            {
+                CvInvoke.FillConvexPoly(scan, vp1, new MCvScalar(50, 50, 50), LineType.AntiAlias);
+            }
+
+            // Photo 2: A square 220x220 centered at (660, 660), which puts its center (660, 660)
+            // inside the axis-aligned bounding box of Photo 1 [646, 1354] x [646, 1354],
+            // but completely outside the actual tilted polygon.
+            CvInvoke.Rectangle(scan, new Rectangle(550, 550, 220, 220), new MCvScalar(20, 20, 20), -1);
+
+            scan.Save(testPath);
+        }
+
+        using var cropper = new PhotoCropper(testPath);
+        cropper.DetectPhotos();
+
+        // Under the old overlap check (which checked bounding box containment), the second photo 
+        // would be rejected because its center (660, 660) is inside Photo 1's AABB.
+        // Under the new CvInvoke.PointPolygonTest convex hull check, both are correctly detected!
+        Assert.Equal(2, cropper.DetectedPhotos.Count);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
