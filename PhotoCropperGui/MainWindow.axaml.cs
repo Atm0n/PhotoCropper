@@ -33,6 +33,23 @@ public partial class MainWindow : Window
         sldMaxArea.Value = settings.MaxAreaFactor;
         sldEdge.Value = settings.CannyLowThreshold;
         tglAdvanced.IsChecked = settings.AdvancedVisible;
+
+        if (cbFormat != null)
+        {
+            cbFormat.SelectedIndex = settings.PreferredFormat.ToUpper() == "PNG" ? 1 : 0;
+        }
+        if (sldJpegQuality != null)
+        {
+            sldJpegQuality.Value = settings.JpegQuality;
+        }
+        if (txtOutputDir != null)
+        {
+            txtOutputDir.Text = settings.CustomOutputDirectory ?? "";
+        }
+        if (pnlJpegQuality != null)
+        {
+            pnlJpegQuality.IsVisible = settings.PreferredFormat.ToUpper() != "PNG";
+        }
     }
 
     private void PopulateLanguageMenu()
@@ -172,10 +189,11 @@ public partial class MainWindow : Window
     {
         if (OriginalPhotos.Count == 0) return;
 
+        var settings = SettingsManager.Instance.Settings;
         int totalSaved = 0;
         foreach (var originalPhoto in OriginalPhotos)
         {
-            originalPhoto.SaveDetectedPhotos();
+            originalPhoto.SaveDetectedPhotos(settings.CustomOutputDirectory, settings.PreferredFormat, settings.JpegQuality);
             totalSaved += originalPhoto.DetectedPhotos.Count;
         }
 
@@ -279,6 +297,56 @@ public partial class MainWindow : Window
             string msgFormat = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
             lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
         }
+    }
+
+    private void CbFormat_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (cbFormat == null || pnlJpegQuality == null) return;
+
+        bool isJpeg = cbFormat.SelectedIndex == 0;
+        pnlJpegQuality.IsVisible = isJpeg;
+
+        var settings = SettingsManager.Instance.Settings;
+        settings.PreferredFormat = isJpeg ? "JPEG" : "PNG";
+        SettingsManager.Instance.Save();
+    }
+
+    private void SldJpegQuality_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
+    {
+        if (sldJpegQuality == null) return;
+        var settings = SettingsManager.Instance.Settings;
+        settings.JpegQuality = (int)sldJpegQuality.Value;
+        SettingsManager.Instance.Save();
+    }
+
+    private async void BtnBrowseDir_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider == null) return;
+
+        var folderResult = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = Application.Current?.FindResource("LblOutputDir")?.ToString() ?? "Select Export Folder",
+            AllowMultiple = false
+        });
+
+        if (folderResult != null && folderResult.Count > 0)
+        {
+            var path = folderResult[0].Path.LocalPath;
+            txtOutputDir.Text = path;
+            var settings = SettingsManager.Instance.Settings;
+            settings.CustomOutputDirectory = path;
+            SettingsManager.Instance.Save();
+        }
+    }
+
+    private void BtnClearOutputDir_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (txtOutputDir == null) return;
+        txtOutputDir.Text = "";
+        var settings = SettingsManager.Instance.Settings;
+        settings.CustomOutputDirectory = null;
+        SettingsManager.Instance.Save();
     }
 
     private void Slides_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -852,6 +920,20 @@ public partial class MainWindow : Window
         settings.MaxAreaFactor = sldMaxArea.Value;
         settings.CannyLowThreshold = sldEdge.Value;
         settings.AdvancedVisible = tglAdvanced.IsChecked ?? false;
+
+        if (cbFormat != null)
+        {
+            settings.PreferredFormat = cbFormat.SelectedIndex == 1 ? "PNG" : "JPEG";
+        }
+        if (sldJpegQuality != null)
+        {
+            settings.JpegQuality = (int)sldJpegQuality.Value;
+        }
+        if (txtOutputDir != null)
+        {
+            settings.CustomOutputDirectory = string.IsNullOrEmpty(txtOutputDir.Text) ? null : txtOutputDir.Text;
+        }
+
         SettingsManager.Instance.Save();
 
         base.OnClosed(e);

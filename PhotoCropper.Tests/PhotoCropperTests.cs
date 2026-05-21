@@ -71,6 +71,39 @@ public class PhotoCropperTests : IDisposable
         Assert.Equal(count, files.Length);
     }
 
+    [Fact]
+    public void SaveDetectedPhotos_PNG_ShouldCreateLosslessFiles()
+    {
+        using var cropper = new PhotoCropper(_testImagePath);
+        cropper.DetectPhotos();
+        int count = cropper.DetectedPhotos.Count;
+
+        cropper.SaveDetectedPhotos(null, "PNG");
+
+        string outputDir = Path.Combine(_tempDir, "cropped");
+        Assert.True(Directory.Exists(outputDir));
+        
+        var files = Directory.GetFiles(outputDir, "*.png");
+        Assert.Equal(count, files.Length);
+    }
+
+    [Fact]
+    public void SaveDetectedPhotos_CustomDir_ShouldCreateFiles()
+    {
+        using var cropper = new PhotoCropper(_testImagePath);
+        cropper.DetectPhotos();
+        int count = cropper.DetectedPhotos.Count;
+
+        string customDir = Path.Combine(_tempDir, $"custom_export_{Guid.NewGuid()}");
+
+        cropper.SaveDetectedPhotos(customDir, "JPEG", 85);
+
+        Assert.True(Directory.Exists(customDir));
+        
+        var files = Directory.GetFiles(customDir, "*.jpg");
+        Assert.Equal(count, files.Length);
+    }
+
     [Theory]
     [InlineData(1500, 1500, 100, 100, true)]  // Valid background crop
     [InlineData(1950, 1950, 200, 200, true)]  // Partially out of bounds (should be clamped)

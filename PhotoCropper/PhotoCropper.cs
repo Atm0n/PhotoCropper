@@ -456,23 +456,42 @@ public class PhotoCropper : IDisposable
 
     #region File Operations
 
-    public void SaveDetectedPhotos()
+    public void SaveDetectedPhotos(string? customOutputFolder = null, string format = "JPEG", int jpegQuality = 90)
     {
-        string? directory = Path.GetDirectoryName(OriginalFilePath);
-        if (string.IsNullOrEmpty(directory)) return;
+        string outputFolder;
+        if (!string.IsNullOrEmpty(customOutputFolder))
+        {
+            outputFolder = customOutputFolder;
+        }
+        else
+        {
+            string? directory = Path.GetDirectoryName(OriginalFilePath);
+            if (string.IsNullOrEmpty(directory)) return;
+            outputFolder = Path.Combine(directory, "cropped");
+        }
 
-        string outputFolder = Path.Combine(directory, "cropped");
         Directory.CreateDirectory(outputFolder);
 
         string baseFileName = Path.GetFileNameWithoutExtension(OriginalFilePath);
+        string extension = format.ToUpper() == "PNG" ? ".png" : ".jpg";
 
         int saveCounter = 1;
         for (int i = 0; i < DetectedPhotos.Count; i++)
         {
             if (DetectedPhotos[i].IsEmpty) continue;
-            string fileName = Path.Combine(outputFolder, $"{baseFileName}_{saveCounter++}.jpg");
+            string fileName = Path.Combine(outputFolder, $"{baseFileName}_{saveCounter++}{extension}");
             
-            DetectedPhotos[i].Save(fileName);
+            if (format.ToUpper() == "PNG")
+            {
+                DetectedPhotos[i].Save(fileName);
+            }
+            else
+            {
+                System.Collections.Generic.KeyValuePair<ImwriteFlags, int>[] parameters = [
+                    new System.Collections.Generic.KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegQuality, jpegQuality)
+                ];
+                CvInvoke.Imwrite(fileName, DetectedPhotos[i], parameters);
+            }
         }
     }
 
