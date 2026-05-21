@@ -7,7 +7,7 @@
 		Background="#1e1e1e"
 		Foreground="White"
         Title="PhotoCropper - Intelligent Photo Extractor"
-        Icon="/Assets/app_icon.png">
+        Icon="avares://PhotoCropperGui/Assets/app_icon.png">
 
 	<Grid>
 		<DockPanel>
