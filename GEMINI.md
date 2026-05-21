@@ -5,7 +5,7 @@ A .NET tool to detect and extract multiple photos from a single scanned image us
 ## Project Structure
 
 - `PhotoCropper`: Core library for image processing.
-  - `PhotoCropper.cs`: Contains the detection and cropping logic using OpenCV (via Emgu.CV). Parallelized extraction engine.
+  - `PhotoCropperEngine.cs`: Contains the detection and cropping logic using OpenCV (via Emgu.CV). Parallelized extraction engine.
 - `PhotoCropperGui`: Avalonia-based desktop application.
   - `MainWindow.axaml`: Main UI layout with Dark Theme, DockPanel, and Grids.
   - `MainWindow.axaml.cs`: UI logic, pointer-based rendering pipeline, and asynchronous event handling.
