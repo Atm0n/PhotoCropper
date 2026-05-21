@@ -159,6 +159,11 @@ internal sealed partial class MainWindow : Window
 
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();
+
+            if (btnResetBackground != null)
+            {
+                btnResetBackground.IsEnabled = OriginalPhotos[currentIndex].CustomBackgroundColorHsv != null;
+            }
         }
         finally
         {
@@ -608,6 +613,14 @@ internal sealed partial class MainWindow : Window
     private void PnlOriginal_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
         if (OriginalPhotos.Count == 0) return;
+
+        if (tglColorPicker != null && tglColorPicker.IsChecked == true)
+        {
+            e.Handled = true;
+            SampleBackgroundColorAtPointer(e.GetPosition(pnlOriginal));
+            return;
+        }
+
         UpdateCropCanvasSize();
         startPoint = e.GetPosition(pnlOriginal);
         isDragging = true;
@@ -938,6 +951,71 @@ internal sealed partial class MainWindow : Window
             lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
         }
     }
+
+    #region Background Color Picker
+
+    private void TglColorPicker_Click(object? sender, RoutedEventArgs e)
+    {
+        if (pnlOriginal == null || tglColorPicker == null) return;
+        pnlOriginal.Cursor = tglColorPicker.IsChecked == true 
+            ? new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Cross) 
+            : Avalonia.Input.Cursor.Default;
+    }
+
+    private async void SampleBackgroundColorAtPointer(Avalonia.Point uiPoint)
+    {
+        if (OriginalPhotos.Count == 0 || tglColorPicker == null || btnResetBackground == null) return;
+        var photo = OriginalPhotos[currentIndex];
+
+        var imageRect = GetImageRectInsideControl();
+        if (imageRect.Width <= 0 || imageRect.Height <= 0) return;
+
+        // Map display coordinate to original physical scan pixels
+        double scaleX = photo.Original.Width / imageRect.Width;
+        double scaleY = photo.Original.Height / imageRect.Height;
+
+        int x = (int)((uiPoint.X - imageRect.X) * scaleX);
+        int y = (int)((uiPoint.Y - imageRect.Y) * scaleY);
+
+        // Reset cursor and toggle
+        pnlOriginal.Cursor = Avalonia.Input.Cursor.Default;
+        tglColorPicker.IsChecked = false;
+
+        pnlLoadingOverlay.IsVisible = true;
+        lblStatus.Text = Application.Current?.FindResource("MsgClickToSample")?.ToString() ?? "Sampling background color...";
+
+        await Task.Run(() =>
+        {
+            photo.SetCustomBackgroundFromPixel(x, y);
+            photo.DetectPhotos();
+        });
+
+        btnResetBackground.IsEnabled = true;
+
+        await LoadPhotosToGuiAsync();
+
+        string completeMsg = Application.Current?.FindResource("MsgBackgroundSampled")?.ToString() ?? "Custom background color applied.";
+        lblStatus.Text = completeMsg;
+    }
+
+    private async void BtnResetBackground_Click(object? sender, RoutedEventArgs e)
+    {
+        if (OriginalPhotos.Count == 0 || btnResetBackground == null) return;
+        var photo = OriginalPhotos[currentIndex];
+
+        photo.CustomBackgroundColorHsv = null;
+        btnResetBackground.IsEnabled = false;
+
+        pnlLoadingOverlay.IsVisible = true;
+        lblStatus.Text = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing with automatic background...";
+
+        await Task.Run(() => photo.DetectPhotos());
+        await LoadPhotosToGuiAsync();
+
+        lblStatus.Text = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete.";
+    }
+
+    #endregion
 
     protected override void OnClosed(System.EventArgs e)
     {

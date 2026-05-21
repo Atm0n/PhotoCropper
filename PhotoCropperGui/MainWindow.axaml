@@ -29,6 +29,19 @@
 							</StackPanel>
 						</Button>
 
+						<ToggleButton x:Name="tglColorPicker" Click="TglColorPicker_Click" Padding="15,8" Focusable="False">
+							<StackPanel Orientation="Horizontal" Spacing="8">
+								<TextBlock Text="🎨"/>
+								<TextBlock Text="{DynamicResource BtnSampleBackground}"/>
+							</StackPanel>
+						</ToggleButton>
+						<Button x:Name="btnResetBackground" Click="BtnResetBackground_Click" Padding="15,8" Focusable="False" IsEnabled="False">
+							<StackPanel Orientation="Horizontal" Spacing="8">
+								<TextBlock Text="🔄"/>
+								<TextBlock Text="{DynamicResource BtnResetBackground}"/>
+							</StackPanel>
+						</Button>
+
 						<Menu Background="Transparent" VerticalAlignment="Center" Margin="5,0">
 							<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuLanguage"/>
 						</Menu>

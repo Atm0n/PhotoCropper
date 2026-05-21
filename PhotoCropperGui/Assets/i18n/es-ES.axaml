@@ -64,4 +64,8 @@
 	<sys:String x:Key="LblOutputDir">Carpeta de salida</sys:String>
 	<sys:String x:Key="WatermarkSameDir">Misma que el original (cropped/)</sys:String>
 	<sys:String x:Key="TipClearDir">Restablecer a la carpeta original</sys:String>
+	<sys:String x:Key="BtnSampleBackground">Muestrear Fondo</sys:String>
+	<sys:String x:Key="BtnResetBackground">Fondo Automático</sys:String>
+	<sys:String x:Key="MsgClickToSample">Haga clic en cualquier parte del fondo del escaneo para muestrear su color...</sys:String>
+	<sys:String x:Key="MsgBackgroundSampled">Color de fondo personalizado aplicado.</sys:String>
 </ResourceDictionary>

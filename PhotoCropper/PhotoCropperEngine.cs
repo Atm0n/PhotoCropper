@@ -21,6 +21,7 @@ public class PhotoCropperEngine : IDisposable
     public double MaxAreaFactor { get; set; } = 0.90; // 90% of scan
     public double CannyLowThreshold { get; set; } = 20;
     public double CannyHighThreshold { get; set; } = 50;
+    public MCvScalar? CustomBackgroundColorHsv { get; set; }
 
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
@@ -84,7 +85,7 @@ public class PhotoCropperEngine : IDisposable
         using Mat hsv = new();
         CvInvoke.CvtColor(source, hsv, ColorConversion.Bgr2Hsv);
 
-        MCvScalar avgBackgroundColor = SampleBackgroundColor(hsv);
+        MCvScalar avgBackgroundColor = CustomBackgroundColorHsv ?? SampleBackgroundColor(hsv);
         using Mat backgroundMask = CreateBackgroundMask(hsv, avgBackgroundColor, backgroundTolerance);
 
         using Mat gray = new();
@@ -161,6 +162,26 @@ public class PhotoCropperEngine : IDisposable
         double medianV = (vVals[3] + vVals[4]) / 2.0;
 
         return new MCvScalar(medianH, medianS, medianV);
+    }
+
+    public void SetCustomBackgroundFromPixel(int x, int y)
+    {
+        if (Original.IsEmpty) return;
+
+        x = Math.Clamp(x, 0, Original.Width - 1);
+        y = Math.Clamp(y, 0, Original.Height - 1);
+
+        int s = 5;
+        int half = s / 2;
+        int startX = Math.Max(0, x - half);
+        int startY = Math.Max(0, y - half);
+        int w = Math.Min(Original.Width - startX, s);
+        int h = Math.Min(Original.Height - startY, s);
+
+        using Mat sampledArea = new(Original, new Rectangle(startX, startY, w, h));
+        using Mat hsvSampled = new();
+        CvInvoke.CvtColor(sampledArea, hsvSampled, ColorConversion.Bgr2Hsv);
+        CustomBackgroundColorHsv = CvInvoke.Mean(hsvSampled);
     }
 
     private Mat CreateBackgroundMask(Mat hsv, MCvScalar avgColor, double? toleranceOverride = null)

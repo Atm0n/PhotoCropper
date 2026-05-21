@@ -22,6 +22,7 @@ The solution consists of three main projects:
 - **Resolution-Aware Morphology:** Morphological opening and closing kernels dynamically scale according to the scan's resolution, ensuring identical edge-detection performance whether processing 150 DPI or 1200 DPI scans.
 - **Adaptive Shadow Tolerance:** Brightness thresholds are scaled dynamically for light backgrounds, allowing the engine to absorb scanner lid gradients and shadows while preserving photo integrity.
 - **Convex Hull Overlap Verification:** Rather than checking basic axis-aligned bounding rectangles, the engine uses OpenCV's convex hull polygon testing (`PointPolygonTest`) to separate tilted adjacent photos.
+- **Interactive Background Color Picker:** Allows manual background sampling via a noise-resistant 5x5 average neighborhood in HSV space directly from any clicked zoom/pan pixel, giving the user control when scanner grain or irregular gradients confound the auto-detector.
 
 ### 3. Smart Manual & Refinement Operations
 - **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm. It automatically detects and removes the scanner's white canvas borders.
@@ -75,7 +76,7 @@ dotnet run --project PhotoCropperGui
 ```
 
 ### Run Tests
-To execute all 21 unit tests:
+To execute all 22 unit tests:
 ```bash
 dotnet test
 ```

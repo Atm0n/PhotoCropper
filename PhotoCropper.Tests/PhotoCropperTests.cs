@@ -291,6 +291,32 @@ public sealed class PhotoCropperTests : IDisposable
         Assert.Equal(2, cropper.DetectedPhotos.Count);
     }
 
+    [Fact]
+    public void SetCustomBackgroundFromPixel_ShouldSampleCorrectlyAndOverrideBackground()
+    {
+        using var cropper = new PhotoCropperEngine(_testImagePath);
+        
+        // Sample at 0, 0 (white background)
+        cropper.SetCustomBackgroundFromPixel(0, 0);
+        Assert.NotNull(cropper.CustomBackgroundColorHsv);
+        var whiteHsv = cropper.CustomBackgroundColorHsv.Value;
+        // White in HSV: S should be close to 0, V should be close to 255
+        Assert.InRange(whiteHsv.V0, 0, 10); // H
+        Assert.InRange(whiteHsv.V1, 0, 10); // S
+        Assert.InRange(whiteHsv.V2, 245, 256); // V
+
+        // Sample at 200, 200 (black photo, BGR = 0,0,0)
+        cropper.SetCustomBackgroundFromPixel(200, 200);
+        Assert.NotNull(cropper.CustomBackgroundColorHsv);
+        var blackHsv = cropper.CustomBackgroundColorHsv.Value;
+        // Black in HSV: V should be close to 0
+        Assert.InRange(blackHsv.V2, 0, 10);
+
+        // Reset
+        cropper.CustomBackgroundColorHsv = null;
+        Assert.Null(cropper.CustomBackgroundColorHsv);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

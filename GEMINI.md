@@ -50,3 +50,4 @@ A .NET tool to detect and extract multiple photos from a single scanned image us
 - [x] **Feature**: Persistent user settings (JSON config).
 - [x] **Feature**: Custom output directory selection.
 - [x] **Feature**: Lossless PNG save option.
+- [x] **Improvement**: **Interactive Background Color Picker** (neighborhood pixel sampling & dynamic boundary recalculation).

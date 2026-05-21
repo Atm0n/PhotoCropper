@@ -64,4 +64,8 @@
 	<sys:String x:Key="LblOutputDir">Export Folder</sys:String>
 	<sys:String x:Key="WatermarkSameDir">Same as original folder (cropped/)</sys:String>
 	<sys:String x:Key="TipClearDir">Reset to original folder</sys:String>
+	<sys:String x:Key="BtnSampleBackground">Sample Background</sys:String>
+	<sys:String x:Key="BtnResetBackground">Auto Background</sys:String>
+	<sys:String x:Key="MsgClickToSample">Click anywhere on the background of the scan to sample its color...</sys:String>
+	<sys:String x:Key="MsgBackgroundSampled">Custom background color applied.</sys:String>
 </ResourceDictionary>

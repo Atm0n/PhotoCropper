@@ -64,4 +64,8 @@
 	<sys:String x:Key="LblOutputDir">Carpeta de sortida</sys:String>
 	<sys:String x:Key="WatermarkSameDir">El mateix que l'original (cropped/)</sys:String>
 	<sys:String x:Key="TipClearDir">Restablir a la carpeta original</sys:String>
+	<sys:String x:Key="BtnSampleBackground">Mostrejar Fons</sys:String>
+	<sys:String x:Key="BtnResetBackground">Fons Automàtic</sys:String>
+	<sys:String x:Key="MsgClickToSample">Faci clic a qualsevol part del fons de l'escaneig per mostrejar-ne el color...</sys:String>
+	<sys:String x:Key="MsgBackgroundSampled">Color de fons personalitzat aplicat.</sys:String>
 </ResourceDictionary>
