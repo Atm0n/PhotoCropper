@@ -74,18 +74,35 @@ public class PhotoCropper : IDisposable
     public void DetectPhotos()
     {
         ResetState();
+        using Mat foreground = GenerateForegroundMask(Original, BackgroundTolerance, CannyLowThreshold, CannyHighThreshold);
+        ProcessContours(foreground);
+    }
 
+    private Mat GenerateForegroundMask(Mat source, double backgroundTolerance, double lowThreshold, double highThreshold)
+    {
         using Mat hsv = new();
-        CvInvoke.CvtColor(Original, hsv, ColorConversion.Bgr2Hsv);
+        CvInvoke.CvtColor(source, hsv, ColorConversion.Bgr2Hsv);
 
         MCvScalar avgBackgroundColor = SampleBackgroundColor(hsv);
-        using Mat backgroundMask = CreateBackgroundMask(hsv, avgBackgroundColor);
-        using Mat edges = PerformEdgeDetection();
+        using Mat backgroundMask = CreateBackgroundMask(hsv, avgBackgroundColor, backgroundTolerance);
 
-        using Mat foreground = CreateForegroundMap(backgroundMask, edges);
-        RefineForegroundMap(foreground);
+        using Mat gray = new();
+        CvInvoke.CvtColor(source, gray, ColorConversion.Bgr2Gray);
+        using Mat edges = new();
+        CvInvoke.GaussianBlur(gray, edges, new Size(5, 5), 1.5);
+        CvInvoke.Canny(edges, edges, lowThreshold, highThreshold);
 
-        ProcessContours(foreground);
+        Mat foreground = new();
+        CvInvoke.BitwiseNot(backgroundMask, foreground);
+        CvInvoke.BitwiseOr(foreground, edges, foreground);
+
+        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(5, 5), new Point(-1, -1));
+        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+
+        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(11, 11), new Point(-1, -1));
+        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Close, closeKernel, new Point(-1, -1), 2, BorderType.Default, new MCvScalar());
+
+        return foreground;
     }
 
     private static MCvScalar SampleBackgroundColor(Mat hsv)
@@ -131,33 +148,6 @@ public class PhotoCropper : IDisposable
         return mask;
     }
 
-    private Mat PerformEdgeDetection()
-    {
-        using Mat gray = new();
-        CvInvoke.CvtColor(Original, gray, ColorConversion.Bgr2Gray);
-        Mat edges = new();
-        CvInvoke.GaussianBlur(gray, edges, new Size(5, 5), 1.5);
-        CvInvoke.Canny(edges, edges, CannyLowThreshold, CannyHighThreshold);
-        return edges;
-    }
-
-    private static Mat CreateForegroundMap(Mat backgroundMask, Mat edges)
-    {
-        Mat foreground = new();
-        CvInvoke.BitwiseNot(backgroundMask, foreground);
-        CvInvoke.BitwiseOr(foreground, edges, foreground);
-        return foreground;
-    }
-
-    private static void RefineForegroundMap(Mat foreground)
-    {
-        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(5, 5), new Point(-1, -1));
-        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
-
-        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(11, 11), new Point(-1, -1));
-        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Close, closeKernel, new Point(-1, -1), 2, BorderType.Default, new MCvScalar());
-    }
-
     private void ProcessContours(Mat foregroundMap)
     {
         using VectorOfVectorOfPoint contours = new();
@@ -168,51 +158,66 @@ public class PhotoCropper : IDisposable
         double maxArea = totalArea * MaxAreaFactor;
 
         var candidates = new List<(Rectangle Rect, double Area, VectorOfPoint Contour)>();
-        for (int i = 0; i < contours.Size; i++)
-        {
-            double area = CvInvoke.ContourArea(contours[i]);
-            if (area > minArea && area < maxArea)
-            {
-                candidates.Add((CvInvoke.BoundingRectangle(contours[i]), area, new VectorOfPoint(contours[i].ToArray())));
-            }
-        }
-
-        var sorted = candidates.OrderByDescending(c => c.Area).ToList();
         var acceptedHulls = new List<VectorOfPoint>();
-        var acceptedRects = new List<Rectangle>();
 
-        foreach (var (Rect, Area, Contour) in sorted)
+        try
         {
-            Point center = new(Rect.X + Rect.Width / 2, Rect.Y + Rect.Height / 2);
-            if (acceptedRects.Any(r => r.Contains(center))) continue;
-
-            acceptedRects.Add(Rect);
-            
-            VectorOfPoint hull = new();
-            CvInvoke.ConvexHull(Contour, hull);
-            acceptedHulls.Add(hull);
-
-            RotatedRect rr = CvInvoke.MinAreaRect(hull);
-            PointF[] vertices = rr.GetVertices();
-            for (int j = 0; j < 4; j++)
+            for (int i = 0; i < contours.Size; i++)
             {
-                CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), new MCvScalar(0, 0, 255), 12);
+                double area = CvInvoke.ContourArea(contours[i]);
+                if (area > minArea && area < maxArea)
+                {
+                    candidates.Add((CvInvoke.BoundingRectangle(contours[i]), area, new VectorOfPoint(contours[i].ToArray())));
+                }
+            }
+
+            var sorted = candidates.OrderByDescending(c => c.Area).ToList();
+            var acceptedRects = new List<Rectangle>();
+
+            foreach (var (Rect, Area, Contour) in sorted)
+            {
+                Point center = new(Rect.X + Rect.Width / 2, Rect.Y + Rect.Height / 2);
+                if (acceptedRects.Any(r => r.Contains(center))) continue;
+
+                acceptedRects.Add(Rect);
+                
+                VectorOfPoint hull = new();
+                CvInvoke.ConvexHull(Contour, hull);
+                acceptedHulls.Add(hull);
+
+                RotatedRect rr = CvInvoke.MinAreaRect(hull);
+                PointF[] vertices = rr.GetVertices();
+                for (int j = 0; j < 4; j++)
+                {
+                    CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), new MCvScalar(0, 0, 255), 12);
+                }
+            }
+
+            // Parallel extraction: Rotate and crop each photo on different CPU cores
+            Mat?[] results = new Mat[acceptedHulls.Count];
+            Parallel.For(0, acceptedHulls.Count, i => 
+            {
+                results[i] = ExtractPhotoFromContour(acceptedHulls[i]);
+            });
+
+            foreach (var mat in results)
+            {
+                if (mat != null && !mat.IsEmpty)
+                {
+                    DetectedPhotos.Add(mat);
+                }
             }
         }
-
-        // Parallel extraction: Rotate and crop each photo on different CPU cores
-        Mat?[] results = new Mat[acceptedHulls.Count];
-        Parallel.For(0, acceptedHulls.Count, i => 
+        finally
         {
-            results[i] = ExtractPhotoFromContour(acceptedHulls[i]);
-            acceptedHulls[i].Dispose();
-        });
-
-        foreach (var mat in results)
-        {
-            if (mat != null && !mat.IsEmpty)
+            // Guaranteed cleanup of unmanaged VectorOfPoint allocations
+            foreach (var candidate in candidates)
             {
-                DetectedPhotos.Add(mat);
+                candidate.Contour?.Dispose();
+            }
+            foreach (var hull in acceptedHulls)
+            {
+                hull?.Dispose();
             }
         }
     }
@@ -263,23 +268,7 @@ public class PhotoCropper : IDisposable
         Mat rotatedCanvas = new();
         CvInvoke.WarpAffine(squareCanvas, rotatedCanvas, rotationMatrix, squareCanvas.Size, Inter.Cubic, Warp.Default, BorderType.Constant, new MCvScalar(255, 255, 255));
 
-        using Mat gray = new();
-        CvInvoke.CvtColor(rotatedCanvas, gray, ColorConversion.Bgr2Gray);
-        
-        using Mat contentMask = new();
-        CvInvoke.Threshold(gray, contentMask, 253, 255, ThresholdType.BinaryInv);
-        
-        Rectangle snugRect = CvInvoke.BoundingRectangle(contentMask);
-        
-        Rectangle predictedRect = new(
-            (int)Math.Max(0, Math.Round(localCenter.X - size.Width / 2.0)),
-            (int)Math.Max(0, Math.Round(localCenter.Y - size.Height / 2.0)),
-            (int)Math.Round(size.Width),
-            (int)Math.Round(size.Height)
-        );
-        
-        Rectangle finalCrop = Rectangle.Intersect(snugRect, predictedRect);
-        finalCrop.Intersect(new Rectangle(Point.Empty, rotatedCanvas.Size));
+        Rectangle finalCrop = GetSnugCropRectangle(rotatedCanvas, size, localCenter);
 
         if (finalCrop.Width <= 10 || finalCrop.Height <= 10) 
         {
@@ -291,6 +280,28 @@ public class PhotoCropper : IDisposable
         Mat final = new Mat(rotatedCanvas, finalCrop).Clone();
         rotatedCanvas.Dispose();
         return final;
+    }
+
+    private Rectangle GetSnugCropRectangle(Mat rotatedCanvas, SizeF minAreaSize, PointF localCenter)
+    {
+        using Mat gray = new();
+        CvInvoke.CvtColor(rotatedCanvas, gray, ColorConversion.Bgr2Gray);
+        
+        using Mat contentMask = new();
+        CvInvoke.Threshold(gray, contentMask, 253, 255, ThresholdType.BinaryInv);
+        
+        Rectangle snugRect = CvInvoke.BoundingRectangle(contentMask);
+        
+        Rectangle predictedRect = new(
+            (int)Math.Max(0, Math.Round(localCenter.X - minAreaSize.Width / 2.0)),
+            (int)Math.Max(0, Math.Round(localCenter.Y - minAreaSize.Height / 2.0)),
+            (int)Math.Round(minAreaSize.Width),
+            (int)Math.Round(minAreaSize.Height)
+        );
+        
+        Rectangle finalCrop = Rectangle.Intersect(snugRect, predictedRect);
+        finalCrop.Intersect(new Rectangle(Point.Empty, rotatedCanvas.Size));
+        return finalCrop;
     }
 
     #endregion
@@ -322,35 +333,12 @@ public class PhotoCropper : IDisposable
         using Mat gray = new();
         CvInvoke.CvtColor(photo, gray, ColorConversion.Bgr2Gray);
         
-        // 1. Determine the background color by sampling the 4 extreme corners.
         int s = 5;
         if (gray.Width <= s * 2 || gray.Height <= s * 2) return new Rectangle(0, 0, photo.Width, photo.Height);
 
-        var tl = CvInvoke.Mean(new Mat(gray, new Rectangle(0, 0, s, s))).V0;
-        var tr = CvInvoke.Mean(new Mat(gray, new Rectangle(gray.Width - s, 0, s, s))).V0;
-        var bl = CvInvoke.Mean(new Mat(gray, new Rectangle(0, gray.Height - s, s, s))).V0;
-        var br = CvInvoke.Mean(new Mat(gray, new Rectangle(gray.Width - s, gray.Height - s, s, s))).V0;
+        double bgGray = EstimateAverageBackgroundShade(gray);
 
-        // Average of corners to find the margin's specific shade of grey
-        double bgGray = (tl + tr + bl + br) / 4.0;
-
-        using Mat mask = new();
-        // Tolerance of 20 shades of grey to catch shadows/gradients in the scanner margin
-        double lower = Math.Max(0, bgGray - 20);
-        double upper = Math.Min(255, bgGray + 20);
-
-        CvInvoke.InRange(gray, new ScalarArray(lower), new ScalarArray(upper), mask);
-        
-        // Invert: Photo is white (255), background margin is black (0)
-        CvInvoke.BitwiseNot(mask, mask);
-
-        // Remove scanner noise/dust from the black margin
-        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(7, 7), new Point(-1, -1));
-        CvInvoke.MorphologyEx(mask, mask, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
-
-        // Solidify the photo area
-        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(21, 21), new Point(-1, -1));
-        CvInvoke.MorphologyEx(mask, mask, MorphOp.Close, closeKernel, new Point(-1, -1), 3, BorderType.Default, new MCvScalar());
+        using Mat mask = BuildRefinementMask(gray, bgGray);
 
         Rectangle contentBox = CvInvoke.BoundingRectangle(mask);
         
@@ -374,6 +362,49 @@ public class PhotoCropper : IDisposable
         return finalRect;
     }
 
+    private double EstimateAverageBackgroundShade(Mat grayImage)
+    {
+        int s = 5;
+        if (grayImage.Width <= s * 2 || grayImage.Height <= s * 2) return 255.0;
+
+        using Mat mTl = new(grayImage, new Rectangle(0, 0, s, s));
+        using Mat mTr = new(grayImage, new Rectangle(grayImage.Width - s, 0, s, s));
+        using Mat mBl = new(grayImage, new Rectangle(0, grayImage.Height - s, s, s));
+        using Mat mBr = new(grayImage, new Rectangle(grayImage.Width - s, grayImage.Height - s, s, s));
+
+        var tl = CvInvoke.Mean(mTl).V0;
+        var tr = CvInvoke.Mean(mTr).V0;
+        var bl = CvInvoke.Mean(mBl).V0;
+        var br = CvInvoke.Mean(mBr).V0;
+
+        return (tl + tr + bl + br) / 4.0;
+    }
+
+    private Mat BuildRefinementMask(Mat grayImage, double bgGray)
+    {
+        Mat mask = new();
+        // Tolerance of 20 shades of grey to catch shadows/gradients in the scanner margin
+        double lower = Math.Max(0, bgGray - 20);
+        double upper = Math.Min(255, bgGray + 20);
+
+        using ScalarArray lowerArray = new(lower);
+        using ScalarArray upperArray = new(upper);
+        CvInvoke.InRange(grayImage, lowerArray, upperArray, mask);
+        
+        // Invert: Photo is white (255), background margin is black (0)
+        CvInvoke.BitwiseNot(mask, mask);
+
+        // Remove scanner noise/dust from the black margin
+        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(7, 7), new Point(-1, -1));
+        CvInvoke.MorphologyEx(mask, mask, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+
+        // Solidify the photo area
+        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(21, 21), new Point(-1, -1));
+        CvInvoke.MorphologyEx(mask, mask, MorphOp.Close, closeKernel, new Point(-1, -1), 3, BorderType.Default, new MCvScalar());
+
+        return mask;
+    }
+
     public void ApplyCropToPhoto(int index, Rectangle rect)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return;
@@ -395,54 +426,49 @@ public class PhotoCropper : IDisposable
         if (searchRoi.Width <= 10 || searchRoi.Height <= 10) return;
 
         using Mat roiMat = new(Original, searchRoi);
-        using Mat hsv = new();
-        CvInvoke.CvtColor(roiMat, hsv, ColorConversion.Bgr2Hsv);
-
-        MCvScalar avgBackgroundColor = SampleBackgroundColor(hsv);
-        using Mat backgroundMask = CreateBackgroundMask(hsv, avgBackgroundColor);
-        
-        using Mat gray = new();
-        CvInvoke.CvtColor(roiMat, gray, ColorConversion.Bgr2Gray);
-        using Mat edges = new();
-        CvInvoke.GaussianBlur(gray, edges, new Size(5, 5), 1.5);
-        CvInvoke.Canny(edges, edges, 20, 50);
-
-        using Mat foreground = CreateForegroundMap(backgroundMask, edges);
-        RefineForegroundMap(foreground);
+        using Mat foreground = GenerateForegroundMask(roiMat, BackgroundTolerance, 20, 50);
 
         using VectorOfVectorOfPoint contours = new();
         CvInvoke.FindContours(foreground, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
 
         VectorOfPoint? bestHull = null;
-        double maxArea = 0;
-
-        for (int i = 0; i < contours.Size; i++)
+        try
         {
-            double area = CvInvoke.ContourArea(contours[i]);
-            if (area > maxArea)
+            double maxArea = 0;
+
+            for (int i = 0; i < contours.Size; i++)
             {
-                maxArea = area;
-                bestHull = new VectorOfPoint();
-                CvInvoke.ConvexHull(contours[i], bestHull);
+                double area = CvInvoke.ContourArea(contours[i]);
+                if (area > maxArea)
+                {
+                    maxArea = area;
+                    bestHull?.Dispose(); // Free the previous smaller hull allocation
+                    bestHull = new VectorOfPoint();
+                    CvInvoke.ConvexHull(contours[i], bestHull);
+                }
+            }
+
+            if (bestHull != null)
+            {
+                Point[] points = bestHull.ToArray();
+                for (int i = 0; i < points.Length; i++)
+                {
+                    points[i].X += searchRoi.X;
+                    points[i].Y += searchRoi.Y;
+                }
+                using VectorOfPoint globalHull = new(points);
+
+                var extracted = ExtractPhotoFromContour(globalHull);
+                if (extracted != null && !extracted.IsEmpty)
+                {
+                    DetectedPhotos.Add(extracted);
+                    return;
+                }
             }
         }
-
-        if (bestHull != null)
+        finally
         {
-            Point[] points = bestHull.ToArray();
-            for (int i = 0; i < points.Length; i++)
-            {
-                points[i].X += searchRoi.X;
-                points[i].Y += searchRoi.Y;
-            }
-            using VectorOfPoint globalHull = new(points);
-
-            var extracted = ExtractPhotoFromContour(globalHull);
-            if (extracted != null && !extracted.IsEmpty)
-            {
-                DetectedPhotos.Add(extracted);
-                return;
-            }
+            bestHull?.Dispose();
         }
 
         rect.Intersect(new Rectangle(Point.Empty, Original.Size));
