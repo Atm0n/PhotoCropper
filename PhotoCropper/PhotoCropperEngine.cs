@@ -212,31 +212,55 @@ public class PhotoCropperEngine : IDisposable
         double minArea = totalArea * MinAreaFactor;
         double maxArea = totalArea * MaxAreaFactor;
 
-        var candidates = new List<(Rectangle Rect, double Area, VectorOfPoint Contour)>();
-        var acceptedHulls = new List<VectorOfPoint>();
+        var candidates = new List<(Rectangle Rect, double Area, Point[] Points, RotatedRect Rotated)>();
+        var acceptedPolys = new List<VectorOfPoint>();
 
         try
         {
             for (int i = 0; i < contours.Size; i++)
             {
                 double area = CvInvoke.ContourArea(contours[i]);
-                if (area > minArea && area < maxArea)
-                {
-                    candidates.Add((CvInvoke.BoundingRectangle(contours[i]), area, new VectorOfPoint(contours[i].ToArray())));
-                }
+                if (area < minArea || area > maxArea) continue;
+
+                // Convex hull of initial contour
+                using VectorOfPoint hull = new();
+                CvInvoke.ConvexHull(contours[i], hull);
+
+                // Polygon approximation to extract clean quadrilateral boundaries
+                double peri = CvInvoke.ArcLength(hull, true);
+                using VectorOfPoint approx = new();
+                CvInvoke.ApproxPolyDP(hull, approx, 0.02 * peri, true);
+
+                // If approximation has 4 to 8 vertices and is convex, use it; otherwise fallback to hull
+                Point[] shapePoints = (approx.Size >= 4 && approx.Size <= 8 && CvInvoke.IsContourConvex(approx)) 
+                    ? approx.ToArray() 
+                    : hull.ToArray();
+
+                using VectorOfPoint tempShape = new(shapePoints);
+                RotatedRect rr = CvInvoke.MinAreaRect(tempShape);
+                
+                // Aspect ratio / compactness filter to discard thin line artifacts
+                float w = rr.Size.Width;
+                float h = rr.Size.Height;
+                if (w < 20 || h < 20) continue;
+
+                float aspectRatio = Math.Max(w, h) / Math.Max(1.0f, Math.Min(w, h));
+                if (aspectRatio > 20.0f) continue; // Extreme thin strip rejection
+
+                candidates.Add((CvInvoke.BoundingRectangle(tempShape), area, shapePoints, rr));
             }
 
             var sorted = candidates.OrderByDescending(c => c.Area).ToList();
 
-            foreach (var (Rect, Area, Contour) in sorted)
+            foreach (var (Rect, Area, Points, Rotated) in sorted)
             {
                 Point center = new(Rect.X + Rect.Width / 2, Rect.Y + Rect.Height / 2);
                 
-                // Precise OpenCV convex hull polygon overlap test
+                // Overlap test: ensure center does not fall into an already accepted polygon
                 bool insideAny = false;
-                foreach (var acceptedHull in acceptedHulls)
+                foreach (var accepted in acceptedPolys)
                 {
-                    if (CvInvoke.PointPolygonTest(acceptedHull, center, false) >= 0)
+                    if (CvInvoke.PointPolygonTest(accepted, center, false) >= 0)
                     {
                         insideAny = true;
                         break;
@@ -244,12 +268,10 @@ public class PhotoCropperEngine : IDisposable
                 }
                 if (insideAny) continue;
                 
-                VectorOfPoint hull = new();
-                CvInvoke.ConvexHull(Contour, hull);
-                acceptedHulls.Add(hull);
+                VectorOfPoint acceptedShape = new(Points);
+                acceptedPolys.Add(acceptedShape);
 
-                RotatedRect rr = CvInvoke.MinAreaRect(hull);
-                PointF[] vertices = rr.GetVertices();
+                PointF[] vertices = Rotated.GetVertices();
                 for (int j = 0; j < 4; j++)
                 {
                     CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), new MCvScalar(0, 0, 255), 12);
@@ -257,10 +279,10 @@ public class PhotoCropperEngine : IDisposable
             }
 
             // Parallel extraction: Rotate and crop each photo on different CPU cores
-            Mat?[] results = new Mat[acceptedHulls.Count];
-            Parallel.For(0, acceptedHulls.Count, i => 
+            Mat?[] results = new Mat[acceptedPolys.Count];
+            Parallel.For(0, acceptedPolys.Count, i => 
             {
-                results[i] = ExtractPhotoFromContour(acceptedHulls[i]);
+                results[i] = ExtractPhotoFromContour(acceptedPolys[i]);
             });
 
             foreach (var mat in results)
@@ -274,20 +296,16 @@ public class PhotoCropperEngine : IDisposable
         finally
         {
             // Guaranteed cleanup of unmanaged VectorOfPoint allocations
-            foreach (var candidate in candidates)
+            foreach (var poly in acceptedPolys)
             {
-                candidate.Contour?.Dispose();
-            }
-            foreach (var hull in acceptedHulls)
-            {
-                hull?.Dispose();
+                poly?.Dispose();
             }
         }
     }
 
-    private Mat ExtractPhotoFromContour(VectorOfPoint hull)
+    private Mat ExtractPhotoFromContour(VectorOfPoint shape)
     {
-        RotatedRect rect = CvInvoke.MinAreaRect(hull);
+        RotatedRect rect = CvInvoke.MinAreaRect(shape);
         float angle = rect.Angle;
         SizeF size = rect.Size;
 
@@ -314,7 +332,18 @@ public class PhotoCropperEngine : IDisposable
 
         using Mat scanRoi = new(Original, safeRoi);
         using Mat squareCanvas = new(side, side, DepthType.Cv8U, 3);
-        squareCanvas.SetTo(new MCvScalar(255, 255, 255)); // White fill
+        
+        // Match canvas background to the estimated background color rather than hardcoding pure white
+        MCvScalar bgBgr = new(255, 255, 255);
+        if (CustomBackgroundColorHsv != null)
+        {
+            using Mat hsvPixel = new(1, 1, DepthType.Cv8U, 3);
+            hsvPixel.SetTo(CustomBackgroundColorHsv.Value);
+            using Mat bgrPixel = new();
+            CvInvoke.CvtColor(hsvPixel, bgrPixel, ColorConversion.Hsv2Bgr);
+            bgBgr = CvInvoke.Mean(bgrPixel);
+        }
+        squareCanvas.SetTo(bgBgr);
         
         int destX = Math.Max(0, safeRoi.X - roi.X);
         int destY = Math.Max(0, safeRoi.Y - roi.Y);
@@ -329,7 +358,7 @@ public class PhotoCropperEngine : IDisposable
         CvInvoke.GetRotationMatrix2D(localCenter, angle, 1.0, rotationMatrix);
 
         using Mat rotatedCanvas = new();
-        CvInvoke.WarpAffine(squareCanvas, rotatedCanvas, rotationMatrix, squareCanvas.Size, Inter.Cubic, Warp.Default, BorderType.Constant, new MCvScalar(255, 255, 255));
+        CvInvoke.WarpAffine(squareCanvas, rotatedCanvas, rotationMatrix, squareCanvas.Size, Inter.Cubic, Warp.Default, BorderType.Constant, bgBgr);
 
         Rectangle finalCrop = GetSnugCropRectangle(rotatedCanvas, size, localCenter);
 

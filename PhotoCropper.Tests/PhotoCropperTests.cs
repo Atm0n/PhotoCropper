@@ -317,6 +317,28 @@ public sealed class PhotoCropperTests : IDisposable
         Assert.Null(cropper.CustomBackgroundColorHsv);
     }
 
+    [Fact]
+    public void DetectPhotos_ShouldDetectOnDarkBackground()
+    {
+        string darkScanPath = Path.Combine(_tempDir, "dark_scan.jpg");
+        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(30, 30, 30)); // Dark scanner background
+
+            // Bright photo
+            CvInvoke.Rectangle(scan, new Rectangle(200, 200, 600, 400), new MCvScalar(220, 200, 180), -1);
+
+            scan.Save(darkScanPath);
+        }
+
+        using var cropper = new PhotoCropperEngine(darkScanPath);
+        cropper.DetectPhotos();
+
+        Assert.Single(cropper.DetectedPhotos);
+        Assert.InRange(cropper.DetectedPhotos[0].Width, 580, 620);
+        Assert.InRange(cropper.DetectedPhotos[0].Height, 380, 420);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
