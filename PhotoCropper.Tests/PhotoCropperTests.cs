@@ -317,6 +317,51 @@ public sealed class PhotoCropperTests : IDisposable
         Assert.Null(cropper.CustomBackgroundColorHsv);
     }
 
+    [Fact]
+    public void DetectPhotos_ShouldDetectOnDarkBackground()
+    {
+        string darkScanPath = Path.Combine(_tempDir, "dark_scan.jpg");
+        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(30, 30, 30)); // Dark scanner background
+
+            // Bright photo
+            CvInvoke.Rectangle(scan, new Rectangle(200, 200, 600, 400), new MCvScalar(220, 200, 180), -1);
+
+            scan.Save(darkScanPath);
+        }
+
+        using var cropper = new PhotoCropperEngine(darkScanPath);
+        cropper.DetectPhotos();
+
+        Assert.Single(cropper.DetectedPhotos);
+        Assert.InRange(cropper.DetectedPhotos[0].Width, 580, 620);
+        Assert.InRange(cropper.DetectedPhotos[0].Height, 380, 420);
+    }
+
+    [Fact]
+    public void DetectPhotos_ShouldDetectPhotoFlushAgainstScanEdge()
+    {
+        string flushScanPath = Path.Combine(_tempDir, "flush_scan.jpg");
+        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(255, 255, 255)); // White background
+
+            // Photo placed directly against top-left (0, 0) touching the physical boundary
+            CvInvoke.Rectangle(scan, new Rectangle(0, 0, 500, 400), new MCvScalar(0, 0, 0), -1);
+
+            scan.Save(flushScanPath);
+        }
+
+        using var cropper = new PhotoCropperEngine(flushScanPath);
+        cropper.DetectPhotos();
+
+        // With background margin padding (CopyMakeBorder), the edge-touching photo now forms a closed contour
+        Assert.Single(cropper.DetectedPhotos);
+        Assert.InRange(cropper.DetectedPhotos[0].Width, 480, 520);
+        Assert.InRange(cropper.DetectedPhotos[0].Height, 380, 420);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
