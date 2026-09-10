@@ -7,6 +7,12 @@ using System.Collections.ObjectModel;
 
 namespace PhotoCropper;
 
+public enum DetectionMode
+{
+    AI,
+    Classical
+}
+
 public class PhotoCropperEngine : IDisposable
 {
     private bool disposedValue;
@@ -14,6 +20,7 @@ public class PhotoCropperEngine : IDisposable
     public string OriginalFilePath { get; }
     
     // Configurable Detection Parameters
+    public DetectionMode DetectionMode { get; set; } = DetectionMode.Classical;
     public double BackgroundTolerance { get; set; } = 30;
     public double MinAreaFactor { get; set; } = 0.01; // 1% of scan
     public double MaxAreaFactor { get; set; } = 0.90; // 90% of scan
@@ -24,6 +31,8 @@ public class PhotoCropperEngine : IDisposable
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
     public Collection<Mat> DetectedPhotos { get; } = [];
+    public AiPhotoDetector? AiDetector { get; set; }
+    public bool UseAiDetection { get; set; } = true;
 
     public PhotoCropperEngine(string originalFilePath)
     {
@@ -52,6 +61,7 @@ public class PhotoCropperEngine : IDisposable
                 OriginalWithDetected?.Dispose();
                 foreach (var photo in DetectedPhotos) photo.Dispose();
                 DetectedPhotos.Clear();
+                AiDetector?.Dispose();
             }
             disposedValue = true;
         }
@@ -67,6 +77,22 @@ public class PhotoCropperEngine : IDisposable
     {
         ResetState();
 
+        // 1. If AI detection mode is chosen, execute AI detector
+        if (DetectionMode == DetectionMode.AI)
+        {
+            AiDetector ??= new AiPhotoDetector();
+            if (AiDetector.IsModelLoaded)
+            {
+                var detectedRects = AiDetector.Detect(Original);
+                if (detectedRects.Count > 0)
+                {
+                    ProcessAiDetections(detectedRects);
+                    return;
+                }
+            }
+        }
+
+        // 2. Classical geometric contour pipeline (default fallback or explicit mode)
         // Sample background color before padding
         using Mat hsv = new();
         CvInvoke.CvtColor(Original, hsv, ColorConversion.Bgr2Hsv);
@@ -86,6 +112,48 @@ public class PhotoCropperEngine : IDisposable
 
         using Mat foreground = GenerateForegroundMask(padded, avgBackgroundColorHsv, BackgroundTolerance, CannyLowThreshold, CannyHighThreshold);
         ProcessContours(foreground, padded, pad);
+    }
+
+    private void ProcessAiDetections(Collection<RotatedRect> detectedRects)
+    {
+        var acceptedShapes = new List<VectorOfPoint>();
+
+        try
+        {
+            foreach (var rect in detectedRects)
+            {
+                PointF[] vertices = rect.GetVertices();
+                Point[] pts = Array.ConvertAll(vertices, Point.Round);
+                VectorOfPoint shape = new(pts);
+                acceptedShapes.Add(shape);
+
+                for (int j = 0; j < 4; j++)
+                {
+                    CvInvoke.Line(OriginalWithDetected, pts[j], pts[(j + 1) % 4], new MCvScalar(0, 255, 0), 12);
+                }
+            }
+
+            Mat?[] results = new Mat[acceptedShapes.Count];
+            Parallel.For(0, acceptedShapes.Count, i =>
+            {
+                results[i] = ExtractPhotoFromContour(acceptedShapes[i]);
+            });
+
+            foreach (var mat in results)
+            {
+                if (mat != null && !mat.IsEmpty)
+                {
+                    DetectedPhotos.Add(mat);
+                }
+            }
+        }
+        finally
+        {
+            foreach (var shape in acceptedShapes)
+            {
+                shape.Dispose();
+            }
+        }
     }
 
     private Mat GenerateForegroundMask(Mat source, MCvScalar avgBackgroundColor, double backgroundTolerance, double lowThreshold, double highThreshold)

@@ -14,6 +14,7 @@
   <Folder Name="/Tests/">
     <Project Path="PhotoCropper.Tests/PhotoCropper.Tests.csproj" />
   </Folder>
+  <Project Path="PhotoCropper.DatasetGenerator/PhotoCropper.DatasetGenerator.csproj" />
   <Project Path="PhotoCropper/PhotoCropper.csproj" />
   <Project Path="PhotoCropperGui/PhotoCropperGui.csproj" />
 </Solution>

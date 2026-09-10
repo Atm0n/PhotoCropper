@@ -362,3 +362,19 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /screenshot
+
+# Python & Machine Learning artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+runs/
+*.pt
+dataset/
+training/dataset/
+PhotoCropper.DatasetGenerator/bin/
+PhotoCropper.DatasetGenerator/obj/
+*.cache
+photo_detector.onnx
+!PhotoCropper/Models/photo_detector.onnx

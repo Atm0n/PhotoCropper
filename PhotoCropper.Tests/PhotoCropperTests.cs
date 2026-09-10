@@ -362,6 +362,30 @@ public sealed class PhotoCropperTests : IDisposable
         Assert.InRange(cropper.DetectedPhotos[0].Height, 380, 420);
     }
 
+    [Fact]
+    public void AiPhotoDetector_WhenModelNotFound_ShouldHandleGracefully()
+    {
+        using var detector = new AiPhotoDetector("non_existent_model.onnx");
+        Assert.False(detector.IsModelLoaded);
+
+        using Mat dummy = new(100, 100, DepthType.Cv8U, 3);
+        var detections = detector.Detect(dummy);
+        Assert.Empty(detections);
+    }
+
+    [Fact]
+    public void DetectPhotos_WithAiFallback_ShouldUseClassicalContourDetection()
+    {
+        using var cropper = new PhotoCropperEngine(_testImagePath)
+        {
+            UseAiDetection = true,
+            AiDetector = new AiPhotoDetector("non_existent_model.onnx")
+        };
+
+        cropper.DetectPhotos();
+        Assert.True(cropper.DetectedPhotos.Count >= 2);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

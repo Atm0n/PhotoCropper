@@ -41,6 +41,10 @@ internal sealed partial class MainWindow : Window
         sldEdge.Value = settings.CannyLowThreshold;
         tglAdvanced.IsChecked = settings.AdvancedVisible;
 
+        if (cbEngine != null)
+        {
+            cbEngine.SelectedIndex = string.Equals(settings.DetectionEngine, "Classical", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        }
         if (cbFormat != null)
         {
             cbFormat.SelectedIndex = string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
@@ -110,11 +114,15 @@ internal sealed partial class MainWindow : Window
             OriginalPhotos.Clear();
             currentIndex = 0;
 
+            var settings = SettingsManager.Instance.Settings;
             foreach (var file in fileResult)
             {
                 var filePath = file.Path.LocalPath;
                 var photo = new PhotoCropperEngine(filePath)
                 {
+                    DetectionMode = string.Equals(settings.DetectionEngine, "Classical", StringComparison.OrdinalIgnoreCase) 
+                        ? DetectionMode.Classical 
+                        : DetectionMode.AI,
                     // Synchronize new photos with the current slider values
                     BackgroundTolerance = sldSensitivity.Value,
                     MinAreaFactor = sldMinArea.Value / 100.0,
@@ -997,6 +1005,30 @@ internal sealed partial class MainWindow : Window
         lblStatus.Text = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete.";
     }
 
+    private async void CbEngine_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (cbEngine == null) return;
+
+        string engine = cbEngine.SelectedIndex == 1 ? "Classical" : "AI";
+        SettingsManager.Instance.Settings.DetectionEngine = engine;
+        SettingsManager.Instance.Save();
+
+        if (OriginalPhotos.Count > 0 && !isLoading)
+        {
+            var photo = OriginalPhotos[currentIndex];
+            photo.DetectionMode = cbEngine.SelectedIndex == 1 ? DetectionMode.Classical : DetectionMode.AI;
+
+            pnlLoadingOverlay.IsVisible = true;
+            lblStatus.Text = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
+
+            await Task.Run(() => photo.DetectPhotos());
+            await LoadPhotosToGuiAsync();
+
+            string msgFormat = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
+            lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
+        }
+    }
+
     protected override void OnClosed(System.EventArgs e)
     {
         // Capture final UI state to settings before exiting
@@ -1008,6 +1040,10 @@ internal sealed partial class MainWindow : Window
         settings.CannyLowThreshold = sldEdge.Value;
         settings.AdvancedVisible = tglAdvanced.IsChecked ?? false;
 
+        if (cbEngine != null)
+        {
+            settings.DetectionEngine = cbEngine.SelectedIndex == 1 ? "Classical" : "AI";
+        }
         if (cbFormat != null)
         {
             settings.PreferredFormat = cbFormat.SelectedIndex == 1 ? "PNG" : "JPEG";

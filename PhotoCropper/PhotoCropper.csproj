@@ -9,6 +9,7 @@
 	<ItemGroup>
 		<PackageReference Include="Emgu.CV" />
 		<PackageReference Include="Emgu.CV.Bitmap" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -17,4 +18,7 @@
 
 	</ItemGroup>
 
+	<ItemGroup>
+		<None Include="Models\**" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
 </Project>

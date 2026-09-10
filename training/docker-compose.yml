@@ -1,0 +1,15 @@
+services:
+  train:
+    image: ultralytics/ultralytics:latest
+    container_name: photocropper_trainer
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    command: python train.py
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

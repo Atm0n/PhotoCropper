@@ -87,6 +87,14 @@
 					<StackPanel Orientation="Vertical" Margin="10" Spacing="10">
 						<!-- Row 1: Detection Settings -->
 						<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="30">
+							<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+								<TextBlock Text="{DynamicResource LblEngine}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
+								<ComboBox x:Name="cbEngine" SelectedIndex="0" Width="130" SelectionChanged="CbEngine_SelectionChanged" Focusable="False">
+									<ComboBoxItem Content="{DynamicResource EngineAi}"/>
+									<ComboBoxItem Content="{DynamicResource EngineClassical}"/>
+								</ComboBox>
+							</StackPanel>
+
 							<StackPanel Orientation="Horizontal" Spacing="10">
 								<TextBlock Text="{DynamicResource LblMinPhotoSize}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
 								<Slider x:Name="sldMinArea" Minimum="0" Maximum="50" Value="1" Width="100" 

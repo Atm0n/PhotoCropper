@@ -3,6 +3,9 @@
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 	<sys:String x:Key="BtnOpenScans">Obrir Escanejos</sys:String>
 	<sys:String x:Key="BtnSaveResults">Guardar Tot</sys:String>
+	<sys:String x:Key="LblEngine">Motor de Detecció</sys:String>
+	<sys:String x:Key="EngineAi">Model IA (ONNX)</sys:String>
+	<sys:String x:Key="EngineClassical">Clàssic (OpenCV)</sys:String>
 	<sys:String x:Key="LblDetectionSensitivity">Sensibilitat</sys:String>
 	<sys:String x:Key="LblZoom">Zoom</sys:String>
 	<sys:String x:Key="BtnAdvanced">Avançat</sys:String>
