@@ -198,7 +198,7 @@
 							</Carousel.PageTransition>
 							<Carousel.ItemTemplate>
 								<DataTemplate>
-									<Border Margin="10" CornerRadius="4" ClipToBounds="True" Background="#000000">
+									<Border Margin="10" CornerRadius="4" ClipToBounds="True" Background="Transparent">
 										<Image Stretch="Uniform" Source="{Binding}" 
 											   MaxHeight="700" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 									</Border>

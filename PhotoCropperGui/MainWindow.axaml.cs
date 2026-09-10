@@ -770,13 +770,23 @@ internal sealed partial class MainWindow : Window
 
     private static Bitmap ConvertMatToAvaloniaBitmap(Mat mat)
     {
+        // If already 4-channel BGRA (supports transparency), use directly
+        if (mat.NumberOfChannels == 4)
+        {
+            return new Bitmap(
+                Avalonia.Platform.PixelFormat.Bgra8888,
+                Avalonia.Platform.AlphaFormat.Premul,
+                mat.DataPointer,
+                new Avalonia.PixelSize(mat.Width, mat.Height),
+                new Avalonia.Vector(96, 96),
+                mat.Step);
+        }
+
         // 1. Convert BGR to BGRA (adds an alpha channel without swapping colors)
-        // This is often more efficient and avoids R/B swap confusion
         using Mat bgraMat = new();
         CvInvoke.CvtColor(mat, bgraMat, ColorConversion.Bgr2Bgra);
 
         // 2. Create Avalonia Bitmap directly from the Mat's data pointer
-        // We use Bgra8888 which matches the output of Bgr2Bgra
         return new Bitmap(
             Avalonia.Platform.PixelFormat.Bgra8888,
             Avalonia.Platform.AlphaFormat.Premul,
