@@ -23,7 +23,11 @@ echo "[*] Installing/updating requirements..."
 python3 -m pip install --upgrade pip || python -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt || pip install -r requirements.txt
 
-echo "[*] Starting GPU training..."
+echo "[*] Setting environment optimizations for AMD Ryzen multi-core..."
+export OMP_NUM_THREADS=$(nproc 2>/dev/null || echo 8)
+export MKL_NUM_THREADS=$(nproc 2>/dev/null || echo 8)
+
+echo "[*] Starting training..."
 python3 train.py || python train.py
 
 echo "================================================="

@@ -27,16 +27,24 @@ def main():
         print(f"[!] Error: Could not find data.yaml at {dataset_yaml}")
         return
 
+    # Maximize CPU parallelism for AMD Ryzen APU / multi-core systems
+    threads = os.cpu_count() or 4
+    torch.set_num_threads(threads)
+    torch.set_num_interop_threads(max(2, threads // 2))
+    print(f"[*] Configured PyTorch CPU parallelism: {threads} threads")
+
     print(f"[*] Using dataset: {dataset_yaml}")
     model = YOLO("yolo11n-obb.pt")
 
-    print("[*] Starting training (50 epochs, imgsz=640)...")
+    print("[*] Starting training (30 epochs, freeze=10, imgsz=640)...")
     results = model.train(
         data=dataset_yaml,
-        epochs=50,
+        epochs=30,
         imgsz=640,
-        batch=32 if torch.cuda.is_available() else 16,
-        workers=8 if torch.cuda.is_available() else 4,
+        batch=16,
+        workers=0,  # 0 is faster on Windows/Linux CPU avoiding IPC pipe overhead
+        freeze=10,  # Freeze backbone for ~2x speedup
+        patience=8,
         device=device,
         project="runs/homelab_train",
         name="photo_cropper_ai"
