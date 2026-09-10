@@ -9,8 +9,6 @@ namespace PhotoCropper;
 
 public class PhotoCropperEngine : IDisposable
 {
-    #region Fields & Properties
-
     private bool disposedValue;
 
     public string OriginalFilePath { get; }
@@ -26,10 +24,6 @@ public class PhotoCropperEngine : IDisposable
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
     public Collection<Mat> DetectedPhotos { get; } = [];
-
-    #endregion
-
-    #region Initialization & Disposal
 
     public PhotoCropperEngine(string originalFilePath)
     {
@@ -68,10 +62,6 @@ public class PhotoCropperEngine : IDisposable
         Dispose(true);
         GC.SuppressFinalize(this);
     }
-
-    #endregion
-
-    #region Detection & Extraction
 
     public void DetectPhotos()
     {
@@ -412,10 +402,6 @@ public class PhotoCropperEngine : IDisposable
         return [leftMost[0], rightMost[0], rightMost[1], leftMost[1]];
     }
 
-    #endregion
-
-    #region Manual Edits & Refinement
-
     public void RotatePhoto(int index)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return;
@@ -597,10 +583,6 @@ public class PhotoCropperEngine : IDisposable
         }
     }
 
-    #endregion
-
-    #region File Operations
-
     public void SaveDetectedPhotos(string? customOutputFolder = null, string format = "JPEG", int jpegQuality = 90)
     {
         ArgumentNullException.ThrowIfNull(format);
@@ -640,6 +622,4 @@ public class PhotoCropperEngine : IDisposable
             }
         }
     }
-
-    #endregion
 }

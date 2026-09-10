@@ -82,8 +82,6 @@ internal sealed partial class MainWindow : Window
         }
     }
 
-    #region UI Initialization & File Handling
-
     private async void BtnOpenFiles_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         var topLevel = TopLevel.GetTopLevel(this);
@@ -187,8 +185,6 @@ internal sealed partial class MainWindow : Window
         }
     }
 
-    #endregion
-
     private async void BtnPrevScan_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (isLoading || OriginalPhotos.Count == 0) return;
@@ -202,8 +198,6 @@ internal sealed partial class MainWindow : Window
         currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
         await LoadPhotosToGuiAsync();
     }
-
-    #region Actions (Rotate, Delete, Save)
 
     private void BtnSaveImages_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -273,10 +267,6 @@ internal sealed partial class MainWindow : Window
         lblStatus.Text = Application.Current?.FindResource("MsgPhotoRotated")?.ToString() ?? "Photo rotated.";
     }
 
-    #endregion
-
-    #region Help Panel
-
     private void BtnHelp_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         pnlHelpOverlay.IsVisible = true;
@@ -286,10 +276,6 @@ internal sealed partial class MainWindow : Window
     {
         pnlHelpOverlay.IsVisible = false;
     }
-
-    #endregion
-
-    #region Sliders & Navigation
 
     private async void SldSensitivity_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
     {
@@ -520,8 +506,6 @@ internal sealed partial class MainWindow : Window
         }
     }
 
-    #endregion
-
     private void ScrollOriginal_SizeChanged(object? sender, SizeChangedEventArgs e)
     {
         UpdateCropCanvasSize();
@@ -604,8 +588,6 @@ internal sealed partial class MainWindow : Window
         cnvCrop.Width = pnlOriginal.Width;
         cnvCrop.Height = pnlOriginal.Height;
     }
-
-    #region Manual Crop on Original
 
     private Avalonia.Point startPoint;
     private bool isDragging;
@@ -713,10 +695,6 @@ internal sealed partial class MainWindow : Window
 
         return new Avalonia.Rect(x, y, w, h);
     }
-
-    #endregion
-
-    #region Interactive Refinement Overlay
 
     private bool isRefining;
     private System.Drawing.Rectangle currentRefineRect;
@@ -924,10 +902,6 @@ internal sealed partial class MainWindow : Window
         imgRefine.Source = null;
     }
 
-    #endregion
-
-    #region Utility Methods
-
     private async void BtnResetDefaults_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (isLoading) return;
@@ -961,8 +935,6 @@ internal sealed partial class MainWindow : Window
             lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
         }
     }
-
-    #region Background Color Picker
 
     private void TglColorPicker_Click(object? sender, RoutedEventArgs e)
     {
@@ -1025,8 +997,6 @@ internal sealed partial class MainWindow : Window
         lblStatus.Text = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete.";
     }
 
-    #endregion
-
     protected override void OnClosed(System.EventArgs e)
     {
         // Capture final UI state to settings before exiting
@@ -1060,6 +1030,4 @@ internal sealed partial class MainWindow : Window
         }
         OriginalPhotos.Clear();
     }
-
-    #endregion
 }
