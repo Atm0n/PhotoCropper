@@ -89,10 +89,44 @@ public class PhotoCropperEngine : IDisposable
         // Convert HSV background color to BGR for border padding
         MCvScalar bgBgr = BackgroundAnalyzer.HsvToBgr(avgBackgroundColorHsv);
 
-        // Pad the image with a synthetic margin so photos touching or extending to the scan boundary form complete closed contours
+        // Pad the full image with a synthetic margin so photos touching or extending to the scan boundary form complete closed contours
         int pad = Math.Max(20, Math.Min(Original.Width, Original.Height) / 50);
         using Mat padded = new();
         CvInvoke.CopyMakeBorder(Original, padded, pad, pad, pad, pad, BorderType.Constant, bgBgr);
+
+        // Determine downscale factor for ultra-fast contour detection on high-DPI scans
+        int maxDim = Math.Max(padded.Width, padded.Height);
+        double scale = 1.0;
+        const int targetMaxDim = 1600;
+
+        using Mat scaledDetectionMat = new();
+        Mat detectionMat;
+
+        if (maxDim > targetMaxDim)
+        {
+            scale = (double)targetMaxDim / maxDim;
+            int scaledW = (int)Math.Round(padded.Width * scale);
+            int scaledH = (int)Math.Round(padded.Height * scale);
+            CvInvoke.Resize(padded, scaledDetectionMat, new Size(scaledW, scaledH), 0, 0, Inter.Area);
+            detectionMat = scaledDetectionMat;
+        }
+        else
+        {
+            detectionMat = padded;
+        }
+
+        int scaledPad = (int)Math.Round(pad * scale);
+        int originalW = Original.Width;
+        int originalH = Original.Height;
+
+        // Precompute HSV and Edge maps once on the detection resolution
+        using Mat detHsv = new();
+        CvInvoke.CvtColor(detectionMat, detHsv, ColorConversion.Bgr2Hsv);
+
+        using Mat precomputedEdges = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(
+            detectionMat, 
+            CannyLowThreshold, 
+            CannyHighThreshold);
 
         // Multi-pass sensitivity detection:
         // Evaluates fine-grained search tolerances around base tolerance
@@ -100,30 +134,71 @@ public class PhotoCropperEngine : IDisposable
         double baseTol = BackgroundTolerance;
         double[] searchTolerances = [
             baseTol,
-            baseTol + 3,
-            baseTol + 6,
-            baseTol + 10,
+            baseTol + 4,
+            baseTol + 8,
             baseTol + 15,
-            baseTol + 22,
-            baseTol + 32,
-            Math.Max(5, baseTol - 5),
-            Math.Max(5, baseTol - 10)
+            baseTol + 25,
+            Math.Max(5, baseTol - 6)
         ];
 
         using Mat foreground = new();
         foreach (double tol in searchTolerances)
         {
-            ForegroundMaskGenerator.PopulateForegroundMask(padded, foreground, avgBackgroundColorHsv, tol, CannyLowThreshold, CannyHighThreshold);
+            ForegroundMaskGenerator.PopulateForegroundMask(
+                detectionMat, 
+                foreground, 
+                avgBackgroundColorHsv, 
+                tol, 
+                CannyLowThreshold, 
+                CannyHighThreshold,
+                precomputedEdges,
+                detHsv);
             
             var passCandidates = CandidateExtractor.ExtractCandidates(
                 foreground, 
-                pad, 
-                Original.Width, 
-                Original.Height, 
+                scaledPad, 
+                (int)Math.Round(originalW * scale), 
+                (int)Math.Round(originalH * scale), 
                 MinAreaFactor, 
                 MaxAreaFactor);
 
-            candidateDetections.AddRange(passCandidates);
+            // If downscaled, map candidate coordinates back to original full resolution space
+            if (scale < 0.999)
+            {
+                double invScale = 1.0 / scale;
+                foreach (var cand in passCandidates)
+                {
+                    Point[] fullPoints = new Point[cand.ShapePoints.Length];
+                    for (int p = 0; p < cand.ShapePoints.Length; p++)
+                    {
+                        fullPoints[p] = new Point(
+                            Math.Clamp((int)Math.Round(cand.ShapePoints[p].X * invScale), 0, originalW - 1),
+                            Math.Clamp((int)Math.Round(cand.ShapePoints[p].Y * invScale), 0, originalH - 1)
+                        );
+                    }
+
+                    using VectorOfPoint fullShape = new(fullPoints);
+                    RotatedRect fullRr = CvInvoke.MinAreaRect(fullShape);
+                    double fullArea = CvInvoke.ContourArea(fullShape);
+                    double rrArea = Math.Max(1.0, (double)fullRr.Size.Width * fullRr.Size.Height);
+                    double rectScore = Math.Clamp(fullArea / rrArea, 0.0, 1.0);
+                    double quality = Math.Pow(rectScore, 3) * Math.Pow(cand.Convexity, 2);
+                    double score = fullArea * quality;
+
+                    candidateDetections.Add(new CropCandidate(
+                        fullPoints,
+                        CvInvoke.BoundingRectangle(fullShape),
+                        score,
+                        fullRr,
+                        fullArea,
+                        rectScore,
+                        cand.Convexity));
+                }
+            }
+            else
+            {
+                candidateDetections.AddRange(passCandidates);
+            }
         }
 
         // Composite resolution and overlap filtering
@@ -139,7 +214,7 @@ public class PhotoCropperEngine : IDisposable
             }
         }
 
-        // Parallel extraction: Rotate and crop each photo on different CPU cores using the padded source
+        // Parallel extraction: Rotate and crop each photo on different CPU cores using the padded source at FULL scan resolution
         Mat?[] results = new Mat[acceptedCandidates.Count];
         Parallel.For(0, acceptedCandidates.Count, i =>
         {

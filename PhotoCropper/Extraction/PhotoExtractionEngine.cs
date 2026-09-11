@@ -69,20 +69,40 @@ public static class PhotoExtractionEngine
             new PointF(0, targetHeight - 1)
         ];
 
-        using Mat bgraOriginal = new();
-        if (extractSource.NumberOfChannels == 3)
+        // Crop tightly around the candidate quad with a margin to avoid converting and transforming the entire scan
+        float minX = Math.Max(0, Math.Min(Math.Min(srcPoints[0].X, srcPoints[1].X), Math.Min(srcPoints[2].X, srcPoints[3].X)) - 4);
+        float minY = Math.Max(0, Math.Min(Math.Min(srcPoints[0].Y, srcPoints[1].Y), Math.Min(srcPoints[2].Y, srcPoints[3].Y)) - 4);
+        float maxX = Math.Min(extractSource.Width, Math.Max(Math.Max(srcPoints[0].X, srcPoints[1].X), Math.Max(srcPoints[2].X, srcPoints[3].X)) + 4);
+        float maxY = Math.Min(extractSource.Height, Math.Max(Math.Max(srcPoints[0].Y, srcPoints[1].Y), Math.Max(srcPoints[2].Y, srcPoints[3].Y)) + 4);
+
+        Rectangle roi = new((int)minX, (int)minY, (int)Math.Ceiling(maxX - minX), (int)Math.Ceiling(maxY - minY));
+        roi.Intersect(new Rectangle(0, 0, extractSource.Width, extractSource.Height));
+
+        if (roi.Width <= 10 || roi.Height <= 10) return new Mat();
+
+        PointF[] roiSrcPoints =
+        [
+            new PointF(srcPoints[0].X - roi.X, srcPoints[0].Y - roi.Y),
+            new PointF(srcPoints[1].X - roi.X, srcPoints[1].Y - roi.Y),
+            new PointF(srcPoints[2].X - roi.X, srcPoints[2].Y - roi.Y),
+            new PointF(srcPoints[3].X - roi.X, srcPoints[3].Y - roi.Y)
+        ];
+
+        using Mat roiMat = new(extractSource, roi);
+        using Mat bgraRoi = new();
+        if (roiMat.NumberOfChannels == 3)
         {
-            CvInvoke.CvtColor(extractSource, bgraOriginal, ColorConversion.Bgr2Bgra);
+            CvInvoke.CvtColor(roiMat, bgraRoi, ColorConversion.Bgr2Bgra);
         }
         else
         {
-            extractSource.CopyTo(bgraOriginal);
+            roiMat.CopyTo(bgraRoi);
         }
 
-        using Mat perspectiveMatrix = CvInvoke.GetPerspectiveTransform(srcPoints, dstPoints);
+        using Mat perspectiveMatrix = CvInvoke.GetPerspectiveTransform(roiSrcPoints, dstPoints);
         Mat result = new();
         // Transparent border: MCvScalar(0, 0, 0, 0) for alpha channel
-        CvInvoke.WarpPerspective(bgraOriginal, result, perspectiveMatrix, new Size(targetWidth, targetHeight), Inter.Cubic, Warp.Default, BorderType.Constant, new MCvScalar(0, 0, 0, 0));
+        CvInvoke.WarpPerspective(bgraRoi, result, perspectiveMatrix, new Size(targetWidth, targetHeight), Inter.Cubic, Warp.Default, BorderType.Constant, new MCvScalar(0, 0, 0, 0));
 
         return result;
     }
