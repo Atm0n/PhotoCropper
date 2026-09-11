@@ -63,7 +63,7 @@ jobs:
         if [ "$RUNNER_OS" == "Linux" ]; then
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/PhotoCropper.Tests/bin/Release/net10.0/
         fi
-        dotnet test --no-build -c Release --verbosity normal
+        dotnet run --no-build -c Release --project PhotoCropper.Tests/PhotoCropper.Tests.csproj
       shell: bash
 
     - name: Publish GUI & CLI
