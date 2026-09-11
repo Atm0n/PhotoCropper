@@ -3,8 +3,13 @@ name: .NET CI
 on:
   push:
     branches: [ master, developer ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ master, developer ]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -67,7 +72,7 @@ jobs:
       shell: bash
 
     - name: Publish GUI & CLI
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
       run: |
         dotnet publish PhotoCropperGui/PhotoCropperGui.csproj `
           -c Release `
@@ -86,11 +91,43 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true `
           -p:PublishReadyToRun=true `
           -o ./publish/${{ matrix.runtime }}
+
+        Compress-Archive -Path ./publish/${{ matrix.runtime }}/* -DestinationPath ./${{ matrix.artifact }}.zip
       shell: pwsh
 
     - name: Upload Artifact
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact }}
-        path: ./publish/${{ matrix.runtime }}
+        path: |
+          ./publish/${{ matrix.runtime }}
+          ./${{ matrix.artifact }}.zip
+
+  release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download Linux Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: PhotoCropper-Linux
+        path: ./artifacts-linux
+
+    - name: Download Windows Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: PhotoCropper-Windows
+        path: ./artifacts-windows
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          ./artifacts-linux/PhotoCropper-Linux.zip
+          ./artifacts-windows/PhotoCropper-Windows.zip
+        generate_release_notes: true
