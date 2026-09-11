@@ -18,6 +18,10 @@
 	<sys:String x:Key="TxtNoFiles">Sense fitxers</sys:String>
 	<sys:String x:Key="HeaderOriginal">ESCANEIG ORIGINAL (CLIC I ARROSSEGAR PER RETALLAR)</sys:String>
 	<sys:String x:Key="HeaderDetected">FOTOS DETECTADES</sys:String>
+	<sys:String x:Key="ViewCarousel">Individual</sys:String>
+	<sys:String x:Key="ViewGrid">Graella</sys:String>
+	<sys:String x:Key="TipViewCarousel">Vista individual de fotos (Drecera: 1)</sys:String>
+	<sys:String x:Key="TipViewGrid">Vista en graella de totes les fotos (Drecera: 2)</sys:String>
 	<sys:String x:Key="BtnDelete">Eliminar</sys:String>
 	<sys:String x:Key="BtnRotate">Girar 90°</sys:String>
 	<sys:String x:Key="BtnRefine">Ajustar Vores</sys:String>
@@ -69,6 +73,7 @@
 	<sys:String x:Key="HelpShortcutNextPhoto">[Esquerra / Dreta] Navegar fotos</sys:String>
 	<sys:String x:Key="HelpShortcutCompare">[Espai] Mantenir per comparar original</sys:String>
 	<sys:String x:Key="HelpShortcutRefine">[N] o [Ñ] Ajustar vores</sys:String>
+	<sys:String x:Key="HelpShortcutToggleView">[1 / 2] Canviar Individual / Graella</sys:String>
 	<sys:String x:Key="HelpShortcutUndo">[Ctrl+Z] Desfer últim canvi</sys:String>
 	<sys:String x:Key="HelpShortcutRedo">[Ctrl+Y] Refer canvi</sys:String>
 	<sys:String x:Key="HelpShortcutSave">[Ctrl+S] Guardar tots els resultats</sys:String>

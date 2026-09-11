@@ -53,6 +53,7 @@ The solution consists of four main projects:
 - **Intelligent Manual Crop Snapping:** Manually drawn selection boxes automatically snap to the nearest high-contrast photo boundary.
 
 ### 4. Interactive UX, Drag & Drop, and Multi-Scan Undo/Redo
+- **Dual-View Inspection & Gallery Grid (`1` / `2`):** Instantly toggle between a focused single-photo carousel and an interactive thumbnail gallery overview displaying indices and pixel dimensions.
 - **Drag & Drop Queuing:** Drag image files or whole folders anywhere onto the application window to automatically queue and batch-process scans.
 - **Multi-Scan Aware Undo/Redo (`Ctrl+Z` / `Ctrl+Y`):** Full undo/redo stack managing deletions, rotations, manual crops, and edge refinements across multiple loaded scans, automatically switching scans when undoing.
 - **Original Scanner DPI Preservation:** Preserves original scanner resolution metadata (JFIF APP0 markers for JPEG, `pHYs` chunks for PNG) for 1:1 physical printing scale (e.g., 300, 600, 1200 DPI).
@@ -84,6 +85,7 @@ The codebase strictly enforces the highest standard of static analysis and memor
 | `Ctrl + Z` | Undo last photo operation (delete, rotate, manual crop, refinement) |
 | `Ctrl + Y` | Redo last undone operation |
 | `N` / `Ñ` | Enter Interactive Refinement Mode |
+| `1 / 2` | Switch between Single Photo Inspection and Gallery Grid View |
 | `Enter` / `A` | Accept Refinement (while in Refinement Mode) |
 | `Backspace` / `Esc` / `C` | Reject Refinement (while in Refinement Mode) |
 | `Esc` | Close Help or Refinement overlays |
