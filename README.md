@@ -133,17 +133,28 @@ dotnet run --project PhotoCropper.Tests/PhotoCropper.Tests.csproj
 
 ---
 
-## Deployment
+## Deployment & Releases
 
-The application is fully cross-platform and supports **Windows** and **Ubuntu/Linux**.
+Pre-compiled, self-contained single-file binaries for **Windows** and **Linux** are automatically built and packaged on GitHub for every release:
 
-To publish both the **GUI** and **CLI** as self-contained, single-file executables:
+- **GUI Application**:
+  - `PhotoCropper-GUI-Windows.zip` (standalone desktop app for Windows x64)
+  - `PhotoCropper-GUI-Linux.zip` (standalone desktop app for Ubuntu/Linux x64)
+- **CLI Batch Extractor**:
+  - `PhotoCropper-CLI-Windows.zip` (unattended batch processor for Windows x64)
+  - `PhotoCropper-CLI-Linux.zip` (unattended batch processor for Linux x64)
 
-```powershell
-./publish.ps1
+No .NET runtime installation is required on the target systems.
+
+### Building Standalone Binaries Locally
+To publish self-contained single-file binaries manually via the .NET CLI:
+```bash
+# Windows GUI
+dotnet publish PhotoCropperGui/PhotoCropperGui.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o ./publish/windows-gui
+
+# Linux CLI
+dotnet publish PhotoCropperCli/PhotoCropperCli.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ./publish/linux-cli
 ```
-
-This creates a `publish/` folder containing standalone executables (`publish/windows/` and `publish/linux/`). No .NET runtime installation is required on the target machines.
 
 ---
 

@@ -21,10 +21,10 @@ jobs:
         include:
           - os: ubuntu-24.04
             runtime: linux-x64
-            artifact: PhotoCropper-Linux
+            platform: Linux
           - os: windows-latest
             runtime: win-x64
-            artifact: PhotoCropper-Windows
+            platform: Windows
 
     runs-on: ${{ matrix.os }}
 
@@ -74,6 +74,7 @@ jobs:
     - name: Publish GUI & CLI
       if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
       run: |
+        # Publish GUI
         dotnet publish PhotoCropperGui/PhotoCropperGui.csproj `
           -c Release `
           -r ${{ matrix.runtime }} `
@@ -81,8 +82,9 @@ jobs:
           -p:PublishSingleFile=true `
           -p:IncludeNativeLibrariesForSelfExtract=true `
           -p:PublishReadyToRun=true `
-          -o ./publish/${{ matrix.runtime }}
+          -o ./publish/gui/${{ matrix.runtime }}
 
+        # Publish CLI
         dotnet publish PhotoCropperCli/PhotoCropperCli.csproj `
           -c Release `
           -r ${{ matrix.runtime }} `
@@ -90,19 +92,26 @@ jobs:
           -p:PublishSingleFile=true `
           -p:IncludeNativeLibrariesForSelfExtract=true `
           -p:PublishReadyToRun=true `
-          -o ./publish/${{ matrix.runtime }}
+          -o ./publish/cli/${{ matrix.runtime }}
 
-        Compress-Archive -Path ./publish/${{ matrix.runtime }}/* -DestinationPath ./${{ matrix.artifact }}.zip
+        # Package separate zip archives
+        Compress-Archive -Path ./publish/gui/${{ matrix.runtime }}/* -DestinationPath ./PhotoCropper-GUI-${{ matrix.platform }}.zip
+        Compress-Archive -Path ./publish/cli/${{ matrix.runtime }}/* -DestinationPath ./PhotoCropper-CLI-${{ matrix.platform }}.zip
       shell: pwsh
 
-    - name: Upload Artifact
+    - name: Upload GUI Artifact
       if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.artifact }}
-        path: |
-          ./publish/${{ matrix.runtime }}
-          ./${{ matrix.artifact }}.zip
+        name: PhotoCropper-GUI-${{ matrix.platform }}
+        path: ./PhotoCropper-GUI-${{ matrix.platform }}.zip
+
+    - name: Upload CLI Artifact
+      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
+      uses: actions/upload-artifact@v4
+      with:
+        name: PhotoCropper-CLI-${{ matrix.platform }}
+        path: ./PhotoCropper-CLI-${{ matrix.platform }}.zip
 
   release:
     name: Create GitHub Release
@@ -112,22 +121,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Download Linux Artifacts
+    - name: Download Artifacts
       uses: actions/download-artifact@v4
       with:
-        name: PhotoCropper-Linux
-        path: ./artifacts-linux
-
-    - name: Download Windows Artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: PhotoCropper-Windows
-        path: ./artifacts-windows
+        path: ./release-artifacts
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          ./artifacts-linux/PhotoCropper-Linux.zip
-          ./artifacts-windows/PhotoCropper-Windows.zip
+          ./release-artifacts/**/*.zip
         generate_release_notes: true
