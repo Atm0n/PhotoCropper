@@ -269,7 +269,14 @@ public class PhotoCropperEngine : IDisposable
                 float aspectRatio = Math.Max(w, h) / Math.Max(1.0f, Math.Min(w, h));
                 if (aspectRatio > 20.0f) continue; // Extreme thin strip rejection
 
-                candidates.Add((CvInvoke.BoundingRectangle(tempShape), area, shapePoints, rr));
+                // Rectangularity score: Ratio of contour area to its minimum bounding rotated rectangle area
+                double rrArea = Math.Max(1.0, (double)w * h);
+                double rectangularity = Math.Clamp(area / rrArea, 0.0, 1.0);
+
+                // Priority score: Highly rectangular contours (genuine photos) receive higher priority than irregular merged blobs
+                double score = area * Math.Pow(rectangularity, 2);
+
+                candidates.Add((CvInvoke.BoundingRectangle(tempShape), score, shapePoints, rr));
             }
 
             var sorted = candidates.OrderByDescending(c => c.Area).ToList();
