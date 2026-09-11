@@ -22,7 +22,7 @@ internal static class BatchProcessor
         Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Detection: Tolerance={0}, MinSize={1:0}%, MaxSize={2:0}%", options.Tolerance, options.MinAreaFactor * 100, options.MaxAreaFactor * 100));
         if (options.AutoOrient)
         {
-            Console.WriteLine("Auto-Orientation: Enabled [Experimental]");
+            Console.WriteLine("Auto-Orientation: Enabled (AI Face + Landscape)");
         }
         Console.WriteLine();
 
