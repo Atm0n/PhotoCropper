@@ -1,7 +1,5 @@
-using System;
-using System.IO;
-using System.Text.Json;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 
 [assembly: InternalsVisibleTo("PhotoCropper.Tests")]
 
@@ -10,8 +8,8 @@ namespace PhotoCropperGui;
 internal sealed class UserSettings
 {
     public string Language { get; set; } = "en-US";
-    public double BackgroundTolerance { get; set; } = 50;
-    public double MinAreaFactor { get; set; } = 1; // 1%
+    public double BackgroundTolerance { get; set; } = 25;
+    public double MinAreaFactor { get; set; } = 15; // 15%
     public double MaxAreaFactor { get; set; } = 90; // 90%
     public double CannyLowThreshold { get; set; } = 20;
     public double ZoomLevel { get; set; } = 1;
@@ -19,6 +17,7 @@ internal sealed class UserSettings
     public string? CustomOutputDirectory { get; set; }
     public string PreferredFormat { get; set; } = "JPEG"; // JPEG or PNG
     public int JpegQuality { get; set; } = 90; // 1-100
+    public bool AutoOrientPhotos { get; set; }
 }
 
 internal sealed class SettingsManager
@@ -107,6 +106,7 @@ internal sealed class SettingsManager
         Settings.MinAreaFactor = defaults.MinAreaFactor;
         Settings.MaxAreaFactor = defaults.MaxAreaFactor;
         Settings.CannyLowThreshold = defaults.CannyLowThreshold;
+        Settings.AutoOrientPhotos = defaults.AutoOrientPhotos;
         Save();
     }
 }

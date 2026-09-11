@@ -15,5 +15,6 @@
     <Project Path="PhotoCropper.Tests/PhotoCropper.Tests.csproj" />
   </Folder>
   <Project Path="PhotoCropper/PhotoCropper.csproj" />
+  <Project Path="PhotoCropperCli/PhotoCropperCli.csproj" />
   <Project Path="PhotoCropperGui/PhotoCropperGui.csproj" />
 </Solution>

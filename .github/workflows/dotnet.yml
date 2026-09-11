@@ -2,9 +2,9 @@ name: .NET CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, developer ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, developer ]
 
 jobs:
   build:
@@ -63,12 +63,22 @@ jobs:
         if [ "$RUNNER_OS" == "Linux" ]; then
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/PhotoCropper.Tests/bin/Release/net10.0/
         fi
-        dotnet test --no-build -c Release --verbosity normal
+        dotnet run --no-build -c Release --project PhotoCropper.Tests/PhotoCropper.Tests.csproj
       shell: bash
 
-    - name: Publish
+    - name: Publish GUI & CLI
+      if: github.ref == 'refs/heads/master'
       run: |
         dotnet publish PhotoCropperGui/PhotoCropperGui.csproj `
+          -c Release `
+          -r ${{ matrix.runtime }} `
+          --self-contained true `
+          -p:PublishSingleFile=true `
+          -p:IncludeNativeLibrariesForSelfExtract=true `
+          -p:PublishReadyToRun=true `
+          -o ./publish/${{ matrix.runtime }}
+
+        dotnet publish PhotoCropperCli/PhotoCropperCli.csproj `
           -c Release `
           -r ${{ matrix.runtime }} `
           --self-contained true `
@@ -79,6 +89,7 @@ jobs:
       shell: pwsh
 
     - name: Upload Artifact
+      if: github.ref == 'refs/heads/master'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact }}

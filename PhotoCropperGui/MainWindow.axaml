@@ -7,7 +7,8 @@
 		Background="#1e1e1e"
 		Foreground="White"
         Title="PhotoCropper - Intelligent Photo Extractor"
-        Icon="avares://PhotoCropperGui/Assets/app_icon.png">
+        Icon="avares://PhotoCropperGui/Assets/app_icon.png"
+        DragDrop.AllowDrop="True">
 
 	<Grid>
 		<DockPanel>
@@ -42,8 +43,8 @@
 							</StackPanel>
 						</Button>
 
-						<Menu Background="Transparent" VerticalAlignment="Center" Margin="5,0">
-							<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuLanguage"/>
+						<Menu Background="Transparent" VerticalAlignment="Center" Margin="5,0" Focusable="False" IsTabStop="False" KeyboardNavigation.TabNavigation="None">
+							<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuLanguage" Focusable="False" IsTabStop="False"/>
 						</Menu>
 
 						<Button x:Name="btnHelp" Click="BtnHelp_Click" Padding="10,8" Background="Transparent" BorderThickness="0" Focusable="False">
@@ -54,7 +55,7 @@
 					<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
 						<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
 							<TextBlock Text="{DynamicResource LblDetectionSensitivity}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#aaaaaa"/>
-							<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="50" Width="150" 
+							<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="25" Width="150" 
 									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
 							<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" 
 									   VerticalAlignment="Center" Width="40" FontWeight="Bold"/>
@@ -89,14 +90,14 @@
 						<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="30">
 							<StackPanel Orientation="Horizontal" Spacing="10">
 								<TextBlock Text="{DynamicResource LblMinPhotoSize}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
-								<Slider x:Name="sldMinArea" Minimum="0" Maximum="50" Value="1" Width="100" 
+								<Slider x:Name="sldMinArea" Minimum="5" Maximum="50" Value="15" Width="100" 
 										PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
 								<TextBlock Text="{Binding #sldMinArea.Value, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Width="30"/>
 							</StackPanel>
 
 							<StackPanel Orientation="Horizontal" Spacing="10">
 								<TextBlock Text="{DynamicResource LblMaxPhotoSize}" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
-								<Slider x:Name="sldMaxArea" Minimum="50" Maximum="100" Value="90" Width="100" 
+								<Slider x:Name="sldMaxArea" Minimum="20" Maximum="100" Value="90" Width="100" 
 										PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
 								<TextBlock Text="{Binding #sldMaxArea.Value, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Width="30"/>
 							</StackPanel>
@@ -107,6 +108,8 @@
 										PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
 								<TextBlock Text="{Binding #sldEdge.Value, StringFormat='{}{0:0}'}" FontSize="11" VerticalAlignment="Center" Width="30"/>
 							</StackPanel>
+
+							<CheckBox x:Name="chkAutoOrient" Content="{DynamicResource LblAutoOrient}" ToolTip.Tip="{DynamicResource TipAutoOrient}" IsCheckedChanged="ChkAutoOrient_IsCheckedChanged" VerticalAlignment="Center" FontSize="11" Focusable="False" Margin="10,0,0,0"/>
 
 							<Button x:Name="btnResetDefaults" Click="BtnResetDefaults_Click" Padding="10,5" FontSize="11" Background="#444444" VerticalAlignment="Center" Margin="15,0,0,0" Focusable="False">
 								<TextBlock Text="{DynamicResource BtnReset}"/>
@@ -192,13 +195,13 @@
 					<TextBlock Grid.Row="0" Text="{DynamicResource HeaderDetected}" Margin="10,5" FontSize="10" FontWeight="Bold" Foreground="#555555"/>
 					
 					<Panel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="1000" MaxHeight="800">
-						<Carousel x:Name="slides" SelectionChanged="Slides_SelectionChanged">
+						<Carousel x:Name="slides" SelectionChanged="Slides_SelectionChanged" Focusable="False" IsTabStop="False">
 							<Carousel.PageTransition>
 								<PageSlide Duration="0:0:0.2" Orientation="Horizontal" />
 							</Carousel.PageTransition>
 							<Carousel.ItemTemplate>
 								<DataTemplate>
-									<Border Margin="10" CornerRadius="4" ClipToBounds="True" Background="#000000">
+									<Border Margin="10" CornerRadius="4" ClipToBounds="True" Background="Transparent">
 										<Image Stretch="Uniform" Source="{Binding}" 
 											   MaxHeight="700" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 									</Border>
@@ -305,6 +308,14 @@
 							<TextBlock Text="{DynamicResource LblZoom}" FontWeight="Bold" Foreground="#3399ff"/>
 							<TextBlock Text="{DynamicResource HelpZoom}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
 						</StackPanel>
+						<StackPanel Grid.Row="3" Grid.Column="0" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource HelpDragDropTitle}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpDragDrop}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
+						<StackPanel Grid.Row="3" Grid.Column="1" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource HelpDpiTitle}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpDpi}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
 					</Grid>
 
 					<Border Background="#1e1e1e" Padding="20" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
@@ -316,6 +327,9 @@
 								<TextBlock Text="{DynamicResource HelpShortcutNextScan}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutNextPhoto}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutRefine}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutUndo}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutRedo}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutSave}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutClose}" Margin="5"/>
 							</UniformGrid>
 						</StackPanel>

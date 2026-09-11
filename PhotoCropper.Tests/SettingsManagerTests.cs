@@ -1,7 +1,4 @@
-using System;
-using System.IO;
 using PhotoCropperGui;
-using Xunit;
 
 namespace PhotoCropper.Tests;
 
@@ -25,8 +22,8 @@ public sealed class SettingsManagerTests : IDisposable
 
         Assert.NotNull(manager.Settings);
         Assert.Equal("en-US", manager.Settings.Language);
-        Assert.Equal(50, manager.Settings.BackgroundTolerance);
-        Assert.Equal(1, manager.Settings.MinAreaFactor);
+        Assert.Equal(25, manager.Settings.BackgroundTolerance);
+        Assert.Equal(15, manager.Settings.MinAreaFactor);
         Assert.Equal(90, manager.Settings.MaxAreaFactor);
         Assert.Equal(20, manager.Settings.CannyLowThreshold);
         Assert.Equal(1, manager.Settings.ZoomLevel);
@@ -75,7 +72,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.Language = "es-ES";
         manager.Settings.ZoomLevel = 3.0;
         manager.Settings.AdvancedVisible = true;
-        
+
         manager.Settings.BackgroundTolerance = 15;
         manager.Settings.MinAreaFactor = 12;
         manager.Settings.MaxAreaFactor = 75;
@@ -87,8 +84,8 @@ public sealed class SettingsManagerTests : IDisposable
         manager.ResetDetectionDefaults();
 
         // Verify detection settings are reset
-        Assert.Equal(50, manager.Settings.BackgroundTolerance);
-        Assert.Equal(1, manager.Settings.MinAreaFactor);
+        Assert.Equal(25, manager.Settings.BackgroundTolerance);
+        Assert.Equal(15, manager.Settings.MinAreaFactor);
         Assert.Equal(90, manager.Settings.MaxAreaFactor);
         Assert.Equal(20, manager.Settings.CannyLowThreshold);
 
@@ -105,14 +102,14 @@ public sealed class SettingsManagerTests : IDisposable
         File.WriteAllText(_tempSettingsPath, "{ INVALID JSON CORRUPTED TEXT ]");
 
         var manager = new SettingsManager(_tempSettingsPath);
-        
+
         // This should not throw an exception, but gracefully load defaults
         var exception = Record.Exception(() => manager.Load());
         Assert.Null(exception);
 
         Assert.NotNull(manager.Settings);
         Assert.Equal("en-US", manager.Settings.Language);
-        Assert.Equal(50, manager.Settings.BackgroundTolerance);
+        Assert.Equal(25, manager.Settings.BackgroundTolerance);
     }
 
     public void Dispose()

@@ -4,10 +4,16 @@ An intelligent, cross-platform .NET 10 desktop application designed to automatic
 
 ## Project Structure
 
-The solution consists of three main projects:
-- **`PhotoCropper` (Core Library):** Contains the core image-processing and detection logic, encapsulated inside the robust `PhotoCropperEngine` class.
-- **`PhotoCropperGui` (Avalonia Desktop App):** A high-performance GUI using a modern dark theme and custom-drawn interactive canvas widgets.
-- **`PhotoCropper.Tests` (xUnit Test Suite):** Comprehensive unit tests checking algorithm correctness, boundary constraints, and edge cases.
+The solution consists of four main projects:
+- **`PhotoCropper` (Core Library):** Modular image-processing and detection pipeline:
+  - **`Models/`**: Domain records and DTOs (`CropCandidate`, `DetectionOptions`).
+  - **`Detection/`**: Dedicated pipeline stages (`BackgroundAnalyzer`, `ForegroundMaskGenerator`, `CandidateExtractor`, `CandidateResolutionFilter`).
+  - **`Extraction/`**: Photo extraction, local ROI perspective warps, border refinement, and auto-orientation (`PhotoExtractionEngine`, `EdgeRefinementService`, `AutoOrientationService`).
+  - **`Export/`**: Output serialization supporting lossless PNG, customizable JPEG quality, and DPI preservation (`PhotoExporter`).
+  - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
+- **`PhotoCropperGui` (Avalonia Desktop App):** A high-performance GUI using a modern dark theme, custom-drawn interactive canvas widgets, multi-language localization (EN, ES, CA), undo/redo history, and persistent configuration.
+- **`PhotoCropperCli` (Unattended CLI Batch Processor):** Fast, standalone console utility for unattended batch photo cropping and extraction from directories or single scans.
+- **`PhotoCropper.Tests` (xUnit Test Suite):** Comprehensive unit tests checking algorithm correctness, composite splitting, boundary constraints, and edge cases.
 
 ---
 
@@ -16,21 +22,32 @@ The solution consists of three main projects:
 ### 1. High-Performance Rendering Pipeline
 - **Direct Pointer-to-Bitmap Transfer:** Replaced slow PNG/JPEG encoding and decoding with direct memory copies. By constructing Avalonia `Bitmap` instances using native pointers (`IntPtr`) and the `Bgra8888` pixel format, the application renders high-DPI scanner scans instantly without UI lag.
 - **Unified BGR Color Management:** Standardized internally on OpenCV's native BGR layout. The UI performs a single `Bgr2Bgra` conversion purely for display, avoiding redundant color conversions and correcting the "blue-tint" saving artifact perfectly.
+- **Parallel Photo Extraction:** Uses `Parallel.For` to process, rotate, and refine multiple detected photos simultaneously across CPU cores.
 
 ### 2. Intelligent Auto-Detection Engine
+- **Multi-Pass Sensitivity Search:** Evaluates progressive tolerance steps around the base background tolerance to automatically recover subtle, low-contrast photos without manual threshold tuning.
+- **Composite Candidate Resolution (Parent-Child Splitting):** Automatically detects when two adjacent photos are fused into a composite bounding box during high-tolerance passes and resolves them into their distinct individual photos.
+- **Convexity & Rectangularity Quality Scoring:** Scores candidates based on contour convexity ($\text{ContourArea} / \text{HullArea}$) and rotated rectangularity, penalizing irregular merged blobs with waist indentations in favor of clean single photos.
 - **8-Point Median Background Profiling:** Rejects corner-photo anomalies by sampling HSV values at 8 distinct points around the scan perimeter (corners and edge centers) to compute median saturation, hue, and brightness.
-- **Resolution-Aware Morphology:** Morphological opening and closing kernels dynamically scale according to the scan's resolution, ensuring identical edge-detection performance whether processing 150 DPI or 1200 DPI scans.
+- **Resolution-Aware Morphology:** Morphological opening and elliptical closing kernels dynamically scale according to the scan's resolution, preserving narrow gaps between close photos.
 - **Adaptive Shadow Tolerance:** Brightness thresholds are scaled dynamically for light backgrounds, allowing the engine to absorb scanner lid gradients and shadows while preserving photo integrity.
-- **Convex Hull Overlap Verification:** Rather than checking basic axis-aligned bounding rectangles, the engine uses OpenCV's convex hull polygon testing (`PointPolygonTest`) to separate tilted adjacent photos.
-- **Interactive Background Color Picker:** Allows manual background sampling via a noise-resistant 5x5 average neighborhood in HSV space directly from any clicked zoom/pan pixel, giving the user control when scanner grain or irregular gradients confound the auto-detector.
+- **Geometric Overlap Verification:** Measures true polygon intersection area in unmanaged masks to prevent duplicate or invading bounding boxes while allowing tilted adjacent photos.
+- **Interactive Background Color Picker:** Allows manual background sampling via a noise-resistant 5x5 average neighborhood in HSV space directly from any clicked zoom/pan pixel.
 
 ### 3. Smart Manual & Refinement Operations
 - **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm. It automatically detects and removes the scanner's white canvas borders.
-- **Local ROI Rotation:** Instead of rotating the entire giant scan, only the region of interest is padded, extracted, rotated, and tightly cropped using Cubic interpolation, saving substantial memory and processing overhead.
+- **Local ROI Perspective Warp:** Instead of rotating the entire giant scan, only the region of interest is extracted and warped with `Inter.Cubic` interpolation with transparent alpha margins.
+- **Subtle Deskew Regularization:** Snaps near-straight photos (within ±1.5° of right angles) to exact axis-aligned rectangles, avoiding resampling blur while maintaining exact dimensions.
+- **Natural Orientation Preservation:** Automatically preserves portrait vs. landscape dimensions based on scanner bed placement. Includes an optional experimental sky/ambient light orientation heuristic.
+- **Intelligent Manual Crop Snapping:** Manually drawn selection boxes automatically snap to the nearest high-contrast photo boundary.
 
-### 4. Focus-Defeat & Keyboard Event Tunneling
-- **Global Key Event Tunneling:** Uses Avalonia's tunneling event routing (`RoutingStrategies.Tunnel`) for key-down events. This intercepts keyboard navigation events at the Window level before they can reach child controls.
-- **Non-Focusable Controls:** Sidebar controls, sliders, combo boxes, and buttons are explicitly configured as `Focusable="False"`. This prevents active UI controls from stealing focus, ensuring key-based navigation (like arrow keys) remains fully responsive at all times.
+### 4. Interactive UX, Drag & Drop, and Multi-Scan Undo/Redo
+- **Drag & Drop Queuing:** Drag image files or whole folders anywhere onto the application window to automatically queue and batch-process scans.
+- **Multi-Scan Aware Undo/Redo (`Ctrl+Z` / `Ctrl+Y`):** Full undo/redo stack managing deletions, rotations, manual crops, and edge refinements across multiple loaded scans, automatically switching scans when undoing.
+- **Original Scanner DPI Preservation:** Preserves original scanner resolution metadata (JFIF APP0 markers for JPEG, `pHYs` chunks for PNG) for 1:1 physical printing scale (e.g., 300, 600, 1200 DPI).
+- **Real-Time Batch Progress Reporting:** Live progress bars and counters during multi-scan processing and batch exporting.
+- **Focus-Defeat & Keyboard Event Tunneling:** Non-focusable sidebar controls and tunneling key events ensure instant keyboard navigation without text box focus stealing.
+- **Multi-Language Localization:** Runtime localization in English (`en-US`), Spanish (`es-ES`), and Catalan (`ca-ES`) with persistent user settings.
 
 ---
 
@@ -40,7 +57,7 @@ The codebase strictly enforces the highest standard of static analysis and memor
 - **Warnings-as-Errors Policy:** Enforced solution-wide via `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<AnalysisLevel>latest-All</AnalysisLevel>` inside `Directory.Build.props`.
 - **Zero-Warning Success:** Compiles with `0 Warnings` and `0 Errors` across both Debug and Release configurations.
 - **OpenCV Memory Safety (CA2000):** Implements explicit `using` statements, unmanaged resource trackers, and try-finally ownership transfer patterns to prevent native memory leaks during parallel contour processing.
-- **Encapsulation & Security:** Core internal helper elements are marked as `internal sealed`, exposing APIs through read-only interfaces (`IReadOnlyList`, `Collection<T>`) to guarantee architectural robustness.
+- **Encapsulation & Security:** Core internal helper elements expose APIs through read-only interfaces (`IReadOnlyList`, `Collection<T>`) to guarantee architectural robustness.
 
 ---
 
@@ -52,6 +69,8 @@ The codebase strictly enforces the highest standard of static analysis and memor
 | `Up / Down` / `PageUp / PageDown` | Switch between original loaded scans |
 | `R` | Rotate the current cropped photo 90° clockwise |
 | `X` / `Delete` | Permanently delete the currently selected photo |
+| `Ctrl + Z` | Undo last photo operation (delete, rotate, manual crop, refinement) |
+| `Ctrl + Y` | Redo last undone operation |
 | `N` / `Ñ` | Enter Interactive Refinement Mode |
 | `Enter` / `A` | Accept Refinement (while in Refinement Mode) |
 | `Backspace` / `Esc` / `C` | Reject Refinement (while in Refinement Mode) |
@@ -75,10 +94,41 @@ To run the desktop application:
 dotnet run --project PhotoCropperGui
 ```
 
-### Run Tests
-To execute all 22 unit tests:
+### Run CLI (Unattended Batch Extractor)
+To run the unattended command-line utility:
 ```bash
-dotnet test
+# Process a single scan
+dotnet run --project PhotoCropperCli -- scan001.jpg
+
+# Process a folder of scans recursively, saving as PNG in a custom directory
+dotnet run --project PhotoCropperCli -- D:\Scans -o D:\Cropped -f PNG -r
+
+# Display all CLI options and flags
+dotnet run --project PhotoCropperCli -- --help
+```
+
+#### CLI Options & Flags Reference
+
+| Option | Description | Default |
+|---|---|---|
+| `-i, --input <path>` | Input image file or directory of scans (positional arguments accepted) | *Required* |
+| `-o, --output <dir>` | Output destination directory for extracted photos | `<scan_dir>/cropped` |
+| `-f, --format <fmt>` | Output file format: `JPEG` or `PNG` | `JPEG` |
+| `-q, --quality <1-100>` | JPEG compression quality | `90` |
+| `-t, --tolerance <num>` | Background color detection tolerance | `25` |
+| `--min-size <percent>` | Minimum photo size as % of total scan area | `15` |
+| `--max-size <percent>` | Maximum photo size as % of total scan area | `90` |
+| `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
+| `--auto-orient` | Enable experimental sky/light orientation detection | `false` |
+| `-r, --recursive` | Recursively process subdirectories when input is a folder | `false` |
+| `-v, --verbose` | Display individual photo dimensions and debug details | `false` |
+| `-h, --help` | Display usage instructions and examples | — |
+| `--version` | Display application version | — |
+
+### Run Tests
+To execute the unit and integration test suite:
+```bash
+dotnet run --project PhotoCropper.Tests/PhotoCropper.Tests.csproj
 ```
 
 ---
@@ -87,13 +137,13 @@ dotnet test
 
 The application is fully cross-platform and supports **Windows** and **Ubuntu/Linux**.
 
-To publish the application without manual configuration, run the provided PowerShell script:
+To publish both the **GUI** and **CLI** as self-contained, single-file executables:
 
 ```powershell
 ./publish.ps1
 ```
 
-This will create a `publish/` folder containing **self-contained, single-file executables** for both platforms. No .NET runtime installation is required on the target machines.
+This creates a `publish/` folder containing standalone executables (`publish/windows/` and `publish/linux/`). No .NET runtime installation is required on the target machines.
 
 ---
 
