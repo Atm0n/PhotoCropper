@@ -37,11 +37,17 @@ The solution consists of four main projects:
 ### 3. Smart Manual & Refinement Operations
 - **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm. It automatically detects and removes the scanner's white canvas borders.
 - **Local ROI Perspective Warp:** Instead of rotating the entire giant scan, only the region of interest is extracted and warped with `Inter.Cubic` interpolation with transparent alpha margins.
+- **Subtle Deskew Regularization:** Snaps near-straight photos (within ±1.5° of right angles) to exact axis-aligned rectangles, avoiding resampling blur while maintaining exact dimensions.
+- **Natural Orientation Preservation:** Automatically preserves portrait vs. landscape dimensions based on scanner bed placement. Includes an optional experimental sky/ambient light orientation heuristic.
 - **Intelligent Manual Crop Snapping:** Manually drawn selection boxes automatically snap to the nearest high-contrast photo boundary.
 
-### 4. Focus-Defeat & Keyboard Event Tunneling
-- **Global Key Event Tunneling:** Uses Avalonia's tunneling event routing (`RoutingStrategies.Tunnel`) for key-down events. This intercepts keyboard navigation events at the Window level before they can reach child controls.
-- **Non-Focusable Controls:** Sidebar controls, sliders, combo boxes, and buttons are explicitly configured as `Focusable="False"`. This prevents active UI controls from stealing focus, ensuring key-based navigation (like arrow keys) remains fully responsive at all times.
+### 4. Interactive UX, Drag & Drop, and Multi-Scan Undo/Redo
+- **Drag & Drop Queuing:** Drag image files or whole folders anywhere onto the application window to automatically queue and batch-process scans.
+- **Multi-Scan Aware Undo/Redo (`Ctrl+Z` / `Ctrl+Y`):** Full undo/redo stack managing deletions, rotations, manual crops, and edge refinements across multiple loaded scans, automatically switching scans when undoing.
+- **Original Scanner DPI Preservation:** Preserves original scanner resolution metadata (JFIF APP0 markers for JPEG, `pHYs` chunks for PNG) for 1:1 physical printing scale (e.g., 300, 600, 1200 DPI).
+- **Real-Time Batch Progress Reporting:** Live progress bars and counters during multi-scan processing and batch exporting.
+- **Focus-Defeat & Keyboard Event Tunneling:** Non-focusable sidebar controls and tunneling key events ensure instant keyboard navigation without text box focus stealing.
+- **Multi-Language Localization:** Runtime localization in English (`en-US`), Spanish (`es-ES`), and Catalan (`ca-ES`) with persistent user settings.
 
 ---
 
@@ -89,20 +95,38 @@ dotnet run --project PhotoCropperGui
 ```
 
 ### Run CLI (Unattended Batch Extractor)
-To run the unattended command-line utility on scans or folders:
+To run the unattended command-line utility:
 ```bash
 # Process a single scan
 dotnet run --project PhotoCropperCli -- scan001.jpg
 
-# Process an entire folder of scans recursively to a custom folder as PNG
+# Process a folder of scans recursively, saving as PNG in a custom directory
 dotnet run --project PhotoCropperCli -- D:\Scans -o D:\Cropped -f PNG -r
 
 # Display all CLI options and flags
 dotnet run --project PhotoCropperCli -- --help
 ```
 
+#### CLI Options & Flags Reference
+
+| Option | Description | Default |
+|---|---|---|
+| `-i, --input <path>` | Input image file or directory of scans (positional arguments accepted) | *Required* |
+| `-o, --output <dir>` | Output destination directory for extracted photos | `<scan_dir>/cropped` |
+| `-f, --format <fmt>` | Output file format: `JPEG` or `PNG` | `JPEG` |
+| `-q, --quality <1-100>` | JPEG compression quality | `90` |
+| `-t, --tolerance <num>` | Background color detection tolerance | `25` |
+| `--min-size <percent>` | Minimum photo size as % of total scan area | `15` |
+| `--max-size <percent>` | Maximum photo size as % of total scan area | `90` |
+| `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
+| `--auto-orient` | Enable experimental sky/light orientation detection | `false` |
+| `-r, --recursive` | Recursively process subdirectories when input is a folder | `false` |
+| `-v, --verbose` | Display individual photo dimensions and debug details | `false` |
+| `-h, --help` | Display usage instructions and examples | — |
+| `--version` | Display application version | — |
+
 ### Run Tests
-To execute the test suite:
+To execute the unit and integration test suite:
 ```bash
 dotnet run --project PhotoCropper.Tests/PhotoCropper.Tests.csproj
 ```
@@ -113,13 +137,13 @@ dotnet run --project PhotoCropper.Tests/PhotoCropper.Tests.csproj
 
 The application is fully cross-platform and supports **Windows** and **Ubuntu/Linux**.
 
-To publish the application without manual configuration, run the provided PowerShell script:
+To publish both the **GUI** and **CLI** as self-contained, single-file executables:
 
 ```powershell
 ./publish.ps1
 ```
 
-This will create a `publish/` folder containing **self-contained, single-file executables** for both platforms. No .NET runtime installation is required on the target machines.
+This creates a `publish/` folder containing standalone executables (`publish/windows/` and `publish/linux/`). No .NET runtime installation is required on the target machines.
 
 ---
 
