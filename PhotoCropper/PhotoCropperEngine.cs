@@ -84,11 +84,279 @@ public class PhotoCropperEngine : IDisposable
         using Mat padded = new();
         CvInvoke.CopyMakeBorder(Original, padded, pad, pad, pad, pad, BorderType.Constant, bgBgr);
 
-        using Mat foreground = GenerateForegroundMask(padded, avgBackgroundColorHsv, BackgroundTolerance, CannyLowThreshold, CannyHighThreshold);
-        ProcessContours(foreground, padded, pad);
+        // Multi-pass sensitivity detection:
+        // When photos require subtle sensitivity adjustments (e.g. 27%, 31% vs 25% default),
+        // or when photos occupy only a portion of the scan, evaluate fine-grained progressive sensitivity steps
+        // (both fine steps nearby +2, +4, +6, +8, +12, +18, +25, +35 and slight tightening -5, -10).
+        var candidateDetections = new List<(Point[] shapePoints, Rectangle rect, double score, RotatedRect rotated, double area, double rectangularity, double convexity)>();
+        double baseTol = BackgroundTolerance;
+        double totalScanArea = (double)Original.Width * Original.Height;
+
+        // Fine-grained search tolerances around base tolerance
+        double[] searchTolerances = [
+            baseTol,
+            baseTol + 3,
+            baseTol + 6,
+            baseTol + 10,
+            baseTol + 15,
+            baseTol + 22,
+            baseTol + 32,
+            Math.Max(5, baseTol - 5),
+            Math.Max(5, baseTol - 10)
+        ];
+
+        using Mat foreground = new();
+        foreach (double tol in searchTolerances)
+        {
+            PopulateForegroundMask(padded, foreground, avgBackgroundColorHsv, tol, CannyLowThreshold, CannyHighThreshold);
+            
+            var passCandidates = ExtractCandidates(foreground, pad);
+            foreach (var cand in passCandidates)
+            {
+                candidateDetections.Add(cand);
+            }
+        }
+
+        ProcessAndFilterCandidates(candidateDetections, padded, pad);
     }
 
-    private Mat GenerateForegroundMask(Mat source, MCvScalar avgBackgroundColor, double backgroundTolerance, double lowThreshold, double highThreshold)
+    private List<(Point[] shapePoints, Rectangle rect, double score, RotatedRect rotated, double area, double rectangularity, double convexity)> ExtractCandidates(Mat foregroundMap, int padOffset)
+    {
+        var result = new List<(Point[] shapePoints, Rectangle rect, double score, RotatedRect rotated, double area, double rectangularity, double convexity)>();
+
+        using VectorOfVectorOfPoint contours = new();
+        CvInvoke.FindContours(foregroundMap, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
+
+        double totalArea = Original.Width * Original.Height;
+        double minArea = totalArea * MinAreaFactor;
+        double maxArea = totalArea * MaxAreaFactor;
+
+        for (int i = 0; i < contours.Size; i++)
+        {
+            double contourArea = CvInvoke.ContourArea(contours[i]);
+            if (contourArea < minArea || contourArea > maxArea) continue;
+
+            // Convex hull of initial contour
+            using VectorOfPoint hull = new();
+            CvInvoke.ConvexHull(contours[i], hull);
+            double hullArea = CvInvoke.ContourArea(hull);
+
+            // Polygon approximation to extract clean quadrilateral boundaries
+            double peri = CvInvoke.ArcLength(hull, true);
+            using VectorOfPoint approx = new();
+            CvInvoke.ApproxPolyDP(hull, approx, 0.02 * peri, true);
+
+            // If approximation has 4 to 8 vertices and is convex, use it; otherwise fallback to hull
+            Point[] rawPoints = (approx.Size >= 4 && approx.Size <= 8 && CvInvoke.IsContourConvex(approx)) 
+                ? approx.ToArray() 
+                : hull.ToArray();
+
+            // Map coordinates back from padded space to Original image space
+            Point[] shapePoints = new Point[rawPoints.Length];
+            for (int p = 0; p < rawPoints.Length; p++)
+            {
+                shapePoints[p] = new Point(
+                    Math.Clamp(rawPoints[p].X - padOffset, 0, Original.Width - 1),
+                    Math.Clamp(rawPoints[p].Y - padOffset, 0, Original.Height - 1)
+                );
+            }
+
+            using VectorOfPoint tempShape = new(shapePoints);
+            RotatedRect rr = CvInvoke.MinAreaRect(tempShape);
+            
+            // Aspect ratio / compactness filter to discard thin line artifacts
+            float w = rr.Size.Width;
+            float h = rr.Size.Height;
+            if (w < 20 || h < 20) continue;
+
+            float aspectRatio = Math.Max(w, h) / Math.Max(1.0f, Math.Min(w, h));
+            if (aspectRatio > 20.0f) continue; // Extreme thin strip rejection
+
+            // Rectangularity score: Ratio of contour area to its minimum bounding rotated rectangle area
+            double rrArea = Math.Max(1.0, (double)w * h);
+            double rectangularity = Math.Clamp(contourArea / rrArea, 0.0, 1.0);
+
+            // Convexity / solidity score: Clean single photos have high convexity (~1.0), merged photos have waist indents (<0.92)
+            double convexity = Math.Clamp(contourArea / Math.Max(1.0, hullArea), 0.0, 1.0);
+
+            // Quality score heavily favors clean, rectangular, convex single photos over merged composites
+            double quality = Math.Pow(rectangularity, 3) * Math.Pow(convexity, 2);
+            double score = contourArea * quality;
+
+            result.Add((shapePoints, CvInvoke.BoundingRectangle(tempShape), score, rr, contourArea, rectangularity, convexity));
+        }
+
+        return result;
+    }
+
+    private static double CalculatePolygonIntersectionArea(Point[] poly1, Rectangle bounds1, Point[] poly2, Rectangle bounds2)
+    {
+        Rectangle intersectBox = Rectangle.Intersect(bounds1, bounds2);
+        if (intersectBox.IsEmpty || intersectBox.Width <= 0 || intersectBox.Height <= 0)
+        {
+            return 0;
+        }
+
+        using Mat mask1 = new(intersectBox.Size, DepthType.Cv8U, 1);
+        using Mat mask2 = new(intersectBox.Size, DepthType.Cv8U, 1);
+        using Mat maskOverlap = new();
+        mask1.SetTo(new MCvScalar(0));
+        mask2.SetTo(new MCvScalar(0));
+
+        Point[] shifted1 = poly1.Select(p => new Point(p.X - intersectBox.X, p.Y - intersectBox.Y)).ToArray();
+        Point[] shifted2 = poly2.Select(p => new Point(p.X - intersectBox.X, p.Y - intersectBox.Y)).ToArray();
+
+        using (VectorOfPoint vp1 = new(shifted1))
+        using (VectorOfPoint vp2 = new(shifted2))
+        using (VectorOfVectorOfPoint vvp1 = new(vp1))
+        using (VectorOfVectorOfPoint vvp2 = new(vp2))
+        {
+            CvInvoke.FillPoly(mask1, vvp1, new MCvScalar(255));
+            CvInvoke.FillPoly(mask2, vvp2, new MCvScalar(255));
+        }
+
+        CvInvoke.BitwiseAnd(mask1, mask2, maskOverlap);
+        return CvInvoke.CountNonZero(maskOverlap);
+    }
+
+    private void ProcessAndFilterCandidates(
+        List<(Point[] shapePoints, Rectangle rect, double score, RotatedRect rotated, double area, double rectangularity, double convexity)> candidates, 
+        Mat paddedSource, 
+        int padOffset)
+    {
+        // 1. Composite resolution: Discard large merged candidate boxes that encompass 2 or more distinct sub-candidates
+        var compositeIndices = new HashSet<int>();
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            var parent = candidates[i];
+            var subCandidates = new List<int>();
+
+            for (int j = 0; j < candidates.Count; j++)
+            {
+                if (i == j) continue;
+                var child = candidates[j];
+
+                // Child must be distinctly smaller than parent and have reasonable rectangularity
+                if (child.area >= parent.area * 0.85 || child.area < parent.area * 0.15) continue;
+                if (child.rectangularity < 0.65) continue;
+
+                double overlap = CalculatePolygonIntersectionArea(child.shapePoints, child.rect, parent.shapePoints, parent.rect);
+                // Child is mostly contained inside parent
+                if (overlap / child.area >= 0.70)
+                {
+                    subCandidates.Add(j);
+                }
+            }
+
+            // Check if parent contains at least 2 mutually disjoint sub-candidates
+            if (subCandidates.Count >= 2)
+            {
+                bool foundDisjointPair = false;
+                for (int a = 0; a < subCandidates.Count && !foundDisjointPair; a++)
+                {
+                    var candA = candidates[subCandidates[a]];
+                    for (int b = a + 1; b < subCandidates.Count; b++)
+                    {
+                        var candB = candidates[subCandidates[b]];
+                        double subOverlap = CalculatePolygonIntersectionArea(candA.shapePoints, candA.rect, candB.shapePoints, candB.rect);
+                        double minSubArea = Math.Min(candA.area, candB.area);
+
+                        // If two sub-candidates don't heavily overlap each other and their combined area accounts for > 45% of parent
+                        if (subOverlap / minSubArea < 0.25 && (candA.area + candB.area) >= parent.area * 0.45)
+                        {
+                            foundDisjointPair = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (foundDisjointPair)
+                {
+                    compositeIndices.Add(i);
+                }
+            }
+        }
+
+        var validCandidates = candidates
+            .Where((_, idx) => !compositeIndices.Contains(idx))
+            .OrderByDescending(c => c.score)
+            .ToList();
+
+        var acceptedPolys = new List<VectorOfPoint>();
+
+        try
+        {
+            foreach (var (shapePoints, rect, score, rotated, area, rectangularity, convexity) in validCandidates)
+            {
+                Point center = new(rect.X + rect.Width / 2, rect.Y + rect.Height / 2);
+                
+                // Overlap test: ensure center does not fall into an already accepted polygon
+                bool insideAny = false;
+                foreach (var accepted in acceptedPolys)
+                {
+                    if (CvInvoke.PointPolygonTest(accepted, center, false) >= 0)
+                    {
+                        insideAny = true;
+                        break;
+                    }
+                }
+                if (insideAny) continue;
+
+                // Mask-based Polygon Intersection Check:
+                // Prevents a larger detection from invading another photo while allowing genuinely adjacent tilted photos
+                bool excessiveOverlap = false;
+                Rectangle candBounds = rect;
+                using VectorOfPoint shape = new(shapePoints);
+
+                foreach (var accepted in acceptedPolys)
+                {
+                    Rectangle accBounds = CvInvoke.BoundingRectangle(accepted);
+                    double overlapPixels = CalculatePolygonIntersectionArea(shapePoints, candBounds, accepted.ToArray(), accBounds);
+                    double minPolyArea = Math.Min(CvInvoke.ContourArea(shape), CvInvoke.ContourArea(accepted));
+
+                    // If overlap exceeds 15% of the smaller photo, reject the duplicate/invading candidate
+                    if (minPolyArea > 0 && (overlapPixels / minPolyArea) > 0.15)
+                    {
+                        excessiveOverlap = true;
+                        break;
+                    }
+                }
+                if (excessiveOverlap) continue;
+                
+                acceptedPolys.Add(new VectorOfPoint(shapePoints));
+
+                PointF[] vertices = rotated.GetVertices();
+                for (int j = 0; j < 4; j++)
+                {
+                    CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), new MCvScalar(0, 0, 255), 12);
+                }
+            }
+
+            // Parallel extraction: Rotate and crop each photo on different CPU cores using the padded source
+            Mat?[] results = new Mat[acceptedPolys.Count];
+            Parallel.For(0, acceptedPolys.Count, i => 
+            {
+                results[i] = ExtractPhotoFromContour(acceptedPolys[i], paddedSource, padOffset);
+            });
+
+            foreach (var mat in results)
+            {
+                if (mat != null && !mat.IsEmpty)
+                {
+                    DetectedPhotos.Add(mat);
+                }
+            }
+        }
+        finally
+        {
+            foreach (var poly in acceptedPolys)
+            {
+                poly.Dispose();
+            }
+        }
+    }
+
+    private void PopulateForegroundMask(Mat source, Mat outputForeground, MCvScalar avgBackgroundColor, double backgroundTolerance, double lowThreshold, double highThreshold)
     {
         using Mat hsv = new();
         CvInvoke.CvtColor(source, hsv, ColorConversion.Bgr2Hsv);
@@ -113,22 +381,19 @@ public class PhotoCropperEngine : IDisposable
         CvInvoke.AdaptiveThreshold(smoothed, adaptive, 255, AdaptiveThresholdType.GaussianC, ThresholdType.BinaryInv, adaptiveBlockSize, 7);
         CvInvoke.BitwiseOr(edges, adaptive, edges);
 
-        Mat foreground = new();
-        CvInvoke.BitwiseNot(backgroundMask, foreground);
-        CvInvoke.BitwiseOr(foreground, edges, foreground);
+        CvInvoke.BitwiseNot(backgroundMask, outputForeground);
+        CvInvoke.BitwiseOr(outputForeground, edges, outputForeground);
 
         // Dynamically scale morphology kernels based on scan resolution/dimensions
-        // Use a modest close kernel and single iteration so close photos don't merge across narrow gaps
+        // Use an elliptical close kernel to seal internal edges without bridging narrow gaps between adjacent photos
         int openSize = Math.Max(3, (minDim / 400) | 1);  // Ensure odd integer, min 3
-        int closeSize = Math.Max(3, (minDim / 300) | 1); // Ensure odd integer, min 3
+        int closeSize = Math.Max(3, (minDim / 500) | 1); // Ensure odd integer, min 3
 
         using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(openSize, openSize), new Point(-1, -1));
-        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+        CvInvoke.MorphologyEx(outputForeground, outputForeground, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
 
-        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(closeSize, closeSize), new Point(-1, -1));
-        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Close, closeKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
-
-        return foreground;
+        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(closeSize, closeSize), new Point(-1, -1));
+        CvInvoke.MorphologyEx(outputForeground, outputForeground, MorphOp.Close, closeKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
     }
 
     private static MCvScalar SampleBackgroundColor(Mat hsv)
@@ -215,168 +480,7 @@ public class PhotoCropperEngine : IDisposable
         return mask;
     }
 
-    private void ProcessContours(Mat foregroundMap, Mat? paddedSource = null, int padOffset = 0)
-    {
-        using VectorOfVectorOfPoint contours = new();
-        CvInvoke.FindContours(foregroundMap, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
 
-        double totalArea = Original.Width * Original.Height;
-        double minArea = totalArea * MinAreaFactor;
-        double maxArea = totalArea * MaxAreaFactor;
-
-        var candidates = new List<(Rectangle Rect, double Area, Point[] Points, RotatedRect Rotated)>();
-        var acceptedPolys = new List<VectorOfPoint>();
-
-        try
-        {
-            for (int i = 0; i < contours.Size; i++)
-            {
-                double area = CvInvoke.ContourArea(contours[i]);
-                if (area < minArea || area > maxArea) continue;
-
-                // Convex hull of initial contour
-                using VectorOfPoint hull = new();
-                CvInvoke.ConvexHull(contours[i], hull);
-
-                // Polygon approximation to extract clean quadrilateral boundaries
-                double peri = CvInvoke.ArcLength(hull, true);
-                using VectorOfPoint approx = new();
-                CvInvoke.ApproxPolyDP(hull, approx, 0.02 * peri, true);
-
-                // If approximation has 4 to 8 vertices and is convex, use it; otherwise fallback to hull
-                Point[] rawPoints = (approx.Size >= 4 && approx.Size <= 8 && CvInvoke.IsContourConvex(approx)) 
-                    ? approx.ToArray() 
-                    : hull.ToArray();
-
-                // Map coordinates back from padded space to Original image space
-                Point[] shapePoints = new Point[rawPoints.Length];
-                for (int p = 0; p < rawPoints.Length; p++)
-                {
-                    shapePoints[p] = new Point(
-                        Math.Clamp(rawPoints[p].X - padOffset, 0, Original.Width - 1),
-                        Math.Clamp(rawPoints[p].Y - padOffset, 0, Original.Height - 1)
-                    );
-                }
-
-                using VectorOfPoint tempShape = new(shapePoints);
-                RotatedRect rr = CvInvoke.MinAreaRect(tempShape);
-                
-                // Aspect ratio / compactness filter to discard thin line artifacts
-                float w = rr.Size.Width;
-                float h = rr.Size.Height;
-                if (w < 20 || h < 20) continue;
-
-                float aspectRatio = Math.Max(w, h) / Math.Max(1.0f, Math.Min(w, h));
-                if (aspectRatio > 20.0f) continue; // Extreme thin strip rejection
-
-                // Rectangularity score: Ratio of contour area to its minimum bounding rotated rectangle area
-                double rrArea = Math.Max(1.0, (double)w * h);
-                double rectangularity = Math.Clamp(area / rrArea, 0.0, 1.0);
-
-                // Priority score: Highly rectangular contours (genuine photos) receive higher priority than irregular merged blobs
-                double score = area * Math.Pow(rectangularity, 2);
-
-                candidates.Add((CvInvoke.BoundingRectangle(tempShape), score, shapePoints, rr));
-            }
-
-            var sorted = candidates.OrderByDescending(c => c.Area).ToList();
-
-            foreach (var (Rect, Area, Points, Rotated) in sorted)
-            {
-                Point center = new(Rect.X + Rect.Width / 2, Rect.Y + Rect.Height / 2);
-                
-                // Overlap test: ensure center does not fall into an already accepted polygon
-                bool insideAny = false;
-                foreach (var accepted in acceptedPolys)
-                {
-                    if (CvInvoke.PointPolygonTest(accepted, center, false) >= 0)
-                    {
-                        insideAny = true;
-                        break;
-                    }
-                }
-                if (insideAny) continue;
-
-                // Mask-based Polygon Intersection Check:
-                // Prevents a larger detection from invading another photo while allowing genuinely adjacent tilted photos
-                bool excessiveOverlap = false;
-                using VectorOfPoint candidateShape = new(Points);
-                Rectangle candBounds = CvInvoke.BoundingRectangle(candidateShape);
-
-                foreach (var accepted in acceptedPolys)
-                {
-                    Rectangle accBounds = CvInvoke.BoundingRectangle(accepted);
-                    Rectangle intersectBox = Rectangle.Intersect(candBounds, accBounds);
-                    if (!intersectBox.IsEmpty && intersectBox.Width > 0 && intersectBox.Height > 0)
-                    {
-                        // Render the two polygons in the intersection bounding box to calculate true geometric overlap
-                        using Mat maskCand = new(intersectBox.Size, DepthType.Cv8U, 1);
-                        using Mat maskAcc = new(intersectBox.Size, DepthType.Cv8U, 1);
-                        using Mat maskOverlap = new();
-                        maskCand.SetTo(new MCvScalar(0));
-                        maskAcc.SetTo(new MCvScalar(0));
-
-                        Point[] shiftedCand = Points.Select(p => new Point(p.X - intersectBox.X, p.Y - intersectBox.Y)).ToArray();
-                        Point[] shiftedAcc = accepted.ToArray().Select(p => new Point(p.X - intersectBox.X, p.Y - intersectBox.Y)).ToArray();
-
-                        using (VectorOfPoint vpCand = new(shiftedCand))
-                        using (VectorOfPoint vpAcc = new(shiftedAcc))
-                        using (VectorOfVectorOfPoint vvpCand = new(vpCand))
-                        using (VectorOfVectorOfPoint vvpAcc = new(vpAcc))
-                        {
-                            CvInvoke.FillPoly(maskCand, vvpCand, new MCvScalar(255));
-                            CvInvoke.FillPoly(maskAcc, vvpAcc, new MCvScalar(255));
-                        }
-
-                        CvInvoke.BitwiseAnd(maskCand, maskAcc, maskOverlap);
-                        double overlapPixels = CvInvoke.CountNonZero(maskOverlap);
-                        double minPolyArea = Math.Min(CvInvoke.ContourArea(candidateShape), CvInvoke.ContourArea(accepted));
-
-                        // If overlap exceeds 15% of the smaller photo, reject the invading candidate
-                        if (minPolyArea > 0 && (overlapPixels / minPolyArea) > 0.15)
-                        {
-                            excessiveOverlap = true;
-                            break;
-                        }
-                    }
-                }
-                if (excessiveOverlap) continue;
-                
-                VectorOfPoint acceptedShape = new(Points);
-                acceptedPolys.Add(acceptedShape);
-
-                PointF[] vertices = Rotated.GetVertices();
-                for (int j = 0; j < 4; j++)
-                {
-                    CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), new MCvScalar(0, 0, 255), 12);
-                }
-            }
-
-            // Parallel extraction: Rotate and crop each photo on different CPU cores using the padded source
-            // This ensures photos touching or extending to the scanner edge extract smoothly with transparent borders outside
-            Mat?[] results = new Mat[acceptedPolys.Count];
-            Parallel.For(0, acceptedPolys.Count, i => 
-            {
-                results[i] = ExtractPhotoFromContour(acceptedPolys[i], paddedSource, padOffset);
-            });
-
-            foreach (var mat in results)
-            {
-                if (mat != null && !mat.IsEmpty)
-                {
-                    DetectedPhotos.Add(mat);
-                }
-            }
-        }
-        finally
-        {
-            // Guaranteed cleanup of unmanaged VectorOfPoint allocations
-            foreach (var poly in acceptedPolys)
-            {
-                poly?.Dispose();
-            }
-        }
-    }
 
     private Mat ExtractPhotoFromContour(VectorOfPoint shapeInScanSpace, Mat? sourceImage = null, int padOffset = 0)
     {
@@ -580,7 +684,8 @@ public class PhotoCropperEngine : IDisposable
         using Mat roiHsv = new();
         CvInvoke.CvtColor(roiMat, roiHsv, ColorConversion.Bgr2Hsv);
         MCvScalar bgHsv = CustomBackgroundColorHsv ?? SampleBackgroundColor(roiHsv);
-        using Mat foreground = GenerateForegroundMask(roiMat, bgHsv, BackgroundTolerance, 20, 50);
+        using Mat foreground = new();
+        PopulateForegroundMask(roiMat, foreground, bgHsv, BackgroundTolerance, 20, 50);
 
         using VectorOfVectorOfPoint contours = new();
         CvInvoke.FindContours(foreground, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);

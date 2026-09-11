@@ -410,6 +410,59 @@ public sealed class PhotoCropperTests : IDisposable
         Assert.Equal(2, cropper.DetectedPhotos.Count);
     }
 
+    [Fact]
+    public void DetectPhotos_AdaptiveMultiPass_ShouldDetectPhotosWithDifferentContrast()
+    {
+        string testPath = Path.Combine(_tempDir, "multipass_contrast_scan.jpg");
+        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(250, 250, 250)); // Light scanner background
+
+            // High contrast photo (easily detected at base sensitivity)
+            CvInvoke.Rectangle(scan, new Rectangle(150, 150, 600, 600), new MCvScalar(20, 20, 20), -1);
+
+            // Lower contrast / fainter photo (requires higher sensitivity pass to extract cleanly)
+            CvInvoke.Rectangle(scan, new Rectangle(1100, 150, 600, 600), new MCvScalar(220, 215, 210), -1);
+
+            scan.Save(testPath);
+        }
+
+        using var cropper = new PhotoCropperEngine(testPath);
+        cropper.DetectPhotos();
+
+        // Multi-pass search should automatically extract both photos without manual adjustment
+        Assert.Equal(2, cropper.DetectedPhotos.Count);
+    }
+
+    [Fact]
+    public void DetectPhotos_UltraClosePhotos_ShouldNotMergeIntoOneBigImage()
+    {
+        string testPath = Path.Combine(_tempDir, "ultra_close_photos_scan.jpg");
+        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(255, 255, 255)); // White background
+
+            // Photo 1: 500x500 at (150, 200)
+            CvInvoke.Rectangle(scan, new Rectangle(150, 200, 500, 500), new MCvScalar(30, 30, 30), -1);
+
+            // Photo 2: 500x500 at (662, 200) -> Only a 12-pixel gap
+            CvInvoke.Rectangle(scan, new Rectangle(662, 200, 500, 500), new MCvScalar(40, 40, 40), -1);
+
+            scan.Save(testPath);
+        }
+
+        using var cropper = new PhotoCropperEngine(testPath);
+        cropper.DetectPhotos();
+
+        // Must detect 2 distinct photos, not 1 large merged composite photo
+        Assert.Equal(2, cropper.DetectedPhotos.Count);
+        foreach (var photo in cropper.DetectedPhotos)
+        {
+            Assert.InRange(photo.Width, 470, 530);
+            Assert.InRange(photo.Height, 470, 530);
+        }
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
@@ -418,3 +471,4 @@ public sealed class PhotoCropperTests : IDisposable
         }
     }
 }
+
