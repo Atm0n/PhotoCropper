@@ -79,6 +79,7 @@
 	<sys:String x:Key="HelpVersion">Version 1.1.0</sys:String>
 	<sys:String x:Key="HelpAuthor">Developed by Nil Riera</sys:String>
 	<sys:String x:Key="HelpPoweredBy">Powered by Emgu.CV (OpenCV wrapper)</sys:String>
+	<sys:String x:Key="HelpModelLicense">AI Face Detection: YuNet by Shiqi Yu / OpenCV Zoo (Apache 2.0)</sys:String>
 	<sys:String x:Key="HelpCopyright">© 2026 Nil Riera. Licensed under GPLv3.</sys:String>
 	<sys:String x:Key="BtnReset">Reset Defaults</sys:String>
 	<sys:String x:Key="LblFormat">Output Format</sys:String>

@@ -172,6 +172,16 @@ dotnet publish PhotoCropperCli/PhotoCropperCli.csproj -c Release -r linux-x64 --
 
 ---
 
+## Acknowledgements & Third-Party Licenses
+
+- **YuNet Face Detection Model (`face_detection_yunet_2023mar.onnx`)**:
+  - Developed by Shiqi Yu & OpenCV Zoo contributors ([opencv/opencv_zoo](https://github.com/opencv/opencv_zoo)).
+  - Licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+- **Emgu.CV**: .NET cross-platform wrapper for OpenCV ([Emgu CV](https://www.emgu.com/)).
+- **Avalonia UI**: Cross-platform desktop XAML UI framework ([Avalonia UI](https://avaloniaui.net/)).
+
+---
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.

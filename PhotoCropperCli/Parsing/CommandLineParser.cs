@@ -134,6 +134,11 @@ internal static class CommandLineParser
         Console.WriteLine("  PhotoCropperCli scan001.jpg");
         Console.WriteLine("  PhotoCropperCli D:\\Scans -o D:\\Cropped -f PNG -r");
         Console.WriteLine("  PhotoCropperCli -i scan1.jpg -i scan2.jpg -t 30 -q 95");
+        Console.WriteLine();
+        Console.WriteLine("Acknowledgements & Licenses:");
+        Console.WriteLine("  PhotoCropper is licensed under GNU General Public License v3.0.");
+        Console.WriteLine("  AI Face Detection uses YuNet (face_detection_yunet_2023mar.onnx)");
+        Console.WriteLine("  developed by Shiqi Yu & OpenCV Zoo (Apache License 2.0).");
     }
 
     public static void PrintVersion()

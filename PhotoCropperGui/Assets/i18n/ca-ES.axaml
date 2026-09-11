@@ -79,6 +79,7 @@
 	<sys:String x:Key="HelpVersion">Versió 1.1.0</sys:String>
 	<sys:String x:Key="HelpAuthor">Desenvolupat per Nil Riera</sys:String>
 	<sys:String x:Key="HelpPoweredBy">Basat en Emgu.CV (wrapper d'OpenCV)</sys:String>
+	<sys:String x:Key="HelpModelLicense">Detecció facial IA: YuNet per Shiqi Yu / OpenCV Zoo (Apache 2.0)</sys:String>
 	<sys:String x:Key="HelpCopyright">© 2026 Nil Riera. Llicència GPLv3.</sys:String>
 	<sys:String x:Key="BtnReset">Restablir valors</sys:String>
 	<sys:String x:Key="LblFormat">Format de sortida</sys:String>

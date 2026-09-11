@@ -1,3 +1,11 @@
+// -------------------------------------------------------------------------------------------------
+// PhotoCropper - Intelligent Scanner Photo Extractor
+//
+// Face Detection utilizes YuNet (face_detection_yunet_2023mar.onnx).
+// YuNet is developed by Shiqi Yu & OpenCV Zoo contributors (https://github.com/opencv/opencv_zoo)
+// and licensed under the Apache License, Version 2.0.
+// -------------------------------------------------------------------------------------------------
+
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Dnn;
