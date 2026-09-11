@@ -10,8 +10,8 @@ namespace PhotoCropperGui;
 internal sealed class UserSettings
 {
     public string Language { get; set; } = "en-US";
-    public double BackgroundTolerance { get; set; } = 50;
-    public double MinAreaFactor { get; set; } = 1; // 1%
+    public double BackgroundTolerance { get; set; } = 25;
+    public double MinAreaFactor { get; set; } = 15; // 15%
     public double MaxAreaFactor { get; set; } = 90; // 90%
     public double CannyLowThreshold { get; set; } = 20;
     public double ZoomLevel { get; set; } = 1;

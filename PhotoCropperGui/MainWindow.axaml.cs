@@ -142,12 +142,19 @@ internal sealed partial class MainWindow : Window
             
             pnlLoadingOverlay.IsVisible = true;
 
-            if (OriginalPhotos[currentIndex].DetectedPhotos.Count == 0)
+            var currentPhoto = OriginalPhotos[currentIndex];
+            currentPhoto.BackgroundTolerance = sldSensitivity.Value;
+            currentPhoto.MinAreaFactor = sldMinArea.Value / 100.0;
+            currentPhoto.MaxAreaFactor = sldMaxArea.Value / 100.0;
+            currentPhoto.CannyLowThreshold = sldEdge.Value;
+            currentPhoto.CannyHighThreshold = sldEdge.Value * 2.5;
+
+            if (currentPhoto.DetectedPhotos.Count == 0)
             {
-                await Task.Run(() => OriginalPhotos[currentIndex].DetectPhotos());
+                await Task.Run(() => currentPhoto.DetectPhotos());
             }
 
-            var mat = OriginalPhotos[currentIndex].OriginalWithDetected;
+            var mat = currentPhoto.OriginalWithDetected;
 
             img.Source = ConvertMatToAvaloniaBitmap(mat);
 

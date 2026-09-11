@@ -118,14 +118,15 @@ public class PhotoCropperEngine : IDisposable
         CvInvoke.BitwiseOr(foreground, edges, foreground);
 
         // Dynamically scale morphology kernels based on scan resolution/dimensions
+        // Use a modest close kernel and single iteration so close photos don't merge across narrow gaps
         int openSize = Math.Max(3, (minDim / 400) | 1);  // Ensure odd integer, min 3
-        int closeSize = Math.Max(5, (minDim / 180) | 1); // Ensure odd integer, min 5
+        int closeSize = Math.Max(3, (minDim / 300) | 1); // Ensure odd integer, min 3
 
         using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(openSize, openSize), new Point(-1, -1));
         CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
 
         using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(closeSize, closeSize), new Point(-1, -1));
-        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Close, closeKernel, new Point(-1, -1), 2, BorderType.Default, new MCvScalar());
+        CvInvoke.MorphologyEx(foreground, foreground, MorphOp.Close, closeKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
 
         return foreground;
     }
@@ -288,6 +289,51 @@ public class PhotoCropperEngine : IDisposable
                     }
                 }
                 if (insideAny) continue;
+
+                // Mask-based Polygon Intersection Check:
+                // Prevents a larger detection from invading another photo while allowing genuinely adjacent tilted photos
+                bool excessiveOverlap = false;
+                using VectorOfPoint candidateShape = new(Points);
+                Rectangle candBounds = CvInvoke.BoundingRectangle(candidateShape);
+
+                foreach (var accepted in acceptedPolys)
+                {
+                    Rectangle accBounds = CvInvoke.BoundingRectangle(accepted);
+                    Rectangle intersectBox = Rectangle.Intersect(candBounds, accBounds);
+                    if (!intersectBox.IsEmpty && intersectBox.Width > 0 && intersectBox.Height > 0)
+                    {
+                        // Render the two polygons in the intersection bounding box to calculate true geometric overlap
+                        using Mat maskCand = new(intersectBox.Size, DepthType.Cv8U, 1);
+                        using Mat maskAcc = new(intersectBox.Size, DepthType.Cv8U, 1);
+                        using Mat maskOverlap = new();
+                        maskCand.SetTo(new MCvScalar(0));
+                        maskAcc.SetTo(new MCvScalar(0));
+
+                        Point[] shiftedCand = Points.Select(p => new Point(p.X - intersectBox.X, p.Y - intersectBox.Y)).ToArray();
+                        Point[] shiftedAcc = accepted.ToArray().Select(p => new Point(p.X - intersectBox.X, p.Y - intersectBox.Y)).ToArray();
+
+                        using (VectorOfPoint vpCand = new(shiftedCand))
+                        using (VectorOfPoint vpAcc = new(shiftedAcc))
+                        using (VectorOfVectorOfPoint vvpCand = new(vpCand))
+                        using (VectorOfVectorOfPoint vvpAcc = new(vpAcc))
+                        {
+                            CvInvoke.FillPoly(maskCand, vvpCand, new MCvScalar(255));
+                            CvInvoke.FillPoly(maskAcc, vvpAcc, new MCvScalar(255));
+                        }
+
+                        CvInvoke.BitwiseAnd(maskCand, maskAcc, maskOverlap);
+                        double overlapPixels = CvInvoke.CountNonZero(maskOverlap);
+                        double minPolyArea = Math.Min(CvInvoke.ContourArea(candidateShape), CvInvoke.ContourArea(accepted));
+
+                        // If overlap exceeds 15% of the smaller photo, reject the invading candidate
+                        if (minPolyArea > 0 && (overlapPixels / minPolyArea) > 0.15)
+                        {
+                            excessiveOverlap = true;
+                            break;
+                        }
+                    }
+                }
+                if (excessiveOverlap) continue;
                 
                 VectorOfPoint acceptedShape = new(Points);
                 acceptedPolys.Add(acceptedShape);

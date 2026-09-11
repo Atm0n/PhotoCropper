@@ -362,6 +362,54 @@ public sealed class PhotoCropperTests : IDisposable
         Assert.InRange(cropper.DetectedPhotos[0].Height, 380, 420);
     }
 
+    [Fact]
+    public void DetectPhotos_ShouldSeparateCloselySpacedPhotos()
+    {
+        string closeScanPath = Path.Combine(_tempDir, "close_photos_scan.jpg");
+        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(255, 255, 255)); // White scanner background
+
+            // Photo 1: 500x500 at (200, 200)
+            CvInvoke.Rectangle(scan, new Rectangle(200, 200, 500, 500), new MCvScalar(20, 20, 20), -1);
+
+            // Photo 2: 500x500 at (720, 200) -> Only a 20-pixel gap between Photo 1 and Photo 2
+            CvInvoke.Rectangle(scan, new Rectangle(720, 200, 500, 500), new MCvScalar(30, 30, 30), -1);
+
+            scan.Save(closeScanPath);
+        }
+
+        using var cropper = new PhotoCropperEngine(closeScanPath);
+        cropper.DetectPhotos();
+
+        // Both photos should be extracted individually and not fused into a single bounding contour
+        Assert.Equal(2, cropper.DetectedPhotos.Count);
+    }
+
+    [Fact]
+    public void DetectPhotos_ShouldRejectInvadingOverlappingDetections()
+    {
+        string testPath = Path.Combine(_tempDir, "overlapping_invading_scan.jpg");
+        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(255, 255, 255)); // White scanner background
+
+            // Photo 1: 500x500 at (200, 200)
+            CvInvoke.Rectangle(scan, new Rectangle(200, 200, 500, 500), new MCvScalar(15, 15, 15), -1);
+
+            // Photo 2: 500x500 at (800, 200)
+            CvInvoke.Rectangle(scan, new Rectangle(800, 200, 500, 500), new MCvScalar(25, 25, 25), -1);
+
+            scan.Save(testPath);
+        }
+
+        using var cropper = new PhotoCropperEngine(testPath);
+        cropper.DetectPhotos();
+
+        // Exactly 2 distinct photos should be detected, with no third overlapping/invading candidate
+        Assert.Equal(2, cropper.DetectedPhotos.Count);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

@@ -25,8 +25,8 @@ public sealed class SettingsManagerTests : IDisposable
 
         Assert.NotNull(manager.Settings);
         Assert.Equal("en-US", manager.Settings.Language);
-        Assert.Equal(50, manager.Settings.BackgroundTolerance);
-        Assert.Equal(1, manager.Settings.MinAreaFactor);
+        Assert.Equal(25, manager.Settings.BackgroundTolerance);
+        Assert.Equal(15, manager.Settings.MinAreaFactor);
         Assert.Equal(90, manager.Settings.MaxAreaFactor);
         Assert.Equal(20, manager.Settings.CannyLowThreshold);
         Assert.Equal(1, manager.Settings.ZoomLevel);
@@ -87,8 +87,8 @@ public sealed class SettingsManagerTests : IDisposable
         manager.ResetDetectionDefaults();
 
         // Verify detection settings are reset
-        Assert.Equal(50, manager.Settings.BackgroundTolerance);
-        Assert.Equal(1, manager.Settings.MinAreaFactor);
+        Assert.Equal(25, manager.Settings.BackgroundTolerance);
+        Assert.Equal(15, manager.Settings.MinAreaFactor);
         Assert.Equal(90, manager.Settings.MaxAreaFactor);
         Assert.Equal(20, manager.Settings.CannyLowThreshold);
 
@@ -112,7 +112,7 @@ public sealed class SettingsManagerTests : IDisposable
 
         Assert.NotNull(manager.Settings);
         Assert.Equal("en-US", manager.Settings.Language);
-        Assert.Equal(50, manager.Settings.BackgroundTolerance);
+        Assert.Equal(25, manager.Settings.BackgroundTolerance);
     }
 
     public void Dispose()
