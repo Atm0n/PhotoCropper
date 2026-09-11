@@ -16,6 +16,10 @@
 	<sys:String x:Key="TxtNoFiles">Sin archivos</sys:String>
 	<sys:String x:Key="HeaderOriginal">ESCANEO ORIGINAL (CLIC Y ARRASTRAR PARA RECORTAR)</sys:String>
 	<sys:String x:Key="HeaderDetected">FOTOS DETECTADAS</sys:String>
+	<sys:String x:Key="ViewCarousel">Individual</sys:String>
+	<sys:String x:Key="ViewGrid">Cuadrícula</sys:String>
+	<sys:String x:Key="TipViewCarousel">Vista individual de fotos (Atajo: 1)</sys:String>
+	<sys:String x:Key="TipViewGrid">Vista en cuadrícula de todas las fotos (Atajo: 2)</sys:String>
 	<sys:String x:Key="BtnDelete">Eliminar</sys:String>
 	<sys:String x:Key="BtnRotate">Rotar 90°</sys:String>
 	<sys:String x:Key="BtnRefine">Ajustar Bordes</sys:String>
@@ -64,6 +68,7 @@
 	<sys:String x:Key="HelpShortcutNextScan">[Re Pág / Av Pág] o [↑ / ↓] Cambiar escaneo</sys:String>
 	<sys:String x:Key="HelpShortcutNextPhoto">[Izquierda / Derecha] Navegar fotos</sys:String>
 	<sys:String x:Key="HelpShortcutRefine">[N] o [Ñ] Ajustar bordes</sys:String>
+	<sys:String x:Key="HelpShortcutToggleView">[1 / 2] Cambiar Individual / Cuadrícula</sys:String>
 	<sys:String x:Key="HelpShortcutUndo">[Ctrl+Z] Deshacer último cambio</sys:String>
 	<sys:String x:Key="HelpShortcutRedo">[Ctrl+Y] Rehacer cambio</sys:String>
 	<sys:String x:Key="HelpShortcutSave">[Ctrl+S] Guardar todos los resultados</sys:String>

@@ -16,6 +16,10 @@
 	<sys:String x:Key="TxtNoFiles">No files loaded</sys:String>
 	<sys:String x:Key="HeaderOriginal">ORIGINAL SCAN (CLICK &amp; DRAG TO MANUALLY CROP)</sys:String>
 	<sys:String x:Key="HeaderDetected">DETECTED PHOTOS</sys:String>
+	<sys:String x:Key="ViewCarousel">Single</sys:String>
+	<sys:String x:Key="ViewGrid">Grid</sys:String>
+	<sys:String x:Key="TipViewCarousel">Single photo inspection view (Shortcut: 1)</sys:String>
+	<sys:String x:Key="TipViewGrid">Grid gallery overview of all detected photos (Shortcut: 2)</sys:String>
 	<sys:String x:Key="BtnDelete">Delete</sys:String>
 	<sys:String x:Key="BtnRotate">Rotate 90°</sys:String>
 	<sys:String x:Key="BtnRefine">Refine Edges</sys:String>
@@ -64,6 +68,7 @@
 	<sys:String x:Key="HelpShortcutNextScan">[PageUp / PageDown] or [↑ / ↓] Switch scans</sys:String>
 	<sys:String x:Key="HelpShortcutNextPhoto">[Left / Right] Navigate photos</sys:String>
 	<sys:String x:Key="HelpShortcutRefine">[N] or [Ñ] Refine edges</sys:String>
+	<sys:String x:Key="HelpShortcutToggleView">[1 / 2] Switch Single / Grid View</sys:String>
 	<sys:String x:Key="HelpShortcutUndo">[Ctrl+Z] Undo last edit</sys:String>
 	<sys:String x:Key="HelpShortcutRedo">[Ctrl+Y] Redo edit</sys:String>
 	<sys:String x:Key="HelpShortcutSave">[Ctrl+S] Save all results</sys:String>

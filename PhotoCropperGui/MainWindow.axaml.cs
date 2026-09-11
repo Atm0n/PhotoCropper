@@ -12,6 +12,8 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace PhotoCropperGui;
 
+internal sealed record GalleryPhotoItem(Avalonia.Media.Imaging.Bitmap Image, string Label, string Dimensions, int Index);
+
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Avalonia Window lifecycle is managed by OnClosed override")]
 internal sealed partial class MainWindow : Window
 {
@@ -19,6 +21,7 @@ internal sealed partial class MainWindow : Window
     private readonly List<PhotoCropperEngine> OriginalPhotos = [];
     private readonly UndoRedoHistory undoHistory = new();
     private bool isLoading;
+    private bool isSyncingSelection;
 
     public MainWindow()
     {
@@ -283,15 +286,30 @@ internal sealed partial class MainWindow : Window
     private void LoadCroppedPhotosToSlider()
     {
         slides.Items.Clear();
+        if (lstGallery != null) lstGallery.Items.Clear();
 
-        foreach (var photo in OriginalPhotos[currentIndex].DetectedPhotos)
+        var detected = OriginalPhotos[currentIndex].DetectedPhotos;
+        for (int i = 0; i < detected.Count; i++)
         {
-            slides.Items.Add(MatBitmapConverter.ToAvaloniaBitmap(photo));
+            var mat = detected[i];
+            var bmp = MatBitmapConverter.ToAvaloniaBitmap(mat);
+            slides.Items.Add(bmp);
+
+            if (lstGallery != null)
+            {
+                string label = $"#{i + 1}";
+                string dims = $"{mat.Width} × {mat.Height} px";
+                lstGallery.Items.Add(new GalleryPhotoItem(bmp, label, dims, i));
+            }
         }
 
         if (slides.Items.Count > 0)
         {
             slides.SelectedIndex = 0;
+            if (lstGallery != null && lstGallery.Items.Count > 0)
+            {
+                lstGallery.SelectedIndex = 0;
+            }
         }
     }
 
@@ -458,7 +476,65 @@ internal sealed partial class MainWindow : Window
         SettingsManager.Instance.Save();
     }
 
-    private void Slides_SelectionChanged(object? sender, SelectionChangedEventArgs e) => UpdatePhotoCounterLabel();
+    private void Slides_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        UpdatePhotoCounterLabel();
+        if (isSyncingSelection || lstGallery == null || slides == null) return;
+        if (slides.SelectedIndex >= 0 && slides.SelectedIndex < lstGallery.Items.Count && lstGallery.SelectedIndex != slides.SelectedIndex)
+        {
+            isSyncingSelection = true;
+            try
+            {
+                lstGallery.SelectedIndex = slides.SelectedIndex;
+                lstGallery.ScrollIntoView(slides.SelectedIndex);
+            }
+            finally
+            {
+                isSyncingSelection = false;
+            }
+        }
+    }
+
+    private void LstGallery_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (isSyncingSelection || lstGallery == null || slides == null) return;
+        if (lstGallery.SelectedIndex >= 0 && lstGallery.SelectedIndex < slides.Items.Count && slides.SelectedIndex != lstGallery.SelectedIndex)
+        {
+            isSyncingSelection = true;
+            try
+            {
+                slides.SelectedIndex = lstGallery.SelectedIndex;
+            }
+            finally
+            {
+                isSyncingSelection = false;
+            }
+            UpdatePhotoCounterLabel();
+        }
+    }
+
+    private void RbViewMode_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (pnlCarouselView == null || scrollGalleryView == null) return;
+        bool isGrid = rbViewGrid?.IsChecked == true;
+        pnlCarouselView.IsVisible = !isGrid;
+        scrollGalleryView.IsVisible = isGrid;
+
+        if (isGrid && lstGallery != null && slides != null && slides.SelectedIndex >= 0)
+        {
+            lstGallery.SelectedIndex = slides.SelectedIndex;
+            lstGallery.ScrollIntoView(slides.SelectedIndex);
+        }
+    }
+
+    private void SetViewMode(bool gridView)
+    {
+        if (rbViewGrid != null && rbViewCarousel != null)
+        {
+            if (gridView) rbViewGrid.IsChecked = true;
+            else rbViewCarousel.IsChecked = true;
+        }
+    }
 
     private void UpdatePhotoCounterLabel()
     {
@@ -646,6 +722,20 @@ internal sealed partial class MainWindow : Window
             case Avalonia.Input.Key.Delete:
                 FocusManager?.Focus(null);
                 DeleteCurrentPhoto();
+                e.Handled = true;
+                break;
+
+            case Avalonia.Input.Key.D1:
+            case Avalonia.Input.Key.NumPad1:
+                FocusManager?.Focus(null);
+                SetViewMode(false);
+                e.Handled = true;
+                break;
+
+            case Avalonia.Input.Key.D2:
+            case Avalonia.Input.Key.NumPad2:
+                FocusManager?.Focus(null);
+                SetViewMode(true);
                 e.Handled = true;
                 break;
 
