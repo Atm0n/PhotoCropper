@@ -12,6 +12,7 @@ internal sealed class CliOptions
     public double CannyLow { get; set; } = 20.0;
     public bool AutoOrient { get; set; } = true;
     public bool RestoreColors { get; set; } = true;
+    public bool RemoveDust { get; set; } = true;
     public bool Recursive { get; set; }
     public bool Verbose { get; set; }
 }

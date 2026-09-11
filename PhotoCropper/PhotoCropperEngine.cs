@@ -26,10 +26,12 @@ public class PhotoCropperEngine : IDisposable
     public MCvScalar? CustomBackgroundColorHsv { get; set; }
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; } = true;
+    public bool RemoveDustAndScratches { get; set; } = true;
 
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
     public Collection<Mat> DetectedPhotos { get; } = [];
+    public Collection<Mat> RawDetectedPhotos { get; } = [];
 
     public PhotoCropperEngine(string originalFilePath)
     {
@@ -49,12 +51,16 @@ public class PhotoCropperEngine : IDisposable
         CustomBackgroundColorHsv = options.CustomBackgroundColorHsv;
         AutoOrientPhotos = options.AutoOrientPhotos;
         RestoreVintageColors = options.RestoreVintageColors;
+        RemoveDustAndScratches = options.RemoveDustAndScratches;
     }
 
     private void ResetState()
     {
         foreach (var photo in DetectedPhotos) photo.Dispose();
         DetectedPhotos.Clear();
+
+        foreach (var raw in RawDetectedPhotos) raw.Dispose();
+        RawDetectedPhotos.Clear();
 
         OriginalWithDetected?.Dispose();
         OriginalWithDetected = Original.Clone();
@@ -220,10 +226,14 @@ public class PhotoCropperEngine : IDisposable
 
         // Parallel extraction: Rotate and crop each photo on different CPU cores using the padded source at FULL scan resolution
         Mat?[] results = new Mat[acceptedCandidates.Count];
+        Mat?[] rawResults = new Mat[acceptedCandidates.Count];
+
         Parallel.For(0, acceptedCandidates.Count, i =>
         {
             using VectorOfPoint poly = new(acceptedCandidates[i].ShapePoints);
             Mat extracted = PhotoExtractionEngine.ExtractPhotoFromContour(poly, Original, padded, pad);
+
+            // Orient photo if enabled (applies to raw as well so comparison geometry is identical)
             if (AutoOrientPhotos && !extracted.IsEmpty)
             {
                 Mat oriented = AutoOrientationService.OrientPhoto(extracted);
@@ -233,9 +243,12 @@ public class PhotoCropperEngine : IDisposable
                     extracted = oriented;
                 }
             }
+
+            rawResults[i] = extracted.Clone();
+
             if (RestoreVintageColors && !extracted.IsEmpty)
             {
-                Mat restored = PhotoRestorationService.RestoreColors(extracted);
+                Mat restored = PhotoRestorationService.RestoreColors(extracted, removeDust: RemoveDustAndScratches);
                 if (!ReferenceEquals(restored, extracted))
                 {
                     extracted.Dispose();
@@ -245,11 +258,19 @@ public class PhotoCropperEngine : IDisposable
             results[i] = extracted;
         });
 
-        foreach (var mat in results)
+        for (int i = 0; i < results.Length; i++)
         {
-            if (mat != null && !mat.IsEmpty)
+            var mat = results[i];
+            var raw = rawResults[i];
+            if (mat != null && !mat.IsEmpty && raw != null && !raw.IsEmpty)
             {
                 DetectedPhotos.Add(mat);
+                RawDetectedPhotos.Add(raw);
+            }
+            else
+            {
+                mat?.Dispose();
+                raw?.Dispose();
             }
         }
     }
@@ -267,6 +288,14 @@ public class PhotoCropperEngine : IDisposable
         CvInvoke.Rotate(DetectedPhotos[index], rotated, RotateFlags.Rotate90Clockwise);
         DetectedPhotos[index].Dispose();
         DetectedPhotos[index] = rotated;
+
+        if (index < RawDetectedPhotos.Count)
+        {
+            Mat rawRotated = new();
+            CvInvoke.Rotate(RawDetectedPhotos[index], rawRotated, RotateFlags.Rotate90Clockwise);
+            RawDetectedPhotos[index].Dispose();
+            RawDetectedPhotos[index] = rawRotated;
+        }
     }
 
     public void DeletePhoto(int index)
@@ -274,6 +303,12 @@ public class PhotoCropperEngine : IDisposable
         if (index < 0 || index >= DetectedPhotos.Count) return;
         DetectedPhotos[index].Dispose();
         DetectedPhotos.RemoveAt(index);
+
+        if (index < RawDetectedPhotos.Count)
+        {
+            RawDetectedPhotos[index].Dispose();
+            RawDetectedPhotos.RemoveAt(index);
+        }
     }
 
     public Rectangle GetRefinedCropRect(int index)

@@ -13,6 +13,8 @@
 	<sys:String x:Key="TipAutoOrient">Endereza y orienta automáticamente las fotos usando detección facial por IA y análisis de paisajes/agua.</sys:String>
 	<sys:String x:Key="LblRestoreColors">Restaurar Color y Contraste</sys:String>
 	<sys:String x:Key="TipRestoreColors">Neutraliza el amarilleo por envejecimiento, recupera sombras y luces con LAB CLAHE y revive colores desvaídos.</sys:String>
+	<sys:String x:Key="LblRemoveDust">Eliminar Polvo y Rayaduras</sys:String>
+	<sys:String x:Key="TipRemoveDust">Inpainting automático de rayaduras finas, motas de polvo y fibras del escáner.</sys:String>
 	<sys:String x:Key="TxtNoFiles">Sin archivos</sys:String>
 	<sys:String x:Key="HeaderOriginal">ESCANEO ORIGINAL (CLIC Y ARRASTRAR PARA RECORTAR)</sys:String>
 	<sys:String x:Key="HeaderDetected">FOTOS DETECTADAS</sys:String>
@@ -26,7 +28,7 @@
 	<sys:String x:Key="BtnAccept">Aceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rechazar (Retroceso)</sys:String>
 	<sys:String x:Key="StatusReady">Listo</sys:String>
-	<sys:String x:Key="StatusShortcuts">Atajos: [↑/↓] Cambiar Escaneo | [←/→] Navegar Fotos | [R] Rotar | [X] Borrar | [Ctrl+Z/Y] Deshacer/Rehacer</sys:String>
+	<sys:String x:Key="StatusShortcuts">Atajos: [↑/↓] Cambiar Escaneo | [←/→] Navegar Fotos | [R] Rotar | [Espacio] Comparar Original | [Ctrl+Z/Y] Deshacer/Rehacer</sys:String>
 	<sys:String x:Key="MsgUndo">Deshecho: {0}.</sys:String>
 	<sys:String x:Key="MsgRedo">Rehecho: {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
@@ -62,11 +64,14 @@
 	<sys:String x:Key="HelpAutoOrientDesc">Usa una red neuronal integrada (YuNet) para detectar la orientación de rostros y análisis de paisajes/agua para orientar fotos en vertical.</sys:String>
 	<sys:String x:Key="HelpRestoreColorsTitle">Restauración de Color Vintage</sys:String>
 	<sys:String x:Key="HelpRestoreColorsDesc">Corrige el tono amarillento/sepia por envejecimiento, recupera contraste con LAB CLAHE y realza pigmentos desvaídos.</sys:String>
+	<sys:String x:Key="HelpRemoveDustTitle">Eliminación de Polvo y Rayaduras</sys:String>
+	<sys:String x:Key="HelpRemoveDustDesc">Detecta motas de polvo, fibras y rayaduras finas mediante filtros morfológicos y las repara con inpainting de OpenCV.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Atajos de Teclado</sys:String>
 	<sys:String x:Key="HelpShortcutRotate">[R] Rotar foto 90°</sys:String>
 	<sys:String x:Key="HelpShortcutDelete">[X] o [Supr] Descartar foto</sys:String>
 	<sys:String x:Key="HelpShortcutNextScan">[Re Pág / Av Pág] o [↑ / ↓] Cambiar escaneo</sys:String>
 	<sys:String x:Key="HelpShortcutNextPhoto">[Izquierda / Derecha] Navegar fotos</sys:String>
+	<sys:String x:Key="HelpShortcutCompare">[Espacio] Mantener para comparar original</sys:String>
 	<sys:String x:Key="HelpShortcutRefine">[N] o [Ñ] Ajustar bordes</sys:String>
 	<sys:String x:Key="HelpShortcutToggleView">[1 / 2] Cambiar Individual / Cuadrícula</sys:String>
 	<sys:String x:Key="HelpShortcutUndo">[Ctrl+Z] Deshacer último cambio</sys:String>
@@ -79,6 +84,7 @@
 	<sys:String x:Key="HelpVersion">Versión 1.1.0</sys:String>
 	<sys:String x:Key="HelpAuthor">Desarrollado por Nil Riera</sys:String>
 	<sys:String x:Key="HelpPoweredBy">Impulsado por Emgu.CV (wrapper de OpenCV)</sys:String>
+	<sys:String x:Key="HelpModelLicense">Detección facial IA: YuNet por Shiqi Yu / OpenCV Zoo (Apache 2.0)</sys:String>
 	<sys:String x:Key="HelpCopyright">© 2026 Nil Riera. Licencia GPLv3.</sys:String>
 	<sys:String x:Key="BtnReset">Restablecer valores</sys:String>
 	<sys:String x:Key="LblFormat">Formato de salida</sys:String>

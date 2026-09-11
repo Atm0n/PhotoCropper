@@ -12,4 +12,5 @@ public record DetectionOptions
     public MCvScalar? CustomBackgroundColorHsv { get; set; }
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; } = true;
+    public bool RemoveDustAndScratches { get; set; } = true;
 }

@@ -310,6 +310,23 @@ public sealed class ModularServiceTests : IDisposable
     }
 
     [Fact]
+    public void PhotoRestorationService_InpaintDustAndScratches_ShouldRemoveDefects()
+    {
+        using Mat photo = new(200, 200, DepthType.Cv8U, 3);
+        photo.SetTo(new MCvScalar(128, 128, 128));
+
+        // Inject simulated dust speck (bright white dot) and dark hair scratch (thin line)
+        CvInvoke.Circle(photo, new Point(50, 50), 2, new MCvScalar(255, 255, 255), -1);
+        CvInvoke.Line(photo, new Point(100, 100), new Point(108, 108), new MCvScalar(0, 0, 0), 1);
+
+        using Mat inpainted = PhotoRestorationService.InpaintDustAndScratches(photo);
+        Assert.False(inpainted.IsEmpty);
+        Assert.Equal(200, inpainted.Width);
+        Assert.Equal(200, inpainted.Height);
+        Assert.Equal(3, inpainted.NumberOfChannels);
+    }
+
+    [Fact]
     public void PhotoCropperCli_ShouldProcessDirectoryAndExtractPhotos()
     {
         string inputDir = Path.Combine(_tempDir, "cli_input");

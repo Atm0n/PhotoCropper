@@ -28,6 +28,10 @@ internal static class BatchProcessor
         {
             Console.WriteLine("Color-Restoration: Enabled (Auto-White Balance + LAB CLAHE + Vibrancy)");
         }
+        if (options.RemoveDust)
+        {
+            Console.WriteLine("Dust-Inpainting: Enabled (Morphological Scratch & Dust Inpainting)");
+        }
         Console.WriteLine();
 
         var detectionOptions = new DetectionOptions
@@ -38,7 +42,8 @@ internal static class BatchProcessor
             CannyLowThreshold = options.CannyLow,
             CannyHighThreshold = options.CannyLow * 2.5,
             AutoOrientPhotos = options.AutoOrient,
-            RestoreVintageColors = options.RestoreColors
+            RestoreVintageColors = options.RestoreColors,
+            RemoveDustAndScratches = options.RemoveDust
         };
 
         int totalExtracted = 0;
