@@ -111,6 +111,7 @@
 
 							<CheckBox x:Name="chkAutoOrient" Content="{DynamicResource LblAutoOrient}" ToolTip.Tip="{DynamicResource TipAutoOrient}" IsCheckedChanged="ChkAutoOrient_IsCheckedChanged" VerticalAlignment="Center" FontSize="11" Focusable="False" Margin="10,0,0,0"/>
 							<CheckBox x:Name="chkRestoreColors" Content="{DynamicResource LblRestoreColors}" ToolTip.Tip="{DynamicResource TipRestoreColors}" IsCheckedChanged="ChkRestoreColors_IsCheckedChanged" VerticalAlignment="Center" FontSize="11" Focusable="False" Margin="10,0,0,0"/>
+							<CheckBox x:Name="chkRemoveDust" Content="{DynamicResource LblRemoveDust}" ToolTip.Tip="{DynamicResource TipRemoveDust}" IsCheckedChanged="ChkRemoveDust_IsCheckedChanged" VerticalAlignment="Center" FontSize="11" Focusable="False" Margin="10,0,0,0"/>
 
 							<Button x:Name="btnResetDefaults" Click="BtnResetDefaults_Click" Padding="10,5" FontSize="11" Background="#444444" VerticalAlignment="Center" Margin="15,0,0,0" Focusable="False">
 								<TextBlock Text="{DynamicResource BtnReset}"/>
@@ -284,7 +285,7 @@
 				<StackPanel Margin="50" MaxWidth="800" Spacing="30">
 					<TextBlock Text="{DynamicResource HeaderHelp}" FontSize="32" FontWeight="Bold" Foreground="#3399ff" HorizontalAlignment="Center"/>
 					
-					<Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto, Auto, Auto" Margin="0,20">
+					<Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto" Margin="0,20">
 						<StackPanel Grid.Row="0" Grid.Column="0" Margin="10" Spacing="5">
 							<TextBlock Text="{DynamicResource BtnOpenScans}" FontWeight="Bold" Foreground="#3399ff"/>
 							<TextBlock Text="{DynamicResource HelpOpenScans}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
@@ -325,6 +326,10 @@
 							<TextBlock Text="{DynamicResource HelpRestoreColorsTitle}" FontWeight="Bold" Foreground="#3399ff"/>
 							<TextBlock Text="{DynamicResource HelpRestoreColorsDesc}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
 						</StackPanel>
+						<StackPanel Grid.Row="5" Grid.Column="0" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource HelpRemoveDustTitle}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpRemoveDustDesc}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
 					</Grid>
 
 					<Border Background="#1e1e1e" Padding="20" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
@@ -335,6 +340,7 @@
 								<TextBlock Text="{DynamicResource HelpShortcutDelete}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutNextScan}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutNextPhoto}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutCompare}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutRefine}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutUndo}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutRedo}" Margin="5"/>

@@ -19,13 +19,15 @@ internal sealed partial class MainWindow : Window
     private readonly List<PhotoCropperEngine> OriginalPhotos = [];
     private readonly UndoRedoHistory undoHistory = new();
     private bool isLoading;
+    private bool isComparingRaw;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        // Register key down handler in the Tunnel phase to prevent focused controls from hijacking keys
+        // Register key handlers in Tunnel phase
         AddHandler(KeyDownEvent, Window_KeyDown, RoutingStrategies.Tunnel);
+        AddHandler(KeyUpEvent, Window_KeyUp, RoutingStrategies.Tunnel);
 
         // Register Drag & Drop event handlers
         AddHandler(DragDrop.DragOverEvent, Window_DragOver);
@@ -134,6 +136,10 @@ internal sealed partial class MainWindow : Window
         {
             chkRestoreColors.IsChecked = settings.RestoreVintageColors;
         }
+        if (chkRemoveDust != null)
+        {
+            chkRemoveDust.IsChecked = settings.RemoveDustAndScratches;
+        }
 
         if (cbFormat != null)
         {
@@ -163,7 +169,8 @@ internal sealed partial class MainWindow : Window
             CannyLowThreshold = sldEdge.Value,
             CannyHighThreshold = sldEdge.Value * 2.5,
             AutoOrientPhotos = chkAutoOrient?.IsChecked == true,
-            RestoreVintageColors = chkRestoreColors?.IsChecked == true
+            RestoreVintageColors = chkRestoreColors?.IsChecked == true,
+            RemoveDustAndScratches = chkRemoveDust?.IsChecked == true
         };
     }
 
@@ -177,6 +184,13 @@ internal sealed partial class MainWindow : Window
     private async void ChkRestoreColors_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
         SettingsManager.Instance.Settings.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
+        SettingsManager.Instance.Save();
+        await ReprocessCurrentScanAsync();
+    }
+
+    private async void ChkRemoveDust_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        SettingsManager.Instance.Settings.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
         SettingsManager.Instance.Save();
         await ReprocessCurrentScanAsync();
     }
@@ -649,11 +663,46 @@ internal sealed partial class MainWindow : Window
                 e.Handled = true;
                 break;
 
+            case Avalonia.Input.Key.Space:
+            case Avalonia.Input.Key.B:
+                if (!isComparingRaw && OriginalPhotos.Count > 0 && slides != null && slides.SelectedIndex >= 0)
+                {
+                    int sel = slides.SelectedIndex;
+                    var engine = OriginalPhotos[currentIndex];
+                    if (sel < engine.RawDetectedPhotos.Count)
+                    {
+                        isComparingRaw = true;
+                        slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.RawDetectedPhotos[sel]);
+                        slides.SelectedIndex = sel;
+                    }
+                }
+                e.Handled = true;
+                break;
+
             case Avalonia.Input.Key.N:
                 FocusManager?.Focus(null);
                 StartRefineMode();
                 e.Handled = true;
                 break;
+        }
+    }
+
+    private void Window_KeyUp(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (isComparingRaw && (e.Key == Avalonia.Input.Key.Space || e.Key == Avalonia.Input.Key.B))
+        {
+            isComparingRaw = false;
+            if (OriginalPhotos.Count > 0 && slides != null && slides.SelectedIndex >= 0)
+            {
+                int sel = slides.SelectedIndex;
+                var engine = OriginalPhotos[currentIndex];
+                if (sel < engine.DetectedPhotos.Count)
+                {
+                    slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.DetectedPhotos[sel]);
+                    slides.SelectedIndex = sel;
+                }
+            }
+            e.Handled = true;
         }
     }
 

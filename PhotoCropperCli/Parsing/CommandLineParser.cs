@@ -82,6 +82,14 @@ internal static class CommandLineParser
             {
                 options.RestoreColors = false;
             }
+            else if (arg == "--remove-dust")
+            {
+                options.RemoveDust = true;
+            }
+            else if (arg == "--no-remove-dust")
+            {
+                options.RemoveDust = false;
+            }
             else if (arg is "-i" or "--input" && i + 1 < args.Length)
             {
                 options.Inputs.Add(args[++i]);
@@ -115,6 +123,8 @@ internal static class CommandLineParser
         Console.WriteLine("  --no-auto-orient        Disable auto-orientation detection and preserve raw scanner placement");
         Console.WriteLine("  --restore-colors        Enable auto-white balance, contrast & vibrancy color restoration (default: on)");
         Console.WriteLine("  --no-restore-colors     Disable color restoration and export raw scanned pixels");
+        Console.WriteLine("  --remove-dust           Enable automated scratch and dust inpainting (default: on)");
+        Console.WriteLine("  --no-remove-dust        Disable automated scratch and dust inpainting");
         Console.WriteLine("  -r, --recursive         Recursively process subdirectories when input is a folder");
         Console.WriteLine("  -v, --verbose           Display individual photo dimensions and debug details");
         Console.WriteLine("  -h, --help              Show this help message and exit");

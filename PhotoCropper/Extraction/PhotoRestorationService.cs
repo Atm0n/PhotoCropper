@@ -10,8 +10,9 @@ public static class PhotoRestorationService
     /// <summary>
     /// Restores faded vintage photographs by neutralizing aging color casts (auto-white balance / auto-levels),
     /// recovering shadow/highlight contrast via LAB CLAHE, and gently reviving bleached color saturation.
+    /// Optionally detects and inpaints dust specks and hairline scratches.
     /// </summary>
-    public static Mat RestoreColors(Mat photo)
+    public static Mat RestoreColors(Mat photo, bool removeDust = false)
     {
         ArgumentNullException.ThrowIfNull(photo);
         if (photo.IsEmpty || photo.Width < 20 || photo.Height < 20) return photo;
@@ -80,6 +81,14 @@ public static class PhotoRestorationService
         Mat finalBgr = new();
         CvInvoke.CvtColor(finalHsv, finalBgr, ColorConversion.Hsv2Bgr);
 
+        // 5. Automated Dust, Hair & Scratch Inpainting (if enabled)
+        if (removeDust)
+        {
+            Mat inpainted = InpaintDustAndScratches(finalBgr);
+            finalBgr.Dispose();
+            finalBgr = inpainted;
+        }
+
         if (hasAlpha && !alpha.IsEmpty)
         {
             using var outChannels = new Emgu.CV.Util.VectorOfMat();
@@ -93,6 +102,79 @@ public static class PhotoRestorationService
         }
 
         return finalBgr;
+    }
+
+    /// <summary>
+    /// Detects high-frequency hairline scratches, dust specks, and fibers using morphological
+    /// Black-Hat (dark defects) and Top-Hat (bright defects) filtering, then in-paints them.
+    /// </summary>
+    public static Mat InpaintDustAndScratches(Mat bgr, double inpaintRadius = 2.5)
+    {
+        ArgumentNullException.ThrowIfNull(bgr);
+        if (bgr.IsEmpty || bgr.Width < 30 || bgr.Height < 30) return bgr.Clone();
+
+        using Mat gray = new();
+        CvInvoke.CvtColor(bgr, gray, ColorConversion.Bgr2Gray);
+
+        // Median blur removes fine natural film grain so we only target true dust/scratches
+        using Mat smooth = new();
+        CvInvoke.MedianBlur(gray, smooth, 3);
+
+        // 3x3 to 5x5 elliptical structuring element for isolated dust & thin lines
+        using Mat kernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5), new Point(-1, -1));
+
+        using Mat blackHat = new();
+        CvInvoke.MorphologyEx(smooth, blackHat, MorphOp.Blackhat, kernel, new Point(-1, -1), 1, BorderType.Reflect, new MCvScalar());
+
+        using Mat topHat = new();
+        CvInvoke.MorphologyEx(smooth, topHat, MorphOp.Tophat, kernel, new Point(-1, -1), 1, BorderType.Reflect, new MCvScalar());
+
+        using Mat threshBlack = new();
+        using Mat threshTop = new();
+        CvInvoke.Threshold(blackHat, threshBlack, 28, 255, ThresholdType.Binary);
+        CvInvoke.Threshold(topHat, threshTop, 35, 255, ThresholdType.Binary);
+
+        using Mat defectMask = new();
+        CvInvoke.BitwiseOr(threshBlack, threshTop, defectMask);
+
+        // Edge detection guard: avoid inpainting natural high-contrast sharp edges (eyes, contours, text)
+        using Mat edges = new();
+        CvInvoke.Canny(smooth, edges, 60, 160);
+        using Mat edgeKernel = CvInvoke.GetStructuringElement(MorphShapes.Cross, new Size(3, 3), new Point(-1, -1));
+        using Mat dilatedEdges = new();
+        CvInvoke.Dilate(edges, dilatedEdges, edgeKernel, new Point(-1, -1), 1, BorderType.Reflect, new MCvScalar());
+
+        // Subtract natural edges from defect mask
+        using Mat cleanDefects = new();
+        CvInvoke.Subtract(defectMask, dilatedEdges, cleanDefects);
+
+        // Contour filtering: ignore massive blobs (e.g. valid large image features)
+        using var contours = new Emgu.CV.Util.VectorOfVectorOfPoint();
+        using Mat hierarchy = new();
+        CvInvoke.FindContours(cleanDefects, contours, hierarchy, RetrType.External, ChainApproxMethod.ChainApproxSimple);
+
+        using Mat filteredMask = Mat.Zeros(cleanDefects.Rows, cleanDefects.Cols, DepthType.Cv8U, 1);
+        int maxDefectArea = Math.Max(25, (int)(bgr.Width * bgr.Height * 0.0008)); // max 0.08% of photo area
+
+        for (int i = 0; i < contours.Size; i++)
+        {
+            using var contour = contours[i];
+            double area = CvInvoke.ContourArea(contour);
+            if (area >= 2 && area <= maxDefectArea)
+            {
+                CvInvoke.DrawContours(filteredMask, contours, i, new MCvScalar(255), -1);
+            }
+        }
+
+        // Slightly dilate the defects to cover boundary penumbra
+        using Mat finalMask = new();
+        using Mat dilateKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3), new Point(-1, -1));
+        CvInvoke.Dilate(filteredMask, finalMask, dilateKernel, new Point(-1, -1), 1, BorderType.Reflect, new MCvScalar());
+
+        // Inpaint defects using Fast Marching Method (Telea)
+        Mat result = new();
+        CvInvoke.Inpaint(bgr, finalMask, result, inpaintRadius, InpaintType.Telea);
+        return result;
     }
 
     private static Mat ApplySoftWhiteBalance(Mat bgr, double damping)

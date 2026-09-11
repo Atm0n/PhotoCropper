@@ -13,6 +13,8 @@
 	<sys:String x:Key="TipAutoOrient">Endreça i orienta automàticament les fotos usant detecció facial per IA i anàlisi de paisatges/aigua.</sys:String>
 	<sys:String x:Key="LblRestoreColors">Restaurar Color i Contrast</sys:String>
 	<sys:String x:Key="TipRestoreColors">Neutralitza el grogueig per envelliment, recupera ombres i llums amb LAB CLAHE i reviu colors descolorits.</sys:String>
+	<sys:String x:Key="LblRemoveDust">Eliminar Pols i Ratllades</sys:String>
+	<sys:String x:Key="TipRemoveDust">Inpainting automàtic de ratllades fines, borrissol i partícules de pols de l'escàner.</sys:String>
 	<sys:String x:Key="TxtNoFiles">Sense fitxers</sys:String>
 	<sys:String x:Key="HeaderOriginal">ESCANEIG ORIGINAL (CLIC I ARROSSEGAR PER RETALLAR)</sys:String>
 	<sys:String x:Key="HeaderDetected">FOTOS DETECTADES</sys:String>
@@ -22,7 +24,7 @@
 	<sys:String x:Key="BtnAccept">Acceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rebutjar (Retrocés)</sys:String>
 	<sys:String x:Key="StatusReady">Llest</sys:String>
-	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [R] Girar | [X] Esborrar | [Ctrl+Z/Y] Desfer/Refer</sys:String>
+	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [R] Girar | [Espai] Comparar Original | [Ctrl+Z/Y] Desfer/Refer</sys:String>
 	<sys:String x:Key="MsgUndo">Desfet: {0}.</sys:String>
 	<sys:String x:Key="MsgRedo">Refet: {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
@@ -58,11 +60,14 @@
 	<sys:String x:Key="HelpAutoOrientDesc">Utilitza una xarxa neuronal integrada (YuNet) per detectar l'orientació de cares i anàlisi de paisatges/aigua per redreçar fotos en vertical.</sys:String>
 	<sys:String x:Key="HelpRestoreColorsTitle">Restauració de Color Vintage</sys:String>
 	<sys:String x:Key="HelpRestoreColorsDesc">Corregeix el to groguenc/sèpia per envelliment, recupera contrast amb LAB CLAHE i realça pigments descolorits.</sys:String>
+	<sys:String x:Key="HelpRemoveDustTitle">Eliminació de Pols i Ratllades</sys:String>
+	<sys:String x:Key="HelpRemoveDustDesc">Detecta borrissol, pols i ratllades fines amb filtres morfològics i les repara amb inpainting d'OpenCV.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Dreceres de Teclat</sys:String>
 	<sys:String x:Key="HelpShortcutRotate">[R] Girar foto 90°</sys:String>
 	<sys:String x:Key="HelpShortcutDelete">[X] o [Supr] Descartar foto</sys:String>
 	<sys:String x:Key="HelpShortcutNextScan">[Re Pàg / Av Pàg] o [↑ / ↓] Canviar escaneig</sys:String>
 	<sys:String x:Key="HelpShortcutNextPhoto">[Esquerra / Dreta] Navegar fotos</sys:String>
+	<sys:String x:Key="HelpShortcutCompare">[Espai] Mantenir per comparar original</sys:String>
 	<sys:String x:Key="HelpShortcutRefine">[N] o [Ñ] Ajustar vores</sys:String>
 	<sys:String x:Key="HelpShortcutUndo">[Ctrl+Z] Desfer últim canvi</sys:String>
 	<sys:String x:Key="HelpShortcutRedo">[Ctrl+Y] Refer canvi</sys:String>

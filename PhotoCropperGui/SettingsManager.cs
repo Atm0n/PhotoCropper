@@ -19,6 +19,7 @@ internal sealed class UserSettings
     public int JpegQuality { get; set; } = 90; // 1-100
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; } = true;
+    public bool RemoveDustAndScratches { get; set; } = true;
 }
 
 internal sealed class SettingsManager

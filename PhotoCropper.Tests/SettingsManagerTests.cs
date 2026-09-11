@@ -30,6 +30,7 @@ public sealed class SettingsManagerTests : IDisposable
         Assert.False(manager.Settings.AdvancedVisible);
         Assert.True(manager.Settings.AutoOrientPhotos);
         Assert.True(manager.Settings.RestoreVintageColors);
+        Assert.True(manager.Settings.RemoveDustAndScratches);
     }
 
     [Fact]

@@ -42,6 +42,11 @@ The solution consists of four main projects:
   - **Warmth-Preserving White Balance:** Damped gray-world channel normalization (`[0.85, 1.18]`) neutralizes yellowing, aged paper, and dark storage discolouration without turning warm vintage memories icy blue.
   - **LAB Contrast-Limited Adaptive Histogram Equalization (CLAHE):** Enhances local luminance dynamic range (`clipLimit: 1.3`) across shadow and highlight regions without channel clipping or artifacts.
   - **Vibrancy Revival:** Gentle HSV saturation enhancement revives faded pigments while preserving natural skin tones.
+- **Automated Dust, Hair & Scratch Inpainting:**
+  - **Dual Morphological Defect Detection:** Combines Black-Hat and Top-Hat filters with median pre-smoothing to isolate dark hair/fibers, dust specks, and bright white hairline scratches.
+  - **Canny Edge Protection Masking:** Subtracts dilated high-frequency structural edges so fine photo contours, eyes, and sharp boundaries are strictly preserved without smearing or blurring.
+  - **Fast Marching Method Inpainting:** Uses `CvInvoke.Inpaint` (Alexandru Telea / FMM) within a localized 2.5px radius to invisibly blend away detected blemishes into surrounding textures.
+- **Hold-to-Compare (`Space` / `B`):** Instant zero-latency toggle between the pristine restored photo and the original unedited scan crop for effortless quality inspection.
 - **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm, automatically detecting and removing scanner glass/bed white borders.
 - **Local ROI Perspective Warp:** Instead of rotating the entire giant scan, only the region of interest is extracted and warped with `Inter.Cubic` interpolation with transparent alpha margins.
 - **Subtle Deskew Regularization:** Snaps near-straight photos (within ±1.5° of right angles) to exact axis-aligned rectangles, avoiding resampling blur while maintaining exact dimensions.
@@ -74,6 +79,7 @@ The codebase strictly enforces the highest standard of static analysis and memor
 | `Left / Right` | Navigate between cropped photos |
 | `Up / Down` / `PageUp / PageDown` | Switch between original loaded scans |
 | `R` | Rotate the current cropped photo 90° clockwise |
+| `Space` / `B` | Hold to compare with the unedited raw scan crop |
 | `X` / `Delete` | Permanently delete the currently selected photo |
 | `Ctrl + Z` | Undo last photo operation (delete, rotate, manual crop, refinement) |
 | `Ctrl + Y` | Redo last undone operation |
@@ -127,6 +133,7 @@ dotnet run --project PhotoCropperCli -- --help
 | `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
 | `--auto-orient` / `--no-auto-orient` | Enable or disable AI face & landscape orientation detection | `true` |
 | `--restore-colors` / `--no-restore-colors` | Enable or disable vintage photo color & contrast restoration | `true` |
+| `--remove-dust` / `--no-remove-dust` | Enable or disable automated dust and hairline scratch inpainting | `true` |
 | `-r, --recursive` | Recursively process subdirectories when input is a folder | `false` |
 | `-v, --verbose` | Display individual photo dimensions and debug details | `false` |
 | `-h, --help` | Display usage instructions and examples | — |

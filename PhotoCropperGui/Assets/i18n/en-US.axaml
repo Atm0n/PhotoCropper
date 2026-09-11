@@ -13,6 +13,8 @@
 	<sys:String x:Key="TipAutoOrient">Automatically straightens and orients photos upright using AI face detection and outdoor landscape/water scene cues.</sys:String>
 	<sys:String x:Key="LblRestoreColors">Restore Vintage Colors</sys:String>
 	<sys:String x:Key="TipRestoreColors">Neutralizes aging yellow casts, recovers shadow/highlight contrast via LAB CLAHE, and revives faded photo pigments.</sys:String>
+	<sys:String x:Key="LblRemoveDust">Remove Dust &amp; Scratches</sys:String>
+	<sys:String x:Key="TipRemoveDust">Automated inpainting of hairline scratches, dust specks, and fibers.</sys:String>
 	<sys:String x:Key="TxtNoFiles">No files loaded</sys:String>
 	<sys:String x:Key="HeaderOriginal">ORIGINAL SCAN (CLICK &amp; DRAG TO MANUALLY CROP)</sys:String>
 	<sys:String x:Key="HeaderDetected">DETECTED PHOTOS</sys:String>
@@ -22,7 +24,7 @@
 	<sys:String x:Key="BtnAccept">Accept (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Reject (Backspace)</sys:String>
 	<sys:String x:Key="StatusReady">Ready</sys:String>
-	<sys:String x:Key="StatusShortcuts">Shortcuts: [↑/↓] Switch Scan | [←/→] Navigate Photos | [R] Rotate | [X] Delete | [Ctrl+Z/Y] Undo/Redo</sys:String>
+	<sys:String x:Key="StatusShortcuts">Shortcuts: [↑/↓] Switch Scan | [←/→] Navigate Photos | [R] Rotate | [Space] Compare Original | [Ctrl+Z/Y] Undo/Redo</sys:String>
 	<sys:String x:Key="MsgUndo">Undid {0}.</sys:String>
 	<sys:String x:Key="MsgRedo">Redid {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">PHOTO {0} OF {1}</sys:String>
@@ -58,11 +60,14 @@
 	<sys:String x:Key="HelpAutoOrientDesc">Uses an embedded neural network (YuNet) to detect facial orientation, backed by landscape/water scene analysis, to orient extracted photos upright.</sys:String>
 	<sys:String x:Key="HelpRestoreColorsTitle">Vintage Color Restoration</sys:String>
 	<sys:String x:Key="HelpRestoreColorsDesc">Corrects aged yellowing/sepia casts via damped gray-world balancing, recovers contrast with LAB CLAHE, and enhances faded pigments.</sys:String>
+	<sys:String x:Key="HelpRemoveDustTitle">Dust &amp; Scratch Inpainting</sys:String>
+	<sys:String x:Key="HelpRemoveDustDesc">Detects scanner dust specks, lint fibers, and hairline scratches using morphological filters and repairs them using OpenCV inpainting.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Keyboard Shortcuts</sys:String>
 	<sys:String x:Key="HelpShortcutRotate">[R] Rotate photo 90°</sys:String>
 	<sys:String x:Key="HelpShortcutDelete">[X] or [Delete] Discard photo</sys:String>
 	<sys:String x:Key="HelpShortcutNextScan">[PageUp / PageDown] or [↑ / ↓] Switch scans</sys:String>
 	<sys:String x:Key="HelpShortcutNextPhoto">[Left / Right] Navigate photos</sys:String>
+	<sys:String x:Key="HelpShortcutCompare">[Space] Hold to compare raw scan</sys:String>
 	<sys:String x:Key="HelpShortcutRefine">[N] or [Ñ] Refine edges</sys:String>
 	<sys:String x:Key="HelpShortcutUndo">[Ctrl+Z] Undo last edit</sys:String>
 	<sys:String x:Key="HelpShortcutRedo">[Ctrl+Y] Redo edit</sys:String>
