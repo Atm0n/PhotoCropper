@@ -2,9 +2,9 @@ name: .NET CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, developer ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, developer ]
 
 jobs:
   build:
@@ -66,9 +66,18 @@ jobs:
         dotnet test --no-build -c Release --verbosity normal
       shell: bash
 
-    - name: Publish
+    - name: Publish GUI & CLI
       run: |
         dotnet publish PhotoCropperGui/PhotoCropperGui.csproj `
+          -c Release `
+          -r ${{ matrix.runtime }} `
+          --self-contained true `
+          -p:PublishSingleFile=true `
+          -p:IncludeNativeLibrariesForSelfExtract=true `
+          -p:PublishReadyToRun=true `
+          -o ./publish/${{ matrix.runtime }}
+
+        dotnet publish PhotoCropperCli/PhotoCropperCli.csproj `
           -c Release `
           -r ${{ matrix.runtime }} `
           --self-contained true `
