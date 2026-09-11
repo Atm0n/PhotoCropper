@@ -12,14 +12,17 @@ using Emgu.CV;
 using Emgu.CV.Structure;
 using PhotoCropper;
 using PhotoCropper.Models;
+using System.Diagnostics.CodeAnalysis;
 using PhotoCropperGui.Services;
 
 namespace PhotoCropperGui;
 
+[SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Avalonia Window lifecycle is managed by OnClosed override")]
 internal sealed partial class MainWindow : Window
 {
     private int currentIndex;
     private readonly List<PhotoCropperEngine> OriginalPhotos = [];
+    private readonly UndoRedoHistory undoHistory = new();
     private bool isLoading;
 
     public MainWindow()
@@ -82,6 +85,7 @@ internal sealed partial class MainWindow : Window
 
     private async Task LoadScansFromPathsAsync(IEnumerable<string> paths)
     {
+        undoHistory.Clear();
         foreach (var photo in OriginalPhotos)
         {
             photo.Dispose();
@@ -297,9 +301,13 @@ internal sealed partial class MainWindow : Window
         int photoIndex = slides.SelectedIndex;
         if (photoIndex < 0) return;
 
-        OriginalPhotos[currentIndex].DeletePhoto(photoIndex);
+        var currentEngine = OriginalPhotos[currentIndex];
+        var matToDelete = currentEngine.DetectedPhotos[photoIndex];
+        undoHistory.PushDelete(currentIndex, photoIndex, matToDelete);
 
-        int nextIndex = Math.Min(photoIndex, OriginalPhotos[currentIndex].DetectedPhotos.Count - 1);
+        currentEngine.DeletePhoto(photoIndex);
+
+        int nextIndex = Math.Min(photoIndex, currentEngine.DetectedPhotos.Count - 1);
         LoadCroppedPhotosToSlider();
         if (nextIndex >= 0)
         {
@@ -319,6 +327,8 @@ internal sealed partial class MainWindow : Window
         if (isLoading || OriginalPhotos.Count == 0 || slides.SelectedIndex < 0) return;
 
         int photoIndex = slides.SelectedIndex;
+        undoHistory.PushRotate(currentIndex, photoIndex);
+
         string rotatingMsg = Application.Current?.FindResource("MsgRotating")?.ToString() ?? "Rotating...";
         string rotatedMsg = Application.Current?.FindResource("MsgPhotoRotated")?.ToString() ?? "Photo rotated.";
 
@@ -437,6 +447,58 @@ internal sealed partial class MainWindow : Window
         if (!isLoading) slides.Next();
     }
 
+    private async void PerformUndo()
+    {
+        if (OriginalPhotos.Count == 0 || !undoHistory.CanUndo) return;
+
+        var action = undoHistory.Undo(OriginalPhotos);
+        if (action != null)
+        {
+            if (action.ScanIndex != currentIndex && action.ScanIndex >= 0 && action.ScanIndex < OriginalPhotos.Count)
+            {
+                currentIndex = action.ScanIndex;
+                await LoadPhotosToGuiAsync();
+            }
+            else
+            {
+                int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, OriginalPhotos[currentIndex].DetectedPhotos.Count - 1)) : 0;
+                LoadCroppedPhotosToSlider();
+                if (slides != null && OriginalPhotos[currentIndex].DetectedPhotos.Count > 0)
+                {
+                    slides.SelectedIndex = selected;
+                }
+            }
+            string undoFormat = Application.Current?.FindResource("MsgUndo")?.ToString() ?? "Undid {0}.";
+            lblStatus.Text = string.Format(undoFormat, action.Description);
+        }
+    }
+
+    private async void PerformRedo()
+    {
+        if (OriginalPhotos.Count == 0 || !undoHistory.CanRedo) return;
+
+        var action = undoHistory.Redo(OriginalPhotos);
+        if (action != null)
+        {
+            if (action.ScanIndex != currentIndex && action.ScanIndex >= 0 && action.ScanIndex < OriginalPhotos.Count)
+            {
+                currentIndex = action.ScanIndex;
+                await LoadPhotosToGuiAsync();
+            }
+            else
+            {
+                int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, OriginalPhotos[currentIndex].DetectedPhotos.Count - 1)) : 0;
+                LoadCroppedPhotosToSlider();
+                if (slides != null && OriginalPhotos[currentIndex].DetectedPhotos.Count > 0)
+                {
+                    slides.SelectedIndex = selected;
+                }
+            }
+            string redoFormat = Application.Current?.FindResource("MsgRedo")?.ToString() ?? "Redid {0}.";
+            lblStatus.Text = string.Format(redoFormat, action.Description);
+        }
+    }
+
     private async void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
         if (isLoading)
@@ -445,11 +507,26 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        if (e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Control) && e.Key == Avalonia.Input.Key.S)
+        if (e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Control))
         {
-            BtnSaveImages_Click(null, new RoutedEventArgs());
-            e.Handled = true;
-            return;
+            if (e.Key == Avalonia.Input.Key.S)
+            {
+                BtnSaveImages_Click(null, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Avalonia.Input.Key.Z)
+            {
+                PerformUndo();
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Avalonia.Input.Key.Y)
+            {
+                PerformRedo();
+                e.Handled = true;
+                return;
+            }
         }
 
         if (pnlHelpOverlay.IsVisible && e.Key == Avalonia.Input.Key.Escape)
@@ -657,7 +734,13 @@ internal sealed partial class MainWindow : Window
 
         await ExecuteWithLoadingAsync(extractingMsg, async () =>
         {
+            int prevCount = photo.DetectedPhotos.Count;
             await Task.Run(() => photo.AddManualCrop(cropRect));
+            if (photo.DetectedPhotos.Count > prevCount)
+            {
+                int newIndex = photo.DetectedPhotos.Count - 1;
+                undoHistory.PushAdd(currentIndex, newIndex, photo.DetectedPhotos[newIndex]);
+            }
             LoadCroppedPhotosToSlider();
             slides.SelectedIndex = photo.DetectedPhotos.Count - 1;
         }, addedMsg);
@@ -789,9 +872,14 @@ internal sealed partial class MainWindow : Window
         string applyingMsg = Application.Current?.FindResource("MsgApplyingRefine")?.ToString() ?? "Applying refinement...";
         string successMsg = Application.Current?.FindResource("MsgRefineSuccess")?.ToString() ?? "Crop refined successfully.";
 
+        var currentEngine = OriginalPhotos[currentIndex];
+        var beforeMat = currentEngine.DetectedPhotos[photoIndex].Clone();
+
         await ExecuteWithLoadingAsync(applyingMsg, async () =>
         {
-            await Task.Run(() => OriginalPhotos[currentIndex].ApplyCropToPhoto(photoIndex, currentRefineRect));
+            await Task.Run(() => currentEngine.ApplyCropToPhoto(photoIndex, currentRefineRect));
+            undoHistory.PushReplace(currentIndex, photoIndex, beforeMat, currentEngine.DetectedPhotos[photoIndex]);
+            beforeMat.Dispose();
             CloseRefineMode();
             LoadCroppedPhotosToSlider();
             slides.SelectedIndex = photoIndex;
@@ -917,6 +1005,7 @@ internal sealed partial class MainWindow : Window
         SettingsManager.Instance.Save();
 
         base.OnClosed(e);
+        undoHistory.Dispose();
         foreach (var photo in OriginalPhotos)
         {
             photo.Dispose();

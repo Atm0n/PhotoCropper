@@ -18,7 +18,9 @@
 	<sys:String x:Key="BtnAccept">Aceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rechazar (Retroceso)</sys:String>
 	<sys:String x:Key="StatusReady">Listo</sys:String>
-	<sys:String x:Key="StatusShortcuts">Atajos: [↑/↓] Cambiar Escaneo | [←/→] Navegar Fotos | [R] Rotar | [X] Borrar</sys:String>
+	<sys:String x:Key="StatusShortcuts">Atajos: [↑/↓] Cambiar Escaneo | [←/→] Navegar Fotos | [R] Rotar | [X] Borrar | [Ctrl+Z/Y] Deshacer/Rehacer</sys:String>
+	<sys:String x:Key="MsgUndo">Deshecho: {0}.</sys:String>
+	<sys:String x:Key="MsgRedo">Rehecho: {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
 	<sys:String x:Key="ScanCounter">Escaneo {0} de {1}</sys:String>
 	<sys:String x:Key="ProcessingScan">Procesando...</sys:String>

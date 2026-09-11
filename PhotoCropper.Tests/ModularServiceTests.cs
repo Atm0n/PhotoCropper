@@ -68,6 +68,57 @@ public sealed class ModularServiceTests : IDisposable
         Assert.True(refined.Height <= 860);
     }
 
+    [Fact]
+    public void UndoRedoHistory_ShouldCorrectlyUndoAndRedoOperations()
+    {
+        string dummyScan = Path.Combine(_tempDir, "undo_test_scan.jpg");
+        using (Mat scan = new(500, 500, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(255, 255, 255));
+            scan.Save(dummyScan);
+        }
+
+        using var engine1 = new PhotoCropperEngine(dummyScan);
+        using var engine2 = new PhotoCropperEngine(dummyScan);
+        var engines = new List<PhotoCropperEngine> { engine1, engine2 };
+        using var history = new PhotoCropperGui.Services.UndoRedoHistory();
+
+        using Mat photo1 = new(200, 100, DepthType.Cv8U, 3);
+        photo1.SetTo(new MCvScalar(10, 10, 10));
+        // Mat(rows: 200, cols: 100) -> Width is 100, Height is 200
+        engine1.DetectedPhotos.Add(photo1.Clone());
+
+        using Mat photo2 = new(300, 300, DepthType.Cv8U, 3);
+        photo2.SetTo(new MCvScalar(20, 20, 20));
+        engine2.DetectedPhotos.Add(photo2.Clone());
+
+        // 1. Delete on scan 0
+        var p1 = engine1.DetectedPhotos[0];
+        history.PushDelete(0, 0, p1);
+        engine1.DeletePhoto(0);
+        Assert.Empty(engine1.DetectedPhotos);
+
+        // 2. Delete on scan 1
+        var p2 = engine2.DetectedPhotos[0];
+        history.PushDelete(1, 0, p2);
+        engine2.DeletePhoto(0);
+        Assert.Empty(engine2.DetectedPhotos);
+
+        // 3. Undo #1 (should restore photo to scan 1)
+        var action1 = history.Undo(engines);
+        Assert.NotNull(action1);
+        Assert.Equal(1, action1.ScanIndex);
+        Assert.Single(engine2.DetectedPhotos);
+        Assert.Empty(engine1.DetectedPhotos);
+
+        // 4. Undo #2 (should restore photo to scan 0)
+        var action2 = history.Undo(engines);
+        Assert.NotNull(action2);
+        Assert.Equal(0, action2.ScanIndex);
+        Assert.Single(engine1.DetectedPhotos);
+        Assert.Single(engine2.DetectedPhotos);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

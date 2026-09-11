@@ -18,7 +18,9 @@
 	<sys:String x:Key="BtnAccept">Acceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rebutjar (Retrocés)</sys:String>
 	<sys:String x:Key="StatusReady">Llest</sys:String>
-	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [R] Girar | [X] Esborrar</sys:String>
+	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [R] Girar | [X] Esborrar | [Ctrl+Z/Y] Desfer/Refer</sys:String>
+	<sys:String x:Key="MsgUndo">Desfet: {0}.</sys:String>
+	<sys:String x:Key="MsgRedo">Refet: {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
 	<sys:String x:Key="ScanCounter">Escaneig {0} de {1}</sys:String>
 	<sys:String x:Key="ProcessingScan">Processant...</sys:String>
