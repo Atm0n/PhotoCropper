@@ -74,6 +74,14 @@ internal static class CommandLineParser
             {
                 options.AutoOrient = false;
             }
+            else if (arg == "--restore-colors")
+            {
+                options.RestoreColors = true;
+            }
+            else if (arg == "--no-restore-colors")
+            {
+                options.RestoreColors = false;
+            }
             else if (arg is "-i" or "--input" && i + 1 < args.Length)
             {
                 options.Inputs.Add(args[++i]);
@@ -105,6 +113,8 @@ internal static class CommandLineParser
         Console.WriteLine("  --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)");
         Console.WriteLine("  --auto-orient           Enable AI face & landscape auto-orientation detection (default: on)");
         Console.WriteLine("  --no-auto-orient        Disable auto-orientation detection and preserve raw scanner placement");
+        Console.WriteLine("  --restore-colors        Enable auto-white balance, contrast & vibrancy color restoration (default: on)");
+        Console.WriteLine("  --no-restore-colors     Disable color restoration and export raw scanned pixels");
         Console.WriteLine("  -r, --recursive         Recursively process subdirectories when input is a folder");
         Console.WriteLine("  -v, --verbose           Display individual photo dimensions and debug details");
         Console.WriteLine("  -h, --help              Show this help message and exit");

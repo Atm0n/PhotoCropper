@@ -42,10 +42,18 @@ public static class AutoOrientationService
             return faceRotation;
         }
 
-        // 2. Secondary: Landscape & Scene Analysis (Sky hue and ambient lighting gradients)
-        // Downscale small proxy for fast analysis (<1ms)
+        // 2. Secondary: Landscape & Scene Analysis (4-way multi-feature evaluation)
+        return DetectLandscapeRotation(photo);
+    }
+
+    public static int DetectLandscapeRotation(Mat photo)
+    {
+        ArgumentNullException.ThrowIfNull(photo);
+        if (photo.IsEmpty || photo.Width < 50 || photo.Height < 50) return 0;
+
+        // Downscale small proxy for fast analysis (<1ms per rotation)
         int maxDim = Math.Max(photo.Width, photo.Height);
-        double scale = maxDim > 300 ? 300.0 / maxDim : 1.0;
+        double scale = maxDim > 240 ? 240.0 / maxDim : 1.0;
         int w = (int)Math.Round(photo.Width * scale);
         int h = (int)Math.Round(photo.Height * scale);
 
@@ -66,74 +74,170 @@ public static class AutoOrientationService
             small.CopyTo(bgrSmall);
         }
 
-        using Mat hsv = new();
-        CvInvoke.CvtColor(bgrSmall, hsv, ColorConversion.Bgr2Hsv);
+        int[] rotations = [0, 90, 180, 270];
+        double bestScore = double.MinValue;
+        double secondBestScore = double.MinValue;
+        int bestRot = 0;
 
-        // Analyze 4 perimeter bands (top, bottom, left, right 25%)
-        int bandH = Math.Max(1, h / 4);
-        int bandW = Math.Max(1, w / 4);
-
-        using Mat topBand = new(hsv, new Rectangle(0, 0, w, bandH));
-        using Mat botBand = new(hsv, new Rectangle(0, h - bandH, w, bandH));
-        using Mat leftBand = new(hsv, new Rectangle(0, 0, bandW, h));
-        using Mat rightBand = new(hsv, new Rectangle(w - bandW, 0, bandW, h));
-
-        double topV = CvInvoke.Mean(topBand).V2;
-        double botV = CvInvoke.Mean(botBand).V2;
-        double leftV = CvInvoke.Mean(leftBand).V2;
-        double rightV = CvInvoke.Mean(rightBand).V2;
-
-        // Top sky score: Sky is bright (high V) and blue (H in [90, 130], S in [30, 220])
-        double topSkyScore = ComputeSkyScore(topBand);
-        double botSkyScore = ComputeSkyScore(botBand);
-        double leftSkyScore = ComputeSkyScore(leftBand);
-        double rightSkyScore = ComputeSkyScore(rightBand);
-
-        // 1. Sky blue dominance check (high confidence for outdoor photos)
-        if (botSkyScore > topSkyScore + 10.0 && botSkyScore > leftSkyScore && botSkyScore > rightSkyScore)
+        foreach (int rot in rotations)
         {
-            return 180; // Upside down
-        }
-        if (leftSkyScore > rightSkyScore + 10.0 && leftSkyScore > topSkyScore && leftSkyScore > botSkyScore)
-        {
-            return 90; // Top is on the left -> rotate 90 CW
-        }
-        if (rightSkyScore > leftSkyScore + 10.0 && rightSkyScore > topSkyScore && rightSkyScore > botSkyScore)
-        {
-            return 270; // Top is on the right -> rotate 270 CW (90 CCW)
+            double score = ScoreLandscapeRotation(bgrSmall, rot);
+            if (score > bestScore)
+            {
+                secondBestScore = bestScore;
+                bestScore = score;
+                bestRot = rot;
+            }
+            else if (score > secondBestScore)
+            {
+                secondBestScore = score;
+            }
         }
 
-        // 2. Ambient light gradient check (bright ceiling/sun vs dark floor/ground)
-        const double gradientThreshold = 20.0;
-        double vertDiff = botV - topV;
-        double horizDiff = leftV - rightV;
-
-        if (vertDiff >= gradientThreshold && vertDiff > Math.Abs(horizDiff) + 8.0)
+        // Only rotate if the top candidate has a clear positive score and outscores alternatives
+        if (bestScore >= 8.0 && (bestScore - secondBestScore) >= 4.0)
         {
-            return 180; // Bottom is significantly brighter than top -> upside down
-        }
-        if (horizDiff >= gradientThreshold && horizDiff > Math.Abs(vertDiff) + 8.0)
-        {
-            return 90; // Left is significantly brighter than right -> rotate 90 CW
-        }
-        if (-horizDiff >= gradientThreshold && -horizDiff > Math.Abs(vertDiff) + 8.0)
-        {
-            return 270; // Right is significantly brighter than left -> rotate 270 CW
+            return bestRot;
         }
 
-        return 0; // Already upright or ambiguous (preserve natural scan orientation)
+        return 0; // Ambiguous scene -> preserve natural scanner bed placement
     }
 
-    private static double ComputeSkyScore(Mat hsvBand)
+    private static double ScoreLandscapeRotation(Mat bgrSmall, int rot)
     {
-        // Blue hue in OpenCV HSV is ~90-130
-        using Mat mask = new();
-        using ScalarArray lower = new(new MCvScalar(85, 30, 80));
-        using ScalarArray upper = new(new MCvScalar(135, 255, 255));
-        CvInvoke.InRange(hsvBand, lower, upper, mask);
+        using Mat candidate = new();
+        if (rot == 0)
+        {
+            bgrSmall.CopyTo(candidate);
+        }
+        else
+        {
+            RotateFlags flag = rot switch
+            {
+                90 => RotateFlags.Rotate90Clockwise,
+                180 => RotateFlags.Rotate180,
+                270 => RotateFlags.Rotate90CounterClockwise,
+                _ => RotateFlags.Rotate180
+            };
+            CvInvoke.Rotate(bgrSmall, candidate, flag);
+        }
 
-        int nonZero = CvInvoke.CountNonZero(mask);
-        int totalPixels = Math.Max(1, hsvBand.Width * hsvBand.Height);
-        return (double)nonZero / totalPixels * 100.0;
+        int cw = candidate.Width;
+        int ch = candidate.Height;
+        int bandH = Math.Max(2, (int)Math.Round(ch * 0.38));
+
+        using Mat hsv = new();
+        CvInvoke.CvtColor(candidate, hsv, ColorConversion.Bgr2Hsv);
+
+        using Mat gray = new();
+        CvInvoke.CvtColor(candidate, gray, ColorConversion.Bgr2Gray);
+
+        // Top and bottom region bounding boxes
+        Rectangle topRect = new(0, 0, cw, bandH);
+        Rectangle botRect = new(0, ch - bandH, cw, bandH);
+
+        using Mat topHsv = new(hsv, topRect);
+        using Mat botHsv = new(hsv, botRect);
+        using Mat topGray = new(gray, topRect);
+        using Mat botGray = new(gray, botRect);
+
+        // 1. Sky feature: Blue sky + Overcast/Cloudy bright sky
+        double topSky = ComputeSkyRatio(topHsv);
+        double botSky = ComputeSkyRatio(botHsv);
+
+        // 2. Vegetation feature: Foliage and grass (Hue in green band)
+        double topVeg = ComputeVegetationRatio(topHsv);
+        double botVeg = ComputeVegetationRatio(botHsv);
+
+        // 3. Water feature: Ocean, lake, river, pool, sea (cyan/blue/teal darker than sky)
+        double topWater = ComputeWaterRatio(topHsv);
+        double botWater = ComputeWaterRatio(botHsv);
+
+        // 4. Luminance (brightness)
+        double topV = CvInvoke.Mean(topHsv).V2;
+        double botV = CvInvoke.Mean(botHsv).V2;
+
+        // 5. Texture complexity (Laplacian variance: sky is smooth, terrain/objects are textured)
+        double topTex = ComputeTextureVariance(topGray);
+        double botTex = ComputeTextureVariance(botGray);
+
+        double totalSky = topSky + botSky;
+        double totalVeg = topVeg + botVeg;
+        double totalWater = topWater + botWater;
+
+        // Only outdoor scenes with perceptible sky, vegetation, or water are evaluated
+        if (totalSky < 6.0 && totalVeg < 6.0 && totalWater < 6.0)
+        {
+            return 0.0;
+        }
+
+        double skyDelta = topSky - botSky;          // Sky at top -> positive
+        double vegDelta = botVeg - topVeg;          // Vegetation at bottom -> positive
+        double waterDelta = botWater - topWater;    // Water at bottom -> positive
+        double lumDelta = topV - botV;              // Light coming from above -> positive
+        double texDelta = botTex - topTex;          // High detail ground at bottom -> positive
+
+        return (skyDelta * 2.5) + (vegDelta * 1.8) + (waterDelta * 1.6) + (lumDelta * 0.3) + (texDelta * 0.4);
+    }
+
+    private static double ComputeSkyRatio(Mat hsvRegion)
+    {
+        // Blue Sky: H in [75, 140], S >= 15, V >= 80
+        using Mat blueMask = new();
+        using ScalarArray blueLow = new(new MCvScalar(75, 15, 80));
+        using ScalarArray blueHigh = new(new MCvScalar(140, 255, 255));
+        CvInvoke.InRange(hsvRegion, blueLow, blueHigh, blueMask);
+
+        // Overcast / Cloudy White Sky: S <= 45, V >= 165
+        using Mat cloudMask = new();
+        using ScalarArray cloudLow = new(new MCvScalar(0, 0, 165));
+        using ScalarArray cloudHigh = new(new MCvScalar(180, 45, 255));
+        CvInvoke.InRange(hsvRegion, cloudLow, cloudHigh, cloudMask);
+
+        using Mat combinedSky = new();
+        CvInvoke.BitwiseOr(blueMask, cloudMask, combinedSky);
+
+        int count = CvInvoke.CountNonZero(combinedSky);
+        int total = Math.Max(1, hsvRegion.Width * hsvRegion.Height);
+        return (double)count / total * 100.0;
+    }
+
+    private static double ComputeWaterRatio(Mat hsvRegion)
+    {
+        // Ocean / Sea / Lake / Pool: Cyan/Deep-Blue/Teal (Hue in [65, 135], Sat >= 30, Val in [25, 175])
+        // Distinguishes rich/darker body of water from bright/high-luminance sky
+        using Mat waterMask = new();
+        using ScalarArray waterLow = new(new MCvScalar(65, 30, 25));
+        using ScalarArray waterHigh = new(new MCvScalar(135, 255, 175));
+        CvInvoke.InRange(hsvRegion, waterLow, waterHigh, waterMask);
+
+        int count = CvInvoke.CountNonZero(waterMask);
+        int total = Math.Max(1, hsvRegion.Width * hsvRegion.Height);
+        return (double)count / total * 100.0;
+    }
+
+    private static double ComputeVegetationRatio(Mat hsvRegion)
+    {
+        // Green foliage / grass: H in [30, 88], S >= 25, V >= 25
+        using Mat vegMask = new();
+        using ScalarArray vegLow = new(new MCvScalar(30, 25, 25));
+        using ScalarArray vegHigh = new(new MCvScalar(88, 255, 255));
+        CvInvoke.InRange(hsvRegion, vegLow, vegHigh, vegMask);
+
+        int count = CvInvoke.CountNonZero(vegMask);
+        int total = Math.Max(1, hsvRegion.Width * hsvRegion.Height);
+        return (double)count / total * 100.0;
+    }
+
+    private static double ComputeTextureVariance(Mat grayRegion)
+    {
+        using Mat laplacian = new();
+        CvInvoke.Laplacian(grayRegion, laplacian, DepthType.Cv64F);
+
+        MCvScalar mean = new();
+        MCvScalar stdDev = new();
+        CvInvoke.MeanStdDev(laplacian, ref mean, ref stdDev);
+
+        return Math.Min(100.0, stdDev.V0);
     }
 }

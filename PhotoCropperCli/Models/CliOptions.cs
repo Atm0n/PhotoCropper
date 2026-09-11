@@ -11,6 +11,7 @@ internal sealed class CliOptions
     public double MaxAreaFactor { get; set; } = 0.90;
     public double CannyLow { get; set; } = 20.0;
     public bool AutoOrient { get; set; } = true;
+    public bool RestoreColors { get; set; } = true;
     public bool Recursive { get; set; }
     public bool Verbose { get; set; }
 }

@@ -110,6 +110,7 @@
 							</StackPanel>
 
 							<CheckBox x:Name="chkAutoOrient" Content="{DynamicResource LblAutoOrient}" ToolTip.Tip="{DynamicResource TipAutoOrient}" IsCheckedChanged="ChkAutoOrient_IsCheckedChanged" VerticalAlignment="Center" FontSize="11" Focusable="False" Margin="10,0,0,0"/>
+							<CheckBox x:Name="chkRestoreColors" Content="{DynamicResource LblRestoreColors}" ToolTip.Tip="{DynamicResource TipRestoreColors}" IsCheckedChanged="ChkRestoreColors_IsCheckedChanged" VerticalAlignment="Center" FontSize="11" Focusable="False" Margin="10,0,0,0"/>
 
 							<Button x:Name="btnResetDefaults" Click="BtnResetDefaults_Click" Padding="10,5" FontSize="11" Background="#444444" VerticalAlignment="Center" Margin="15,0,0,0" Focusable="False">
 								<TextBlock Text="{DynamicResource BtnReset}"/>
@@ -283,7 +284,7 @@
 				<StackPanel Margin="50" MaxWidth="800" Spacing="30">
 					<TextBlock Text="{DynamicResource HeaderHelp}" FontSize="32" FontWeight="Bold" Foreground="#3399ff" HorizontalAlignment="Center"/>
 					
-					<Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto, Auto" Margin="0,20">
+					<Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto, Auto, Auto" Margin="0,20">
 						<StackPanel Grid.Row="0" Grid.Column="0" Margin="10" Spacing="5">
 							<TextBlock Text="{DynamicResource BtnOpenScans}" FontWeight="Bold" Foreground="#3399ff"/>
 							<TextBlock Text="{DynamicResource HelpOpenScans}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
@@ -315,6 +316,14 @@
 						<StackPanel Grid.Row="3" Grid.Column="1" Margin="10" Spacing="5">
 							<TextBlock Text="{DynamicResource HelpDpiTitle}" FontWeight="Bold" Foreground="#3399ff"/>
 							<TextBlock Text="{DynamicResource HelpDpi}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
+						<StackPanel Grid.Row="4" Grid.Column="0" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource HelpAutoOrientTitle}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpAutoOrientDesc}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
+						<StackPanel Grid.Row="4" Grid.Column="1" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource HelpRestoreColorsTitle}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpRestoreColorsDesc}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
 						</StackPanel>
 					</Grid>
 

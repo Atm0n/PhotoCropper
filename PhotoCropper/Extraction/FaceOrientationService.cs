@@ -134,20 +134,44 @@ public static class FaceOrientationService
             float score = data[i, 14];
             if (score < scoreThreshold) continue;
 
+            float faceW = data[i, 2];
+            float faceH = data[i, 3];
+
+            float rightEyeX = data[i, 4];
             float rightEyeY = data[i, 5];
+            float leftEyeX = data[i, 6];
             float leftEyeY = data[i, 7];
+
+            float noseY = data[i, 9];
+
+            float mouthRightX = data[i, 10];
             float mouthRightY = data[i, 11];
+            float mouthLeftX = data[i, 12];
             float mouthLeftY = data[i, 13];
 
             float eyeMidY = (rightEyeY + leftEyeY) * 0.5f;
             float mouthMidY = (mouthRightY + mouthLeftY) * 0.5f;
 
-            // For an upright face in the candidate image:
-            // Eyes must be strictly above the mouth (smaller Y coordinate in image space)
-            if (eyeMidY < mouthMidY)
-            {
-                totalScore += score;
-            }
+            // 1. Upright vertical sequence: Eyes are above Nose, Nose is above Mouth
+            float eyeToMouthDist = mouthMidY - eyeMidY;
+            if (eyeToMouthDist < faceH * 0.12f) continue;
+            if (noseY <= eyeMidY || noseY >= mouthMidY) continue;
+
+            // 2. Eyes must be predominantly horizontal (not vertically stacked as in sideways faces)
+            float eyeHorizSpan = Math.Abs(leftEyeX - rightEyeX);
+            float eyeVertSpan = Math.Abs(leftEyeY - rightEyeY);
+            if (eyeHorizSpan < eyeVertSpan * 1.5f) continue;
+
+            // 3. Mouth corners must be predominantly horizontal
+            float mouthHorizSpan = Math.Abs(mouthLeftX - mouthRightX);
+            float mouthVertSpan = Math.Abs(mouthLeftY - mouthRightY);
+            if (mouthHorizSpan < mouthVertSpan * 1.5f) continue;
+
+            // 4. Eye line tilt relative to horizon must be within ±35 degrees
+            double eyeTiltDeg = Math.Abs(Math.Atan2(eyeVertSpan, Math.Max(1f, eyeHorizSpan)) * (180.0 / Math.PI));
+            if (eyeTiltDeg > 35.0) continue;
+
+            totalScore += score;
         }
 
         return totalScore;

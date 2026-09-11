@@ -286,6 +286,30 @@ public sealed class ModularServiceTests : IDisposable
     }
 
     [Fact]
+    public void PhotoRestorationService_ShouldRestoreColorsAndPreserveDimensionsAndChannels()
+    {
+        // 1. 3-channel BGR faded photo with yellow cast (High Red & Green, low Blue)
+        using Mat fadedBgr = new(200, 200, DepthType.Cv8U, 3);
+        fadedBgr.SetTo(new MCvScalar(50, 150, 200)); // Yellowish cast
+        using Mat restoredBgr = PhotoRestorationService.RestoreColors(fadedBgr);
+
+        Assert.False(restoredBgr.IsEmpty);
+        Assert.Equal(200, restoredBgr.Width);
+        Assert.Equal(200, restoredBgr.Height);
+        Assert.Equal(3, restoredBgr.NumberOfChannels);
+
+        // 2. 4-channel BGRA photo with transparency
+        using Mat fadedBgra = new(150, 150, DepthType.Cv8U, 4);
+        fadedBgra.SetTo(new MCvScalar(60, 140, 180, 200));
+        using Mat restoredBgra = PhotoRestorationService.RestoreColors(fadedBgra);
+
+        Assert.False(restoredBgra.IsEmpty);
+        Assert.Equal(150, restoredBgra.Width);
+        Assert.Equal(150, restoredBgra.Height);
+        Assert.Equal(4, restoredBgra.NumberOfChannels);
+    }
+
+    [Fact]
     public void PhotoCropperCli_ShouldProcessDirectoryAndExtractPhotos()
     {
         string inputDir = Path.Combine(_tempDir, "cli_input");
