@@ -273,20 +273,38 @@ internal sealed partial class MainWindow : Window
         await LoadPhotosToGuiAsync();
     }
 
-    private void BtnSaveImages_Click(object? sender, RoutedEventArgs e)
+    private async void BtnSaveImages_Click(object? sender, RoutedEventArgs e)
     {
         if (isLoading || OriginalPhotos.Count == 0) return;
 
         var settings = SettingsManager.Instance.Settings;
-        int totalSaved = 0;
-        foreach (var originalPhoto in OriginalPhotos)
-        {
-            originalPhoto.SaveDetectedPhotos(settings.CustomOutputDirectory, settings.PreferredFormat, settings.JpegQuality);
-            totalSaved += originalPhoto.DetectedPhotos.Count;
-        }
+        int grandTotal = OriginalPhotos.Sum(p => p.DetectedPhotos.Count);
+        int currentProgress = 0;
 
-        string msgFormat = Application.Current?.FindResource("MsgSaved")?.ToString() ?? "Successfully saved {0} photos.";
-        lblStatus.Text = string.Format(msgFormat, totalSaved);
+        string savingMsg = Application.Current?.FindResource("MsgSavingProgress")?.ToString() ?? "Exporting photo {0} of {1}...";
+        string msgFormat = Application.Current?.FindResource("MsgSaved")?.ToString() ?? "Successfully saved {0} photos to 'cropped' folders.";
+
+        await ExecuteWithLoadingAsync(string.Format(savingMsg, 1, Math.Max(1, grandTotal)), async () =>
+        {
+            await Task.Run(() =>
+            {
+                foreach (var originalPhoto in OriginalPhotos)
+                {
+                    originalPhoto.SaveDetectedPhotos(
+                        settings.CustomOutputDirectory, 
+                        settings.PreferredFormat, 
+                        settings.JpegQuality,
+                        (savedInScan, totalInScan) =>
+                        {
+                            int done = Interlocked.Increment(ref currentProgress);
+                            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                            {
+                                lblStatus.Text = string.Format(savingMsg, done, grandTotal);
+                            });
+                        });
+                }
+            });
+        }, string.Format(msgFormat, grandTotal));
     }
 
     private void BtnDelete_Click(object? sender, RoutedEventArgs e)

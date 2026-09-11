@@ -119,6 +119,45 @@ public sealed class ModularServiceTests : IDisposable
         Assert.Single(engine2.DetectedPhotos);
     }
 
+    [Fact]
+    public void PhotoExporter_ShouldPreserveDpiAndReportProgress()
+    {
+        string scanPath = Path.Combine(_tempDir, "dpi_test_scan.jpg");
+        using (Mat scan = new(300, 300, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(200, 200, 200));
+            scan.Save(scanPath);
+        }
+
+        // Set source JPEG DPI to 600x600
+        PhotoCropper.Export.PhotoExporter.EmbedJpegDpi(scanPath, 600, 600);
+        var sourceDpi = PhotoCropper.Export.PhotoExporter.GetDpiFromSource(scanPath);
+        Assert.Equal(600, sourceDpi.XDpi);
+        Assert.Equal(600, sourceDpi.YDpi);
+
+        using Mat photo1 = new(100, 100, DepthType.Cv8U, 3);
+        photo1.SetTo(new MCvScalar(50, 50, 50));
+
+        int progressUpdates = 0;
+        string exportDir = Path.Combine(_tempDir, "dpi_export");
+
+        PhotoCropper.Export.PhotoExporter.SavePhotos(
+            [photo1], 
+            scanPath, 
+            exportDir, 
+            "JPEG", 
+            90, 
+            (done, total) => { progressUpdates++; });
+
+        Assert.Equal(1, progressUpdates);
+        string[] exportedFiles = Directory.GetFiles(exportDir, "*.jpg");
+        Assert.Single(exportedFiles);
+
+        var exportedDpi = PhotoCropper.Export.PhotoExporter.GetDpiFromSource(exportedFiles[0]);
+        Assert.Equal(600, exportedDpi.XDpi);
+        Assert.Equal(600, exportedDpi.YDpi);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

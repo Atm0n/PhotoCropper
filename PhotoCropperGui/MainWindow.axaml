@@ -306,6 +306,14 @@
 							<TextBlock Text="{DynamicResource LblZoom}" FontWeight="Bold" Foreground="#3399ff"/>
 							<TextBlock Text="{DynamicResource HelpZoom}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
 						</StackPanel>
+						<StackPanel Grid.Row="3" Grid.Column="0" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource HelpDragDropTitle}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpDragDrop}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
+						<StackPanel Grid.Row="3" Grid.Column="1" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource HelpDpiTitle}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpDpi}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
 					</Grid>
 
 					<Border Background="#1e1e1e" Padding="20" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
@@ -317,6 +325,9 @@
 								<TextBlock Text="{DynamicResource HelpShortcutNextScan}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutNextPhoto}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutRefine}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutUndo}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutRedo}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutSave}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutClose}" Margin="5"/>
 							</UniformGrid>
 						</StackPanel>
