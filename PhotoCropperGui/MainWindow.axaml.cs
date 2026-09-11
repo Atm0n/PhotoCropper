@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -12,8 +7,8 @@ using Emgu.CV;
 using Emgu.CV.Structure;
 using PhotoCropper;
 using PhotoCropper.Models;
-using System.Diagnostics.CodeAnalysis;
 using PhotoCropperGui.Services;
+using System.Diagnostics.CodeAnalysis;
 
 namespace PhotoCropperGui;
 
@@ -320,8 +315,8 @@ internal sealed partial class MainWindow : Window
                 foreach (var originalPhoto in OriginalPhotos)
                 {
                     originalPhoto.SaveDetectedPhotos(
-                        settings.CustomOutputDirectory, 
-                        settings.PreferredFormat, 
+                        settings.CustomOutputDirectory,
+                        settings.PreferredFormat,
                         settings.JpegQuality,
                         (savedInScan, totalInScan) =>
                         {
@@ -672,7 +667,7 @@ internal sealed partial class MainWindow : Window
             double oldZoom = sldZoom.Value;
             double delta = e.Delta.Y > 0 ? 1.1 : 0.9;
             double newZoom = Math.Clamp(oldZoom * delta, sldZoom.Minimum, sldZoom.Maximum);
-            
+
             if (newZoom != oldZoom)
             {
                 sldZoom.Value = newZoom;
@@ -971,8 +966,8 @@ internal sealed partial class MainWindow : Window
     private void TglColorPicker_Click(object? sender, RoutedEventArgs e)
     {
         if (pnlOriginal == null || tglColorPicker == null) return;
-        pnlOriginal.Cursor = tglColorPicker.IsChecked == true 
-            ? new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Cross) 
+        pnlOriginal.Cursor = tglColorPicker.IsChecked == true
+            ? new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Cross)
             : Avalonia.Input.Cursor.Default;
     }
 

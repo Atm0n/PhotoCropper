@@ -1,7 +1,7 @@
-using System.Drawing;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using System.Drawing;
 
 namespace PhotoCropper.Detection;
 
@@ -33,11 +33,11 @@ public static class ForegroundMaskGenerator
     }
 
     public static void PopulateForegroundMask(
-        Mat source, 
-        Mat outputForeground, 
-        MCvScalar avgBackgroundColorHsv, 
-        double backgroundTolerance, 
-        double lowThreshold, 
+        Mat source,
+        Mat outputForeground,
+        MCvScalar avgBackgroundColorHsv,
+        double backgroundTolerance,
+        double lowThreshold,
         double highThreshold,
         Mat? precomputedEdgeMap = null,
         Mat? precomputedHsv = null)

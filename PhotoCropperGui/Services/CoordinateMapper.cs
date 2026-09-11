@@ -1,6 +1,3 @@
-using System.Drawing;
-using Avalonia;
-
 namespace PhotoCropperGui.Services;
 
 internal static class CoordinateMapper
@@ -16,8 +13,8 @@ internal static class CoordinateMapper
     }
 
     public static System.Drawing.Rectangle MapUiRectToImageRect(
-        Avalonia.Rect uiRect, 
-        Avalonia.Rect imageBoundsInControl, 
+        Avalonia.Rect uiRect,
+        Avalonia.Rect imageBoundsInControl,
         System.Drawing.Size originalImageSize)
     {
         if (imageBoundsInControl.Width <= 0 || imageBoundsInControl.Height <= 0)
@@ -39,8 +36,8 @@ internal static class CoordinateMapper
     }
 
     public static System.Drawing.Point MapUiPointToImagePixel(
-        Avalonia.Point uiPoint, 
-        Avalonia.Rect imageBoundsInControl, 
+        Avalonia.Point uiPoint,
+        Avalonia.Rect imageBoundsInControl,
         System.Drawing.Size originalImageSize)
     {
         if (imageBoundsInControl.Width <= 0 || imageBoundsInControl.Height <= 0)

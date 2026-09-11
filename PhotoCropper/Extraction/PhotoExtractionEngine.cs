@@ -1,9 +1,9 @@
-using System.Drawing;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
 using PhotoCropper.Detection;
+using System.Drawing;
 
 namespace PhotoCropper.Extraction;
 
@@ -173,11 +173,11 @@ public static class PhotoExtractionEngine
     }
 
     public static Mat ExtractManualCrop(
-        Mat original, 
-        Rectangle rect, 
-        MCvScalar? customBgHsv, 
-        double bgTolerance, 
-        double cannyLow, 
+        Mat original,
+        Rectangle rect,
+        MCvScalar? customBgHsv,
+        double bgTolerance,
+        double cannyLow,
         double cannyHigh)
     {
         ArgumentNullException.ThrowIfNull(original);
@@ -194,7 +194,7 @@ public static class PhotoExtractionEngine
             using Mat roiHsv = new();
             CvInvoke.CvtColor(roiMat, roiHsv, ColorConversion.Bgr2Hsv);
             MCvScalar bgHsv = customBgHsv ?? BackgroundAnalyzer.SampleBackgroundColor(roiHsv);
-            
+
             using Mat foreground = new();
             ForegroundMaskGenerator.PopulateForegroundMask(roiMat, foreground, bgHsv, bgTolerance, cannyLow, cannyHigh);
 

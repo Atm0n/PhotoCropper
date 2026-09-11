@@ -4,14 +4,15 @@ An intelligent, cross-platform .NET 10 desktop application designed to automatic
 
 ## Project Structure
 
-The solution consists of three main projects:
+The solution consists of four main projects:
 - **`PhotoCropper` (Core Library):** Modular image-processing and detection pipeline:
   - **`Models/`**: Domain records and DTOs (`CropCandidate`, `DetectionOptions`).
   - **`Detection/`**: Dedicated pipeline stages (`BackgroundAnalyzer`, `ForegroundMaskGenerator`, `CandidateExtractor`, `CandidateResolutionFilter`).
-  - **`Extraction/`**: Photo extraction, local ROI perspective warps, and border refinement (`PhotoExtractionEngine`, `EdgeRefinementService`).
-  - **`Export/`**: Output serialization supporting lossless PNG and customizable JPEG quality (`PhotoExporter`).
+  - **`Extraction/`**: Photo extraction, local ROI perspective warps, border refinement, and auto-orientation (`PhotoExtractionEngine`, `EdgeRefinementService`, `AutoOrientationService`).
+  - **`Export/`**: Output serialization supporting lossless PNG, customizable JPEG quality, and DPI preservation (`PhotoExporter`).
   - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
-- **`PhotoCropperGui` (Avalonia Desktop App):** A high-performance GUI using a modern dark theme, custom-drawn interactive canvas widgets, multi-language localization (EN, ES, CA), and persistent configuration.
+- **`PhotoCropperGui` (Avalonia Desktop App):** A high-performance GUI using a modern dark theme, custom-drawn interactive canvas widgets, multi-language localization (EN, ES, CA), undo/redo history, and persistent configuration.
+- **`PhotoCropperCli` (Unattended CLI Batch Processor):** Fast, standalone console utility for unattended batch photo cropping and extraction from directories or single scans.
 - **`PhotoCropper.Tests` (xUnit Test Suite):** Comprehensive unit tests checking algorithm correctness, composite splitting, boundary constraints, and edge cases.
 
 ---
@@ -85,6 +86,19 @@ dotnet build
 To run the desktop application:
 ```bash
 dotnet run --project PhotoCropperGui
+```
+
+### Run CLI (Unattended Batch Extractor)
+To run the unattended command-line utility on scans or folders:
+```bash
+# Process a single scan
+dotnet run --project PhotoCropperCli -- scan001.jpg
+
+# Process an entire folder of scans recursively to a custom folder as PNG
+dotnet run --project PhotoCropperCli -- D:\Scans -o D:\Cropped -f PNG -r
+
+# Display all CLI options and flags
+dotnet run --project PhotoCropperCli -- --help
 ```
 
 ### Run Tests

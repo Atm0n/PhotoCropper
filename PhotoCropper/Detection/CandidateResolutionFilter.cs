@@ -1,9 +1,9 @@
-using System.Drawing;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
 using PhotoCropper.Models;
+using System.Drawing;
 
 namespace PhotoCropper.Detection;
 
@@ -113,7 +113,7 @@ public static class CandidateResolutionFilter
             foreach (var cand in validCandidates)
             {
                 Point center = new(cand.Rect.X + cand.Rect.Width / 2, cand.Rect.Y + cand.Rect.Height / 2);
-                
+
                 // Overlap test: ensure center does not fall into an already accepted polygon
                 bool insideAny = false;
                 foreach (var accepted in acceptedPolys)
@@ -145,7 +145,7 @@ public static class CandidateResolutionFilter
                     }
                 }
                 if (excessiveOverlap) continue;
-                
+
                 acceptedCandidates.Add(cand);
                 acceptedPolys.Add(new VectorOfPoint(cand.ShapePoints));
             }

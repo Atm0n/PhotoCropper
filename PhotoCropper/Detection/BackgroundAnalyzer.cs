@@ -1,7 +1,7 @@
-using System.Drawing;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using System.Drawing;
 
 namespace PhotoCropper.Detection;
 
@@ -87,7 +87,7 @@ public static class BackgroundAnalyzer
         ArgumentNullException.ThrowIfNull(hsv);
         double hTol = tolerance * 0.4;
         double sTol = tolerance;
-        
+
         // Widen Value (V) tolerance slightly to absorb scanner lid shadow gradients if the background is light
         double vTol = avgColor.V2 > 128 ? tolerance * 1.5 : tolerance;
 

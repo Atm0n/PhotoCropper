@@ -1,9 +1,6 @@
 using Avalonia;
 using Avalonia.Markup.Xaml.Styling;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 
 namespace PhotoCropperGui;
 
@@ -58,7 +55,7 @@ internal static class LocalizationManager
         }
 
         string localCulture = CultureInfo.CurrentCulture.Name;
-        
+
         // Try to match specific culture (es-ES) or general language (es)
         var match = AvailableLanguages.Keys.FirstOrDefault(k => k.Equals(localCulture, StringComparison.OrdinalIgnoreCase))
                  ?? AvailableLanguages.Keys.FirstOrDefault(k => k.StartsWith(localCulture.Split('-')[0], StringComparison.OrdinalIgnoreCase));

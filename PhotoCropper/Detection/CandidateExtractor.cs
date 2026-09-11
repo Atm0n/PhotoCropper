@@ -1,21 +1,21 @@
-using System.Drawing;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
 using PhotoCropper.Extraction;
 using PhotoCropper.Models;
+using System.Drawing;
 
 namespace PhotoCropper.Detection;
 
 public static class CandidateExtractor
 {
     public static IReadOnlyList<CropCandidate> ExtractCandidates(
-        Mat foregroundMap, 
-        int padOffset, 
-        int originalWidth, 
-        int originalHeight, 
-        double minAreaFactor, 
+        Mat foregroundMap,
+        int padOffset,
+        int originalWidth,
+        int originalHeight,
+        double minAreaFactor,
         double maxAreaFactor)
     {
         ArgumentNullException.ThrowIfNull(foregroundMap);
@@ -45,8 +45,8 @@ public static class CandidateExtractor
             CvInvoke.ApproxPolyDP(hull, approx, 0.02 * peri, true);
 
             // If approximation has 4 to 8 vertices and is convex, use it; otherwise fallback to hull
-            Point[] rawPoints = (approx.Size >= 4 && approx.Size <= 8 && CvInvoke.IsContourConvex(approx)) 
-                ? approx.ToArray() 
+            Point[] rawPoints = (approx.Size >= 4 && approx.Size <= 8 && CvInvoke.IsContourConvex(approx))
+                ? approx.ToArray()
                 : hull.ToArray();
 
             // Map coordinates back from padded space to original image space
@@ -61,7 +61,7 @@ public static class CandidateExtractor
 
             using VectorOfPoint tempShape = new(shapePoints);
             RotatedRect rr = PhotoExtractionEngine.RegularizeNearRightAngles(CvInvoke.MinAreaRect(tempShape));
-            
+
             // Aspect ratio / compactness filter to discard thin line artifacts
             float w = rr.Size.Width;
             float h = rr.Size.Height;
@@ -82,12 +82,12 @@ public static class CandidateExtractor
             double score = contourArea * quality;
 
             result.Add(new CropCandidate(
-                shapePoints, 
-                CvInvoke.BoundingRectangle(tempShape), 
-                score, 
-                rr, 
-                contourArea, 
-                rectangularity, 
+                shapePoints,
+                CvInvoke.BoundingRectangle(tempShape),
+                score,
+                rr,
+                contourArea,
+                rectangularity,
                 convexity));
         }
 

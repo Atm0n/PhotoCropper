@@ -1,7 +1,7 @@
-using System.Drawing;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using System.Drawing;
 
 namespace PhotoCropper.Extraction;
 
@@ -15,7 +15,7 @@ public static class EdgeRefinementService
 
         using Mat gray = new();
         CvInvoke.CvtColor(photo, gray, ColorConversion.Bgr2Gray);
-        
+
         int s = 5;
         if (gray.Width <= s * 2 || gray.Height <= s * 2) return new Rectangle(0, 0, photo.Width, photo.Height);
 
@@ -23,7 +23,7 @@ public static class EdgeRefinementService
         using Mat mask = BuildRefinementMask(gray, bgGray);
 
         Rectangle contentBox = CvInvoke.BoundingRectangle(mask);
-        
+
         // Safety: Abort if content box is too small (<20% of photo area)
         if (contentBox.Width < photo.Width * 0.2 || contentBox.Height < photo.Height * 0.2)
         {
@@ -32,12 +32,12 @@ public static class EdgeRefinementService
 
         // Shave 2 pixels to guarantee cutting inside the gradient edge of the margin
         contentBox.Inflate(-2, -2);
-        
+
         int x = Math.Max(0, contentBox.X);
         int y = Math.Max(0, contentBox.Y);
         int w = Math.Max(10, contentBox.Width);
         int h = Math.Max(10, contentBox.Height);
-        
+
         Rectangle finalRect = new(x, y, w, h);
         finalRect.Intersect(new Rectangle(Point.Empty, photo.Size));
 
@@ -83,7 +83,7 @@ public static class EdgeRefinementService
         using ScalarArray lowerArray = new(lower);
         using ScalarArray upperArray = new(upper);
         CvInvoke.InRange(grayImage, lowerArray, upperArray, mask);
-        
+
         // Invert: Photo is white (255), background margin is black (0)
         CvInvoke.BitwiseNot(mask, mask);
 

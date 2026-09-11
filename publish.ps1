@@ -11,19 +11,21 @@ if (Test-Path $PublishDir) {
 }
 New-Item -ItemType Directory -Path $PublishDir | Out-Null
 
-function Publish-App {
+function Publish-Project {
     param (
+        [string]$Project,
         [string]$Runtime,
         [string]$OutputFolder
     )
 
+    $ProjectName = [System.IO.Path]::GetFileNameWithoutExtension($Project)
     Write-Host "----------------------------------------------------" -ForegroundColor Green
-    Write-Host "Publishing for $Runtime..." -ForegroundColor Green
+    Write-Host "Publishing $ProjectName for $Runtime..." -ForegroundColor Green
     Write-Host "----------------------------------------------------" -ForegroundColor Green
 
     $OutputPath = Join-Path $PublishDir $OutputFolder
 
-    dotnet publish $ProjectFile `
+    dotnet publish $Project `
         -c Release `
         -r $Runtime `
         --self-contained true `
@@ -33,16 +35,18 @@ function Publish-App {
         -o $OutputPath
 
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "Successfully published $Runtime to $OutputPath" -ForegroundColor Green
+        Write-Host "Successfully published $ProjectName ($Runtime) to $OutputPath" -ForegroundColor Green
     } else {
-        Write-Host "Failed to publish for $Runtime" -ForegroundColor Red
+        Write-Host "Failed to publish $ProjectName for $Runtime" -ForegroundColor Red
     }
 }
 
-# Publish for Windows x64
-Publish-App -Runtime "win-x64" -OutputFolder "windows"
+# Publish GUI and CLI for Windows x64
+Publish-Project -Project "PhotoCropperGui/PhotoCropperGui.csproj" -Runtime "win-x64" -OutputFolder "windows"
+Publish-Project -Project "PhotoCropperCli/PhotoCropperCli.csproj" -Runtime "win-x64" -OutputFolder "windows"
 
-# Publish for Linux x64
-Publish-App -Runtime "linux-x64" -OutputFolder "linux"
+# Publish GUI and CLI for Linux x64
+Publish-Project -Project "PhotoCropperGui/PhotoCropperGui.csproj" -Runtime "linux-x64" -OutputFolder "linux"
+Publish-Project -Project "PhotoCropperCli/PhotoCropperCli.csproj" -Runtime "linux-x64" -OutputFolder "linux"
 
 Write-Host "`nAll tasks complete. Check the '$PublishDir' folder for results." -ForegroundColor Cyan

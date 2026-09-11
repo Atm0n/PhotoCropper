@@ -1,6 +1,6 @@
+using Emgu.CV.Structure;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
-using Emgu.CV.Structure;
 
 namespace PhotoCropper.Models;
 

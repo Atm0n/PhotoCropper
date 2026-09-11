@@ -90,10 +90,10 @@ public static class PhotoExporter
     }
 
     public static void SavePhotos(
-        IReadOnlyList<Mat> photos, 
-        string originalFilePath, 
-        string? customOutputFolder = null, 
-        string format = "JPEG", 
+        IReadOnlyList<Mat> photos,
+        string originalFilePath,
+        string? customOutputFolder = null,
+        string format = "JPEG",
         int jpegQuality = 90,
         Action<int, int>? progressCallback = null)
     {
@@ -124,7 +124,7 @@ public static class PhotoExporter
         {
             if (photos[i].IsEmpty) continue;
             string fileName = Path.Combine(outputFolder, $"{baseFileName}_{saveCounter++}{extension}");
-            
+
             if (string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase))
             {
                 photos[i].Save(fileName);

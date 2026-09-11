@@ -1,5 +1,3 @@
-using System.Collections.ObjectModel;
-using System.Drawing;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
@@ -8,6 +6,8 @@ using PhotoCropper.Detection;
 using PhotoCropper.Export;
 using PhotoCropper.Extraction;
 using PhotoCropper.Models;
+using System.Collections.ObjectModel;
+using System.Drawing;
 
 namespace PhotoCropper;
 
@@ -16,7 +16,7 @@ public class PhotoCropperEngine : IDisposable
     private bool disposedValue;
 
     public string OriginalFilePath { get; }
-    
+
     // Configurable Detection Parameters
     public double BackgroundTolerance { get; set; } = 30;
     public double MinAreaFactor { get; set; } = 0.01; // 1% of scan
@@ -126,8 +126,8 @@ public class PhotoCropperEngine : IDisposable
         CvInvoke.CvtColor(detectionMat, detHsv, ColorConversion.Bgr2Hsv);
 
         using Mat precomputedEdges = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(
-            detectionMat, 
-            CannyLowThreshold, 
+            detectionMat,
+            CannyLowThreshold,
             CannyHighThreshold);
 
         // Multi-pass sensitivity detection:
@@ -147,21 +147,21 @@ public class PhotoCropperEngine : IDisposable
         foreach (double tol in searchTolerances)
         {
             ForegroundMaskGenerator.PopulateForegroundMask(
-                detectionMat, 
-                foreground, 
-                avgBackgroundColorHsv, 
-                tol, 
-                CannyLowThreshold, 
+                detectionMat,
+                foreground,
+                avgBackgroundColorHsv,
+                tol,
+                CannyLowThreshold,
                 CannyHighThreshold,
                 precomputedEdges,
                 detHsv);
-            
+
             var passCandidates = CandidateExtractor.ExtractCandidates(
-                foreground, 
-                scaledPad, 
-                (int)Math.Round(originalW * scale), 
-                (int)Math.Round(originalH * scale), 
-                MinAreaFactor, 
+                foreground,
+                scaledPad,
+                (int)Math.Round(originalW * scale),
+                (int)Math.Round(originalH * scale),
+                MinAreaFactor,
                 MaxAreaFactor);
 
             // If downscaled, map candidate coordinates back to original full resolution space
@@ -274,7 +274,7 @@ public class PhotoCropperEngine : IDisposable
     public void ApplyCropToPhoto(int index, Rectangle rect)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return;
-        
+
         Mat cropped = EdgeRefinementService.ApplyCrop(DetectedPhotos[index], rect);
         DetectedPhotos[index].Dispose();
         DetectedPhotos[index] = cropped;
@@ -283,11 +283,11 @@ public class PhotoCropperEngine : IDisposable
     public void AddManualCrop(Rectangle rect)
     {
         Mat extracted = PhotoExtractionEngine.ExtractManualCrop(
-            Original, 
-            rect, 
-            CustomBackgroundColorHsv, 
-            BackgroundTolerance, 
-            CannyLowThreshold, 
+            Original,
+            rect,
+            CustomBackgroundColorHsv,
+            BackgroundTolerance,
+            CannyLowThreshold,
             CannyHighThreshold);
 
         if (!extracted.IsEmpty)

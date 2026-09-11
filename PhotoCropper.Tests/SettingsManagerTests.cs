@@ -1,7 +1,4 @@
-using System;
-using System.IO;
 using PhotoCropperGui;
-using Xunit;
 
 namespace PhotoCropper.Tests;
 
@@ -75,7 +72,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.Language = "es-ES";
         manager.Settings.ZoomLevel = 3.0;
         manager.Settings.AdvancedVisible = true;
-        
+
         manager.Settings.BackgroundTolerance = 15;
         manager.Settings.MinAreaFactor = 12;
         manager.Settings.MaxAreaFactor = 75;
@@ -105,7 +102,7 @@ public sealed class SettingsManagerTests : IDisposable
         File.WriteAllText(_tempSettingsPath, "{ INVALID JSON CORRUPTED TEXT ]");
 
         var manager = new SettingsManager(_tempSettingsPath);
-        
+
         // This should not throw an exception, but gracefully load defaults
         var exception = Record.Exception(() => manager.Load());
         Assert.Null(exception);

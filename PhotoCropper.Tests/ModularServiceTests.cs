@@ -1,4 +1,3 @@
-using System.Drawing;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
@@ -6,6 +5,7 @@ using Emgu.CV.Util;
 using PhotoCropper.Detection;
 using PhotoCropper.Extraction;
 using PhotoCropper.Models;
+using System.Drawing;
 
 namespace PhotoCropper.Tests;
 
@@ -143,11 +143,11 @@ public sealed class ModularServiceTests : IDisposable
         string exportDir = Path.Combine(_tempDir, "dpi_export");
 
         PhotoCropper.Export.PhotoExporter.SavePhotos(
-            [photo1], 
-            scanPath, 
-            exportDir, 
-            "JPEG", 
-            90, 
+            [photo1],
+            scanPath,
+            exportDir,
+            "JPEG",
+            90,
             (done, total) => { progressUpdates++; });
 
         Assert.Equal(1, progressUpdates);
@@ -255,6 +255,41 @@ public sealed class ModularServiceTests : IDisposable
         CvInvoke.Rectangle(sidewaysLeft, new Rectangle(0, 0, 100, 200), new MCvScalar(235, 180, 70), -1);
         CvInvoke.Rectangle(sidewaysLeft, new Rectangle(100, 0, 100, 200), new MCvScalar(20, 40, 20), -1);
         Assert.Equal(90, AutoOrientationService.DetectRequiredRotation(sidewaysLeft));
+    }
+
+    [Fact]
+    public void PhotoCropperCli_ShouldProcessDirectoryAndExtractPhotos()
+    {
+        string inputDir = Path.Combine(_tempDir, "cli_input");
+        string outputDir = Path.Combine(_tempDir, "cli_output");
+        Directory.CreateDirectory(inputDir);
+        Directory.CreateDirectory(outputDir);
+
+        // Scan 1: 1000x1000 with 2 photos
+        string scan1Path = Path.Combine(inputDir, "scan_001.jpg");
+        using (Mat scan1 = new(1000, 1000, DepthType.Cv8U, 3))
+        {
+            scan1.SetTo(new MCvScalar(255, 255, 255));
+            CvInvoke.Rectangle(scan1, new Rectangle(50, 50, 400, 400), new MCvScalar(30, 40, 50), -1);
+            CvInvoke.Rectangle(scan1, new Rectangle(550, 50, 400, 400), new MCvScalar(70, 80, 90), -1);
+            scan1.Save(scan1Path);
+        }
+
+        // Scan 2: 1000x1000 with 2 photos
+        string scan2Path = Path.Combine(inputDir, "scan_002.jpg");
+        using (Mat scan2 = new(1000, 1000, DepthType.Cv8U, 3))
+        {
+            scan2.SetTo(new MCvScalar(255, 255, 255));
+            CvInvoke.Rectangle(scan2, new Rectangle(50, 500, 400, 400), new MCvScalar(20, 20, 20), -1);
+            CvInvoke.Rectangle(scan2, new Rectangle(550, 500, 400, 400), new MCvScalar(60, 60, 60), -1);
+            scan2.Save(scan2Path);
+        }
+
+        int exitCode = PhotoCropperCli.Program.Main(["-i", inputDir, "-o", outputDir, "-f", "PNG", "-v"]);
+        Assert.Equal(0, exitCode);
+
+        string[] exportedPngs = Directory.GetFiles(outputDir, "*.png");
+        Assert.Equal(4, exportedPngs.Length);
     }
 
     public void Dispose()
