@@ -28,6 +28,7 @@ public sealed class SettingsManagerTests : IDisposable
         Assert.Equal(20, manager.Settings.CannyLowThreshold);
         Assert.Equal(1, manager.Settings.ZoomLevel);
         Assert.False(manager.Settings.AdvancedVisible);
+        Assert.True(manager.Settings.AutoOrientPhotos);
     }
 
     [Fact]

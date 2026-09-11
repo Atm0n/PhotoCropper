@@ -47,13 +47,13 @@ public static class FaceOrientationService
     /// Detects the required clockwise rotation (0, 90, 180, 270) to make detected faces upright.
     /// Returns -1 if no faces are detected with sufficient confidence.
     /// </summary>
-    public static int DetectFaceRotation(Mat photo, float scoreThreshold = 0.6f)
+    public static int DetectFaceRotation(Mat photo, float scoreThreshold = 0.45f)
     {
         ArgumentNullException.ThrowIfNull(photo);
         if (photo.IsEmpty || photo.Width < 60 || photo.Height < 60) return -1;
         if (LazyModelPath.Value == null || !File.Exists(LazyModelPath.Value)) return -1;
 
-        // Resize image to max 320px for fast face detection (<5ms)
+        // Resize image to max 320px for fast face detection (<2ms per pass)
         int maxDim = Math.Max(photo.Width, photo.Height);
         double scale = maxDim > 320 ? 320.0 / maxDim : 1.0;
         int w = (int)Math.Round(photo.Width * scale);
@@ -76,84 +76,80 @@ public static class FaceOrientationService
             small.CopyTo(bgrSmall);
         }
 
+        // Test the 4 cardinal rotations to find the orientation where faces are upright
+        int[] rotations = [0, 90, 180, 270];
+        int bestRot = -1;
+        float bestScore = scoreThreshold;
+
+        foreach (int rot in rotations)
+        {
+            float score = ScoreRotation(bgrSmall, rot, scoreThreshold);
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestRot = rot;
+            }
+        }
+
+        return bestRot;
+    }
+
+    private static float ScoreRotation(Mat bgrSmall, int rot, float scoreThreshold)
+    {
+        using Mat candidate = new();
+        if (rot == 0)
+        {
+            bgrSmall.CopyTo(candidate);
+        }
+        else
+        {
+            RotateFlags flag = rot switch
+            {
+                90 => RotateFlags.Rotate90Clockwise,
+                180 => RotateFlags.Rotate180,
+                270 => RotateFlags.Rotate90CounterClockwise,
+                _ => RotateFlags.Rotate180
+            };
+            CvInvoke.Rotate(bgrSmall, candidate, flag);
+        }
+
         using var detector = new FaceDetectorYN(
             LazyModelPath.Value,
             string.Empty,
-            new Size(w, h),
+            candidate.Size,
             scoreThreshold,
             0.3f,
             5000);
 
         using Mat faces = new();
-        detector.Detect(bgrSmall, faces);
+        detector.Detect(candidate, faces);
 
-            if (faces.IsEmpty || faces.Rows == 0) return -1;
+        if (faces.IsEmpty || faces.Rows == 0) return 0f;
 
-            int votes0 = 0, votes90 = 0, votes180 = 0, votes270 = 0;
+        float[,] data = (float[,])faces.GetData();
+        float totalScore = 0f;
 
-            float[,] data = (float[,])faces.GetData();
-            for (int i = 0; i < faces.Rows; i++)
+        for (int i = 0; i < faces.Rows; i++)
+        {
+            float score = data[i, 14];
+            if (score < scoreThreshold) continue;
+
+            float rightEyeY = data[i, 5];
+            float leftEyeY = data[i, 7];
+            float mouthRightY = data[i, 11];
+            float mouthLeftY = data[i, 13];
+
+            float eyeMidY = (rightEyeY + leftEyeY) * 0.5f;
+            float mouthMidY = (mouthRightY + mouthLeftY) * 0.5f;
+
+            // For an upright face in the candidate image:
+            // Eyes must be strictly above the mouth (smaller Y coordinate in image space)
+            if (eyeMidY < mouthMidY)
             {
-                float score = data[i, 14];
-                if (score < scoreThreshold) continue;
-
-                float rightEyeX = data[i, 4];
-                float rightEyeY = data[i, 5];
-                float leftEyeX = data[i, 6];
-                float leftEyeY = data[i, 7];
-
-                float mouthRightX = data[i, 10];
-                float mouthRightY = data[i, 11];
-                float mouthLeftX = data[i, 12];
-                float mouthLeftY = data[i, 13];
-
-                float eyeMidX = (rightEyeX + leftEyeX) * 0.5f;
-                float eyeMidY = (rightEyeY + leftEyeY) * 0.5f;
-
-                float mouthMidX = (mouthRightX + mouthLeftX) * 0.5f;
-                float mouthMidY = (mouthRightY + mouthLeftY) * 0.5f;
-
-                // Vector from mouth to eyes points UPWARDS in face coordinates
-                float upVectorX = eyeMidX - mouthMidX;
-                float upVectorY = eyeMidY - mouthMidY;
-
-                // Calculate angle of the 'up' vector relative to image coordinate system:
-                // Standard upright image: Eyes are above mouth (smaller Y), so upVectorY is negative (pointing up).
-                // Angle in degrees: 0° is up (0, -1), 90° CW is right (1, 0), 180° is down (0, 1), 270° CW is left (-1, 0).
-                double angleRad = Math.Atan2(upVectorX, -upVectorY);
-                double angleDeg = angleRad * (180.0 / Math.PI);
-                if (angleDeg < 0) angleDeg += 360.0;
-
-                // Snap to nearest 90 degree quadrant
-                int snapAngle = ((int)Math.Round(angleDeg / 90.0) * 90) % 360;
-
-                switch (snapAngle)
-                {
-                    case 0:
-                        votes0++;
-                        break;
-                    case 90:
-                        // If face UP vector points right (90°), image must be rotated 270° CW to make it upright
-                        votes270++;
-                        break;
-                    case 180:
-                        votes180++;
-                        break;
-                    case 270:
-                        // If face UP vector points left (270°), image must be rotated 90° CW to make it upright
-                        votes90++;
-                        break;
-                }
+                totalScore += score;
             }
+        }
 
-        int maxVotes = Math.Max(Math.Max(votes0, votes90), Math.Max(votes180, votes270));
-        if (maxVotes == 0) return -1;
-
-        if (votes0 == maxVotes) return 0;
-        if (votes90 == maxVotes) return 90;
-        if (votes180 == maxVotes) return 180;
-        if (votes270 == maxVotes) return 270;
-
-        return -1;
+        return totalScore;
     }
 }

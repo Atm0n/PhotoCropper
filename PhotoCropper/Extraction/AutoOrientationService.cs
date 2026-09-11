@@ -89,35 +89,34 @@ public static class AutoOrientationService
         double leftSkyScore = ComputeSkyScore(leftBand);
         double rightSkyScore = ComputeSkyScore(rightBand);
 
-        // 1. Sky blue dominance check (very high confidence for outdoor photos)
-        if (botSkyScore > topSkyScore + 25.0 && botSkyScore > leftSkyScore && botSkyScore > rightSkyScore)
+        // 1. Sky blue dominance check (high confidence for outdoor photos)
+        if (botSkyScore > topSkyScore + 10.0 && botSkyScore > leftSkyScore && botSkyScore > rightSkyScore)
         {
             return 180; // Upside down
         }
-        if (leftSkyScore > rightSkyScore + 25.0 && leftSkyScore > topSkyScore && leftSkyScore > botSkyScore)
+        if (leftSkyScore > rightSkyScore + 10.0 && leftSkyScore > topSkyScore && leftSkyScore > botSkyScore)
         {
             return 90; // Top is on the left -> rotate 90 CW
         }
-        if (rightSkyScore > leftSkyScore + 25.0 && rightSkyScore > topSkyScore && rightSkyScore > botSkyScore)
+        if (rightSkyScore > leftSkyScore + 10.0 && rightSkyScore > topSkyScore && rightSkyScore > botSkyScore)
         {
             return 270; // Top is on the right -> rotate 270 CW (90 CCW)
         }
 
         // 2. Ambient light gradient check (bright ceiling/sun vs dark floor/ground)
-        // Requires strong contrast difference (>= 40 brightness units) to avoid false positives on flat scenes
-        const double gradientThreshold = 40.0;
+        const double gradientThreshold = 20.0;
         double vertDiff = botV - topV;
         double horizDiff = leftV - rightV;
 
-        if (vertDiff >= gradientThreshold && vertDiff > Math.Abs(horizDiff) + 15.0)
+        if (vertDiff >= gradientThreshold && vertDiff > Math.Abs(horizDiff) + 8.0)
         {
             return 180; // Bottom is significantly brighter than top -> upside down
         }
-        if (horizDiff >= gradientThreshold && horizDiff > Math.Abs(vertDiff) + 15.0)
+        if (horizDiff >= gradientThreshold && horizDiff > Math.Abs(vertDiff) + 8.0)
         {
             return 90; // Left is significantly brighter than right -> rotate 90 CW
         }
-        if (-horizDiff >= gradientThreshold && -horizDiff > Math.Abs(vertDiff) + 15.0)
+        if (-horizDiff >= gradientThreshold && -horizDiff > Math.Abs(vertDiff) + 8.0)
         {
             return 270; // Right is significantly brighter than left -> rotate 270 CW
         }
