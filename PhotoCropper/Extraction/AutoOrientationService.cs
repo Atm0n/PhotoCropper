@@ -52,8 +52,22 @@ public static class AutoOrientationService
         using Mat small = new();
         CvInvoke.Resize(photo, small, new Size(w, h), 0, 0, Inter.Area);
 
+        using Mat bgrSmall = new();
+        if (small.NumberOfChannels == 4)
+        {
+            CvInvoke.CvtColor(small, bgrSmall, ColorConversion.Bgra2Bgr);
+        }
+        else if (small.NumberOfChannels == 1)
+        {
+            CvInvoke.CvtColor(small, bgrSmall, ColorConversion.Gray2Bgr);
+        }
+        else
+        {
+            small.CopyTo(bgrSmall);
+        }
+
         using Mat hsv = new();
-        CvInvoke.CvtColor(small, hsv, ColorConversion.Bgr2Hsv);
+        CvInvoke.CvtColor(bgrSmall, hsv, ColorConversion.Bgr2Hsv);
 
         // Analyze 4 perimeter bands (top, bottom, left, right 25%)
         int bandH = Math.Max(1, h / 4);

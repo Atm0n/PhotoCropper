@@ -62,6 +62,20 @@ public static class FaceOrientationService
         using Mat small = new();
         CvInvoke.Resize(photo, small, new Size(w, h), 0, 0, Inter.Linear);
 
+        using Mat bgrSmall = new();
+        if (small.NumberOfChannels == 4)
+        {
+            CvInvoke.CvtColor(small, bgrSmall, ColorConversion.Bgra2Bgr);
+        }
+        else if (small.NumberOfChannels == 1)
+        {
+            CvInvoke.CvtColor(small, bgrSmall, ColorConversion.Gray2Bgr);
+        }
+        else
+        {
+            small.CopyTo(bgrSmall);
+        }
+
         using var detector = new FaceDetectorYN(
             LazyModelPath.Value,
             string.Empty,
@@ -71,66 +85,66 @@ public static class FaceOrientationService
             5000);
 
         using Mat faces = new();
-        detector.Detect(small, faces);
+        detector.Detect(bgrSmall, faces);
 
-        if (faces.IsEmpty || faces.Rows == 0) return -1;
+            if (faces.IsEmpty || faces.Rows == 0) return -1;
 
-        int votes0 = 0, votes90 = 0, votes180 = 0, votes270 = 0;
+            int votes0 = 0, votes90 = 0, votes180 = 0, votes270 = 0;
 
-        float[,] data = (float[,])faces.GetData();
-        for (int i = 0; i < faces.Rows; i++)
-        {
-            float score = data[i, 14];
-            if (score < scoreThreshold) continue;
-
-            float rightEyeX = data[i, 4];
-            float rightEyeY = data[i, 5];
-            float leftEyeX = data[i, 6];
-            float leftEyeY = data[i, 7];
-
-            float mouthRightX = data[i, 10];
-            float mouthRightY = data[i, 11];
-            float mouthLeftX = data[i, 12];
-            float mouthLeftY = data[i, 13];
-
-            float eyeMidX = (rightEyeX + leftEyeX) * 0.5f;
-            float eyeMidY = (rightEyeY + leftEyeY) * 0.5f;
-
-            float mouthMidX = (mouthRightX + mouthLeftX) * 0.5f;
-            float mouthMidY = (mouthRightY + mouthLeftY) * 0.5f;
-
-            // Vector from mouth to eyes points UPWARDS in face coordinates
-            float upVectorX = eyeMidX - mouthMidX;
-            float upVectorY = eyeMidY - mouthMidY;
-
-            // Calculate angle of the 'up' vector relative to image coordinate system:
-            // Standard upright image: Eyes are above mouth (smaller Y), so upVectorY is negative (pointing up).
-            // Angle in degrees: 0° is up (0, -1), 90° CW is right (1, 0), 180° is down (0, 1), 270° CW is left (-1, 0).
-            double angleRad = Math.Atan2(upVectorX, -upVectorY);
-            double angleDeg = angleRad * (180.0 / Math.PI);
-            if (angleDeg < 0) angleDeg += 360.0;
-
-            // Snap to nearest 90 degree quadrant
-            int snapAngle = ((int)Math.Round(angleDeg / 90.0) * 90) % 360;
-
-            switch (snapAngle)
+            float[,] data = (float[,])faces.GetData();
+            for (int i = 0; i < faces.Rows; i++)
             {
-                case 0:
-                    votes0++;
-                    break;
-                case 90:
-                    // If face UP vector points right (90°), image must be rotated 270° CW to make it upright
-                    votes270++;
-                    break;
-                case 180:
-                    votes180++;
-                    break;
-                case 270:
-                    // If face UP vector points left (270°), image must be rotated 90° CW to make it upright
-                    votes90++;
-                    break;
+                float score = data[i, 14];
+                if (score < scoreThreshold) continue;
+
+                float rightEyeX = data[i, 4];
+                float rightEyeY = data[i, 5];
+                float leftEyeX = data[i, 6];
+                float leftEyeY = data[i, 7];
+
+                float mouthRightX = data[i, 10];
+                float mouthRightY = data[i, 11];
+                float mouthLeftX = data[i, 12];
+                float mouthLeftY = data[i, 13];
+
+                float eyeMidX = (rightEyeX + leftEyeX) * 0.5f;
+                float eyeMidY = (rightEyeY + leftEyeY) * 0.5f;
+
+                float mouthMidX = (mouthRightX + mouthLeftX) * 0.5f;
+                float mouthMidY = (mouthRightY + mouthLeftY) * 0.5f;
+
+                // Vector from mouth to eyes points UPWARDS in face coordinates
+                float upVectorX = eyeMidX - mouthMidX;
+                float upVectorY = eyeMidY - mouthMidY;
+
+                // Calculate angle of the 'up' vector relative to image coordinate system:
+                // Standard upright image: Eyes are above mouth (smaller Y), so upVectorY is negative (pointing up).
+                // Angle in degrees: 0° is up (0, -1), 90° CW is right (1, 0), 180° is down (0, 1), 270° CW is left (-1, 0).
+                double angleRad = Math.Atan2(upVectorX, -upVectorY);
+                double angleDeg = angleRad * (180.0 / Math.PI);
+                if (angleDeg < 0) angleDeg += 360.0;
+
+                // Snap to nearest 90 degree quadrant
+                int snapAngle = ((int)Math.Round(angleDeg / 90.0) * 90) % 360;
+
+                switch (snapAngle)
+                {
+                    case 0:
+                        votes0++;
+                        break;
+                    case 90:
+                        // If face UP vector points right (90°), image must be rotated 270° CW to make it upright
+                        votes270++;
+                        break;
+                    case 180:
+                        votes180++;
+                        break;
+                    case 270:
+                        // If face UP vector points left (270°), image must be rotated 90° CW to make it upright
+                        votes90++;
+                        break;
+                }
             }
-        }
 
         int maxVotes = Math.Max(Math.Max(votes0, votes90), Math.Max(votes180, votes270));
         if (maxVotes == 0) return -1;

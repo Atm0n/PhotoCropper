@@ -272,6 +272,20 @@ public sealed class ModularServiceTests : IDisposable
     }
 
     [Fact]
+    public void AutoOrientationService_ShouldHandleBgra4ChannelAndGrayscale()
+    {
+        // 4-channel BGRA (transparent margins from extracted photos)
+        using Mat bgra = new(200, 200, DepthType.Cv8U, 4);
+        bgra.SetTo(new MCvScalar(200, 100, 50, 255));
+        Assert.Equal(0, AutoOrientationService.DetectRequiredRotation(bgra));
+
+        // 1-channel Grayscale
+        using Mat gray = new(200, 200, DepthType.Cv8U, 1);
+        gray.SetTo(new MCvScalar(128));
+        Assert.Equal(0, AutoOrientationService.DetectRequiredRotation(gray));
+    }
+
+    [Fact]
     public void PhotoCropperCli_ShouldProcessDirectoryAndExtractPhotos()
     {
         string inputDir = Path.Combine(_tempDir, "cli_input");
