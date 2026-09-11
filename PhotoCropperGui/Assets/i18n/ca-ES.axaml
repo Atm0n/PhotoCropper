@@ -81,7 +81,7 @@
 	<sys:String x:Key="TipRefine">Drecera: N o Ñ</sys:String>
 	<sys:String x:Key="HelpAboutTitle">Quant a PhotoCropper</sys:String>
 	<sys:String x:Key="HelpAboutDescription">Extractor intel·ligent de fotos d'alt rendiment. Dissenyat per a una digitalització ràpida i precisa d'àlbums antics.</sys:String>
-	<sys:String x:Key="HelpVersion">Versió 1.1.0</sys:String>
+	<sys:String x:Key="HelpVersion">Versió 2.1.0</sys:String>
 	<sys:String x:Key="HelpAuthor">Desenvolupat per Nil Riera</sys:String>
 	<sys:String x:Key="HelpPoweredBy">Basat en Emgu.CV (wrapper d'OpenCV)</sys:String>
 	<sys:String x:Key="HelpModelLicense">Detecció facial IA: YuNet per Shiqi Yu / OpenCV Zoo (Apache 2.0)</sys:String>
