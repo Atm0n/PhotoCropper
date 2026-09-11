@@ -9,8 +9,10 @@
 	<sys:String x:Key="LblMinPhotoSize">Mida Mínima</sys:String>
 	<sys:String x:Key="LblMaxPhotoSize">Mida Màxima</sys:String>
 	<sys:String x:Key="LblEdgeThreshold">Llindar de Vores</sys:String>
-	<sys:String x:Key="LblAutoOrient">Auto-Orientar (Cel/Llum) [Exp.]</sys:String>
-	<sys:String x:Key="TipAutoOrient">Detector heurístic de cel i gradient de llum. Experimental: pot no ser precís en fotos d'interior o complexes.</sys:String>
+	<sys:String x:Key="LblAutoOrient">Auto-Orientar (IA / Paisatge)</sys:String>
+	<sys:String x:Key="TipAutoOrient">Endreça i orienta automàticament les fotos usant detecció facial per IA i anàlisi de paisatges/aigua.</sys:String>
+	<sys:String x:Key="LblRestoreColors">Restaurar Color i Contrast</sys:String>
+	<sys:String x:Key="TipRestoreColors">Neutralitza el grogueig per envelliment, recupera ombres i llums amb LAB CLAHE i reviu colors descolorits.</sys:String>
 	<sys:String x:Key="TxtNoFiles">Sense fitxers</sys:String>
 	<sys:String x:Key="HeaderOriginal">ESCANEIG ORIGINAL (CLIC I ARROSSEGAR PER RETALLAR)</sys:String>
 	<sys:String x:Key="HeaderDetected">FOTOS DETECTADES</sys:String>
@@ -52,6 +54,10 @@
 	<sys:String x:Key="HelpDragDrop">Arrossega fitxers d'imatge o carpetes senceres a la finestra per posar a la cua i processar escanejos automàticament.</sys:String>
 	<sys:String x:Key="HelpDpiTitle">Preservació de DPI</sys:String>
 	<sys:String x:Key="HelpDpi">La resolució original de l'escàner (ex. 300/600 DPI) es detecta i preserva en exportar per mantenir l'escala física d'impressió 1:1.</sys:String>
+	<sys:String x:Key="HelpAutoOrientTitle">Orientació IA i Paisatges</sys:String>
+	<sys:String x:Key="HelpAutoOrientDesc">Utilitza una xarxa neuronal integrada (YuNet) per detectar l'orientació de cares i anàlisi de paisatges/aigua per redreçar fotos en vertical.</sys:String>
+	<sys:String x:Key="HelpRestoreColorsTitle">Restauració de Color Vintage</sys:String>
+	<sys:String x:Key="HelpRestoreColorsDesc">Corregeix el to groguenc/sèpia per envelliment, recupera contrast amb LAB CLAHE i realça pigments descolorits.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Dreceres de Teclat</sys:String>
 	<sys:String x:Key="HelpShortcutRotate">[R] Girar foto 90°</sys:String>
 	<sys:String x:Key="HelpShortcutDelete">[X] o [Supr] Descartar foto</sys:String>

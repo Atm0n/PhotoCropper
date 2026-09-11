@@ -24,7 +24,8 @@ public class PhotoCropperEngine : IDisposable
     public double CannyLowThreshold { get; set; } = 20;
     public double CannyHighThreshold { get; set; } = 50;
     public MCvScalar? CustomBackgroundColorHsv { get; set; }
-    public bool AutoOrientPhotos { get; set; }
+    public bool AutoOrientPhotos { get; set; } = true;
+    public bool RestoreVintageColors { get; set; } = true;
 
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
@@ -47,6 +48,7 @@ public class PhotoCropperEngine : IDisposable
         CannyHighThreshold = options.CannyHighThreshold;
         CustomBackgroundColorHsv = options.CustomBackgroundColorHsv;
         AutoOrientPhotos = options.AutoOrientPhotos;
+        RestoreVintageColors = options.RestoreVintageColors;
     }
 
     private void ResetState()
@@ -229,6 +231,15 @@ public class PhotoCropperEngine : IDisposable
                 {
                     extracted.Dispose();
                     extracted = oriented;
+                }
+            }
+            if (RestoreVintageColors && !extracted.IsEmpty)
+            {
+                Mat restored = PhotoRestorationService.RestoreColors(extracted);
+                if (!ReferenceEquals(restored, extracted))
+                {
+                    extracted.Dispose();
+                    extracted = restored;
                 }
             }
             results[i] = extracted;

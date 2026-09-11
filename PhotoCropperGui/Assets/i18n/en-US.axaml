@@ -9,8 +9,10 @@
 	<sys:String x:Key="LblMinPhotoSize">Min Photo Size</sys:String>
 	<sys:String x:Key="LblMaxPhotoSize">Max Photo Size</sys:String>
 	<sys:String x:Key="LblEdgeThreshold">Edge Threshold</sys:String>
-	<sys:String x:Key="LblAutoOrient">Auto-Orient (Sky/Light) [Exp.]</sys:String>
-	<sys:String x:Key="TipAutoOrient">Heuristic sky and light gradient detector. Experimental — may not work accurately on indoor, overcast, or complex photos.</sys:String>
+	<sys:String x:Key="LblAutoOrient">Auto-Orient (AI / Landscape)</sys:String>
+	<sys:String x:Key="TipAutoOrient">Automatically straightens and orients photos upright using AI face detection and outdoor landscape/water scene cues.</sys:String>
+	<sys:String x:Key="LblRestoreColors">Restore Vintage Colors</sys:String>
+	<sys:String x:Key="TipRestoreColors">Neutralizes aging yellow casts, recovers shadow/highlight contrast via LAB CLAHE, and revives faded photo pigments.</sys:String>
 	<sys:String x:Key="TxtNoFiles">No files loaded</sys:String>
 	<sys:String x:Key="HeaderOriginal">ORIGINAL SCAN (CLICK &amp; DRAG TO MANUALLY CROP)</sys:String>
 	<sys:String x:Key="HeaderDetected">DETECTED PHOTOS</sys:String>
@@ -52,6 +54,10 @@
 	<sys:String x:Key="HelpDragDrop">Drag image files or whole folders anywhere onto the window to automatically queue and process scans.</sys:String>
 	<sys:String x:Key="HelpDpiTitle">DPI Preservation</sys:String>
 	<sys:String x:Key="HelpDpi">Original scanner resolution metadata (e.g. 300/600 DPI) is automatically detected and preserved on export for 1:1 physical printing scale.</sys:String>
+	<sys:String x:Key="HelpAutoOrientTitle">AI &amp; Landscape Orientation</sys:String>
+	<sys:String x:Key="HelpAutoOrientDesc">Uses an embedded neural network (YuNet) to detect facial orientation, backed by landscape/water scene analysis, to orient extracted photos upright.</sys:String>
+	<sys:String x:Key="HelpRestoreColorsTitle">Vintage Color Restoration</sys:String>
+	<sys:String x:Key="HelpRestoreColorsDesc">Corrects aged yellowing/sepia casts via damped gray-world balancing, recovers contrast with LAB CLAHE, and enhances faded pigments.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Keyboard Shortcuts</sys:String>
 	<sys:String x:Key="HelpShortcutRotate">[R] Rotate photo 90°</sys:String>
 	<sys:String x:Key="HelpShortcutDelete">[X] or [Delete] Discard photo</sys:String>

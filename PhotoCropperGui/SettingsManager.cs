@@ -17,7 +17,8 @@ internal sealed class UserSettings
     public string? CustomOutputDirectory { get; set; }
     public string PreferredFormat { get; set; } = "JPEG"; // JPEG or PNG
     public int JpegQuality { get; set; } = 90; // 1-100
-    public bool AutoOrientPhotos { get; set; }
+    public bool AutoOrientPhotos { get; set; } = true;
+    public bool RestoreVintageColors { get; set; } = true;
 }
 
 internal sealed class SettingsManager
@@ -107,6 +108,7 @@ internal sealed class SettingsManager
         Settings.MaxAreaFactor = defaults.MaxAreaFactor;
         Settings.CannyLowThreshold = defaults.CannyLowThreshold;
         Settings.AutoOrientPhotos = defaults.AutoOrientPhotos;
+        Settings.RestoreVintageColors = defaults.RestoreVintageColors;
         Save();
     }
 }

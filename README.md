@@ -8,7 +8,7 @@ The solution consists of four main projects:
 - **`PhotoCropper` (Core Library):** Modular image-processing and detection pipeline:
   - **`Models/`**: Domain records and DTOs (`CropCandidate`, `DetectionOptions`).
   - **`Detection/`**: Dedicated pipeline stages (`BackgroundAnalyzer`, `ForegroundMaskGenerator`, `CandidateExtractor`, `CandidateResolutionFilter`).
-  - **`Extraction/`**: Photo extraction, local ROI perspective warps, border refinement, and auto-orientation (`PhotoExtractionEngine`, `EdgeRefinementService`, `AutoOrientationService`).
+  - **`Extraction/`**: Photo extraction, local ROI perspective warps, border refinement, orientation, and color restoration (`PhotoExtractionEngine`, `EdgeRefinementService`, `FaceOrientationService`, `AutoOrientationService`, `PhotoRestorationService`).
   - **`Export/`**: Output serialization supporting lossless PNG, customizable JPEG quality, and DPI preservation (`PhotoExporter`).
   - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
 - **`PhotoCropperGui` (Avalonia Desktop App):** A high-performance GUI using a modern dark theme, custom-drawn interactive canvas widgets, multi-language localization (EN, ES, CA), undo/redo history, and persistent configuration.
@@ -34,11 +34,17 @@ The solution consists of four main projects:
 - **Geometric Overlap Verification:** Measures true polygon intersection area in unmanaged masks to prevent duplicate or invading bounding boxes while allowing tilted adjacent photos.
 - **Interactive Background Color Picker:** Allows manual background sampling via a noise-resistant 5x5 average neighborhood in HSV space directly from any clicked zoom/pan pixel.
 
-### 3. Smart Manual & Refinement Operations
-- **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm. It automatically detects and removes the scanner's white canvas borders.
+#### 3. Smart Manual, Refinement & AI Orientation
+- **Hierarchical AI Face & Landscape Orientation:** Extracted photos are automatically rotated upright.
+  - **Embedded YuNet Neural Face Detector:** Analyzes 4 candidate orientations (`0°`, `90°`, `180°`, `270°`) and verifies full 5-point facial landmark anatomy (eye-to-nose-to-mouth sequencing, horizontal eye span, and level tilt) with zero cloud dependencies.
+  - **Landscape & Water Scene Heuristics:** Evaluates sky gradients (blue and overcast), horizon textures, ground/vegetation, and water bodies (seas, lakes, rivers) with strict non-landscape guards to prevent false indoor rotations.
+- **Vintage Photo Color & Contrast Restoration:**
+  - **Warmth-Preserving White Balance:** Damped gray-world channel normalization (`[0.85, 1.18]`) neutralizes yellowing, aged paper, and dark storage discolouration without turning warm vintage memories icy blue.
+  - **LAB Contrast-Limited Adaptive Histogram Equalization (CLAHE):** Enhances local luminance dynamic range (`clipLimit: 1.3`) across shadow and highlight regions without channel clipping or artifacts.
+  - **Vibrancy Revival:** Gentle HSV saturation enhancement revives faded pigments while preserving natural skin tones.
+- **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm, automatically detecting and removing scanner glass/bed white borders.
 - **Local ROI Perspective Warp:** Instead of rotating the entire giant scan, only the region of interest is extracted and warped with `Inter.Cubic` interpolation with transparent alpha margins.
 - **Subtle Deskew Regularization:** Snaps near-straight photos (within ±1.5° of right angles) to exact axis-aligned rectangles, avoiding resampling blur while maintaining exact dimensions.
-- **Natural Orientation Preservation:** Automatically preserves portrait vs. landscape dimensions based on scanner bed placement. Includes an optional experimental sky/ambient light orientation heuristic.
 - **Intelligent Manual Crop Snapping:** Manually drawn selection boxes automatically snap to the nearest high-contrast photo boundary.
 
 ### 4. Interactive UX, Drag & Drop, and Multi-Scan Undo/Redo
@@ -100,7 +106,7 @@ To run the unattended command-line utility:
 # Process a single scan
 dotnet run --project PhotoCropperCli -- scan001.jpg
 
-# Process a folder of scans recursively, saving as PNG in a custom directory
+# Process a folder of scans recursively, saving as PNG with color restoration in a custom directory
 dotnet run --project PhotoCropperCli -- D:\Scans -o D:\Cropped -f PNG -r
 
 # Display all CLI options and flags
@@ -119,7 +125,8 @@ dotnet run --project PhotoCropperCli -- --help
 | `--min-size <percent>` | Minimum photo size as % of total scan area | `15` |
 | `--max-size <percent>` | Maximum photo size as % of total scan area | `90` |
 | `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
-| `--auto-orient` | Enable experimental sky/light orientation detection | `false` |
+| `--auto-orient` / `--no-auto-orient` | Enable or disable AI face & landscape orientation detection | `true` |
+| `--restore-colors` / `--no-restore-colors` | Enable or disable vintage photo color & contrast restoration | `true` |
 | `-r, --recursive` | Recursively process subdirectories when input is a folder | `false` |
 | `-v, --verbose` | Display individual photo dimensions and debug details | `false` |
 | `-h, --help` | Display usage instructions and examples | — |

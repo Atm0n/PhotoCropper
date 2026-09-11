@@ -130,6 +130,10 @@ internal sealed partial class MainWindow : Window
         {
             chkAutoOrient.IsChecked = settings.AutoOrientPhotos;
         }
+        if (chkRestoreColors != null)
+        {
+            chkRestoreColors.IsChecked = settings.RestoreVintageColors;
+        }
 
         if (cbFormat != null)
         {
@@ -158,13 +162,21 @@ internal sealed partial class MainWindow : Window
             MaxAreaFactor = sldMaxArea.Value / 100.0,
             CannyLowThreshold = sldEdge.Value,
             CannyHighThreshold = sldEdge.Value * 2.5,
-            AutoOrientPhotos = chkAutoOrient?.IsChecked == true
+            AutoOrientPhotos = chkAutoOrient?.IsChecked == true,
+            RestoreVintageColors = chkRestoreColors?.IsChecked == true
         };
     }
 
     private async void ChkAutoOrient_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
         SettingsManager.Instance.Settings.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
+        SettingsManager.Instance.Save();
+        await ReprocessCurrentScanAsync();
+    }
+
+    private async void ChkRestoreColors_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        SettingsManager.Instance.Settings.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
         SettingsManager.Instance.Save();
         await ReprocessCurrentScanAsync();
     }
@@ -945,6 +957,10 @@ internal sealed partial class MainWindow : Window
         if (chkAutoOrient != null)
         {
             chkAutoOrient.IsChecked = settings.AutoOrientPhotos;
+        }
+        if (chkRestoreColors != null)
+        {
+            chkRestoreColors.IsChecked = settings.RestoreVintageColors;
         }
 
         if (OriginalPhotos.Count > 0)

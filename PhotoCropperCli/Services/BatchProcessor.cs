@@ -22,7 +22,11 @@ internal static class BatchProcessor
         Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Detection: Tolerance={0}, MinSize={1:0}%, MaxSize={2:0}%", options.Tolerance, options.MinAreaFactor * 100, options.MaxAreaFactor * 100));
         if (options.AutoOrient)
         {
-            Console.WriteLine("Auto-Orientation: Enabled [Experimental]");
+            Console.WriteLine("Auto-Orientation: Enabled (AI Face + Landscape)");
+        }
+        if (options.RestoreColors)
+        {
+            Console.WriteLine("Color-Restoration: Enabled (Auto-White Balance + LAB CLAHE + Vibrancy)");
         }
         Console.WriteLine();
 
@@ -33,7 +37,8 @@ internal static class BatchProcessor
             MaxAreaFactor = options.MaxAreaFactor,
             CannyLowThreshold = options.CannyLow,
             CannyHighThreshold = options.CannyLow * 2.5,
-            AutoOrientPhotos = options.AutoOrient
+            AutoOrientPhotos = options.AutoOrient,
+            RestoreVintageColors = options.RestoreColors
         };
 
         int totalExtracted = 0;
