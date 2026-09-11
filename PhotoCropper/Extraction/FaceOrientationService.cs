@@ -121,28 +121,30 @@ public static class FaceOrientationService
             CvInvoke.Rotate(bgrSmall, candidate, flag);
         }
 
-        using var detector = new FaceDetectorYN(
-            LazyModelPath.Value,
-            string.Empty,
-            candidate.Size,
-            scoreThreshold,
-            0.3f,
-            5000);
-
-        using Mat faces = new();
-        detector.Detect(candidate, faces);
-
-        if (faces.IsEmpty || faces.Rows == 0) return 0f;
-
-        float[,] data = (float[,])faces.GetData();
-        float totalScore = 0f;
-
-        for (int i = 0; i < faces.Rows; i++)
+        try
         {
-            float score = data[i, 14];
-            if (score < scoreThreshold) continue;
+            using var detector = new FaceDetectorYN(
+                LazyModelPath.Value,
+                string.Empty,
+                candidate.Size,
+                scoreThreshold,
+                0.3f,
+                5000);
 
-            float faceW = data[i, 2];
+            using Mat faces = new();
+            detector.Detect(candidate, faces);
+
+            if (faces.IsEmpty || faces.Rows == 0) return 0f;
+
+            float[,] data = (float[,])faces.GetData();
+            float totalScore = 0f;
+
+            for (int i = 0; i < faces.Rows; i++)
+            {
+                float score = data[i, 14];
+                if (score < scoreThreshold) continue;
+
+                float faceW = data[i, 2];
             float faceH = data[i, 3];
 
             float rightEyeX = data[i, 4];
@@ -184,4 +186,9 @@ public static class FaceOrientationService
 
         return totalScore;
     }
+    catch
+    {
+        return 0f;
+    }
+}
 }

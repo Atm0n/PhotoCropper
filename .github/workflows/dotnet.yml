@@ -55,7 +55,7 @@ jobs:
     - name: Fix Native Libraries (Linux)
       if: runner.os == 'Linux'
       run: |
-        cp PhotoCropper.Tests/bin/Release/net10.0/runtimes/ubuntu-x64/native/* PhotoCropper.Tests/bin/Release/net10.0/
+        cp PhotoCropper.Tests/bin/Release/net10.0/runtimes/ubuntu*-x64/native/* PhotoCropper.Tests/bin/Release/net10.0/
 
     - name: List Test Assets (Linux Debug)
       if: runner.os == 'Linux'

@@ -13,7 +13,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Emgu.CV.runtime.windows" />
-		<PackageReference Include="Emgu.CV.runtime.ubuntu-x64" />
+		<PackageReference Include="Emgu.CV.runtime.ubuntu-24.04-x64" />
 	</ItemGroup>
 
 	<ItemGroup>
