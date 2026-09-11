@@ -10,5 +10,7 @@ public record DetectionOptions
     public double CannyLowThreshold { get; set; } = 20;
     public double CannyHighThreshold { get; set; } = 50;
     public MCvScalar? CustomBackgroundColorHsv { get; set; }
-    public bool AutoOrientPhotos { get; set; }
+    public bool AutoOrientPhotos { get; set; } = true;
+    public bool RestoreVintageColors { get; set; } = true;
+    public bool RemoveDustAndScratches { get; set; } = true;
 }

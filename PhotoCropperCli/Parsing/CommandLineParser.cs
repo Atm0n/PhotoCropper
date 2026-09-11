@@ -70,6 +70,26 @@ internal static class CommandLineParser
             {
                 options.AutoOrient = true;
             }
+            else if (arg == "--no-auto-orient")
+            {
+                options.AutoOrient = false;
+            }
+            else if (arg == "--restore-colors")
+            {
+                options.RestoreColors = true;
+            }
+            else if (arg == "--no-restore-colors")
+            {
+                options.RestoreColors = false;
+            }
+            else if (arg == "--remove-dust")
+            {
+                options.RemoveDust = true;
+            }
+            else if (arg == "--no-remove-dust")
+            {
+                options.RemoveDust = false;
+            }
             else if (arg is "-i" or "--input" && i + 1 < args.Length)
             {
                 options.Inputs.Add(args[++i]);
@@ -99,7 +119,12 @@ internal static class CommandLineParser
         Console.WriteLine("  --min-size <percent>    Minimum photo size as % of scan area (default: 15)");
         Console.WriteLine("  --max-size <percent>    Maximum photo size as % of scan area (default: 90)");
         Console.WriteLine("  --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)");
-        Console.WriteLine("  --auto-orient           Enable experimental sky/light orientation detection (default: off)");
+        Console.WriteLine("  --auto-orient           Enable AI face & landscape auto-orientation detection (default: on)");
+        Console.WriteLine("  --no-auto-orient        Disable auto-orientation detection and preserve raw scanner placement");
+        Console.WriteLine("  --restore-colors        Enable auto-white balance, contrast & vibrancy color restoration (default: on)");
+        Console.WriteLine("  --no-restore-colors     Disable color restoration and export raw scanned pixels");
+        Console.WriteLine("  --remove-dust           Enable automated scratch and dust inpainting (default: on)");
+        Console.WriteLine("  --no-remove-dust        Disable automated scratch and dust inpainting");
         Console.WriteLine("  -r, --recursive         Recursively process subdirectories when input is a folder");
         Console.WriteLine("  -v, --verbose           Display individual photo dimensions and debug details");
         Console.WriteLine("  -h, --help              Show this help message and exit");
@@ -109,10 +134,15 @@ internal static class CommandLineParser
         Console.WriteLine("  PhotoCropperCli scan001.jpg");
         Console.WriteLine("  PhotoCropperCli D:\\Scans -o D:\\Cropped -f PNG -r");
         Console.WriteLine("  PhotoCropperCli -i scan1.jpg -i scan2.jpg -t 30 -q 95");
+        Console.WriteLine();
+        Console.WriteLine("Acknowledgements & Licenses:");
+        Console.WriteLine("  PhotoCropper is licensed under GNU General Public License v3.0.");
+        Console.WriteLine("  AI Face Detection uses YuNet (face_detection_yunet_2023mar.onnx)");
+        Console.WriteLine("  developed by Shiqi Yu & OpenCV Zoo (Apache License 2.0).");
     }
 
     public static void PrintVersion()
     {
-        Console.WriteLine("PhotoCropper CLI v2.0 (.NET 10 / OpenCV)");
+        Console.WriteLine("PhotoCropper CLI v2.1.0 (.NET 10 / OpenCV)");
     }
 }

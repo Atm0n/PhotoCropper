@@ -14,7 +14,10 @@
 	<ItemGroup>
 		<PackageReference Include="Emgu.CV.runtime.windows" />
 		<PackageReference Include="Emgu.CV.runtime.ubuntu-x64" />
+	</ItemGroup>
 
+	<ItemGroup>
+		<EmbeddedResource Include="Models\face_detection_yunet_2023mar.onnx" />
 	</ItemGroup>
 
 </Project>

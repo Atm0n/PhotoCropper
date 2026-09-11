@@ -258,6 +258,75 @@ public sealed class ModularServiceTests : IDisposable
     }
 
     [Fact]
+    public void FaceOrientationService_ModelShouldBeAvailableAndEmbedded()
+    {
+        Assert.True(FaceOrientationService.IsModelAvailable);
+    }
+
+    [Fact]
+    public void FaceOrientationService_NonFaceImage_ShouldReturnNegativeOne()
+    {
+        using Mat landscape = new(200, 200, DepthType.Cv8U, 3);
+        landscape.SetTo(new MCvScalar(200, 100, 50));
+        Assert.Equal(-1, FaceOrientationService.DetectFaceRotation(landscape));
+    }
+
+    [Fact]
+    public void AutoOrientationService_ShouldHandleBgra4ChannelAndGrayscale()
+    {
+        // 4-channel BGRA (transparent margins from extracted photos)
+        using Mat bgra = new(200, 200, DepthType.Cv8U, 4);
+        bgra.SetTo(new MCvScalar(200, 100, 50, 255));
+        Assert.Equal(0, AutoOrientationService.DetectRequiredRotation(bgra));
+
+        // 1-channel Grayscale
+        using Mat gray = new(200, 200, DepthType.Cv8U, 1);
+        gray.SetTo(new MCvScalar(128));
+        Assert.Equal(0, AutoOrientationService.DetectRequiredRotation(gray));
+    }
+
+    [Fact]
+    public void PhotoRestorationService_ShouldRestoreColorsAndPreserveDimensionsAndChannels()
+    {
+        // 1. 3-channel BGR faded photo with yellow cast (High Red & Green, low Blue)
+        using Mat fadedBgr = new(200, 200, DepthType.Cv8U, 3);
+        fadedBgr.SetTo(new MCvScalar(50, 150, 200)); // Yellowish cast
+        using Mat restoredBgr = PhotoRestorationService.RestoreColors(fadedBgr);
+
+        Assert.False(restoredBgr.IsEmpty);
+        Assert.Equal(200, restoredBgr.Width);
+        Assert.Equal(200, restoredBgr.Height);
+        Assert.Equal(3, restoredBgr.NumberOfChannels);
+
+        // 2. 4-channel BGRA photo with transparency
+        using Mat fadedBgra = new(150, 150, DepthType.Cv8U, 4);
+        fadedBgra.SetTo(new MCvScalar(60, 140, 180, 200));
+        using Mat restoredBgra = PhotoRestorationService.RestoreColors(fadedBgra);
+
+        Assert.False(restoredBgra.IsEmpty);
+        Assert.Equal(150, restoredBgra.Width);
+        Assert.Equal(150, restoredBgra.Height);
+        Assert.Equal(4, restoredBgra.NumberOfChannels);
+    }
+
+    [Fact]
+    public void PhotoRestorationService_InpaintDustAndScratches_ShouldRemoveDefects()
+    {
+        using Mat photo = new(200, 200, DepthType.Cv8U, 3);
+        photo.SetTo(new MCvScalar(128, 128, 128));
+
+        // Inject simulated dust speck (bright white dot) and dark hair scratch (thin line)
+        CvInvoke.Circle(photo, new Point(50, 50), 2, new MCvScalar(255, 255, 255), -1);
+        CvInvoke.Line(photo, new Point(100, 100), new Point(108, 108), new MCvScalar(0, 0, 0), 1);
+
+        using Mat inpainted = PhotoRestorationService.InpaintDustAndScratches(photo);
+        Assert.False(inpainted.IsEmpty);
+        Assert.Equal(200, inpainted.Width);
+        Assert.Equal(200, inpainted.Height);
+        Assert.Equal(3, inpainted.NumberOfChannels);
+    }
+
+    [Fact]
     public void PhotoCropperCli_ShouldProcessDirectoryAndExtractPhotos()
     {
         string inputDir = Path.Combine(_tempDir, "cli_input");

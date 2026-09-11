@@ -12,6 +12,8 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace PhotoCropperGui;
 
+internal sealed record GalleryPhotoItem(Avalonia.Media.Imaging.Bitmap Image, string Label, string Dimensions, int Index);
+
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Avalonia Window lifecycle is managed by OnClosed override")]
 internal sealed partial class MainWindow : Window
 {
@@ -19,13 +21,16 @@ internal sealed partial class MainWindow : Window
     private readonly List<PhotoCropperEngine> OriginalPhotos = [];
     private readonly UndoRedoHistory undoHistory = new();
     private bool isLoading;
+    private bool isComparingRaw;
+    private bool isSyncingSelection;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        // Register key down handler in the Tunnel phase to prevent focused controls from hijacking keys
+        // Register key handlers in Tunnel phase
         AddHandler(KeyDownEvent, Window_KeyDown, RoutingStrategies.Tunnel);
+        AddHandler(KeyUpEvent, Window_KeyUp, RoutingStrategies.Tunnel);
 
         // Register Drag & Drop event handlers
         AddHandler(DragDrop.DragOverEvent, Window_DragOver);
@@ -130,6 +135,14 @@ internal sealed partial class MainWindow : Window
         {
             chkAutoOrient.IsChecked = settings.AutoOrientPhotos;
         }
+        if (chkRestoreColors != null)
+        {
+            chkRestoreColors.IsChecked = settings.RestoreVintageColors;
+        }
+        if (chkRemoveDust != null)
+        {
+            chkRemoveDust.IsChecked = settings.RemoveDustAndScratches;
+        }
 
         if (cbFormat != null)
         {
@@ -158,13 +171,29 @@ internal sealed partial class MainWindow : Window
             MaxAreaFactor = sldMaxArea.Value / 100.0,
             CannyLowThreshold = sldEdge.Value,
             CannyHighThreshold = sldEdge.Value * 2.5,
-            AutoOrientPhotos = chkAutoOrient?.IsChecked == true
+            AutoOrientPhotos = chkAutoOrient?.IsChecked == true,
+            RestoreVintageColors = chkRestoreColors?.IsChecked == true,
+            RemoveDustAndScratches = chkRemoveDust?.IsChecked == true
         };
     }
 
     private async void ChkAutoOrient_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
         SettingsManager.Instance.Settings.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
+        SettingsManager.Instance.Save();
+        await ReprocessCurrentScanAsync();
+    }
+
+    private async void ChkRestoreColors_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        SettingsManager.Instance.Settings.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
+        SettingsManager.Instance.Save();
+        await ReprocessCurrentScanAsync();
+    }
+
+    private async void ChkRemoveDust_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        SettingsManager.Instance.Settings.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
         SettingsManager.Instance.Save();
         await ReprocessCurrentScanAsync();
     }
@@ -271,15 +300,30 @@ internal sealed partial class MainWindow : Window
     private void LoadCroppedPhotosToSlider()
     {
         slides.Items.Clear();
+        if (lstGallery != null) lstGallery.Items.Clear();
 
-        foreach (var photo in OriginalPhotos[currentIndex].DetectedPhotos)
+        var detected = OriginalPhotos[currentIndex].DetectedPhotos;
+        for (int i = 0; i < detected.Count; i++)
         {
-            slides.Items.Add(MatBitmapConverter.ToAvaloniaBitmap(photo));
+            var mat = detected[i];
+            var bmp = MatBitmapConverter.ToAvaloniaBitmap(mat);
+            slides.Items.Add(bmp);
+
+            if (lstGallery != null)
+            {
+                string label = $"#{i + 1}";
+                string dims = $"{mat.Width} × {mat.Height} px";
+                lstGallery.Items.Add(new GalleryPhotoItem(bmp, label, dims, i));
+            }
         }
 
         if (slides.Items.Count > 0)
         {
             slides.SelectedIndex = 0;
+            if (lstGallery != null && lstGallery.Items.Count > 0)
+            {
+                lstGallery.SelectedIndex = 0;
+            }
         }
     }
 
@@ -446,7 +490,65 @@ internal sealed partial class MainWindow : Window
         SettingsManager.Instance.Save();
     }
 
-    private void Slides_SelectionChanged(object? sender, SelectionChangedEventArgs e) => UpdatePhotoCounterLabel();
+    private void Slides_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        UpdatePhotoCounterLabel();
+        if (isSyncingSelection || lstGallery == null || slides == null) return;
+        if (slides.SelectedIndex >= 0 && slides.SelectedIndex < lstGallery.Items.Count && lstGallery.SelectedIndex != slides.SelectedIndex)
+        {
+            isSyncingSelection = true;
+            try
+            {
+                lstGallery.SelectedIndex = slides.SelectedIndex;
+                lstGallery.ScrollIntoView(slides.SelectedIndex);
+            }
+            finally
+            {
+                isSyncingSelection = false;
+            }
+        }
+    }
+
+    private void LstGallery_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (isSyncingSelection || lstGallery == null || slides == null) return;
+        if (lstGallery.SelectedIndex >= 0 && lstGallery.SelectedIndex < slides.Items.Count && slides.SelectedIndex != lstGallery.SelectedIndex)
+        {
+            isSyncingSelection = true;
+            try
+            {
+                slides.SelectedIndex = lstGallery.SelectedIndex;
+            }
+            finally
+            {
+                isSyncingSelection = false;
+            }
+            UpdatePhotoCounterLabel();
+        }
+    }
+
+    private void RbViewMode_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (pnlCarouselView == null || scrollGalleryView == null) return;
+        bool isGrid = rbViewGrid?.IsChecked == true;
+        pnlCarouselView.IsVisible = !isGrid;
+        scrollGalleryView.IsVisible = isGrid;
+
+        if (isGrid && lstGallery != null && slides != null && slides.SelectedIndex >= 0)
+        {
+            lstGallery.SelectedIndex = slides.SelectedIndex;
+            lstGallery.ScrollIntoView(slides.SelectedIndex);
+        }
+    }
+
+    private void SetViewMode(bool gridView)
+    {
+        if (rbViewGrid != null && rbViewCarousel != null)
+        {
+            if (gridView) rbViewGrid.IsChecked = true;
+            else rbViewCarousel.IsChecked = true;
+        }
+    }
 
     private void UpdatePhotoCounterLabel()
     {
@@ -637,11 +739,60 @@ internal sealed partial class MainWindow : Window
                 e.Handled = true;
                 break;
 
+            case Avalonia.Input.Key.Space:
+            case Avalonia.Input.Key.B:
+                if (!isComparingRaw && OriginalPhotos.Count > 0 && slides != null && slides.SelectedIndex >= 0)
+                {
+                    int sel = slides.SelectedIndex;
+                    var engine = OriginalPhotos[currentIndex];
+                    if (sel < engine.RawDetectedPhotos.Count)
+                    {
+                        isComparingRaw = true;
+                        slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.RawDetectedPhotos[sel]);
+                        slides.SelectedIndex = sel;
+                    }
+                }
+                e.Handled = true;
+                break;
+
+            case Avalonia.Input.Key.D1:
+            case Avalonia.Input.Key.NumPad1:
+                FocusManager?.Focus(null);
+                SetViewMode(false);
+                e.Handled = true;
+                break;
+
+            case Avalonia.Input.Key.D2:
+            case Avalonia.Input.Key.NumPad2:
+                FocusManager?.Focus(null);
+                SetViewMode(true);
+                e.Handled = true;
+                break;
+
             case Avalonia.Input.Key.N:
                 FocusManager?.Focus(null);
                 StartRefineMode();
                 e.Handled = true;
                 break;
+        }
+    }
+
+    private void Window_KeyUp(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (isComparingRaw && (e.Key == Avalonia.Input.Key.Space || e.Key == Avalonia.Input.Key.B))
+        {
+            isComparingRaw = false;
+            if (OriginalPhotos.Count > 0 && slides != null && slides.SelectedIndex >= 0)
+            {
+                int sel = slides.SelectedIndex;
+                var engine = OriginalPhotos[currentIndex];
+                if (sel < engine.DetectedPhotos.Count)
+                {
+                    slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.DetectedPhotos[sel]);
+                    slides.SelectedIndex = sel;
+                }
+            }
+            e.Handled = true;
         }
     }
 
@@ -945,6 +1096,10 @@ internal sealed partial class MainWindow : Window
         if (chkAutoOrient != null)
         {
             chkAutoOrient.IsChecked = settings.AutoOrientPhotos;
+        }
+        if (chkRestoreColors != null)
+        {
+            chkRestoreColors.IsChecked = settings.RestoreVintageColors;
         }
 
         if (OriginalPhotos.Count > 0)
