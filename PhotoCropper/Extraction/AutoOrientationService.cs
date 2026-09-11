@@ -35,6 +35,14 @@ public static class AutoOrientationService
         ArgumentNullException.ThrowIfNull(photo);
         if (photo.IsEmpty || photo.Width < 50 || photo.Height < 50) return 0;
 
+        // 1. Primary: AI Face Detection (YuNet ONNX)
+        int faceRotation = FaceOrientationService.DetectFaceRotation(photo);
+        if (faceRotation >= 0)
+        {
+            return faceRotation;
+        }
+
+        // 2. Secondary: Landscape & Scene Analysis (Sky hue and ambient lighting gradients)
         // Downscale small proxy for fast analysis (<1ms)
         int maxDim = Math.Max(photo.Width, photo.Height);
         double scale = maxDim > 300 ? 300.0 / maxDim : 1.0;

@@ -258,6 +258,20 @@ public sealed class ModularServiceTests : IDisposable
     }
 
     [Fact]
+    public void FaceOrientationService_ModelShouldBeAvailableAndEmbedded()
+    {
+        Assert.True(FaceOrientationService.IsModelAvailable);
+    }
+
+    [Fact]
+    public void FaceOrientationService_NonFaceImage_ShouldReturnNegativeOne()
+    {
+        using Mat landscape = new(200, 200, DepthType.Cv8U, 3);
+        landscape.SetTo(new MCvScalar(200, 100, 50));
+        Assert.Equal(-1, FaceOrientationService.DetectFaceRotation(landscape));
+    }
+
+    [Fact]
     public void PhotoCropperCli_ShouldProcessDirectoryAndExtractPhotos()
     {
         string inputDir = Path.Combine(_tempDir, "cli_input");
