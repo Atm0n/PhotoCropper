@@ -5,9 +5,14 @@ An intelligent, cross-platform .NET 10 desktop application designed to automatic
 ## Project Structure
 
 The solution consists of three main projects:
-- **`PhotoCropper` (Core Library):** Contains the core image-processing and detection logic, encapsulated inside the robust `PhotoCropperEngine` class.
-- **`PhotoCropperGui` (Avalonia Desktop App):** A high-performance GUI using a modern dark theme and custom-drawn interactive canvas widgets.
-- **`PhotoCropper.Tests` (xUnit Test Suite):** Comprehensive unit tests checking algorithm correctness, boundary constraints, and edge cases.
+- **`PhotoCropper` (Core Library):** Modular image-processing and detection pipeline:
+  - **`Models/`**: Domain records and DTOs (`CropCandidate`, `DetectionOptions`).
+  - **`Detection/`**: Dedicated pipeline stages (`BackgroundAnalyzer`, `ForegroundMaskGenerator`, `CandidateExtractor`, `CandidateResolutionFilter`).
+  - **`Extraction/`**: Photo extraction, local ROI perspective warps, and border refinement (`PhotoExtractionEngine`, `EdgeRefinementService`).
+  - **`Export/`**: Output serialization supporting lossless PNG and customizable JPEG quality (`PhotoExporter`).
+  - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
+- **`PhotoCropperGui` (Avalonia Desktop App):** A high-performance GUI using a modern dark theme, custom-drawn interactive canvas widgets, multi-language localization (EN, ES, CA), and persistent configuration.
+- **`PhotoCropper.Tests` (xUnit Test Suite):** Comprehensive unit tests checking algorithm correctness, composite splitting, boundary constraints, and edge cases.
 
 ---
 
@@ -16,17 +21,22 @@ The solution consists of three main projects:
 ### 1. High-Performance Rendering Pipeline
 - **Direct Pointer-to-Bitmap Transfer:** Replaced slow PNG/JPEG encoding and decoding with direct memory copies. By constructing Avalonia `Bitmap` instances using native pointers (`IntPtr`) and the `Bgra8888` pixel format, the application renders high-DPI scanner scans instantly without UI lag.
 - **Unified BGR Color Management:** Standardized internally on OpenCV's native BGR layout. The UI performs a single `Bgr2Bgra` conversion purely for display, avoiding redundant color conversions and correcting the "blue-tint" saving artifact perfectly.
+- **Parallel Photo Extraction:** Uses `Parallel.For` to process, rotate, and refine multiple detected photos simultaneously across CPU cores.
 
 ### 2. Intelligent Auto-Detection Engine
+- **Multi-Pass Sensitivity Search:** Evaluates progressive tolerance steps around the base background tolerance to automatically recover subtle, low-contrast photos without manual threshold tuning.
+- **Composite Candidate Resolution (Parent-Child Splitting):** Automatically detects when two adjacent photos are fused into a composite bounding box during high-tolerance passes and resolves them into their distinct individual photos.
+- **Convexity & Rectangularity Quality Scoring:** Scores candidates based on contour convexity ($\text{ContourArea} / \text{HullArea}$) and rotated rectangularity, penalizing irregular merged blobs with waist indentations in favor of clean single photos.
 - **8-Point Median Background Profiling:** Rejects corner-photo anomalies by sampling HSV values at 8 distinct points around the scan perimeter (corners and edge centers) to compute median saturation, hue, and brightness.
-- **Resolution-Aware Morphology:** Morphological opening and closing kernels dynamically scale according to the scan's resolution, ensuring identical edge-detection performance whether processing 150 DPI or 1200 DPI scans.
+- **Resolution-Aware Morphology:** Morphological opening and elliptical closing kernels dynamically scale according to the scan's resolution, preserving narrow gaps between close photos.
 - **Adaptive Shadow Tolerance:** Brightness thresholds are scaled dynamically for light backgrounds, allowing the engine to absorb scanner lid gradients and shadows while preserving photo integrity.
-- **Convex Hull Overlap Verification:** Rather than checking basic axis-aligned bounding rectangles, the engine uses OpenCV's convex hull polygon testing (`PointPolygonTest`) to separate tilted adjacent photos.
-- **Interactive Background Color Picker:** Allows manual background sampling via a noise-resistant 5x5 average neighborhood in HSV space directly from any clicked zoom/pan pixel, giving the user control when scanner grain or irregular gradients confound the auto-detector.
+- **Geometric Overlap Verification:** Measures true polygon intersection area in unmanaged masks to prevent duplicate or invading bounding boxes while allowing tilted adjacent photos.
+- **Interactive Background Color Picker:** Allows manual background sampling via a noise-resistant 5x5 average neighborhood in HSV space directly from any clicked zoom/pan pixel.
 
 ### 3. Smart Manual & Refinement Operations
 - **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm. It automatically detects and removes the scanner's white canvas borders.
-- **Local ROI Rotation:** Instead of rotating the entire giant scan, only the region of interest is padded, extracted, rotated, and tightly cropped using Cubic interpolation, saving substantial memory and processing overhead.
+- **Local ROI Perspective Warp:** Instead of rotating the entire giant scan, only the region of interest is extracted and warped with `Inter.Cubic` interpolation with transparent alpha margins.
+- **Intelligent Manual Crop Snapping:** Manually drawn selection boxes automatically snap to the nearest high-contrast photo boundary.
 
 ### 4. Focus-Defeat & Keyboard Event Tunneling
 - **Global Key Event Tunneling:** Uses Avalonia's tunneling event routing (`RoutingStrategies.Tunnel`) for key-down events. This intercepts keyboard navigation events at the Window level before they can reach child controls.
@@ -40,7 +50,7 @@ The codebase strictly enforces the highest standard of static analysis and memor
 - **Warnings-as-Errors Policy:** Enforced solution-wide via `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<AnalysisLevel>latest-All</AnalysisLevel>` inside `Directory.Build.props`.
 - **Zero-Warning Success:** Compiles with `0 Warnings` and `0 Errors` across both Debug and Release configurations.
 - **OpenCV Memory Safety (CA2000):** Implements explicit `using` statements, unmanaged resource trackers, and try-finally ownership transfer patterns to prevent native memory leaks during parallel contour processing.
-- **Encapsulation & Security:** Core internal helper elements are marked as `internal sealed`, exposing APIs through read-only interfaces (`IReadOnlyList`, `Collection<T>`) to guarantee architectural robustness.
+- **Encapsulation & Security:** Core internal helper elements expose APIs through read-only interfaces (`IReadOnlyList`, `Collection<T>`) to guarantee architectural robustness.
 
 ---
 
@@ -76,9 +86,9 @@ dotnet run --project PhotoCropperGui
 ```
 
 ### Run Tests
-To execute all 22 unit tests:
+To execute all 31 unit tests:
 ```bash
-dotnet test
+dotnet run --project PhotoCropper.Tests/PhotoCropper.Tests.csproj
 ```
 
 ---

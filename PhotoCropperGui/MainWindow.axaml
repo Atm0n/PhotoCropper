@@ -7,7 +7,8 @@
 		Background="#1e1e1e"
 		Foreground="White"
         Title="PhotoCropper - Intelligent Photo Extractor"
-        Icon="avares://PhotoCropperGui/Assets/app_icon.png">
+        Icon="avares://PhotoCropperGui/Assets/app_icon.png"
+        DragDrop.AllowDrop="True">
 
 	<Grid>
 		<DockPanel>
@@ -42,8 +43,8 @@
 							</StackPanel>
 						</Button>
 
-						<Menu Background="Transparent" VerticalAlignment="Center" Margin="5,0">
-							<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuLanguage"/>
+						<Menu Background="Transparent" VerticalAlignment="Center" Margin="5,0" Focusable="False" IsTabStop="False" KeyboardNavigation.TabNavigation="None">
+							<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuLanguage" Focusable="False" IsTabStop="False"/>
 						</Menu>
 
 						<Button x:Name="btnHelp" Click="BtnHelp_Click" Padding="10,8" Background="Transparent" BorderThickness="0" Focusable="False">
@@ -192,7 +193,7 @@
 					<TextBlock Grid.Row="0" Text="{DynamicResource HeaderDetected}" Margin="10,5" FontSize="10" FontWeight="Bold" Foreground="#555555"/>
 					
 					<Panel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="1000" MaxHeight="800">
-						<Carousel x:Name="slides" SelectionChanged="Slides_SelectionChanged">
+						<Carousel x:Name="slides" SelectionChanged="Slides_SelectionChanged" Focusable="False" IsTabStop="False">
 							<Carousel.PageTransition>
 								<PageSlide Duration="0:0:0.2" Orientation="Horizontal" />
 							</Carousel.PageTransition>
