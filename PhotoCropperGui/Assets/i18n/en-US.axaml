@@ -9,6 +9,8 @@
 	<sys:String x:Key="LblMinPhotoSize">Min Photo Size</sys:String>
 	<sys:String x:Key="LblMaxPhotoSize">Max Photo Size</sys:String>
 	<sys:String x:Key="LblEdgeThreshold">Edge Threshold</sys:String>
+	<sys:String x:Key="LblAutoOrient">Auto-Orient (Sky/Light) [Exp.]</sys:String>
+	<sys:String x:Key="TipAutoOrient">Heuristic sky and light gradient detector. Experimental — may not work accurately on indoor, overcast, or complex photos.</sys:String>
 	<sys:String x:Key="TxtNoFiles">No files loaded</sys:String>
 	<sys:String x:Key="HeaderOriginal">ORIGINAL SCAN (CLICK &amp; DRAG TO MANUALLY CROP)</sys:String>
 	<sys:String x:Key="HeaderDetected">DETECTED PHOTOS</sys:String>

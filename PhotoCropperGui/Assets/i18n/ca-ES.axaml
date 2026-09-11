@@ -9,6 +9,8 @@
 	<sys:String x:Key="LblMinPhotoSize">Mida Mínima</sys:String>
 	<sys:String x:Key="LblMaxPhotoSize">Mida Màxima</sys:String>
 	<sys:String x:Key="LblEdgeThreshold">Llindar de Vores</sys:String>
+	<sys:String x:Key="LblAutoOrient">Auto-Orientar (Cel/Llum) [Exp.]</sys:String>
+	<sys:String x:Key="TipAutoOrient">Detector heurístic de cel i gradient de llum. Experimental: pot no ser precís en fotos d'interior o complexes.</sys:String>
 	<sys:String x:Key="TxtNoFiles">Sense fitxers</sys:String>
 	<sys:String x:Key="HeaderOriginal">ESCANEIG ORIGINAL (CLIC I ARROSSEGAR PER RETALLAR)</sys:String>
 	<sys:String x:Key="HeaderDetected">FOTOS DETECTADES</sys:String>

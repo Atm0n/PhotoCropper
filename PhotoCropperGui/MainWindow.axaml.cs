@@ -131,6 +131,10 @@ internal sealed partial class MainWindow : Window
         sldMaxArea.Value = settings.MaxAreaFactor;
         sldEdge.Value = settings.CannyLowThreshold;
         tglAdvanced.IsChecked = settings.AdvancedVisible;
+        if (chkAutoOrient != null)
+        {
+            chkAutoOrient.IsChecked = settings.AutoOrientPhotos;
+        }
 
         if (cbFormat != null)
         {
@@ -158,8 +162,33 @@ internal sealed partial class MainWindow : Window
             MinAreaFactor = sldMinArea.Value / 100.0,
             MaxAreaFactor = sldMaxArea.Value / 100.0,
             CannyLowThreshold = sldEdge.Value,
-            CannyHighThreshold = sldEdge.Value * 2.5
+            CannyHighThreshold = sldEdge.Value * 2.5,
+            AutoOrientPhotos = chkAutoOrient?.IsChecked == true
         };
+    }
+
+    private async void ChkAutoOrient_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        SettingsManager.Instance.Settings.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
+        SettingsManager.Instance.Save();
+        await ReprocessCurrentScanAsync();
+    }
+
+    private async Task ReprocessCurrentScanAsync()
+    {
+        if (isLoading || OriginalPhotos.Count == 0) return;
+
+        var photo = OriginalPhotos[currentIndex];
+        photo.ApplyOptions(GetDetectionOptionsFromUi());
+
+        string reprocessingMsg = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
+        await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
+        {
+            await Task.Run(() => photo.DetectPhotos());
+            await LoadPhotosToGuiAsync();
+            string msgFormat = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
+            lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
+        });
     }
 
     private void PopulateLanguageMenu()
@@ -372,17 +401,7 @@ internal sealed partial class MainWindow : Window
         settings.CannyLowThreshold = sldEdge.Value;
         SettingsManager.Instance.Save();
 
-        var photo = OriginalPhotos[currentIndex];
-        photo.ApplyOptions(GetDetectionOptionsFromUi());
-
-        string reprocessingMsg = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
-        await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
-        {
-            await Task.Run(() => photo.DetectPhotos());
-            await LoadPhotosToGuiAsync();
-            string msgFormat = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
-            lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
-        });
+        await ReprocessCurrentScanAsync();
     }
 
     private void CbFormat_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -928,6 +947,10 @@ internal sealed partial class MainWindow : Window
         sldMinArea.Value = settings.MinAreaFactor;
         sldMaxArea.Value = settings.MaxAreaFactor;
         sldEdge.Value = settings.CannyLowThreshold;
+        if (chkAutoOrient != null)
+        {
+            chkAutoOrient.IsChecked = settings.AutoOrientPhotos;
+        }
 
         if (OriginalPhotos.Count > 0)
         {

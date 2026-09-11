@@ -9,6 +9,8 @@
 	<sys:String x:Key="LblMinPhotoSize">Tamaño Mínimo</sys:String>
 	<sys:String x:Key="LblMaxPhotoSize">Tamaño Máximo</sys:String>
 	<sys:String x:Key="LblEdgeThreshold">Umbral de Bordes</sys:String>
+	<sys:String x:Key="LblAutoOrient">Auto-Orientar (Cielo/Luz) [Exp.]</sys:String>
+	<sys:String x:Key="TipAutoOrient">Detector heurístico de cielo y gradiente de luz. Experimental: puede no ser preciso en fotos de interior o complejas.</sys:String>
 	<sys:String x:Key="TxtNoFiles">Sin archivos</sys:String>
 	<sys:String x:Key="HeaderOriginal">ESCANEO ORIGINAL (CLIC Y ARRASTRAR PARA RECORTAR)</sys:String>
 	<sys:String x:Key="HeaderDetected">FOTOS DETECTADAS</sys:String>

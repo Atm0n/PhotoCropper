@@ -24,6 +24,7 @@ public class PhotoCropperEngine : IDisposable
     public double CannyLowThreshold { get; set; } = 20;
     public double CannyHighThreshold { get; set; } = 50;
     public MCvScalar? CustomBackgroundColorHsv { get; set; }
+    public bool AutoOrientPhotos { get; set; }
 
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
@@ -45,6 +46,7 @@ public class PhotoCropperEngine : IDisposable
         CannyLowThreshold = options.CannyLowThreshold;
         CannyHighThreshold = options.CannyHighThreshold;
         CustomBackgroundColorHsv = options.CustomBackgroundColorHsv;
+        AutoOrientPhotos = options.AutoOrientPhotos;
     }
 
     private void ResetState()
@@ -178,7 +180,7 @@ public class PhotoCropperEngine : IDisposable
                     }
 
                     using VectorOfPoint fullShape = new(fullPoints);
-                    RotatedRect fullRr = CvInvoke.MinAreaRect(fullShape);
+                    RotatedRect fullRr = PhotoExtractionEngine.RegularizeNearRightAngles(CvInvoke.MinAreaRect(fullShape));
                     double fullArea = CvInvoke.ContourArea(fullShape);
                     double rrArea = Math.Max(1.0, (double)fullRr.Size.Width * fullRr.Size.Height);
                     double rectScore = Math.Clamp(fullArea / rrArea, 0.0, 1.0);
@@ -219,7 +221,17 @@ public class PhotoCropperEngine : IDisposable
         Parallel.For(0, acceptedCandidates.Count, i =>
         {
             using VectorOfPoint poly = new(acceptedCandidates[i].ShapePoints);
-            results[i] = PhotoExtractionEngine.ExtractPhotoFromContour(poly, Original, padded, pad);
+            Mat extracted = PhotoExtractionEngine.ExtractPhotoFromContour(poly, Original, padded, pad);
+            if (AutoOrientPhotos && !extracted.IsEmpty)
+            {
+                Mat oriented = AutoOrientationService.OrientPhoto(extracted);
+                if (!ReferenceEquals(oriented, extracted))
+                {
+                    extracted.Dispose();
+                    extracted = oriented;
+                }
+            }
+            results[i] = extracted;
         });
 
         foreach (var mat in results)

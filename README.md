@@ -62,6 +62,8 @@ The codebase strictly enforces the highest standard of static analysis and memor
 | `Up / Down` / `PageUp / PageDown` | Switch between original loaded scans |
 | `R` | Rotate the current cropped photo 90° clockwise |
 | `X` / `Delete` | Permanently delete the currently selected photo |
+| `Ctrl + Z` | Undo last photo operation (delete, rotate, manual crop, refinement) |
+| `Ctrl + Y` | Redo last undone operation |
 | `N` / `Ñ` | Enter Interactive Refinement Mode |
 | `Enter` / `A` | Accept Refinement (while in Refinement Mode) |
 | `Backspace` / `Esc` / `C` | Reject Refinement (while in Refinement Mode) |
@@ -86,7 +88,7 @@ dotnet run --project PhotoCropperGui
 ```
 
 ### Run Tests
-To execute all 31 unit tests:
+To execute the test suite:
 ```bash
 dotnet run --project PhotoCropper.Tests/PhotoCropper.Tests.csproj
 ```

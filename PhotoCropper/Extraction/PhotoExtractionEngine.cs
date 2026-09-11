@@ -12,13 +12,88 @@ public static class PhotoExtractionEngine
     public static PointF[] OrderBoxPoints(PointF[] pts)
     {
         ArgumentNullException.ThrowIfNull(pts);
+        if (pts.Length != 4) return pts;
 
-        var xSorted = pts.OrderBy(p => p.X).ToArray();
-        var leftMost = xSorted.Take(2).OrderBy(p => p.Y).ToArray();
-        var rightMost = xSorted.Skip(2).OrderBy(p => p.Y).ToArray();
+        float cx = pts.Average(p => p.X);
+        float cy = pts.Average(p => p.Y);
 
-        // [top-left, top-right, bottom-right, bottom-left]
-        return [leftMost[0], rightMost[0], rightMost[1], leftMost[1]];
+        // Sort points by polar angle from center in clockwise order
+        var sorted = pts.OrderBy(p => Math.Atan2(p.Y - cy, p.X - cx)).ToArray();
+
+        // Top-left candidate has the smallest (X + Y)
+        int bestTlIdx = 0;
+        double minSum = double.MaxValue;
+        for (int i = 0; i < 4; i++)
+        {
+            double sum = sorted[i].X + sorted[i].Y;
+            if (sum < minSum)
+            {
+                minSum = sum;
+                bestTlIdx = i;
+            }
+        }
+
+        PointF tl = sorted[bestTlIdx];
+        PointF tr = sorted[(bestTlIdx + 1) % 4];
+        PointF br = sorted[(bestTlIdx + 2) % 4];
+        PointF bl = sorted[(bestTlIdx + 3) % 4];
+
+        // Ensure tl -> tr corresponds to the mostly-horizontal edge (angle within [-45, 45] deg)
+        double dx = tr.X - tl.X;
+        double dy = tr.Y - tl.Y;
+        double deg = Math.Atan2(dy, dx) * (180.0 / Math.PI);
+
+        if (deg > 45.0 && deg <= 135.0)
+        {
+            return [bl, tl, tr, br];
+        }
+        if (deg < -45.0 && deg >= -135.0)
+        {
+            return [tr, br, bl, tl];
+        }
+
+        return [tl, tr, br, bl];
+    }
+
+    public static RotatedRect RegularizeNearRightAngles(RotatedRect rect, float toleranceDegrees = 1.5f)
+    {
+        PointF[] pts = rect.GetVertices();
+        if (pts.Length < 4) return rect;
+
+        double dx1 = pts[1].X - pts[0].X;
+        double dy1 = pts[1].Y - pts[0].Y;
+        double len1 = Math.Sqrt(dx1 * dx1 + dy1 * dy1);
+
+        double dx2 = pts[2].X - pts[1].X;
+        double dy2 = pts[2].Y - pts[1].Y;
+        double len2 = Math.Sqrt(dx2 * dx2 + dy2 * dy2);
+
+        if (len1 <= 1.0 || len2 <= 1.0) return rect;
+
+        double theta1 = Math.Atan2(dy1, dx1) * (180.0 / Math.PI);
+        double normAngle = theta1;
+        while (normAngle > 45.0) normAngle -= 90.0;
+        while (normAngle < -45.0) normAngle += 90.0;
+
+        if (Math.Abs(normAngle) <= toleranceDegrees)
+        {
+            double rad1 = theta1 * (Math.PI / 180.0);
+            float hWidth, vHeight;
+            if (Math.Abs(Math.Cos(rad1)) >= Math.Abs(Math.Sin(rad1)))
+            {
+                hWidth = (float)len1;
+                vHeight = (float)len2;
+            }
+            else
+            {
+                hWidth = (float)len2;
+                vHeight = (float)len1;
+            }
+
+            return new RotatedRect(rect.Center, new SizeF(hWidth, vHeight), 0f);
+        }
+
+        return rect;
     }
 
     public static Mat ExtractPhotoFromContour(VectorOfPoint shapeInScanSpace, Mat original, Mat? paddedSource = null, int padOffset = 0)
@@ -26,7 +101,8 @@ public static class PhotoExtractionEngine
         ArgumentNullException.ThrowIfNull(shapeInScanSpace);
         ArgumentNullException.ThrowIfNull(original);
 
-        RotatedRect rect = CvInvoke.MinAreaRect(shapeInScanSpace);
+        RotatedRect rawRect = CvInvoke.MinAreaRect(shapeInScanSpace);
+        RotatedRect rect = RegularizeNearRightAngles(rawRect);
         PointF[] srcPoints = OrderBoxPoints(rect.GetVertices());
 
         // If extracting from the padded source, shift the crop quad coordinates to padded space
@@ -49,17 +125,6 @@ public static class PhotoExtractionEngine
         int targetHeight = (int)Math.Round(Math.Max(heightA, heightB));
 
         if (targetWidth <= 10 || targetHeight <= 10) return new Mat();
-
-        // Orientation normalization: default to landscape orientation (standard photo convention)
-        if (targetWidth < targetHeight)
-        {
-            PointF temp = srcPoints[0];
-            srcPoints[0] = srcPoints[1];
-            srcPoints[1] = srcPoints[2];
-            srcPoints[2] = srcPoints[3];
-            srcPoints[3] = temp;
-            (targetWidth, targetHeight) = (targetHeight, targetWidth);
-        }
 
         PointF[] dstPoints =
         [

@@ -3,6 +3,7 @@ using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
+using PhotoCropper.Extraction;
 using PhotoCropper.Models;
 
 namespace PhotoCropper.Detection;
@@ -59,7 +60,7 @@ public static class CandidateExtractor
             }
 
             using VectorOfPoint tempShape = new(shapePoints);
-            RotatedRect rr = CvInvoke.MinAreaRect(tempShape);
+            RotatedRect rr = PhotoExtractionEngine.RegularizeNearRightAngles(CvInvoke.MinAreaRect(tempShape));
             
             // Aspect ratio / compactness filter to discard thin line artifacts
             float w = rr.Size.Width;
