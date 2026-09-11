@@ -67,6 +67,7 @@ jobs:
       shell: bash
 
     - name: Publish GUI & CLI
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: |
         dotnet publish PhotoCropperGui/PhotoCropperGui.csproj `
           -c Release `
@@ -88,6 +89,7 @@ jobs:
       shell: pwsh
 
     - name: Upload Artifact
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact }}
