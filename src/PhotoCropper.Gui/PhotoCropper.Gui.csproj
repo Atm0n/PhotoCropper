@@ -32,6 +32,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PhotoCropper\PhotoCropper.csproj" />
+    <ProjectReference Include="..\PhotoCropper.Core\PhotoCropper.Core.csproj" />
   </ItemGroup>
 </Project>

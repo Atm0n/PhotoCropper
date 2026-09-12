@@ -6,7 +6,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="avares://PhotoCropperGui/Assets/i18n/en-US.axaml" />
+                <ResourceInclude Source="avares://PhotoCropper.Gui/Assets/i18n/en-US.axaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

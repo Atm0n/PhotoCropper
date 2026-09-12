@@ -26,7 +26,7 @@ public static class FaceOrientationService
         try
         {
             var assembly = Assembly.GetExecutingAssembly();
-            const string resourceName = "PhotoCropper.Models.face_detection_yunet_2023mar.onnx";
+            const string resourceName = "PhotoCropper.Core.Models.face_detection_yunet_2023mar.onnx";
 
             using Stream? stream = assembly.GetManifestResourceStream(resourceName);
             if (stream == null)

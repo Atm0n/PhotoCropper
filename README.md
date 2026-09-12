@@ -4,16 +4,16 @@ An intelligent, cross-platform .NET 10 desktop application designed to automatic
 
 ## Project Structure
 
-The solution consists of four main projects:
-- **`PhotoCropper` (Core Library):** Modular image-processing and detection pipeline:
+The solution consists of four main projects organized under `src/` and `tests/`:
+- **`src/PhotoCropper.Core` (Core Library):** Modular image-processing and detection pipeline:
   - **`Models/`**: Domain records and DTOs (`CropCandidate`, `DetectionOptions`).
   - **`Detection/`**: Dedicated pipeline stages (`BackgroundAnalyzer`, `ForegroundMaskGenerator`, `CandidateExtractor`, `CandidateResolutionFilter`).
   - **`Extraction/`**: Photo extraction, local ROI perspective warps, border refinement, orientation, and color restoration (`PhotoExtractionEngine`, `EdgeRefinementService`, `FaceOrientationService`, `AutoOrientationService`, `PhotoRestorationService`).
   - **`Export/`**: Output serialization supporting lossless PNG, customizable JPEG quality, and DPI preservation (`PhotoExporter`).
   - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
-- **`PhotoCropperGui` (Avalonia Desktop App):** A high-performance GUI using a modern dark theme, custom-drawn interactive canvas widgets, multi-language localization (EN, ES, CA), undo/redo history, and persistent configuration.
-- **`PhotoCropperCli` (Unattended CLI Batch Processor):** Fast, standalone console utility for unattended batch photo cropping and extraction from directories or single scans.
-- **`PhotoCropper.Tests` (xUnit Test Suite):** Comprehensive unit tests checking algorithm correctness, composite splitting, boundary constraints, and edge cases.
+- **`src/PhotoCropper.Gui` (Avalonia Desktop App):** A high-performance GUI using a modern dark theme, custom-drawn interactive canvas widgets, multi-language localization (EN, ES, CA), undo/redo history, and persistent configuration.
+- **`src/PhotoCropper.Cli` (Unattended CLI Batch Processor):** Fast, standalone console utility for unattended batch photo cropping and extraction from directories or single scans.
+- **`tests/PhotoCropper.Tests` (xUnit Test Suite):** Comprehensive unit tests checking algorithm correctness, composite splitting, boundary constraints, and edge cases.
 
 ---
 

@@ -29,9 +29,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\PhotoCropper\PhotoCropper.csproj" />
-		<ProjectReference Include="..\PhotoCropperCli\PhotoCropperCli.csproj" />
-		<ProjectReference Include="..\PhotoCropperGui\PhotoCropperGui.csproj" />
+		<ProjectReference Include="..\..\src\PhotoCropper.Core\PhotoCropper.Core.csproj" />
+		<ProjectReference Include="..\..\src\PhotoCropper.Cli\PhotoCropper.Cli.csproj" />
+		<ProjectReference Include="..\..\src\PhotoCropper.Gui\PhotoCropper.Gui.csproj" />
 	</ItemGroup>
 
 </Project>

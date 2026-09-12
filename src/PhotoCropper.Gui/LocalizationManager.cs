@@ -31,9 +31,9 @@ internal static class LocalizationManager
             Application.Current?.Resources.MergedDictionaries.Remove(translations);
         }
 
-        Application.Current?.Resources.MergedDictionaries.Add(new ResourceInclude(new Uri($"avares://PhotoCropperGui/Assets/i18n/{languageCode}.axaml"))
+        Application.Current?.Resources.MergedDictionaries.Add(new ResourceInclude(new Uri($"avares://PhotoCropper.Gui/Assets/i18n/{languageCode}.axaml"))
         {
-            Source = new Uri($"avares://PhotoCropperGui/Assets/i18n/{languageCode}.axaml")
+            Source = new Uri($"avares://PhotoCropper.Gui/Assets/i18n/{languageCode}.axaml")
         });
 
         CurrentLanguage = languageCode;

@@ -5,7 +5,7 @@ See `README.md` for full project architecture, documentation, and usage instruct
 ## Core Conventions
 - **Framework**: .NET 10 / Avalonia 12 / Emgu.CV (OpenCV wrapper).
 - **Color Space**: Standardized on **BGR** internally (OpenCV default). The UI performs a single `Bgr2Bgra` conversion purely for display.
-- **Testing Standards**: Maintain 100% pass rate in `PhotoCropper.Tests`. Run tests with `dotnet run --project PhotoCropper.Tests/PhotoCropper.Tests.csproj`.
+- **Testing Standards**: Maintain 100% pass rate in `PhotoCropper.Tests`. Run tests with `dotnet run --project tests/PhotoCropper.Tests/PhotoCropper.Tests.csproj`.
 - **Code Style**:
   - Strictly **no `#region` / `#endregion`** directives.
   - Zero warnings and zero errors across the entire solution (`TreatWarningsAsErrors`).

@@ -8,7 +8,7 @@
 		Background="#1e1e1e"
 		Foreground="White"
         Title="PhotoCropper - Intelligent Photo Extractor"
-        Icon="avares://PhotoCropperGui/Assets/app_icon.png"
+        Icon="avares://PhotoCropper.Gui/Assets/app_icon.png"
         DragDrop.AllowDrop="True">
 
 	<Grid>

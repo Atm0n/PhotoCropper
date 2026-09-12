@@ -11,10 +11,12 @@
     <File Path="publish.ps1" />
     <File Path="README.md" />
   </Folder>
-  <Folder Name="/Tests/">
-    <Project Path="PhotoCropper.Tests/PhotoCropper.Tests.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/PhotoCropper.Core/PhotoCropper.Core.csproj" />
+    <Project Path="src/PhotoCropper.Cli/PhotoCropper.Cli.csproj" />
+    <Project Path="src/PhotoCropper.Gui/PhotoCropper.Gui.csproj" />
   </Folder>
-  <Project Path="PhotoCropper/PhotoCropper.csproj" />
-  <Project Path="PhotoCropperCli/PhotoCropperCli.csproj" />
-  <Project Path="PhotoCropperGui/PhotoCropperGui.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/PhotoCropper.Tests/PhotoCropper.Tests.csproj" />
+  </Folder>
 </Solution>
