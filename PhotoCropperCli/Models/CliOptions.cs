@@ -18,4 +18,5 @@ internal sealed class CliOptions
     public bool Verbose { get; set; }
     public bool AutoTune { get; set; }
     public string? CopyUndetectedDirectory { get; set; }
+    public bool NonInteractive { get; set; }
 }

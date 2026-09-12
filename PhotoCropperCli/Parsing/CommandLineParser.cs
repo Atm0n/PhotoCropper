@@ -105,6 +105,10 @@ internal static class CommandLineParser
             {
                 options.CopyUndetectedDirectory = args[++i];
             }
+            else if (arg is "-y" or "--yes" or "--non-interactive")
+            {
+                options.NonInteractive = true;
+            }
             else if (arg is "-i" or "--input" && i + 1 < args.Length)
             {
                 options.Inputs.Add(args[++i]);
@@ -137,6 +141,7 @@ internal static class CommandLineParser
         Console.WriteLine("  --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)");
         Console.WriteLine("  --auto-tune             Automatically search optimal detection parameters on difficult scans");
         Console.WriteLine("  --copy-undetected <dir> Copy undetected scans with 0 photos to a designated review directory");
+        Console.WriteLine("  -y, --non-interactive   Disable interactive prompts (e.g., auto-tune prompts at batch completion)");
         Console.WriteLine("  --auto-orient           Enable AI face & landscape auto-orientation detection (default: on)");
         Console.WriteLine("  --no-auto-orient        Disable auto-orientation detection and preserve raw scanner placement");
         Console.WriteLine("  --restore-colors        Enable auto-white balance, contrast & vibrancy color restoration (default: on)");
