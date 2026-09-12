@@ -112,26 +112,26 @@ dotnet build
 ### Run GUI
 To run the desktop application:
 ```bash
-dotnet run --project PhotoCropperGui
+dotnet run --project src/PhotoCropper.Gui/PhotoCropper.Gui.csproj
 ```
 
 ### Run CLI (Unattended Batch Extractor)
 To run the unattended command-line utility:
 ```bash
 # Process a single scan
-dotnet run --project PhotoCropperCli -- scan001.jpg
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- scan001.jpg
 
 # Process a folder of scans recursively, saving as PNG with color restoration in a custom directory
-dotnet run --project PhotoCropperCli -- D:\Scans -o D:\Cropped -f PNG -r
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans -o D:\Cropped -f PNG -r
 
 # Batch process with parallel worker threads and auto-tuning enabled
-dotnet run --project PhotoCropperCli -- D:\Scans -o D:\Cropped --auto-tune -j 8
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans -o D:\Cropped --auto-tune -j 8
 
 # Batch process and isolate undetected scans for review
-dotnet run --project PhotoCropperCli -- D:\Scans -o D:\Cropped --copy-undetected D:\NeedsReview
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans -o D:\Cropped --copy-undetected D:\NeedsReview
 
 # Display all CLI options and flags
-dotnet run --project PhotoCropperCli -- --help
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 ```
 
 #### CLI Options & Flags Reference
@@ -159,9 +159,16 @@ dotnet run --project PhotoCropperCli -- --help
 | `--version` | Display application version | — |
 
 ### Run Tests
-To execute the unit and integration test suite:
+To execute the unit and integration test suites:
 ```bash
-dotnet run --project PhotoCropper.Tests/PhotoCropper.Tests.csproj
+# Core Library Tests
+dotnet run --project tests/PhotoCropper.Core.Tests/PhotoCropper.Core.Tests.csproj
+
+# CLI Integration Tests
+dotnet run --project tests/PhotoCropper.Cli.Tests/PhotoCropper.Cli.Tests.csproj
+
+# GUI Domain & ViewModel Tests
+dotnet run --project tests/PhotoCropper.Gui.Tests/PhotoCropper.Gui.Tests.csproj
 ```
 
 ---
@@ -183,10 +190,10 @@ No .NET runtime installation is required on the target systems.
 To publish self-contained single-file binaries manually via the .NET CLI:
 ```bash
 # Windows GUI
-dotnet publish PhotoCropperGui/PhotoCropperGui.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o ./publish/windows-gui
+dotnet publish src/PhotoCropper.Gui/PhotoCropper.Gui.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o ./publish/windows-gui
 
 # Linux CLI
-dotnet publish PhotoCropperCli/PhotoCropperCli.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ./publish/linux-cli
+dotnet publish src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ./publish/linux-cli
 ```
 
 ---
