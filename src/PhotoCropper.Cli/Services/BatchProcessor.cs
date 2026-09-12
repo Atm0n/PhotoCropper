@@ -2,6 +2,7 @@ using PhotoCropper.Cli.Models;
 using PhotoCropper.Core;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
+using Spectre.Console;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
@@ -15,33 +16,28 @@ internal static class BatchProcessor
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(scanFiles);
 
-        Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.WriteLine("=== PhotoCropper CLI - Unattended Batch Extractor ===");
-        Console.ResetColor();
-        Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Found {0} scan(s) to process.", scanFiles.Count));
-        Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Output Format: {0} (Quality: {1})", options.Format, options.JpegQuality));
-        Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Detection: Tolerance={0}, MinSize={1:0}%, MaxSize={2:0}%", options.Tolerance, options.MinAreaFactor * 100, options.MaxAreaFactor * 100));
-        if (options.AutoTune)
-        {
-            Console.WriteLine("Auto-Tune: Enabled (Automatic Parameter Sweeping for Difficult Scans)");
-        }
+        // Header Panel
+        var grid = new Grid();
+        grid.AddColumn(new GridColumn().PadRight(2));
+        grid.AddColumn(new GridColumn());
+
+        grid.AddRow("[bold cyan]Scans Found:[/]", $"[bold white]{scanFiles.Count}[/]");
+        grid.AddRow("[bold cyan]Output Format:[/]", $"[bold white]{options.Format}[/] (Quality: {options.JpegQuality})");
+        grid.AddRow("[bold cyan]Detection:[/]", $"Tolerance: [bold white]{options.Tolerance}[/], MinSize: [bold white]{options.MinAreaFactor * 100:0}%[/], MaxSize: [bold white]{options.MaxAreaFactor * 100:0}%[/]");
+        grid.AddRow("[bold cyan]Auto-Tune:[/]", options.AutoTune ? "[bold green]Enabled (Sweeping)[/]" : "[grey]Disabled[/]");
+        grid.AddRow("[bold cyan]Auto-Orient:[/]", options.AutoOrient ? "[bold green]Enabled (AI Face + Sky)[/]" : "[grey]Disabled[/]");
+        grid.AddRow("[bold cyan]Restoration:[/]", options.RestoreColors ? "[bold green]Enabled (Auto-WB + CLAHE)[/]" : "[grey]Disabled[/]");
+        grid.AddRow("[bold cyan]Dust Inpainting:[/]", options.RemoveDust ? "[bold green]Enabled (Morphological)[/]" : "[grey]Disabled[/]");
         if (options.CopyUndetectedDirectory != null)
         {
-            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Undetected Isolation Directory: '{0}'", options.CopyUndetectedDirectory));
+            grid.AddRow("[bold cyan]Isolation Dir:[/]", $"[yellow]{options.CopyUndetectedDirectory}[/]");
         }
-        if (options.AutoOrient)
-        {
-            Console.WriteLine("Auto-Orientation: Enabled (AI Face + Landscape)");
-        }
-        if (options.RestoreColors)
-        {
-            Console.WriteLine("Color-Restoration: Enabled (Auto-White Balance + LAB CLAHE + Vibrancy)");
-        }
-        if (options.RemoveDust)
-        {
-            Console.WriteLine("Dust-Inpainting: Enabled (Morphological Scratch & Dust Inpainting)");
-        }
-        Console.WriteLine();
+
+        AnsiConsole.Write(
+            new Panel(grid)
+                .Header("[bold cyan]PhotoCropper CLI - Batch Extractor[/]")
+                .Border(BoxBorder.Rounded)
+                .BorderColor(Color.Cyan1));
 
         var detectionOptions = new DetectionOptions
         {
@@ -57,109 +53,92 @@ internal static class BatchProcessor
 
         int totalExtracted = 0;
         int errorCount = 0;
-        int completedCount = 0;
         var undetectedScans = new ConcurrentBag<string>();
         var totalStopwatch = Stopwatch.StartNew();
-        var consoleLock = new object();
 
         var parallelOptions = new ParallelOptions
         {
             MaxDegreeOfParallelism = Math.Max(1, options.Threads)
         };
 
-        Parallel.ForEach(scanFiles, parallelOptions, (scanPath) =>
+        if (scanFiles.Count > 0)
         {
-            string fileName = Path.GetFileName(scanPath);
-            var fileStopwatch = Stopwatch.StartNew();
-
-            try
-            {
-                using var engine = new PhotoCropperEngine(scanPath);
-                engine.ApplyOptions(detectionOptions);
-                engine.DetectPhotos();
-
-                int photoCount = engine.DetectedPhotos.Count;
-                bool wasAutoTuned = false;
-
-                if (photoCount == 0 && options.AutoTune)
+            AnsiConsole.Progress()
+                .AutoClear(false)
+                .HideCompleted(false)
+                .Columns(
+                    new TaskDescriptionColumn(),
+                    new ProgressBarColumn(),
+                    new PercentageColumn(),
+                    new RemainingTimeColumn(),
+                    new SpinnerColumn())
+                .Start(ctx =>
                 {
-                    var tuneResult = engine.AutoTune();
-                    if (tuneResult.PhotoCount > 0)
+                    var progressTask = ctx.AddTask("[green]Processing Scans[/]", maxValue: scanFiles.Count);
+
+                    Parallel.ForEach(scanFiles, parallelOptions, (scanPath) =>
                     {
-                        photoCount = tuneResult.PhotoCount;
-                        wasAutoTuned = true;
-                    }
-                }
-
-                if (photoCount > 0)
-                {
-                    PhotoExporter.SavePhotos(
-                        engine.DetectedPhotos,
-                        scanPath,
-                        options.OutputDirectory,
-                        options.Format,
-                        options.JpegQuality);
-
-                    Interlocked.Add(ref totalExtracted, photoCount);
-                    fileStopwatch.Stop();
-
-                    int currentDone = Interlocked.Increment(ref completedCount);
-
-                    lock (consoleLock)
-                    {
-                        Console.Write(string.Format(CultureInfo.InvariantCulture, "[{0}/{1}] Processing {2}... ", currentDone, scanFiles.Count, fileName));
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        if (wasAutoTuned)
+                        string fileName = Path.GetFileName(scanPath);
+                        try
                         {
-                            Console.Write(string.Format(CultureInfo.InvariantCulture, "⚡ {0} photo(s) auto-tuned & extracted ", photoCount));
-                        }
-                        else
-                        {
-                            Console.Write(string.Format(CultureInfo.InvariantCulture, "✓ {0} photo(s) extracted ", photoCount));
-                        }
-                        Console.ResetColor();
-                        Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "({0}ms)", fileStopwatch.ElapsedMilliseconds));
+                            using var engine = new PhotoCropperEngine(scanPath);
+                            engine.ApplyOptions(detectionOptions);
+                            engine.DetectPhotos();
 
-                        if (options.Verbose)
-                        {
-                            for (int p = 0; p < photoCount; p++)
+                            int photoCount = engine.DetectedPhotos.Count;
+                            bool wasAutoTuned = false;
+
+                            if (photoCount == 0 && options.AutoTune)
                             {
-                                var mat = engine.DetectedPhotos[p];
-                                Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "    -> Photo #{0}: {1}x{2} px", p + 1, mat.Width, mat.Height));
+                                var tuneResult = engine.AutoTune();
+                                if (tuneResult.PhotoCount > 0)
+                                {
+                                    photoCount = tuneResult.PhotoCount;
+                                    wasAutoTuned = true;
+                                }
+                            }
+
+                            if (photoCount > 0)
+                            {
+                                PhotoExporter.SavePhotos(
+                                    engine.DetectedPhotos,
+                                    scanPath,
+                                    options.OutputDirectory,
+                                    options.Format,
+                                    options.JpegQuality);
+
+                                Interlocked.Add(ref totalExtracted, photoCount);
+
+                                string tag = wasAutoTuned ? "[yellow]⚡ auto-tuned[/]" : "[green]✓ extracted[/]";
+                                AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] {tag} [bold white]{fileName}[/] -> [green]{photoCount}[/] photo(s)");
+
+                                if (options.Verbose)
+                                {
+                                    for (int p = 0; p < photoCount; p++)
+                                    {
+                                        var mat = engine.DetectedPhotos[p];
+                                        AnsiConsole.MarkupLine($"  [dim]-> Photo #{p + 1}: {mat.Width}x{mat.Height} px[/]");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                undetectedScans.Add(scanPath);
+                                AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ 0 photos[/] [bold white]{fileName}[/]");
                             }
                         }
-                    }
-                }
-                else
-                {
-                    undetectedScans.Add(scanPath);
-                    fileStopwatch.Stop();
-                    int currentDone = Interlocked.Increment(ref completedCount);
-
-                    lock (consoleLock)
-                    {
-                        Console.Write(string.Format(CultureInfo.InvariantCulture, "[{0}/{1}] Processing {2}... ", currentDone, scanFiles.Count, fileName));
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "No photos detected ({0}ms)", fileStopwatch.ElapsedMilliseconds));
-                        Console.ResetColor();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                fileStopwatch.Stop();
-                Interlocked.Increment(ref errorCount);
-                int currentDone = Interlocked.Increment(ref completedCount);
-
-                lock (consoleLock)
-                {
-                    Console.Write(string.Format(CultureInfo.InvariantCulture, "[{0}/{1}] Processing {2}... ", currentDone, scanFiles.Count, fileName));
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "FAILED: {0}", ex.Message));
-                    Console.ResetColor();
-                }
-            }
-        });
+                        catch (Exception ex)
+                        {
+                            Interlocked.Increment(ref errorCount);
+                            AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [bold red]✗ FAILED[/] [bold white]{fileName}[/]: [red]{Markup.Escape(ex.Message)}[/]");
+                        }
+                        finally
+                        {
+                            progressTask.Increment(1);
+                        }
+                    });
+                });
+        }
 
         totalStopwatch.Stop();
 
@@ -169,125 +148,104 @@ internal static class BatchProcessor
             WriteUndetectedAuditLog(undetectedScans, options, scanFiles.Count, scanFiles);
         }
 
-        Console.WriteLine();
-        Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.WriteLine("=== Batch Complete ===");
-        Console.ResetColor();
-        Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Scans Processed : {0}", scanFiles.Count));
-        Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Photos Extracted: {0}", totalExtracted));
-        if (!undetectedScans.IsEmpty)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Undetected Scans: {0} (Logged to undetected_scans.txt)", undetectedScans.Count));
-            if (options.CopyUndetectedDirectory != null)
-            {
-                Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "  -> Isolated copy saved to '{0}'", options.CopyUndetectedDirectory));
-            }
-            Console.ResetColor();
-        }
-        if (errorCount > 0)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Errors          : {0}", errorCount));
-            Console.ResetColor();
-        }
-        Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Total Time      : {0:F2}s", totalStopwatch.Elapsed.TotalSeconds));
+        // Summary Table
+        var summaryTable = new Table()
+            .Border(TableBorder.Rounded)
+            .BorderColor(Color.Cyan1)
+            .AddColumn("[bold]Metric[/]")
+            .AddColumn("[bold]Result[/]");
+
+        summaryTable.AddRow("Total Scans Processed", $"[bold white]{scanFiles.Count}[/]");
+        summaryTable.AddRow("Photos Extracted", $"[bold green]{totalExtracted}[/]");
+        summaryTable.AddRow("Undetected Scans", undetectedScans.IsEmpty ? "[green]0[/]" : $"[bold yellow]{undetectedScans.Count}[/]");
+        summaryTable.AddRow("Errors", errorCount == 0 ? "[green]0[/]" : $"[bold red]{errorCount}[/]");
+        summaryTable.AddRow("Total Time", $"[bold cyan]{totalStopwatch.Elapsed.TotalSeconds:F2}s[/]");
+
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Panel(summaryTable).Header("[bold cyan]Batch Summary[/]").Border(BoxBorder.Rounded));
 
         // Interactive Post-Batch Auto-Tune Review Prompt
         if (!options.AutoTune && !options.NonInteractive && !undetectedScans.IsEmpty && !Console.IsInputRedirected)
         {
-            Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.Write(string.Format(CultureInfo.InvariantCulture, "⚠ {0} scan(s) had 0 photos detected. Would you like to run Auto-Tune on them now? [y/N]: ", undetectedScans.Count));
-            Console.ResetColor();
+            AnsiConsole.WriteLine();
+            bool runAutoTune = AnsiConsole.Confirm(
+                $"[yellow]⚠ {undetectedScans.Count} scan(s) had 0 photos detected. Would you like to run Auto-Tune on them now?[/]",
+                defaultValue: false);
 
-            string? response = Console.ReadLine()?.Trim();
-            if (string.Equals(response, "y", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(response, "yes", StringComparison.OrdinalIgnoreCase))
+            if (runAutoTune)
             {
-                Console.WriteLine();
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("=== Running Auto-Tune Pass on Undetected Scans ===");
-                Console.ResetColor();
-
                 var remainingUndetected = new ConcurrentBag<string>();
                 int autoTunedRecovered = 0;
-                int autoTuneDone = 0;
                 var unlist = undetectedScans.ToList();
 
-                Parallel.ForEach(unlist, parallelOptions, (scanPath) =>
-                {
-                    string fileName = Path.GetFileName(scanPath);
-                    var fileStopwatch = Stopwatch.StartNew();
-
-                    try
+                AnsiConsole.Progress()
+                    .AutoClear(false)
+                    .HideCompleted(false)
+                    .Columns(
+                        new TaskDescriptionColumn(),
+                        new ProgressBarColumn(),
+                        new PercentageColumn(),
+                        new RemainingTimeColumn(),
+                        new SpinnerColumn())
+                    .Start(ctx =>
                     {
-                        using var engine = new PhotoCropperEngine(scanPath);
-                        engine.ApplyOptions(detectionOptions);
-                        var tuneResult = engine.AutoTune();
+                        var autoTuneTask = ctx.AddTask("[yellow]Auto-Tuning Undetected Scans[/]", maxValue: unlist.Count);
 
-                        int photoCount = engine.DetectedPhotos.Count;
-                        if (photoCount > 0)
+                        Parallel.ForEach(unlist, parallelOptions, (scanPath) =>
                         {
-                            PhotoExporter.SavePhotos(
-                                engine.DetectedPhotos,
-                                scanPath,
-                                options.OutputDirectory,
-                                options.Format,
-                                options.JpegQuality);
-
-                            Interlocked.Add(ref totalExtracted, photoCount);
-                            Interlocked.Increment(ref autoTunedRecovered);
-                            fileStopwatch.Stop();
-
-                            int current = Interlocked.Increment(ref autoTuneDone);
-                            lock (consoleLock)
+                            string fileName = Path.GetFileName(scanPath);
+                            try
                             {
-                                Console.Write(string.Format(CultureInfo.InvariantCulture, "[{0}/{1}] Auto-tuning {2}... ", current, unlist.Count, fileName));
-                                Console.ForegroundColor = ConsoleColor.Green;
-                                Console.Write(string.Format(CultureInfo.InvariantCulture, "⚡ {0} photo(s) recovered! (Tolerance: {1:0}, Edge: {2:0}) ", photoCount, tuneResult.BestOptions.BackgroundTolerance, tuneResult.BestOptions.CannyLowThreshold));
-                                Console.ResetColor();
-                                Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "({0}ms)", fileStopwatch.ElapsedMilliseconds));
+                                using var engine = new PhotoCropperEngine(scanPath);
+                                engine.ApplyOptions(detectionOptions);
+                                var tuneResult = engine.AutoTune();
+
+                                int photoCount = engine.DetectedPhotos.Count;
+                                if (photoCount > 0)
+                                {
+                                    PhotoExporter.SavePhotos(
+                                        engine.DetectedPhotos,
+                                        scanPath,
+                                        options.OutputDirectory,
+                                        options.Format,
+                                        options.JpegQuality);
+
+                                    Interlocked.Add(ref totalExtracted, photoCount);
+                                    Interlocked.Increment(ref autoTunedRecovered);
+
+                                    AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [bold green]⚡ Recovered[/] [bold white]{fileName}[/] -> [green]{photoCount}[/] photo(s) (Tolerance: {tuneResult.BestOptions.BackgroundTolerance:0})");
+                                }
+                                else
+                                {
+                                    remainingUndetected.Add(scanPath);
+                                    AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [grey]Still 0 photos[/] [bold white]{fileName}[/]");
+                                }
                             }
-                        }
-                        else
-                        {
-                            remainingUndetected.Add(scanPath);
-                            fileStopwatch.Stop();
-                            int current = Interlocked.Increment(ref autoTuneDone);
-                            lock (consoleLock)
+                            catch (Exception ex)
                             {
-                                Console.Write(string.Format(CultureInfo.InvariantCulture, "[{0}/{1}] Auto-tuning {2}... ", current, unlist.Count, fileName));
-                                Console.ForegroundColor = ConsoleColor.DarkGray;
-                                Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Still 0 photos ({0}ms)", fileStopwatch.ElapsedMilliseconds));
-                                Console.ResetColor();
+                                remainingUndetected.Add(scanPath);
+                                AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [bold red]✗ FAILED[/] [bold white]{fileName}[/]: [red]{Markup.Escape(ex.Message)}[/]");
                             }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        fileStopwatch.Stop();
-                        remainingUndetected.Add(scanPath);
-                        int current = Interlocked.Increment(ref autoTuneDone);
-                        lock (consoleLock)
-                        {
-                            Console.Write(string.Format(CultureInfo.InvariantCulture, "[{0}/{1}] Auto-tuning {2}... ", current, unlist.Count, fileName));
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "FAILED: {0}", ex.Message));
-                            Console.ResetColor();
-                        }
-                    }
-                });
+                            finally
+                            {
+                                autoTuneTask.Increment(1);
+                            }
+                        });
+                    });
 
                 WriteUndetectedAuditLog(remainingUndetected, options, scanFiles.Count, scanFiles);
 
-                Console.WriteLine();
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("=== Auto-Tune Review Summary ===");
-                Console.ResetColor();
-                Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Scans Recovered   : {0}", autoTunedRecovered));
-                Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Remaining Scans   : {0}", remainingUndetected.Count));
-                Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "Total Photos Saved: {0}", totalExtracted));
+                var reviewTable = new Table()
+                    .Border(TableBorder.Rounded)
+                    .AddColumn("[bold]Auto-Tune Metric[/]")
+                    .AddColumn("[bold]Count[/]");
+
+                reviewTable.AddRow("Scans Recovered", $"[bold green]{autoTunedRecovered}[/]");
+                reviewTable.AddRow("Remaining Undetected", $"[bold yellow]{remainingUndetected.Count}[/]");
+                reviewTable.AddRow("Total Photos Saved", $"[bold cyan]{totalExtracted}[/]");
+
+                AnsiConsole.WriteLine();
+                AnsiConsole.Write(new Panel(reviewTable).Header("[bold green]Auto-Tune Results[/]").Border(BoxBorder.Rounded));
             }
         }
 

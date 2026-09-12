@@ -19,6 +19,7 @@
 		<PackageReference Include="Emgu.CV" />
 		<PackageReference Include="Emgu.CV.runtime.windows" />
 		<PackageReference Include="Emgu.CV.runtime.ubuntu-24.04-x64" />
+		<PackageReference Include="Spectre.Console" />
 	</ItemGroup>
 
 </Project>

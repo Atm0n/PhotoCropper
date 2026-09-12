@@ -30,19 +30,15 @@ internal static class Program
         CliOptions options = CommandLineParser.Parse(args);
         if (options.Inputs.Count == 0)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("Error: No input files or directories specified.");
-            Console.ResetColor();
-            Console.WriteLine("Use --help for usage instructions.");
+            Spectre.Console.AnsiConsole.MarkupLine("[bold red]Error:[/] No input files or directories specified.");
+            Spectre.Console.AnsiConsole.MarkupLine("[grey]Use --help for usage instructions.[/]");
             return 1;
         }
 
         List<string> scanFiles = FileCollector.CollectFiles(options.Inputs, options.Recursive);
         if (scanFiles.Count == 0)
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("Warning: No supported image files found in specified inputs.");
-            Console.ResetColor();
+            Spectre.Console.AnsiConsole.MarkupLine("[bold yellow]Warning:[/] No supported image files found in specified inputs.");
             return 0;
         }
 
