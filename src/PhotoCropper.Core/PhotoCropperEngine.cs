@@ -36,7 +36,10 @@ public class PhotoCropperEngine : IDisposable
     public PhotoCropperEngine(string originalFilePath)
     {
         OriginalFilePath = originalFilePath;
-        Original = CvInvoke.Imread(originalFilePath, ImreadModes.AnyColor);
+        byte[] fileBytes = File.ReadAllBytes(originalFilePath);
+        using Mat rawMat = new();
+        CvInvoke.Imdecode(fileBytes, ImreadModes.AnyColor, rawMat);
+        Original = rawMat.Clone();
         OriginalWithDetected = Original.Clone();
     }
 
@@ -97,6 +100,8 @@ public class PhotoCropperEngine : IDisposable
                 OriginalWithDetected?.Dispose();
                 foreach (var photo in DetectedPhotos) photo.Dispose();
                 DetectedPhotos.Clear();
+                foreach (var raw in RawDetectedPhotos) raw.Dispose();
+                RawDetectedPhotos.Clear();
             }
             disposedValue = true;
         }

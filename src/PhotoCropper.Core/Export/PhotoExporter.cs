@@ -127,7 +127,9 @@ public static class PhotoExporter
 
             if (string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase))
             {
-                photos[i].Save(fileName);
+                using Emgu.CV.Util.VectorOfByte buf = new();
+                CvInvoke.Imencode(".png", photos[i], buf);
+                File.WriteAllBytes(fileName, buf.ToArray());
                 EmbedPngDpi(fileName, xDpi, yDpi);
             }
             else
@@ -135,7 +137,9 @@ public static class PhotoExporter
                 KeyValuePair<ImwriteFlags, int>[] parameters = [
                     new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegQuality, jpegQuality)
                 ];
-                CvInvoke.Imwrite(fileName, photos[i], parameters);
+                using Emgu.CV.Util.VectorOfByte buf = new();
+                CvInvoke.Imencode(".jpg", photos[i], buf, parameters);
+                File.WriteAllBytes(fileName, buf.ToArray());
                 EmbedJpegDpi(fileName, xDpi, yDpi);
             }
 

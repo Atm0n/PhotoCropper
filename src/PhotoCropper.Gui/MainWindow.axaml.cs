@@ -18,7 +18,7 @@ internal sealed record GalleryPhotoItem(Avalonia.Media.Imaging.Bitmap Image, str
 internal sealed partial class MainWindow : Window
 {
     private int currentIndex;
-    private readonly List<PhotoCropperEngine> OriginalPhotos = [];
+    private readonly List<ScanSessionItem> ScanSessions = [];
     private readonly UndoRedoHistory undoHistory = new();
     private bool isLoading;
     private bool isComparingRaw;
@@ -87,20 +87,18 @@ internal sealed partial class MainWindow : Window
     private async Task LoadScansFromPathsAsync(IEnumerable<string> paths)
     {
         undoHistory.Clear();
-        foreach (var photo in OriginalPhotos)
+        foreach (var session in ScanSessions)
         {
-            photo.Dispose();
+            session.Dispose();
         }
-        OriginalPhotos.Clear();
+        ScanSessions.Clear();
         currentIndex = 0;
 
         var options = GetDetectionOptionsFromUi();
         foreach (var path in paths)
         {
             if (!File.Exists(path)) continue;
-            var photo = new PhotoCropperEngine(path);
-            photo.ApplyOptions(options);
-            OriginalPhotos.Add(photo);
+            ScanSessions.Add(new ScanSessionItem(path, options));
         }
         await LoadPhotosToGuiAsync();
     }
@@ -200,7 +198,7 @@ internal sealed partial class MainWindow : Window
 
     private async void ChkAutoOrient_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (isUpdatingUiFromScan || isLoading || OriginalPhotos.Count == 0) return;
+        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
         SettingsManager.Instance.Save();
         await ReprocessCurrentScanAsync();
@@ -208,7 +206,7 @@ internal sealed partial class MainWindow : Window
 
     private async void ChkRestoreColors_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (isUpdatingUiFromScan || isLoading || OriginalPhotos.Count == 0) return;
+        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
         SettingsManager.Instance.Save();
         await ReprocessCurrentScanAsync();
@@ -216,7 +214,7 @@ internal sealed partial class MainWindow : Window
 
     private async void ChkRemoveDust_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (isUpdatingUiFromScan || isLoading || OriginalPhotos.Count == 0) return;
+        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
         SettingsManager.Instance.Save();
         await ReprocessCurrentScanAsync();
@@ -224,9 +222,10 @@ internal sealed partial class MainWindow : Window
 
     private async Task ReprocessCurrentScanAsync()
     {
-        if (isLoading || OriginalPhotos.Count == 0) return;
+        if (isLoading || ScanSessions.Count == 0) return;
 
-        var photo = OriginalPhotos[currentIndex];
+        var session = ScanSessions[currentIndex];
+        var photo = session.Activate();
         photo.ApplyOptions(GetDetectionOptionsFromUi());
 
         string reprocessingMsg = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
@@ -292,25 +291,21 @@ internal sealed partial class MainWindow : Window
 
     private async Task LoadPhotosToGuiAsync()
     {
-        if (OriginalPhotos.Count == 0 || isLoading) return;
+        if (ScanSessions.Count == 0 || isLoading) return;
 
-        string fileName = Path.GetFileName(OriginalPhotos[currentIndex].OriginalFilePath);
+        string fileName = Path.GetFileName(ScanSessions[currentIndex].FilePath);
         string processingMsg = Application.Current?.FindResource("ProcessingScan")?.ToString() ?? "Processing...";
 
         await ExecuteWithLoadingAsync($"{processingMsg} {fileName}", async () =>
         {
-            var currentPhoto = OriginalPhotos[currentIndex];
+            var session = ScanSessions[currentIndex];
+            var currentPhoto = await Task.Run(() => session.Activate());
             SyncUiWithScanOptions(currentPhoto.CurrentOptions);
-
-            if (currentPhoto.DetectedPhotos.Count == 0)
-            {
-                await Task.Run(() => currentPhoto.DetectPhotos());
-            }
 
             img.Source = MatBitmapConverter.ToAvaloniaBitmap(currentPhoto.OriginalWithDetected);
 
             string scanCounterFormat = Application.Current?.FindResource("ScanCounter")?.ToString() ?? "Scan {0} of {1}";
-            txtFileCounter.Text = string.Format(scanCounterFormat, currentIndex + 1, OriginalPhotos.Count);
+            txtFileCounter.Text = string.Format(scanCounterFormat, currentIndex + 1, ScanSessions.Count);
             lblStatus.Text = fileName;
 
             LoadCroppedPhotosToSlider();
@@ -328,7 +323,7 @@ internal sealed partial class MainWindow : Window
         slides.Items.Clear();
         if (lstGallery != null) lstGallery.Items.Clear();
 
-        var detected = OriginalPhotos[currentIndex].DetectedPhotos;
+        var detected = ScanSessions[currentIndex].Activate().DetectedPhotos;
         for (int i = 0; i < detected.Count; i++)
         {
             var mat = detected[i];
@@ -355,50 +350,75 @@ internal sealed partial class MainWindow : Window
 
     private async void BtnPrevScan_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || OriginalPhotos.Count == 0) return;
-        currentIndex = (currentIndex - 1 + OriginalPhotos.Count) % OriginalPhotos.Count;
+        if (isLoading || ScanSessions.Count == 0) return;
+        ScanSessions[currentIndex].Deactivate();
+        currentIndex = (currentIndex - 1 + ScanSessions.Count) % ScanSessions.Count;
         await LoadPhotosToGuiAsync();
     }
 
     private async void BtnNextScan_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || OriginalPhotos.Count == 0) return;
-        currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
+        if (isLoading || ScanSessions.Count == 0) return;
+        ScanSessions[currentIndex].Deactivate();
+        currentIndex = (currentIndex + 1) % ScanSessions.Count;
         await LoadPhotosToGuiAsync();
     }
 
     private async void BtnSaveImages_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || OriginalPhotos.Count == 0) return;
+        if (isLoading || ScanSessions.Count == 0) return;
 
         var settings = SettingsManager.Instance.Settings;
-        int grandTotal = OriginalPhotos.Sum(p => p.DetectedPhotos.Count);
-        int currentProgress = 0;
+        int totalScans = ScanSessions.Count;
+        int completedScans = 0;
+        int totalSavedPhotos = 0;
 
-        string savingMsg = Application.Current?.FindResource("MsgSavingProgress")?.ToString() ?? "Exporting photo {0} of {1}...";
+        string savingMsg = Application.Current?.FindResource("MsgSavingProgress")?.ToString() ?? "Exporting scan {0} of {1} ({2} photos saved)...";
         string msgFormat = Application.Current?.FindResource("MsgSaved")?.ToString() ?? "Successfully saved {0} photos to 'cropped' folders.";
 
-        await ExecuteWithLoadingAsync(string.Format(savingMsg, 1, Math.Max(1, grandTotal)), async () =>
+        int maxConcurrency = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
+
+        await ExecuteWithLoadingAsync(string.Format(savingMsg, 1, totalScans, 0), async () =>
         {
             await Task.Run(() =>
             {
-                Parallel.ForEach(OriginalPhotos, (originalPhoto) =>
+                Parallel.ForEach(ScanSessions, new ParallelOptions { MaxDegreeOfParallelism = maxConcurrency }, (session) =>
                 {
-                    originalPhoto.SaveDetectedPhotos(
-                        settings.CustomOutputDirectory,
-                        settings.PreferredFormat,
-                        settings.JpegQuality,
-                        (savedInScan, totalInScan) =>
+                    bool wasActive = session.IsActive;
+                    var engine = session.Activate();
+                    try
+                    {
+                        engine.SaveDetectedPhotos(
+                            settings.CustomOutputDirectory,
+                            settings.PreferredFormat,
+                            settings.JpegQuality);
+
+                        int savedCount = engine.DetectedPhotos.Count;
+                        Interlocked.Add(ref totalSavedPhotos, savedCount);
+                    }
+                    finally
+                    {
+                        if (!wasActive)
                         {
-                            int done = Interlocked.Increment(ref currentProgress);
-                            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                            {
-                                lblStatus.Text = string.Format(savingMsg, done, grandTotal);
-                            });
-                        });
+                            session.Deactivate();
+                        }
+                    }
+
+                    int done = Interlocked.Increment(ref completedScans);
+                    if (done % 15 == 0)
+                    {
+                        GC.Collect(1, GCCollectionMode.Optimized, false);
+                    }
+
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                    {
+                        lblStatus.Text = string.Format(savingMsg, done, totalScans, totalSavedPhotos);
+                    });
                 });
             });
-        }, string.Format(msgFormat, grandTotal));
+
+            PhotoCropper.Core.Utils.NotificationSound.PlayCompletionSound();
+        }, string.Format(msgFormat, totalSavedPhotos));
     }
 
     private void BtnDelete_Click(object? sender, RoutedEventArgs e)
@@ -409,11 +429,11 @@ internal sealed partial class MainWindow : Window
 
     private void DeleteCurrentPhoto()
     {
-        if (isLoading || OriginalPhotos.Count == 0 || slides == null) return;
+        if (isLoading || ScanSessions.Count == 0 || slides == null) return;
         int photoIndex = slides.SelectedIndex;
         if (photoIndex < 0) return;
 
-        var currentEngine = OriginalPhotos[currentIndex];
+        var currentEngine = ScanSessions[currentIndex].Activate();
         var matToDelete = currentEngine.DetectedPhotos[photoIndex];
         undoHistory.PushDelete(currentIndex, photoIndex, matToDelete);
 
@@ -436,7 +456,7 @@ internal sealed partial class MainWindow : Window
 
     private async Task RotateCurrentPhotoAsync()
     {
-        if (isLoading || OriginalPhotos.Count == 0 || slides.SelectedIndex < 0) return;
+        if (isLoading || ScanSessions.Count == 0 || slides.SelectedIndex < 0) return;
 
         int photoIndex = slides.SelectedIndex;
         undoHistory.PushRotate(currentIndex, photoIndex);
@@ -446,7 +466,7 @@ internal sealed partial class MainWindow : Window
 
         await ExecuteWithLoadingAsync(rotatingMsg, async () =>
         {
-            await Task.Run(() => OriginalPhotos[currentIndex].RotatePhoto(photoIndex));
+            await Task.Run(() => ScanSessions[currentIndex].Activate().RotatePhoto(photoIndex));
             LoadCroppedPhotosToSlider();
             slides.SelectedIndex = photoIndex;
         }, rotatedMsg);
@@ -457,7 +477,7 @@ internal sealed partial class MainWindow : Window
 
     private async void SldSensitivity_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
     {
-        if (isUpdatingUiFromScan || isLoading || OriginalPhotos.Count == 0) return;
+        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
 
         var settings = SettingsManager.Instance.Settings;
         settings.BackgroundTolerance = sldSensitivity.Value;
@@ -471,9 +491,9 @@ internal sealed partial class MainWindow : Window
 
     private async void BtnAutoTune_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || OriginalPhotos.Count == 0) return;
+        if (isLoading || ScanSessions.Count == 0) return;
 
-        var photo = OriginalPhotos[currentIndex];
+        var photo = ScanSessions[currentIndex].Activate();
         string tuningMsg = Application.Current?.FindResource("MsgAutoTuning")?.ToString() ?? "Auto-tuning detection parameters...";
 
         await ExecuteWithLoadingAsync(tuningMsg, async () =>
@@ -605,21 +625,21 @@ internal sealed partial class MainWindow : Window
 
     private void UpdatePhotoCounterLabel()
     {
-        if (lblPhotoInfo == null || slides == null || OriginalPhotos.Count == 0 || currentIndex >= OriginalPhotos.Count)
+        if (lblPhotoInfo == null || slides == null || ScanSessions.Count == 0 || currentIndex >= ScanSessions.Count)
         {
             if (lblPhotoInfo != null) lblPhotoInfo.Text = "";
             return;
         }
 
-        var currentPhoto = OriginalPhotos[currentIndex];
-        if (currentPhoto.DetectedPhotos.Count == 0)
+        var session = ScanSessions[currentIndex];
+        int total = session.PhotoCount;
+        if (total == 0)
         {
             lblPhotoInfo.Text = "";
             return;
         }
 
         int current = slides.SelectedIndex + 1;
-        int total = currentPhoto.DetectedPhotos.Count;
         string format = Application.Current?.FindResource("PhotoCounter")?.ToString() ?? "PHOTO {0} OF {1}";
         lblPhotoInfo.Text = string.Format(format, current, total);
     }
@@ -636,21 +656,23 @@ internal sealed partial class MainWindow : Window
 
     private async void PerformUndo()
     {
-        if (OriginalPhotos.Count == 0 || !undoHistory.CanUndo) return;
+        if (ScanSessions.Count == 0 || !undoHistory.CanUndo) return;
 
-        var action = undoHistory.Undo(OriginalPhotos);
+        var action = undoHistory.Undo(idx => idx >= 0 && idx < ScanSessions.Count ? ScanSessions[idx].Activate() : null);
         if (action != null)
         {
-            if (action.ScanIndex != currentIndex && action.ScanIndex >= 0 && action.ScanIndex < OriginalPhotos.Count)
+            if (action.ScanIndex != currentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
             {
+                ScanSessions[currentIndex].Deactivate();
                 currentIndex = action.ScanIndex;
                 await LoadPhotosToGuiAsync();
             }
             else
             {
-                int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, OriginalPhotos[currentIndex].DetectedPhotos.Count - 1)) : 0;
+                var engine = ScanSessions[currentIndex].Activate();
+                int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, engine.DetectedPhotos.Count - 1)) : 0;
                 LoadCroppedPhotosToSlider();
-                if (slides != null && OriginalPhotos[currentIndex].DetectedPhotos.Count > 0)
+                if (slides != null && engine.DetectedPhotos.Count > 0)
                 {
                     slides.SelectedIndex = selected;
                 }
@@ -662,21 +684,23 @@ internal sealed partial class MainWindow : Window
 
     private async void PerformRedo()
     {
-        if (OriginalPhotos.Count == 0 || !undoHistory.CanRedo) return;
+        if (ScanSessions.Count == 0 || !undoHistory.CanRedo) return;
 
-        var action = undoHistory.Redo(OriginalPhotos);
+        var action = undoHistory.Redo(idx => idx >= 0 && idx < ScanSessions.Count ? ScanSessions[idx].Activate() : null);
         if (action != null)
         {
-            if (action.ScanIndex != currentIndex && action.ScanIndex >= 0 && action.ScanIndex < OriginalPhotos.Count)
+            if (action.ScanIndex != currentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
             {
+                ScanSessions[currentIndex].Deactivate();
                 currentIndex = action.ScanIndex;
                 await LoadPhotosToGuiAsync();
             }
             else
             {
-                int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, OriginalPhotos[currentIndex].DetectedPhotos.Count - 1)) : 0;
+                var engine = ScanSessions[currentIndex].Activate();
+                int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, engine.DetectedPhotos.Count - 1)) : 0;
                 LoadCroppedPhotosToSlider();
-                if (slides != null && OriginalPhotos[currentIndex].DetectedPhotos.Count > 0)
+                if (slides != null && engine.DetectedPhotos.Count > 0)
                 {
                     slides.SelectedIndex = selected;
                 }
@@ -742,7 +766,7 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        if (OriginalPhotos.Count == 0) return;
+        if (ScanSessions.Count == 0) return;
 
         var key = e.Key;
         if (key == Avalonia.Input.Key.OemPlus) key = Avalonia.Input.Key.Add;
@@ -754,7 +778,8 @@ internal sealed partial class MainWindow : Window
             case Avalonia.Input.Key.Up:
             case Avalonia.Input.Key.PageUp:
                 FocusManager?.Focus(null);
-                currentIndex = (currentIndex - 1 + OriginalPhotos.Count) % OriginalPhotos.Count;
+                ScanSessions[currentIndex].Deactivate();
+                currentIndex = (currentIndex - 1 + ScanSessions.Count) % ScanSessions.Count;
                 await LoadPhotosToGuiAsync();
                 e.Handled = true;
                 break;
@@ -762,7 +787,8 @@ internal sealed partial class MainWindow : Window
             case Avalonia.Input.Key.Down:
             case Avalonia.Input.Key.PageDown:
                 FocusManager?.Focus(null);
-                currentIndex = (currentIndex + 1) % OriginalPhotos.Count;
+                ScanSessions[currentIndex].Deactivate();
+                currentIndex = (currentIndex + 1) % ScanSessions.Count;
                 await LoadPhotosToGuiAsync();
                 e.Handled = true;
                 break;
@@ -794,10 +820,10 @@ internal sealed partial class MainWindow : Window
 
             case Avalonia.Input.Key.Space:
             case Avalonia.Input.Key.B:
-                if (!isComparingRaw && OriginalPhotos.Count > 0 && slides != null && slides.SelectedIndex >= 0)
+                if (!isComparingRaw && ScanSessions.Count > 0 && slides != null && slides.SelectedIndex >= 0)
                 {
                     int sel = slides.SelectedIndex;
-                    var engine = OriginalPhotos[currentIndex];
+                    var engine = ScanSessions[currentIndex].Activate();
                     if (sel < engine.RawDetectedPhotos.Count)
                     {
                         isComparingRaw = true;
@@ -841,10 +867,10 @@ internal sealed partial class MainWindow : Window
         if (isComparingRaw && (e.Key == Avalonia.Input.Key.Space || e.Key == Avalonia.Input.Key.B))
         {
             isComparingRaw = false;
-            if (OriginalPhotos.Count > 0 && slides != null && slides.SelectedIndex >= 0)
+            if (ScanSessions.Count > 0 && slides != null && slides.SelectedIndex >= 0)
             {
                 int sel = slides.SelectedIndex;
-                var engine = OriginalPhotos[currentIndex];
+                var engine = ScanSessions[currentIndex].Activate();
                 if (sel < engine.DetectedPhotos.Count)
                 {
                     slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.DetectedPhotos[sel]);
@@ -921,7 +947,7 @@ internal sealed partial class MainWindow : Window
 
     private void PnlOriginal_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
-        if (OriginalPhotos.Count == 0) return;
+        if (ScanSessions.Count == 0) return;
 
         if (tglColorPicker?.IsChecked == true)
         {
@@ -955,7 +981,6 @@ internal sealed partial class MainWindow : Window
         if (!isDragging) return;
         isDragging = false;
         rectCrop.IsVisible = false;
-
         var rect = CoordinateMapper.ComputeNormalizedRect(startPoint, e.GetPosition(pnlOriginal));
         if (rect.Width < 5 || rect.Height < 5) return;
 
@@ -964,7 +989,7 @@ internal sealed partial class MainWindow : Window
 
     private async void ApplyManualCrop(Rect uiRect)
     {
-        var photo = OriginalPhotos[currentIndex];
+        var photo = ScanSessions[currentIndex].Activate();
         var imageRect = GetImageRectInsideControl();
         var originalSize = new System.Drawing.Size(photo.Original.Width, photo.Original.Height);
         var cropRect = CoordinateMapper.MapUiRectToImageRect(uiRect, imageRect, originalSize);
@@ -1010,10 +1035,10 @@ internal sealed partial class MainWindow : Window
 
     private void StartRefineMode()
     {
-        if (OriginalPhotos.Count == 0 || slides == null || slides.SelectedIndex < 0) return;
+        if (ScanSessions.Count == 0 || slides == null || slides.SelectedIndex < 0) return;
         int photoIndex = slides.SelectedIndex;
 
-        var photoCropper = OriginalPhotos[currentIndex];
+        var photoCropper = ScanSessions[currentIndex].Activate();
         currentRefineRect = photoCropper.GetRefinedCropRect(photoIndex);
 
         if (currentRefineRect.IsEmpty || currentRefineRect.Width <= 10 || currentRefineRect.Height <= 10)
@@ -1030,10 +1055,10 @@ internal sealed partial class MainWindow : Window
 
     private void UpdateRefinePreview()
     {
-        if (OriginalPhotos.Count == 0 || slides == null || slides.SelectedIndex < 0) return;
+        if (ScanSessions.Count == 0 || slides == null || slides.SelectedIndex < 0) return;
         int photoIndex = slides.SelectedIndex;
 
-        var photoCropper = OriginalPhotos[currentIndex];
+        var photoCropper = ScanSessions[currentIndex].Activate();
         using Mat previewMat = photoCropper.DetectedPhotos[photoIndex].Clone();
 
         System.Drawing.Rectangle drawRect = currentRefineRect;
@@ -1077,7 +1102,7 @@ internal sealed partial class MainWindow : Window
 
         var imageRect = GetRefineImageRectInsideControl();
         int photoIndex = slides.SelectedIndex;
-        var photo = OriginalPhotos[currentIndex].DetectedPhotos[photoIndex];
+        var photo = ScanSessions[currentIndex].Activate().DetectedPhotos[photoIndex];
         var photoSize = new System.Drawing.Size(photo.Width, photo.Height);
 
         currentRefineRect = CoordinateMapper.MapUiRectToImageRect(uiRect, imageRect, photoSize);
@@ -1114,7 +1139,7 @@ internal sealed partial class MainWindow : Window
         string applyingMsg = Application.Current?.FindResource("MsgApplyingRefine")?.ToString() ?? "Applying refinement...";
         string successMsg = Application.Current?.FindResource("MsgRefineSuccess")?.ToString() ?? "Crop refined successfully.";
 
-        var currentEngine = OriginalPhotos[currentIndex];
+        var currentEngine = ScanSessions[currentIndex].Activate();
         var beforeMat = currentEngine.DetectedPhotos[photoIndex].Clone();
 
         await ExecuteWithLoadingAsync(applyingMsg, async () =>
@@ -1162,9 +1187,9 @@ internal sealed partial class MainWindow : Window
 
         SyncUiWithScanOptions(defaultOptions);
 
-        if (OriginalPhotos.Count > 0)
+        if (ScanSessions.Count > 0)
         {
-            var photo = OriginalPhotos[currentIndex];
+            var photo = ScanSessions[currentIndex].Activate();
             photo.ApplyOptions(defaultOptions);
 
             string reprocessingMsg = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
@@ -1190,8 +1215,8 @@ internal sealed partial class MainWindow : Window
 
     private async void SampleBackgroundColorAtPointer(Point uiPoint)
     {
-        if (OriginalPhotos.Count == 0 || tglColorPicker == null || btnResetBackground == null) return;
-        var photo = OriginalPhotos[currentIndex];
+        if (ScanSessions.Count == 0 || tglColorPicker == null || btnResetBackground == null) return;
+        var photo = ScanSessions[currentIndex].Activate();
         var imageRect = GetImageRectInsideControl();
         var originalSize = new System.Drawing.Size(photo.Original.Width, photo.Original.Height);
         var pixel = CoordinateMapper.MapUiPointToImagePixel(uiPoint, imageRect, originalSize);
@@ -1216,8 +1241,8 @@ internal sealed partial class MainWindow : Window
 
     private async void BtnResetBackground_Click(object? sender, RoutedEventArgs e)
     {
-        if (OriginalPhotos.Count == 0 || btnResetBackground == null) return;
-        var photo = OriginalPhotos[currentIndex];
+        if (ScanSessions.Count == 0 || btnResetBackground == null) return;
+        var photo = ScanSessions[currentIndex].Activate();
 
         photo.CustomBackgroundColorHsv = null;
         btnResetBackground.IsEnabled = false;
@@ -1259,10 +1284,10 @@ internal sealed partial class MainWindow : Window
 
         base.OnClosed(e);
         undoHistory.Dispose();
-        foreach (var photo in OriginalPhotos)
+        foreach (var session in ScanSessions)
         {
-            photo.Dispose();
+            session.Dispose();
         }
-        OriginalPhotos.Clear();
+        ScanSessions.Clear();
     }
 }

@@ -14,6 +14,8 @@ internal static class Program
     internal static int Main(string[] args)
     {
         ArgumentNullException.ThrowIfNull(args);
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        Console.InputEncoding = System.Text.Encoding.UTF8;
 
         if (args.Length == 0 || args.Contains("-h") || args.Contains("--help"))
         {

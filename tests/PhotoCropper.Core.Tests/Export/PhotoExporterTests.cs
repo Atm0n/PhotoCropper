@@ -74,6 +74,36 @@ public sealed class PhotoExporterTests : IDisposable
         exportedPngs.Length.ShouldBe(1);
     }
 
+    [Fact]
+    public void SavePhotos_AndEngine_ShouldSupportUnicodeAndAccentedPaths()
+    {
+        string unicodeScanPath = Path.Combine(_tempDir, "IMG_2026_còpia (24) - 日本語_тест.jpg");
+        using (Mat scan = new(200, 200, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(128, 128, 128));
+            using Emgu.CV.Util.VectorOfByte buf = new();
+            CvInvoke.Imencode(".jpg", scan, buf);
+            File.WriteAllBytes(unicodeScanPath, buf.ToArray());
+        }
+
+        using (PhotoCropperEngine engine = new(unicodeScanPath))
+        {
+            engine.Original.IsEmpty.ShouldBeFalse();
+            engine.Original.Width.ShouldBe(200);
+            engine.Original.Height.ShouldBe(200);
+        }
+
+        using Mat photo = new(50, 50, DepthType.Cv8U, 3);
+        photo.SetTo(new MCvScalar(255, 0, 0));
+
+        string exportDir = Path.Combine(_tempDir, "export_còpia_folder");
+        PhotoExporter.SavePhotos([photo], unicodeScanPath, exportDir, "JPEG", 90);
+
+        string[] exported = Directory.GetFiles(exportDir, "*.jpg");
+        exported.Length.ShouldBe(1);
+        Path.GetFileName(exported[0]).ShouldContain("còpia");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

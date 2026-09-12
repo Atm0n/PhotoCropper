@@ -53,6 +53,7 @@ internal static class BatchProcessor
 
         int totalExtracted = 0;
         int errorCount = 0;
+        int completedScans = 0;
         var undetectedScans = new ConcurrentBag<string>();
         var totalStopwatch = Stopwatch.StartNew();
 
@@ -135,12 +136,18 @@ internal static class BatchProcessor
                         finally
                         {
                             progressTask.Increment(1);
+                            int done = Interlocked.Increment(ref completedScans);
+                            if (done % 25 == 0)
+                            {
+                                GC.Collect(1, GCCollectionMode.Optimized, false);
+                            }
                         }
                     });
                 });
         }
 
         totalStopwatch.Stop();
+        PhotoCropper.Core.Utils.NotificationSound.PlayCompletionSound();
 
         // Process undetected audit log & isolation
         if (!undetectedScans.IsEmpty)

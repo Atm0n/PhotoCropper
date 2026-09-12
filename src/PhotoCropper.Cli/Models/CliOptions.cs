@@ -13,7 +13,7 @@ internal sealed class CliOptions
     public bool AutoOrient { get; set; } = true;
     public bool RestoreColors { get; set; } = true;
     public bool RemoveDust { get; set; } = true;
-    public int Threads { get; set; } = Math.Max(1, Environment.ProcessorCount);
+    public int Threads { get; set; } = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
     public bool Recursive { get; set; }
     public bool Verbose { get; set; }
     public bool AutoTune { get; set; }

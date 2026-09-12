@@ -244,12 +244,19 @@ internal sealed class UndoRedoHistory : IDisposable
     public IUndoableAction? Undo(IReadOnlyList<PhotoCropperEngine> engines)
     {
         ArgumentNullException.ThrowIfNull(engines);
+        return Undo(idx => idx >= 0 && idx < engines.Count ? engines[idx] : null);
+    }
+
+    public IUndoableAction? Undo(Func<int, PhotoCropperEngine?> engineAccessor)
+    {
+        ArgumentNullException.ThrowIfNull(engineAccessor);
         if (_undoStack.Count == 0) return null;
 
         var action = _undoStack.Pop();
-        if (action.ScanIndex >= 0 && action.ScanIndex < engines.Count)
+        var engine = engineAccessor(action.ScanIndex);
+        if (engine != null)
         {
-            action.Undo(engines[action.ScanIndex]);
+            action.Undo(engine);
         }
         _redoStack.Push(action);
         return action;
@@ -258,12 +265,19 @@ internal sealed class UndoRedoHistory : IDisposable
     public IUndoableAction? Redo(IReadOnlyList<PhotoCropperEngine> engines)
     {
         ArgumentNullException.ThrowIfNull(engines);
+        return Redo(idx => idx >= 0 && idx < engines.Count ? engines[idx] : null);
+    }
+
+    public IUndoableAction? Redo(Func<int, PhotoCropperEngine?> engineAccessor)
+    {
+        ArgumentNullException.ThrowIfNull(engineAccessor);
         if (_redoStack.Count == 0) return null;
 
         var action = _redoStack.Pop();
-        if (action.ScanIndex >= 0 && action.ScanIndex < engines.Count)
+        var engine = engineAccessor(action.ScanIndex);
+        if (engine != null)
         {
-            action.Redo(engines[action.ScanIndex]);
+            action.Redo(engine);
         }
         _undoStack.Push(action);
         return action;
