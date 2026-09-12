@@ -166,6 +166,6 @@ internal static class CommandLineParser
 
     public static void PrintVersion()
     {
-        Console.WriteLine("PhotoCropper CLI v2.1.0 (.NET 10 / OpenCV)");
+        Console.WriteLine("PhotoCropper CLI v2.2.0 (.NET 10 / OpenCV)");
     }
 }
