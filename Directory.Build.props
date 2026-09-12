@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Version>2.2.0</Version>
+    <Version>2.3.0</Version>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest-All</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
