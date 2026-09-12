@@ -54,12 +54,18 @@
 					</StackPanel>
 
 					<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
-						<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+						<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
 							<TextBlock Text="{DynamicResource LblDetectionSensitivity}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#aaaaaa"/>
-							<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="25" Width="150" 
+							<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="25" Width="120" 
 									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
 							<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" 
-									   VerticalAlignment="Center" Width="40" FontWeight="Bold"/>
+									   VerticalAlignment="Center" Width="35" FontWeight="Bold"/>
+							<Button x:Name="btnAutoTune" Click="BtnAutoTune_Click" Padding="10,6" Background="#2a5a8c" ToolTip.Tip="{DynamicResource TipAutoTune}" Focusable="False">
+								<StackPanel Orientation="Horizontal" Spacing="5">
+									<TextBlock Text="⚡"/>
+									<TextBlock Text="{DynamicResource BtnAutoTune}" FontSize="11" FontWeight="SemiBold"/>
+								</StackPanel>
+							</Button>
 						</StackPanel>
 
 						<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">

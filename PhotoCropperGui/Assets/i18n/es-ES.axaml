@@ -95,5 +95,9 @@
 	<sys:String x:Key="BtnSampleBackground">Muestrear Fondo</sys:String>
 	<sys:String x:Key="BtnResetBackground">Fondo Automático</sys:String>
 	<sys:String x:Key="MsgClickToSample">Haga clic en cualquier parte del fondo del escaneo para muestrear su color...</sys:String>
-	<sys:String x:Key="MsgBackgroundSampled">Color de fondo personalizado aplicado.</sys:String>
+	<sys:String x:Key="BtnAutoTune">Auto-Ajustar</sys:String>
+	<sys:String x:Key="TipAutoTune">Busca automáticamente los parámetros de detección óptimos para este escaneo.</sys:String>
+	<sys:String x:Key="MsgAutoTuning">Auto-ajustando parámetros de detección...</sys:String>
+	<sys:String x:Key="MsgAutoTuneSuccess">Auto-ajustado: se encontraron {0} fotos (Tolerancia: {1:0}, Borde: {2:0}).</sys:String>
+	<sys:String x:Key="MsgAutoTuneFailed">El auto-ajuste no encontró fotos adicionales.</sys:String>
 </ResourceDictionary>

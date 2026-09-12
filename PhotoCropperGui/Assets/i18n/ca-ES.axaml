@@ -95,5 +95,9 @@
 	<sys:String x:Key="BtnSampleBackground">Mostrejar Fons</sys:String>
 	<sys:String x:Key="BtnResetBackground">Fons Automàtic</sys:String>
 	<sys:String x:Key="MsgClickToSample">Faci clic a qualsevol part del fons de l'escaneig per mostrejar-ne el color...</sys:String>
-	<sys:String x:Key="MsgBackgroundSampled">Color de fons personalitzat aplicat.</sys:String>
+	<sys:String x:Key="BtnAutoTune">Auto-Ajustar</sys:String>
+	<sys:String x:Key="TipAutoTune">Cerca automàticament els paràmetres de detecció òptims per a aquest escaneig.</sys:String>
+	<sys:String x:Key="MsgAutoTuning">Auto-ajustant paràmetres de detecció...</sys:String>
+	<sys:String x:Key="MsgAutoTuneSuccess">Auto-ajustat: s'han trobat {0} fotos (Tolerància: {1:0}, Vora: {2:0}).</sys:String>
+	<sys:String x:Key="MsgAutoTuneFailed">L'auto-ajust no ha trobat fotos addicionals.</sys:String>
 </ResourceDictionary>

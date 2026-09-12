@@ -23,6 +23,7 @@ internal sealed partial class MainWindow : Window
     private bool isLoading;
     private bool isComparingRaw;
     private bool isSyncingSelection;
+    private bool isUpdatingUiFromScan;
 
     public MainWindow()
     {
@@ -162,6 +163,26 @@ internal sealed partial class MainWindow : Window
         }
     }
 
+    private void SyncUiWithScanOptions(DetectionOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        isUpdatingUiFromScan = true;
+        try
+        {
+            sldSensitivity.Value = options.BackgroundTolerance;
+            sldMinArea.Value = options.MinAreaFactor * 100.0;
+            sldMaxArea.Value = options.MaxAreaFactor * 100.0;
+            sldEdge.Value = options.CannyLowThreshold;
+            if (chkAutoOrient != null) chkAutoOrient.IsChecked = options.AutoOrientPhotos;
+            if (chkRestoreColors != null) chkRestoreColors.IsChecked = options.RestoreVintageColors;
+            if (chkRemoveDust != null) chkRemoveDust.IsChecked = options.RemoveDustAndScratches;
+        }
+        finally
+        {
+            isUpdatingUiFromScan = false;
+        }
+    }
+
     private DetectionOptions GetDetectionOptionsFromUi()
     {
         return new DetectionOptions
@@ -179,6 +200,7 @@ internal sealed partial class MainWindow : Window
 
     private async void ChkAutoOrient_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
+        if (isUpdatingUiFromScan || isLoading || OriginalPhotos.Count == 0) return;
         SettingsManager.Instance.Settings.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
         SettingsManager.Instance.Save();
         await ReprocessCurrentScanAsync();
@@ -186,6 +208,7 @@ internal sealed partial class MainWindow : Window
 
     private async void ChkRestoreColors_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
+        if (isUpdatingUiFromScan || isLoading || OriginalPhotos.Count == 0) return;
         SettingsManager.Instance.Settings.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
         SettingsManager.Instance.Save();
         await ReprocessCurrentScanAsync();
@@ -193,6 +216,7 @@ internal sealed partial class MainWindow : Window
 
     private async void ChkRemoveDust_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
+        if (isUpdatingUiFromScan || isLoading || OriginalPhotos.Count == 0) return;
         SettingsManager.Instance.Settings.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
         SettingsManager.Instance.Save();
         await ReprocessCurrentScanAsync();
@@ -209,7 +233,9 @@ internal sealed partial class MainWindow : Window
         await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
         {
             await Task.Run(() => photo.DetectPhotos());
-            await LoadPhotosToGuiAsync();
+            img.Source = MatBitmapConverter.ToAvaloniaBitmap(photo.OriginalWithDetected);
+            LoadCroppedPhotosToSlider();
+            UpdatePhotoCounterLabel();
             string msgFormat = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
             lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
         });
@@ -274,7 +300,7 @@ internal sealed partial class MainWindow : Window
         await ExecuteWithLoadingAsync($"{processingMsg} {fileName}", async () =>
         {
             var currentPhoto = OriginalPhotos[currentIndex];
-            currentPhoto.ApplyOptions(GetDetectionOptionsFromUi());
+            SyncUiWithScanOptions(currentPhoto.CurrentOptions);
 
             if (currentPhoto.DetectedPhotos.Count == 0)
             {
@@ -431,7 +457,7 @@ internal sealed partial class MainWindow : Window
 
     private async void SldSensitivity_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
     {
-        if (isLoading || OriginalPhotos.Count == 0) return;
+        if (isUpdatingUiFromScan || isLoading || OriginalPhotos.Count == 0) return;
 
         var settings = SettingsManager.Instance.Settings;
         settings.BackgroundTolerance = sldSensitivity.Value;
@@ -441,6 +467,33 @@ internal sealed partial class MainWindow : Window
         SettingsManager.Instance.Save();
 
         await ReprocessCurrentScanAsync();
+    }
+
+    private async void BtnAutoTune_Click(object? sender, RoutedEventArgs e)
+    {
+        if (isLoading || OriginalPhotos.Count == 0) return;
+
+        var photo = OriginalPhotos[currentIndex];
+        string tuningMsg = Application.Current?.FindResource("MsgAutoTuning")?.ToString() ?? "Auto-tuning detection parameters...";
+
+        await ExecuteWithLoadingAsync(tuningMsg, async () =>
+        {
+            var result = await Task.Run(() => photo.AutoTune());
+            SyncUiWithScanOptions(photo.CurrentOptions);
+            img.Source = MatBitmapConverter.ToAvaloniaBitmap(photo.OriginalWithDetected);
+            LoadCroppedPhotosToSlider();
+            UpdatePhotoCounterLabel();
+
+            if (result.Improved || result.PhotoCount > 0)
+            {
+                string successFormat = Application.Current?.FindResource("MsgAutoTuneSuccess")?.ToString() ?? "Auto-tuned: found {0} photos (Tolerance: {1:0}, Edge: {2:0}).";
+                lblStatus.Text = string.Format(successFormat, result.PhotoCount, result.BestOptions.BackgroundTolerance, result.BestOptions.CannyLowThreshold);
+            }
+            else
+            {
+                lblStatus.Text = Application.Current?.FindResource("MsgAutoTuneFailed")?.ToString() ?? "Auto-tune did not find additional photos.";
+            }
+        });
     }
 
     private void CbFormat_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1089,29 +1142,32 @@ internal sealed partial class MainWindow : Window
 
         SettingsManager.Instance.ResetDetectionDefaults();
         var settings = SettingsManager.Instance.Settings;
-        sldSensitivity.Value = settings.BackgroundTolerance;
-        sldMinArea.Value = settings.MinAreaFactor;
-        sldMaxArea.Value = settings.MaxAreaFactor;
-        sldEdge.Value = settings.CannyLowThreshold;
-        if (chkAutoOrient != null)
+        var defaultOptions = new DetectionOptions
         {
-            chkAutoOrient.IsChecked = settings.AutoOrientPhotos;
-        }
-        if (chkRestoreColors != null)
-        {
-            chkRestoreColors.IsChecked = settings.RestoreVintageColors;
-        }
+            BackgroundTolerance = settings.BackgroundTolerance,
+            MinAreaFactor = settings.MinAreaFactor / 100.0,
+            MaxAreaFactor = settings.MaxAreaFactor / 100.0,
+            CannyLowThreshold = settings.CannyLowThreshold,
+            CannyHighThreshold = settings.CannyLowThreshold * 2.5,
+            AutoOrientPhotos = settings.AutoOrientPhotos,
+            RestoreVintageColors = settings.RestoreVintageColors,
+            RemoveDustAndScratches = settings.RemoveDustAndScratches
+        };
+
+        SyncUiWithScanOptions(defaultOptions);
 
         if (OriginalPhotos.Count > 0)
         {
             var photo = OriginalPhotos[currentIndex];
-            photo.ApplyOptions(GetDetectionOptionsFromUi());
+            photo.ApplyOptions(defaultOptions);
 
             string reprocessingMsg = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
             await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
             {
                 await Task.Run(() => photo.DetectPhotos());
-                await LoadPhotosToGuiAsync();
+                img.Source = MatBitmapConverter.ToAvaloniaBitmap(photo.OriginalWithDetected);
+                LoadCroppedPhotosToSlider();
+                UpdatePhotoCounterLabel();
                 string msgFormat = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
                 lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
             });

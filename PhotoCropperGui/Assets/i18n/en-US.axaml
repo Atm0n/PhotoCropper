@@ -95,5 +95,9 @@
 	<sys:String x:Key="BtnSampleBackground">Sample Background</sys:String>
 	<sys:String x:Key="BtnResetBackground">Auto Background</sys:String>
 	<sys:String x:Key="MsgClickToSample">Click anywhere on the background of the scan to sample its color...</sys:String>
-	<sys:String x:Key="MsgBackgroundSampled">Custom background color applied.</sys:String>
+	<sys:String x:Key="BtnAutoTune">Auto-Tune</sys:String>
+	<sys:String x:Key="TipAutoTune">Automatically search for optimal detection parameters for this scan.</sys:String>
+	<sys:String x:Key="MsgAutoTuning">Auto-tuning detection parameters...</sys:String>
+	<sys:String x:Key="MsgAutoTuneSuccess">Auto-tuned: found {0} photos (Tolerance: {1:0}, Edge: {2:0}).</sys:String>
+	<sys:String x:Key="MsgAutoTuneFailed">Auto-tune did not find additional photos.</sys:String>
 </ResourceDictionary>

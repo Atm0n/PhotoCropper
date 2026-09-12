@@ -97,6 +97,14 @@ internal static class CommandLineParser
             {
                 options.RemoveDust = false;
             }
+            else if (arg == "--auto-tune")
+            {
+                options.AutoTune = true;
+            }
+            else if (arg is "--copy-undetected" or "--isolate-undetected" && i + 1 < args.Length)
+            {
+                options.CopyUndetectedDirectory = args[++i];
+            }
             else if (arg is "-i" or "--input" && i + 1 < args.Length)
             {
                 options.Inputs.Add(args[++i]);
@@ -127,6 +135,8 @@ internal static class CommandLineParser
         Console.WriteLine("  --min-size <percent>    Minimum photo size as % of scan area (default: 15)");
         Console.WriteLine("  --max-size <percent>    Maximum photo size as % of scan area (default: 90)");
         Console.WriteLine("  --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)");
+        Console.WriteLine("  --auto-tune             Automatically search optimal detection parameters on difficult scans");
+        Console.WriteLine("  --copy-undetected <dir> Copy undetected scans with 0 photos to a designated review directory");
         Console.WriteLine("  --auto-orient           Enable AI face & landscape auto-orientation detection (default: on)");
         Console.WriteLine("  --no-auto-orient        Disable auto-orientation detection and preserve raw scanner placement");
         Console.WriteLine("  --restore-colors        Enable auto-white balance, contrast & vibrancy color restoration (default: on)");
