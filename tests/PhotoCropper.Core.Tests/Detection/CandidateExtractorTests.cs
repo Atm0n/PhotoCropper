@@ -1,10 +1,10 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using PhotoCropper.Detection;
+using PhotoCropper.Core.Detection;
 using System.Drawing;
 
-namespace PhotoCropper.Tests.Detection;
+namespace PhotoCropper.Core.Tests.Detection;
 
 public sealed class CandidateExtractorTests
 {
@@ -17,10 +17,10 @@ public sealed class CandidateExtractorTests
 
         var candidates = CandidateExtractor.ExtractCandidates(mask, 0, 500, 500, 0.01, 0.90);
 
-        Assert.Single(candidates);
-        Assert.InRange(candidates[0].Area, 38000, 42000);
-        Assert.True(candidates[0].Rectangularity >= 0.9);
-        Assert.True(candidates[0].Convexity >= 0.95);
+        candidates.ShouldHaveSingleItem();
+        candidates[0].Area.ShouldBeInRange(38000, 42000);
+        candidates[0].Rectangularity.ShouldBeGreaterThanOrEqualTo(0.9);
+        candidates[0].Convexity.ShouldBeGreaterThanOrEqualTo(0.95);
     }
 
     [Fact]
@@ -33,6 +33,6 @@ public sealed class CandidateExtractorTests
 
         var candidates = CandidateExtractor.ExtractCandidates(mask, 0, 500, 500, 0.001, 0.90);
 
-        Assert.Empty(candidates);
+        candidates.ShouldBeEmpty();
     }
 }

@@ -1,6 +1,6 @@
-using PhotoCropper.Models;
+using PhotoCropper.Core.Models;
 
-namespace PhotoCropper.Detection;
+namespace PhotoCropper.Core.Detection;
 
 public sealed record AutoTuneResult(
     DetectionOptions BestOptions,

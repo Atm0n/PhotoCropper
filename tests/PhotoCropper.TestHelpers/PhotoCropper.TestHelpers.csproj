@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Emgu.CV" />
+		<PackageReference Include="Emgu.CV.Bitmap" />
+		<PackageReference Include="Emgu.CV.runtime.windows" />
+		<PackageReference Include="Emgu.CV.runtime.ubuntu-24.04-x64" />
+	</ItemGroup>
+
+</Project>

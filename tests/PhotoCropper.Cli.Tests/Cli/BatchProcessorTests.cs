@@ -1,11 +1,11 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using PhotoCropper.Tests.Helpers;
-using PhotoCropperCli.Models;
-using PhotoCropperCli.Services;
+using PhotoCropper.Cli.Models;
+using PhotoCropper.Cli.Services;
+using PhotoCropper.TestHelpers;
 
-namespace PhotoCropper.Tests.Cli;
+namespace PhotoCropper.Cli.Tests.Cli;
 
 public sealed class BatchProcessorTests : IDisposable
 {
@@ -41,10 +41,10 @@ public sealed class BatchProcessorTests : IDisposable
         };
 
         int exitCode = BatchProcessor.Execute(options, [scan1Path, scan2Path]);
-        Assert.Equal(0, exitCode);
+        exitCode.ShouldBe(0);
 
         string[] exportedJpegs = Directory.GetFiles(outputDir, "*.jpg");
-        Assert.True(exportedJpegs.Length >= 4);
+        exportedJpegs.Length.ShouldBeGreaterThanOrEqualTo(4);
     }
 
     [Fact]
@@ -77,17 +77,17 @@ public sealed class BatchProcessorTests : IDisposable
         };
 
         int exitCode = BatchProcessor.Execute(options, [detectedScanPath, emptyScanPath]);
-        Assert.Equal(0, exitCode);
+        exitCode.ShouldBe(0);
 
         // Verify audit log exists and lists blank scan
         string auditLogFile = Path.Combine(outputDir, "undetected_scans.txt");
-        Assert.True(File.Exists(auditLogFile));
+        File.Exists(auditLogFile).ShouldBeTrue();
         string auditContent = File.ReadAllText(auditLogFile);
-        Assert.Contains("blank_scan.jpg", auditContent, StringComparison.Ordinal);
+        auditContent.ShouldContain("blank_scan.jpg");
 
         // Verify isolated copy was copied to isolateDir
         string isolatedFile = Path.Combine(isolateDir, "blank_scan.jpg");
-        Assert.True(File.Exists(isolatedFile));
+        File.Exists(isolatedFile).ShouldBeTrue();
     }
 
     [Fact]
@@ -107,10 +107,10 @@ public sealed class BatchProcessorTests : IDisposable
         };
 
         int exitCode = BatchProcessor.Execute(options, [lowContrastScanPath]);
-        Assert.Equal(0, exitCode);
+        exitCode.ShouldBe(0);
 
         string[] files = Directory.GetFiles(outputDir, "*.jpg");
-        Assert.True(files.Length >= 1);
+        files.Length.ShouldBeGreaterThanOrEqualTo(1);
     }
 
     public void Dispose()

@@ -1,10 +1,10 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using PhotoCropper.Detection;
+using PhotoCropper.Core.Detection;
 using System.Drawing;
 
-namespace PhotoCropper.Tests.Detection;
+namespace PhotoCropper.Core.Tests.Detection;
 
 public sealed class BackgroundAnalyzerTests
 {
@@ -17,7 +17,7 @@ public sealed class BackgroundAnalyzerTests
         CvInvoke.CvtColor(whiteBgr, whiteHsv, ColorConversion.Bgr2Hsv);
 
         MCvScalar bgHsv = BackgroundAnalyzer.SampleBackgroundColor(whiteHsv);
-        Assert.True(bgHsv.V2 >= 250);
+        bgHsv.V2.ShouldBeGreaterThanOrEqualTo(250);
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public sealed class BackgroundAnalyzerTests
         CvInvoke.CvtColor(darkBgr, darkHsv, ColorConversion.Bgr2Hsv);
 
         MCvScalar bgHsv = BackgroundAnalyzer.SampleBackgroundColor(darkHsv);
-        Assert.True(bgHsv.V2 <= 25);
+        bgHsv.V2.ShouldBeLessThanOrEqualTo(25);
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public sealed class BackgroundAnalyzerTests
         CvInvoke.Rectangle(bgr, new Rectangle(40, 40, 20, 20), new MCvScalar(0, 0, 0), -1);
 
         MCvScalar sample = BackgroundAnalyzer.SamplePixelBackgroundColor(bgr, 50, 50);
-        Assert.True(sample.V2 <= 10);
+        sample.V2.ShouldBeLessThanOrEqualTo(10);
     }
 
     [Fact]
@@ -50,9 +50,9 @@ public sealed class BackgroundAnalyzerTests
         MCvScalar whiteHsv = new(0, 0, 255);
         MCvScalar bgr = BackgroundAnalyzer.HsvToBgr(whiteHsv);
 
-        Assert.InRange(bgr.V0, 250, 256);
-        Assert.InRange(bgr.V1, 250, 256);
-        Assert.InRange(bgr.V2, 250, 256);
+        bgr.V0.ShouldBeInRange(250, 256);
+        bgr.V1.ShouldBeInRange(250, 256);
+        bgr.V2.ShouldBeInRange(250, 256);
     }
 
     [Fact]
@@ -68,8 +68,8 @@ public sealed class BackgroundAnalyzerTests
         MCvScalar avgColor = BackgroundAnalyzer.SampleBackgroundColor(hsv);
         using Mat mask = BackgroundAnalyzer.CreateBackgroundMask(hsv, avgColor, 30);
 
-        Assert.False(mask.IsEmpty);
-        Assert.Equal(200, mask.Width);
-        Assert.Equal(200, mask.Height);
+        mask.IsEmpty.ShouldBeFalse();
+        mask.Width.ShouldBe(200);
+        mask.Height.ShouldBe(200);
     }
 }

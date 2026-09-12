@@ -5,12 +5,12 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Emgu.CV;
 using Emgu.CV.Structure;
-using PhotoCropper;
-using PhotoCropper.Models;
-using PhotoCropperGui.Services;
+using PhotoCropper.Core;
+using PhotoCropper.Core.Models;
+using PhotoCropper.Gui.Services;
 using System.Diagnostics.CodeAnalysis;
 
-namespace PhotoCropperGui;
+namespace PhotoCropper.Gui;
 
 internal sealed record GalleryPhotoItem(Avalonia.Media.Imaging.Bitmap Image, string Label, string Dimensions, int Index);
 

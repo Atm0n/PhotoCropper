@@ -10,7 +10,7 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="PhotoCropper.Tests" />
+    <InternalsVisibleTo Include="PhotoCropper.Gui.Tests" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="Assets\app_icon.png" />

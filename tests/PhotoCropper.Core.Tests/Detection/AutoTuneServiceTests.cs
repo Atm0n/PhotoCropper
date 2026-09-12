@@ -1,11 +1,11 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using PhotoCropper.Detection;
-using PhotoCropper.Models;
+using PhotoCropper.Core.Detection;
+using PhotoCropper.Core.Models;
 using System.Drawing;
 
-namespace PhotoCropper.Tests.Detection;
+namespace PhotoCropper.Core.Tests.Detection;
 
 public sealed class AutoTuneServiceTests
 {
@@ -25,9 +25,9 @@ public sealed class AutoTuneServiceTests
 
         var result = AutoTuneService.Tune(scan, restrictiveOptions);
 
-        Assert.NotNull(result);
-        Assert.NotNull(result.BestOptions);
-        Assert.True(result.PhotoCount >= 1);
-        Assert.True(result.Score > 0);
+        result.ShouldNotBeNull();
+        result.BestOptions.ShouldNotBeNull();
+        result.PhotoCount.ShouldBeGreaterThanOrEqualTo(1);
+        result.Score.ShouldBeGreaterThan(0);
     }
 }

@@ -3,7 +3,7 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using System.Drawing;
 
-namespace PhotoCropper.Extraction;
+namespace PhotoCropper.Core.Extraction;
 
 public static class PhotoRestorationService
 {

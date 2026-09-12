@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Markup.Xaml.Styling;
 using System.Globalization;
 
-namespace PhotoCropperGui;
+namespace PhotoCropper.Gui;
 
 internal static class LocalizationManager
 {

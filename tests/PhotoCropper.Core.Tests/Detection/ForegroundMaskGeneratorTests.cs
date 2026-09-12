@@ -1,10 +1,10 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using PhotoCropper.Detection;
+using PhotoCropper.Core.Detection;
 using System.Drawing;
 
-namespace PhotoCropper.Tests.Detection;
+namespace PhotoCropper.Core.Tests.Detection;
 
 public sealed class ForegroundMaskGeneratorTests
 {
@@ -17,10 +17,10 @@ public sealed class ForegroundMaskGeneratorTests
 
         using Mat edges = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(source, 20, 50);
 
-        Assert.False(edges.IsEmpty);
-        Assert.Equal(300, edges.Width);
-        Assert.Equal(300, edges.Height);
-        Assert.Equal(1, edges.NumberOfChannels);
+        edges.IsEmpty.ShouldBeFalse();
+        edges.Width.ShouldBe(300);
+        edges.Height.ShouldBe(300);
+        edges.NumberOfChannels.ShouldBe(1);
     }
 
     [Fact]
@@ -47,8 +47,8 @@ public sealed class ForegroundMaskGeneratorTests
             edges,
             hsv);
 
-        Assert.False(foreground.IsEmpty);
-        Assert.Equal(300, foreground.Width);
-        Assert.Equal(300, foreground.Height);
+        foreground.IsEmpty.ShouldBeFalse();
+        foreground.Width.ShouldBe(300);
+        foreground.Height.ShouldBe(300);
     }
 }

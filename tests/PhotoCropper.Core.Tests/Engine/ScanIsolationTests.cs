@@ -1,10 +1,10 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using PhotoCropper.Models;
-using PhotoCropper.Tests.Helpers;
+using PhotoCropper.Core.Models;
+using PhotoCropper.TestHelpers;
 
-namespace PhotoCropper.Tests.Engine;
+namespace PhotoCropper.Core.Tests.Engine;
 
 public sealed class ScanIsolationTests : IDisposable
 {
@@ -35,11 +35,11 @@ public sealed class ScanIsolationTests : IDisposable
         var options1 = engine1.CurrentOptions;
         var options2 = engine2.CurrentOptions;
 
-        Assert.Equal(45, options1.BackgroundTolerance);
-        Assert.Equal(10, options1.CannyLowThreshold);
+        options1.BackgroundTolerance.ShouldBe(45);
+        options1.CannyLowThreshold.ShouldBe(10);
 
-        Assert.Equal(15, options2.BackgroundTolerance);
-        Assert.Equal(35, options2.CannyLowThreshold);
+        options2.BackgroundTolerance.ShouldBe(15);
+        options2.CannyLowThreshold.ShouldBe(35);
     }
 
     [Fact]
@@ -57,14 +57,14 @@ public sealed class ScanIsolationTests : IDisposable
 
         engine1.ApplyOptions(customOptions);
 
-        Assert.Equal(60, engine1.BackgroundTolerance);
-        Assert.Equal(0.05, engine1.MinAreaFactor);
-        Assert.False(engine1.AutoOrientPhotos);
+        engine1.BackgroundTolerance.ShouldBe(60);
+        engine1.MinAreaFactor.ShouldBe(0.05);
+        engine1.AutoOrientPhotos.ShouldBeFalse();
 
         // Engine2 retains original defaults
-        Assert.Equal(30, engine2.BackgroundTolerance);
-        Assert.Equal(0.01, engine2.MinAreaFactor);
-        Assert.True(engine2.AutoOrientPhotos);
+        engine2.BackgroundTolerance.ShouldBe(30);
+        engine2.MinAreaFactor.ShouldBe(0.01);
+        engine2.AutoOrientPhotos.ShouldBeTrue();
     }
 
     public void Dispose()

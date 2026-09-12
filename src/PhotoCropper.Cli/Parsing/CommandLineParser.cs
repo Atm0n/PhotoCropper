@@ -1,7 +1,7 @@
-using PhotoCropperCli.Models;
+using PhotoCropper.Cli.Models;
 using System.Globalization;
 
-namespace PhotoCropperCli.Parsing;
+namespace PhotoCropper.Cli.Parsing;
 
 internal static class CommandLineParser
 {

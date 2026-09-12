@@ -1,7 +1,7 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 
-namespace PhotoCropper.Export;
+namespace PhotoCropper.Core.Export;
 
 public static class PhotoExporter
 {

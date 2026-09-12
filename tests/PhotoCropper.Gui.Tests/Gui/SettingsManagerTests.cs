@@ -1,7 +1,6 @@
-using PhotoCropper.Tests.Helpers;
-using PhotoCropperGui;
+using PhotoCropper.TestHelpers;
 
-namespace PhotoCropper.Tests.Gui;
+namespace PhotoCropper.Gui.Tests.Gui;
 
 public sealed class SettingsManagerTests : IDisposable
 {
@@ -20,17 +19,17 @@ public sealed class SettingsManagerTests : IDisposable
         var manager = new SettingsManager(_settingsPath);
         manager.Load();
 
-        Assert.NotNull(manager.Settings);
-        Assert.Equal("en-US", manager.Settings.Language);
-        Assert.Equal(25, manager.Settings.BackgroundTolerance);
-        Assert.Equal(15, manager.Settings.MinAreaFactor);
-        Assert.Equal(90, manager.Settings.MaxAreaFactor);
-        Assert.Equal(20, manager.Settings.CannyLowThreshold);
-        Assert.Equal(1, manager.Settings.ZoomLevel);
-        Assert.False(manager.Settings.AdvancedVisible);
-        Assert.True(manager.Settings.AutoOrientPhotos);
-        Assert.True(manager.Settings.RestoreVintageColors);
-        Assert.True(manager.Settings.RemoveDustAndScratches);
+        manager.Settings.ShouldNotBeNull();
+        manager.Settings.Language.ShouldBe("en-US");
+        manager.Settings.BackgroundTolerance.ShouldBe(25);
+        manager.Settings.MinAreaFactor.ShouldBe(15);
+        manager.Settings.MaxAreaFactor.ShouldBe(90);
+        manager.Settings.CannyLowThreshold.ShouldBe(20);
+        manager.Settings.ZoomLevel.ShouldBe(1);
+        manager.Settings.AdvancedVisible.ShouldBeFalse();
+        manager.Settings.AutoOrientPhotos.ShouldBeTrue();
+        manager.Settings.RestoreVintageColors.ShouldBeTrue();
+        manager.Settings.RemoveDustAndScratches.ShouldBeTrue();
     }
 
     [Fact]
@@ -55,14 +54,14 @@ public sealed class SettingsManagerTests : IDisposable
         var secondManager = new SettingsManager(_settingsPath);
         secondManager.Load();
 
-        Assert.Equal("ca-ES", secondManager.Settings.Language);
-        Assert.Equal(42, secondManager.Settings.BackgroundTolerance);
-        Assert.Equal(5, secondManager.Settings.MinAreaFactor);
-        Assert.Equal(85, secondManager.Settings.MaxAreaFactor);
-        Assert.Equal(35, secondManager.Settings.CannyLowThreshold);
-        Assert.Equal(2.5, secondManager.Settings.ZoomLevel);
-        Assert.True(secondManager.Settings.AdvancedVisible);
-        Assert.Equal("C:\\CroppedPhotos", secondManager.Settings.CustomOutputDirectory);
+        secondManager.Settings.Language.ShouldBe("ca-ES");
+        secondManager.Settings.BackgroundTolerance.ShouldBe(42);
+        secondManager.Settings.MinAreaFactor.ShouldBe(5);
+        secondManager.Settings.MaxAreaFactor.ShouldBe(85);
+        secondManager.Settings.CannyLowThreshold.ShouldBe(35);
+        secondManager.Settings.ZoomLevel.ShouldBe(2.5);
+        secondManager.Settings.AdvancedVisible.ShouldBeTrue();
+        secondManager.Settings.CustomOutputDirectory.ShouldBe("C:\\CroppedPhotos");
     }
 
     [Fact]
@@ -83,14 +82,14 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Save();
         manager.ResetDetectionDefaults();
 
-        Assert.Equal(25, manager.Settings.BackgroundTolerance);
-        Assert.Equal(15, manager.Settings.MinAreaFactor);
-        Assert.Equal(90, manager.Settings.MaxAreaFactor);
-        Assert.Equal(20, manager.Settings.CannyLowThreshold);
+        manager.Settings.BackgroundTolerance.ShouldBe(25);
+        manager.Settings.MinAreaFactor.ShouldBe(15);
+        manager.Settings.MaxAreaFactor.ShouldBe(90);
+        manager.Settings.CannyLowThreshold.ShouldBe(20);
 
-        Assert.Equal("es-ES", manager.Settings.Language);
-        Assert.Equal(3.0, manager.Settings.ZoomLevel);
-        Assert.True(manager.Settings.AdvancedVisible);
+        manager.Settings.Language.ShouldBe("es-ES");
+        manager.Settings.ZoomLevel.ShouldBe(3.0);
+        manager.Settings.AdvancedVisible.ShouldBeTrue();
     }
 
     [Fact]
@@ -100,11 +99,11 @@ public sealed class SettingsManagerTests : IDisposable
 
         var manager = new SettingsManager(_settingsPath);
         var exception = Record.Exception(() => manager.Load());
-        Assert.Null(exception);
+        exception.ShouldBeNull();
 
-        Assert.NotNull(manager.Settings);
-        Assert.Equal("en-US", manager.Settings.Language);
-        Assert.Equal(25, manager.Settings.BackgroundTolerance);
+        manager.Settings.ShouldNotBeNull();
+        manager.Settings.Language.ShouldBe("en-US");
+        manager.Settings.BackgroundTolerance.ShouldBe(25);
     }
 
     public void Dispose()

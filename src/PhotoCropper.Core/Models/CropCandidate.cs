@@ -2,7 +2,7 @@ using Emgu.CV.Structure;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 
-namespace PhotoCropper.Models;
+namespace PhotoCropper.Core.Models;
 
 public readonly record struct CropCandidate
 {

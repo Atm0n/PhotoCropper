@@ -1,8 +1,8 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
-using PhotoCropper;
+using PhotoCropper.Core;
 
-namespace PhotoCropperGui.Services;
+namespace PhotoCropper.Gui.Services;
 
 internal interface IUndoableAction : IDisposable
 {

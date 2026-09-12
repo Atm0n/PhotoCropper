@@ -1,6 +1,6 @@
 using Emgu.CV.Structure;
 
-namespace PhotoCropper.Models;
+namespace PhotoCropper.Core.Models;
 
 public record DetectionOptions
 {

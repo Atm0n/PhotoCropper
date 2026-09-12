@@ -1,12 +1,12 @@
-using PhotoCropper;
-using PhotoCropper.Export;
-using PhotoCropper.Models;
-using PhotoCropperCli.Models;
+using PhotoCropper.Cli.Models;
+using PhotoCropper.Core;
+using PhotoCropper.Core.Export;
+using PhotoCropper.Core.Models;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 
-namespace PhotoCropperCli.Services;
+namespace PhotoCropper.Cli.Services;
 
 internal static class BatchProcessor
 {

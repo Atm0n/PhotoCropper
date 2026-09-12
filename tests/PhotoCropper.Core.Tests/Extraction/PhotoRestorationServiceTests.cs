@@ -1,8 +1,8 @@
 using Emgu.CV;
-using PhotoCropper.Extraction;
-using PhotoCropper.Tests.Helpers;
+using PhotoCropper.Core.Extraction;
+using PhotoCropper.TestHelpers;
 
-namespace PhotoCropper.Tests.Extraction;
+namespace PhotoCropper.Core.Tests.Extraction;
 
 public sealed class PhotoRestorationServiceTests
 {
@@ -12,10 +12,10 @@ public sealed class PhotoRestorationServiceTests
         using Mat fadedBgr = TestImageFactory.CreateFadedPhoto(200, 200, includeAlpha: false);
         using Mat restoredBgr = PhotoRestorationService.RestoreColors(fadedBgr);
 
-        Assert.False(restoredBgr.IsEmpty);
-        Assert.Equal(200, restoredBgr.Width);
-        Assert.Equal(200, restoredBgr.Height);
-        Assert.Equal(3, restoredBgr.NumberOfChannels);
+        restoredBgr.IsEmpty.ShouldBeFalse();
+        restoredBgr.Width.ShouldBe(200);
+        restoredBgr.Height.ShouldBe(200);
+        restoredBgr.NumberOfChannels.ShouldBe(3);
     }
 
     [Fact]
@@ -24,10 +24,10 @@ public sealed class PhotoRestorationServiceTests
         using Mat fadedBgra = TestImageFactory.CreateFadedPhoto(150, 150, includeAlpha: true);
         using Mat restoredBgra = PhotoRestorationService.RestoreColors(fadedBgra);
 
-        Assert.False(restoredBgra.IsEmpty);
-        Assert.Equal(150, restoredBgra.Width);
-        Assert.Equal(150, restoredBgra.Height);
-        Assert.Equal(4, restoredBgra.NumberOfChannels);
+        restoredBgra.IsEmpty.ShouldBeFalse();
+        restoredBgra.Width.ShouldBe(150);
+        restoredBgra.Height.ShouldBe(150);
+        restoredBgra.NumberOfChannels.ShouldBe(4);
     }
 
     [Fact]
@@ -36,9 +36,9 @@ public sealed class PhotoRestorationServiceTests
         using Mat photo = TestImageFactory.CreateBlemishedPhoto(200, 200);
         using Mat inpainted = PhotoRestorationService.InpaintDustAndScratches(photo);
 
-        Assert.False(inpainted.IsEmpty);
-        Assert.Equal(200, inpainted.Width);
-        Assert.Equal(200, inpainted.Height);
-        Assert.Equal(3, inpainted.NumberOfChannels);
+        inpainted.IsEmpty.ShouldBeFalse();
+        inpainted.Width.ShouldBe(200);
+        inpainted.Height.ShouldBe(200);
+        inpainted.NumberOfChannels.ShouldBe(3);
     }
 }

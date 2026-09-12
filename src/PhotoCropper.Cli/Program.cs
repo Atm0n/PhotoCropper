@@ -1,13 +1,13 @@
-using PhotoCropperCli.Models;
-using PhotoCropperCli.Parsing;
-using PhotoCropperCli.Services;
+using PhotoCropper.Cli.Models;
+using PhotoCropper.Cli.Parsing;
+using PhotoCropper.Cli.Services;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 [assembly: SuppressMessage("Globalization", "CA1303:Do not pass literals as localized parameters", Justification = "CLI application outputs standard console messages")]
-[assembly: InternalsVisibleTo("PhotoCropper.Tests")]
+[assembly: InternalsVisibleTo("PhotoCropper.Cli.Tests")]
 
-namespace PhotoCropperCli;
+namespace PhotoCropper.Cli;
 
 internal static class Program
 {

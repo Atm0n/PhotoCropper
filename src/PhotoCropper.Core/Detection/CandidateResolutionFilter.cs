@@ -2,10 +2,10 @@ using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
-using PhotoCropper.Models;
+using PhotoCropper.Core.Models;
 using System.Drawing;
 
-namespace PhotoCropper.Detection;
+namespace PhotoCropper.Core.Detection;
 
 public static class CandidateResolutionFilter
 {

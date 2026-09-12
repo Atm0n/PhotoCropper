@@ -1,10 +1,10 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using PhotoCropper.Export;
-using PhotoCropper.Tests.Helpers;
+using PhotoCropper.Core.Export;
+using PhotoCropper.TestHelpers;
 
-namespace PhotoCropper.Tests.Export;
+namespace PhotoCropper.Core.Tests.Export;
 
 public sealed class PhotoExporterTests : IDisposable
 {
@@ -28,8 +28,8 @@ public sealed class PhotoExporterTests : IDisposable
         // Set source JPEG DPI to 600x600
         PhotoExporter.EmbedJpegDpi(scanPath, 600, 600);
         var sourceDpi = PhotoExporter.GetDpiFromSource(scanPath);
-        Assert.Equal(600, sourceDpi.XDpi);
-        Assert.Equal(600, sourceDpi.YDpi);
+        sourceDpi.XDpi.ShouldBe(600);
+        sourceDpi.YDpi.ShouldBe(600);
 
         using Mat photo1 = new(100, 100, DepthType.Cv8U, 3);
         photo1.SetTo(new MCvScalar(50, 50, 50));
@@ -45,13 +45,13 @@ public sealed class PhotoExporterTests : IDisposable
             90,
             (done, total) => { progressUpdates++; });
 
-        Assert.Equal(1, progressUpdates);
+        progressUpdates.ShouldBe(1);
         string[] exportedFiles = Directory.GetFiles(exportDir, "*.jpg");
-        Assert.Single(exportedFiles);
+        exportedFiles.Length.ShouldBe(1);
 
         var exportedDpi = PhotoExporter.GetDpiFromSource(exportedFiles[0]);
-        Assert.Equal(600, exportedDpi.XDpi);
-        Assert.Equal(600, exportedDpi.YDpi);
+        exportedDpi.XDpi.ShouldBe(600);
+        exportedDpi.YDpi.ShouldBe(600);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class PhotoExporterTests : IDisposable
         PhotoExporter.SavePhotos([photo1], scanPath, exportDir, "PNG", 90);
 
         string[] exportedPngs = Directory.GetFiles(exportDir, "*.png");
-        Assert.Single(exportedPngs);
+        exportedPngs.Length.ShouldBe(1);
     }
 
     public void Dispose()

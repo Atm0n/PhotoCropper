@@ -2,10 +2,10 @@ using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
-using PhotoCropper.Detection;
+using PhotoCropper.Core.Detection;
 using System.Drawing;
 
-namespace PhotoCropper.Extraction;
+namespace PhotoCropper.Core.Extraction;
 
 public static class PhotoExtractionEngine
 {

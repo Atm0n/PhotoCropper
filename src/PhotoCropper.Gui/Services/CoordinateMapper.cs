@@ -1,4 +1,4 @@
-namespace PhotoCropperGui.Services;
+namespace PhotoCropper.Gui.Services;
 
 internal static class CoordinateMapper
 {

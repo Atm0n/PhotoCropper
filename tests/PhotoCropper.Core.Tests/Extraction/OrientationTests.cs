@@ -1,10 +1,10 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using PhotoCropper.Extraction;
-using PhotoCropper.Tests.Helpers;
+using PhotoCropper.Core.Extraction;
+using PhotoCropper.TestHelpers;
 
-namespace PhotoCropper.Tests.Extraction;
+namespace PhotoCropper.Core.Tests.Extraction;
 
 public sealed class OrientationTests
 {
@@ -13,25 +13,25 @@ public sealed class OrientationTests
     {
         // 1. Upright photo: Sky at top, Ground at bottom
         using Mat upright = TestImageFactory.CreateSkyLandscapePhoto(200, 200, 0);
-        Assert.Equal(0, AutoOrientationService.DetectRequiredRotation(upright));
+        AutoOrientationService.DetectRequiredRotation(upright).ShouldBe(0);
 
         // 2. Upside-down photo: Sky at bottom, Ground at top
         using Mat upsideDown = TestImageFactory.CreateSkyLandscapePhoto(200, 200, 180);
-        Assert.Equal(180, AutoOrientationService.DetectRequiredRotation(upsideDown));
+        AutoOrientationService.DetectRequiredRotation(upsideDown).ShouldBe(180);
 
         // Test OrientPhoto rotates 180
         using Mat oriented = AutoOrientationService.OrientPhoto(upsideDown);
-        Assert.Equal(0, AutoOrientationService.DetectRequiredRotation(oriented));
+        AutoOrientationService.DetectRequiredRotation(oriented).ShouldBe(0);
 
         // 3. Sideways photo: Sky on left -> needs 90 CW rotation
         using Mat sidewaysLeft = TestImageFactory.CreateSkyLandscapePhoto(200, 200, 90);
-        Assert.Equal(90, AutoOrientationService.DetectRequiredRotation(sidewaysLeft));
+        AutoOrientationService.DetectRequiredRotation(sidewaysLeft).ShouldBe(90);
     }
 
     [Fact]
     public void FaceOrientationService_ModelShouldBeAvailableAndEmbedded()
     {
-        Assert.True(FaceOrientationService.IsModelAvailable);
+        FaceOrientationService.IsModelAvailable.ShouldBeTrue();
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public sealed class OrientationTests
     {
         using Mat landscape = new(200, 200, DepthType.Cv8U, 3);
         landscape.SetTo(new MCvScalar(200, 100, 50));
-        Assert.Equal(-1, FaceOrientationService.DetectFaceRotation(landscape));
+        FaceOrientationService.DetectFaceRotation(landscape).ShouldBe(-1);
     }
 
     [Fact]
@@ -48,11 +48,11 @@ public sealed class OrientationTests
         // 4-channel BGRA (transparent margins from extracted photos)
         using Mat bgra = new(200, 200, DepthType.Cv8U, 4);
         bgra.SetTo(new MCvScalar(200, 100, 50, 255));
-        Assert.Equal(0, AutoOrientationService.DetectRequiredRotation(bgra));
+        AutoOrientationService.DetectRequiredRotation(bgra).ShouldBe(0);
 
         // 1-channel Grayscale
         using Mat gray = new(200, 200, DepthType.Cv8U, 1);
         gray.SetTo(new MCvScalar(128));
-        Assert.Equal(0, AutoOrientationService.DetectRequiredRotation(gray));
+        AutoOrientationService.DetectRequiredRotation(gray).ShouldBe(0);
     }
 }

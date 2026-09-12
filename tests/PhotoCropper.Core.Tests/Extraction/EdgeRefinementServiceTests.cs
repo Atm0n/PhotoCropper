@@ -1,10 +1,10 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using PhotoCropper.Extraction;
+using PhotoCropper.Core.Extraction;
 using System.Drawing;
 
-namespace PhotoCropper.Tests.Extraction;
+namespace PhotoCropper.Core.Tests.Extraction;
 
 public sealed class EdgeRefinementServiceTests
 {
@@ -18,9 +18,9 @@ public sealed class EdgeRefinementServiceTests
 
         Rectangle refined = EdgeRefinementService.GetRefinedCropRect(photo);
 
-        Assert.True(refined.X >= 70);
-        Assert.True(refined.Y >= 70);
-        Assert.True(refined.Width <= 860);
-        Assert.True(refined.Height <= 860);
+        refined.X.ShouldBeGreaterThanOrEqualTo(70);
+        refined.Y.ShouldBeGreaterThanOrEqualTo(70);
+        refined.Width.ShouldBeLessThanOrEqualTo(860);
+        refined.Height.ShouldBeLessThanOrEqualTo(860);
     }
 }

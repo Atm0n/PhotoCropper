@@ -4,9 +4,9 @@ using Emgu.CV.Structure;
 using Emgu.CV.Util;
 using System.Drawing;
 
-namespace PhotoCropper.Tests.Helpers;
+namespace PhotoCropper.TestHelpers;
 
-internal static class TestImageFactory
+public static class TestImageFactory
 {
     public static string CreateTempDirectory(string prefix = "PhotoCropperTest")
     {

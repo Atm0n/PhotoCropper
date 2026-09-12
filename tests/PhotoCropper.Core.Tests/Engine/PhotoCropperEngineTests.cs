@@ -1,10 +1,10 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using PhotoCropper.Tests.Helpers;
+using PhotoCropper.TestHelpers;
 using System.Drawing;
 
-namespace PhotoCropper.Tests.Engine;
+namespace PhotoCropper.Core.Tests.Engine;
 
 public sealed class PhotoCropperEngineTests : IDisposable
 {
@@ -22,8 +22,8 @@ public sealed class PhotoCropperEngineTests : IDisposable
     public void Constructor_ShouldLoadImage()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
-        Assert.False(cropper.Original.IsEmpty);
-        Assert.Equal(2000, cropper.Original.Width);
+        cropper.Original.IsEmpty.ShouldBeFalse();
+        cropper.Original.Width.ShouldBe(2000);
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         cropper.DetectPhotos();
-        Assert.True(cropper.DetectedPhotos.Count >= 2);
+        cropper.DetectedPhotos.Count.ShouldBeGreaterThanOrEqualTo(2);
     }
 
     [Fact]
@@ -46,8 +46,8 @@ public sealed class PhotoCropperEngineTests : IDisposable
 
         cropper.RotatePhoto(0);
 
-        Assert.Equal(h, cropper.DetectedPhotos[0].Width);
-        Assert.Equal(w, cropper.DetectedPhotos[0].Height);
+        cropper.DetectedPhotos[0].Width.ShouldBe(h);
+        cropper.DetectedPhotos[0].Height.ShouldBe(w);
     }
 
     [Fact]
@@ -61,8 +61,8 @@ public sealed class PhotoCropperEngineTests : IDisposable
 
         for (int i = 0; i < 4; i++) cropper.RotatePhoto(0);
 
-        Assert.Equal(w, cropper.DetectedPhotos[0].Width);
-        Assert.Equal(h, cropper.DetectedPhotos[0].Height);
+        cropper.DetectedPhotos[0].Width.ShouldBe(w);
+        cropper.DetectedPhotos[0].Height.ShouldBe(h);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
 
         cropper.DeletePhoto(0);
 
-        Assert.Equal(initialCount - 1, cropper.DetectedPhotos.Count);
+        cropper.DetectedPhotos.Count.ShouldBe(initialCount - 1);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
         cropper.DeletePhoto(-1);
         cropper.DeletePhoto(999);
 
-        Assert.Equal(count, cropper.DetectedPhotos.Count);
+        cropper.DetectedPhotos.Count.ShouldBe(count);
     }
 
     [Theory]
@@ -102,11 +102,11 @@ public sealed class PhotoCropperEngineTests : IDisposable
 
         if (expectedAdded)
         {
-            Assert.Single(cropper.DetectedPhotos);
+            cropper.DetectedPhotos.ShouldHaveSingleItem();
         }
         else
         {
-            Assert.Empty(cropper.DetectedPhotos);
+            cropper.DetectedPhotos.ShouldBeEmpty();
         }
     }
 
@@ -122,11 +122,11 @@ public sealed class PhotoCropperEngineTests : IDisposable
         cropper.DetectedPhotos.Add(messy.Clone());
         Rectangle refined = cropper.GetRefinedCropRect(0);
 
-        Assert.InRange(refined.Width, 190, 205);
-        Assert.InRange(refined.Height, 190, 205);
+        refined.Width.ShouldBeInRange(190, 205);
+        refined.Height.ShouldBeInRange(190, 205);
 
         cropper.ApplyCropToPhoto(0, refined);
-        Assert.Equal(refined.Width, cropper.DetectedPhotos[0].Width);
+        cropper.DetectedPhotos[0].Width.ShouldBe(refined.Width);
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
         using var cropper = new PhotoCropperEngine(path);
         cropper.DetectPhotos();
 
-        Assert.True(cropper.DetectedPhotos.Count >= 2);
+        cropper.DetectedPhotos.Count.ShouldBeGreaterThanOrEqualTo(2);
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
         using var cropper = new PhotoCropperEngine(path);
         cropper.DetectPhotos();
 
-        Assert.NotEmpty(cropper.DetectedPhotos);
+        cropper.DetectedPhotos.ShouldNotBeEmpty();
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
         using var cropper = new PhotoCropperEngine(path);
         cropper.DetectPhotos();
 
-        Assert.Equal(2, cropper.DetectedPhotos.Count);
+        cropper.DetectedPhotos.Count.ShouldBe(2);
     }
 
     [Fact]
@@ -174,9 +174,9 @@ public sealed class PhotoCropperEngineTests : IDisposable
         using var cropper = new PhotoCropperEngine(path);
         cropper.DetectPhotos();
 
-        Assert.Single(cropper.DetectedPhotos);
-        Assert.InRange(cropper.DetectedPhotos[0].Width, 580, 620);
-        Assert.InRange(cropper.DetectedPhotos[0].Height, 380, 420);
+        cropper.DetectedPhotos.Count.ShouldBe(1);
+        cropper.DetectedPhotos[0].Width.ShouldBeInRange(580, 620);
+        cropper.DetectedPhotos[0].Height.ShouldBeInRange(380, 420);
     }
 
     [Fact]
@@ -188,9 +188,9 @@ public sealed class PhotoCropperEngineTests : IDisposable
         using var cropper = new PhotoCropperEngine(path);
         cropper.DetectPhotos();
 
-        Assert.Single(cropper.DetectedPhotos);
-        Assert.InRange(cropper.DetectedPhotos[0].Width, 480, 520);
-        Assert.InRange(cropper.DetectedPhotos[0].Height, 380, 420);
+        cropper.DetectedPhotos.Count.ShouldBe(1);
+        cropper.DetectedPhotos[0].Width.ShouldBeInRange(480, 520);
+        cropper.DetectedPhotos[0].Height.ShouldBeInRange(380, 420);
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
         using var cropper = new PhotoCropperEngine(path);
         cropper.DetectPhotos();
 
-        Assert.Equal(2, cropper.DetectedPhotos.Count);
+        cropper.DetectedPhotos.Count.ShouldBe(2);
     }
 
     [Fact]
@@ -214,11 +214,11 @@ public sealed class PhotoCropperEngineTests : IDisposable
         using var cropper = new PhotoCropperEngine(path);
         cropper.DetectPhotos();
 
-        Assert.Equal(2, cropper.DetectedPhotos.Count);
+        cropper.DetectedPhotos.Count.ShouldBe(2);
         foreach (var photo in cropper.DetectedPhotos)
         {
-            Assert.InRange(photo.Width, 470, 530);
-            Assert.InRange(photo.Height, 470, 530);
+            photo.Width.ShouldBeInRange(470, 530);
+            photo.Height.ShouldBeInRange(470, 530);
         }
     }
 
@@ -229,21 +229,21 @@ public sealed class PhotoCropperEngineTests : IDisposable
 
         // Sample at 0, 0 (white background)
         cropper.SetCustomBackgroundFromPixel(0, 0);
-        Assert.NotNull(cropper.CustomBackgroundColorHsv);
+        cropper.CustomBackgroundColorHsv.ShouldNotBeNull();
         var whiteHsv = cropper.CustomBackgroundColorHsv.Value;
-        Assert.InRange(whiteHsv.V0, 0, 10);
-        Assert.InRange(whiteHsv.V1, 0, 10);
-        Assert.InRange(whiteHsv.V2, 245, 256);
+        whiteHsv.V0.ShouldBeInRange(0, 10);
+        whiteHsv.V1.ShouldBeInRange(0, 10);
+        whiteHsv.V2.ShouldBeInRange(245, 256);
 
         // Sample at 200, 200 (black photo)
         cropper.SetCustomBackgroundFromPixel(200, 200);
-        Assert.NotNull(cropper.CustomBackgroundColorHsv);
+        cropper.CustomBackgroundColorHsv.ShouldNotBeNull();
         var blackHsv = cropper.CustomBackgroundColorHsv.Value;
-        Assert.InRange(blackHsv.V2, 0, 10);
+        blackHsv.V2.ShouldBeInRange(0, 10);
 
         // Reset
         cropper.CustomBackgroundColorHsv = null;
-        Assert.Null(cropper.CustomBackgroundColorHsv);
+        cropper.CustomBackgroundColorHsv.ShouldBeNull();
     }
 
     public void Dispose()

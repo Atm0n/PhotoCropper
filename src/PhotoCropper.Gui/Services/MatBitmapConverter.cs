@@ -3,7 +3,7 @@ using Avalonia.Platform;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 
-namespace PhotoCropperGui.Services;
+namespace PhotoCropper.Gui.Services;
 
 internal static class MatBitmapConverter
 {

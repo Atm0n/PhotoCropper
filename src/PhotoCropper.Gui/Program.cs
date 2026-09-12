@@ -1,6 +1,6 @@
 using Avalonia;
 
-namespace PhotoCropperGui
+namespace PhotoCropper.Gui
 {
     internal sealed class Program
     {

@@ -1,4 +1,4 @@
-namespace PhotoCropperCli.Services;
+namespace PhotoCropper.Cli.Services;
 
 internal static class FileCollector
 {

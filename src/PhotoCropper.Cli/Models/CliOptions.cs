@@ -1,4 +1,4 @@
-namespace PhotoCropperCli.Models;
+namespace PhotoCropper.Cli.Models;
 
 internal sealed class CliOptions
 {

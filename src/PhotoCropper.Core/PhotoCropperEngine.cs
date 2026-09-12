@@ -2,14 +2,14 @@ using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
-using PhotoCropper.Detection;
-using PhotoCropper.Export;
-using PhotoCropper.Extraction;
-using PhotoCropper.Models;
+using PhotoCropper.Core.Detection;
+using PhotoCropper.Core.Export;
+using PhotoCropper.Core.Extraction;
+using PhotoCropper.Core.Models;
 using System.Collections.ObjectModel;
 using System.Drawing;
 
-namespace PhotoCropper;
+namespace PhotoCropper.Core;
 
 public class PhotoCropperEngine : IDisposable
 {

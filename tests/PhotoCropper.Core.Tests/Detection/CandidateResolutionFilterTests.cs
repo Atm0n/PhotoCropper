@@ -1,9 +1,9 @@
 using Emgu.CV.Structure;
-using PhotoCropper.Detection;
-using PhotoCropper.Models;
+using PhotoCropper.Core.Detection;
+using PhotoCropper.Core.Models;
 using System.Drawing;
 
-namespace PhotoCropper.Tests.Detection;
+namespace PhotoCropper.Core.Tests.Detection;
 
 public sealed class CandidateResolutionFilterTests
 {
@@ -25,8 +25,8 @@ public sealed class CandidateResolutionFilterTests
         var filtered = CandidateResolutionFilter.FilterCandidates([parent, child1, child2]);
 
         // Parent should be rejected as composite, retaining child 1 and child 2
-        Assert.Equal(2, filtered.Count);
-        Assert.DoesNotContain(filtered, c => c.Area == 500000);
+        filtered.Count.ShouldBe(2);
+        filtered.ShouldNotContain(c => c.Area == 500000);
     }
 
     [Fact]
@@ -39,6 +39,6 @@ public sealed class CandidateResolutionFilterTests
         var cand2 = new CropCandidate(pts2, new Rectangle(500, 0, 400, 400), 160000, new RotatedRect(new PointF(700, 200), new SizeF(400, 400), 0), 160000, 0.98, 0.99);
 
         var filtered = CandidateResolutionFilter.FilterCandidates([cand1, cand2]);
-        Assert.Equal(2, filtered.Count);
+        filtered.Count.ShouldBe(2);
     }
 }
