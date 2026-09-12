@@ -59,7 +59,13 @@ jobs:
         run: dotnet run --project tests/PhotoCropper.Cli.Tests/PhotoCropper.Cli.Tests.csproj -c Release --no-build
 
       - name: Run GUI Tests
-        run: dotnet run --project tests/PhotoCropper.Gui.Tests/PhotoCropper.Gui.Tests.csproj -c Release --no-build
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run dotnet run --project tests/PhotoCropper.Gui.Tests/PhotoCropper.Gui.Tests.csproj -c Release --no-build
+          else
+            dotnet run --project tests/PhotoCropper.Gui.Tests/PhotoCropper.Gui.Tests.csproj -c Release --no-build
+          fi
+        shell: bash
 
       - name: Publish GUI & CLI Binaries
         if: startsWith(github.ref, 'refs/tags/v')
