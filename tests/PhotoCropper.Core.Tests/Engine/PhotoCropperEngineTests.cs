@@ -246,6 +246,86 @@ public sealed class PhotoCropperEngineTests : IDisposable
         cropper.CustomBackgroundColorHsv.ShouldBeNull();
     }
 
+    [Fact]
+    public void ApplyOptions_AndCurrentOptions_ShouldRoundtrip()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        var options = new Models.DetectionOptions
+        {
+            BackgroundTolerance = 45,
+            MinAreaFactor = 0.05,
+            MaxAreaFactor = 0.80,
+            CannyLowThreshold = 30,
+            CannyHighThreshold = 70,
+            CustomBackgroundColorHsv = new MCvScalar(10, 20, 30),
+            AutoOrientPhotos = false,
+            RestoreVintageColors = false,
+            RemoveDustAndScratches = false
+        };
+
+        cropper.ApplyOptions(options);
+
+        cropper.BackgroundTolerance.ShouldBe(45);
+        cropper.MinAreaFactor.ShouldBe(0.05);
+        cropper.MaxAreaFactor.ShouldBe(0.80);
+        cropper.CannyLowThreshold.ShouldBe(30);
+        cropper.CannyHighThreshold.ShouldBe(70);
+        cropper.CustomBackgroundColorHsv.ShouldBe(new MCvScalar(10, 20, 30));
+        cropper.AutoOrientPhotos.ShouldBeFalse();
+        cropper.RestoreVintageColors.ShouldBeFalse();
+        cropper.RemoveDustAndScratches.ShouldBeFalse();
+
+        var retrieved = cropper.CurrentOptions;
+        retrieved.BackgroundTolerance.ShouldBe(45);
+        retrieved.MinAreaFactor.ShouldBe(0.05);
+        retrieved.AutoOrientPhotos.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ApplyOptions_Null_ShouldThrowArgumentNullException()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        Should.Throw<ArgumentNullException>(() => cropper.ApplyOptions(null!));
+    }
+
+    [Fact]
+    public void RotatePhoto_OutOfBounds_ShouldNotThrow()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        cropper.RotatePhoto(-1);
+        cropper.RotatePhoto(100);
+    }
+
+    [Fact]
+    public void GetRefinedCropRect_OutOfBounds_ShouldReturnEmpty()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        cropper.GetRefinedCropRect(-1).ShouldBe(Rectangle.Empty);
+        cropper.GetRefinedCropRect(100).ShouldBe(Rectangle.Empty);
+    }
+
+    [Fact]
+    public void ApplyCropToPhoto_OutOfBounds_ShouldNotThrow()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        cropper.ApplyCropToPhoto(-1, new Rectangle(0, 0, 10, 10));
+        cropper.ApplyCropToPhoto(100, new Rectangle(0, 0, 10, 10));
+    }
+
+    [Fact]
+    public void SaveDetectedPhotos_ShouldExportFiles()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        cropper.DetectPhotos();
+
+        string outDir = Path.Combine(_tempDir, "exported_photos");
+        cropper.SaveDetectedPhotos(outDir, "PNG");
+
+        Directory.Exists(outDir).ShouldBeTrue();
+        var files = Directory.GetFiles(outDir, "*.png");
+        files.Length.ShouldBe(cropper.DetectedPhotos.Count);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
