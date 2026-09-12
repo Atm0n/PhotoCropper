@@ -24,7 +24,9 @@ The solution consists of four main projects:
 - **Unified BGR Color Management:** Standardized internally on OpenCV's native BGR layout. The UI performs a single `Bgr2Bgra` conversion purely for display, avoiding redundant color conversions and correcting the "blue-tint" saving artifact perfectly.
 - **Parallel Photo Extraction:** Uses `Parallel.For` to process, rotate, and refine multiple detected photos simultaneously across CPU cores.
 
-### 2. Intelligent Auto-Detection Engine
+### 2. Intelligent Auto-Detection & Auto-Tuning Engine
+- **Multi-Parameter Auto-Tuning (`⚡ Auto-Tune` / `T`):** Sweeps background tolerances (`10`–`85`), Canny edge thresholds (`10`–`40`), and minimum area factors (`0.5%`–`10%`) to automatically discover difficult or low-contrast photos without manual trial-and-error.
+- **Per-Scan Settings Isolation:** Each loaded scan retains its own independent detection parameters; adjusting sliders on one scan re-evaluates only that scan without altering other images in the queue.
 - **Multi-Pass Sensitivity Search:** Evaluates progressive tolerance steps around the base background tolerance to automatically recover subtle, low-contrast photos without manual threshold tuning.
 - **Composite Candidate Resolution (Parent-Child Splitting):** Automatically detects when two adjacent photos are fused into a composite bounding box during high-tolerance passes and resolves them into their distinct individual photos.
 - **Convexity & Rectangularity Quality Scoring:** Scores candidates based on contour convexity ($\text{ContourArea} / \text{HullArea}$) and rotated rectangularity, penalizing irregular merged blobs with waist indentations in favor of clean single photos.
@@ -33,6 +35,7 @@ The solution consists of four main projects:
 - **Adaptive Shadow Tolerance:** Brightness thresholds are scaled dynamically for light backgrounds, allowing the engine to absorb scanner lid gradients and shadows while preserving photo integrity.
 - **Geometric Overlap Verification:** Measures true polygon intersection area in unmanaged masks to prevent duplicate or invading bounding boxes while allowing tilted adjacent photos.
 - **Interactive Background Color Picker:** Allows manual background sampling via a noise-resistant 5x5 average neighborhood in HSV space directly from any clicked zoom/pan pixel.
+- **Undetected Scan Tracking & Review Isolation:** Logs any uncropped scans to `undetected_scans.txt` and supports isolated directory copying (`--copy-undetected`) with an interactive post-batch CLI review prompt.
 
 #### 3. Smart Manual, Refinement & AI Orientation
 - **Hierarchical AI Face & Landscape Orientation:** Extracted photos are automatically rotated upright.
@@ -57,7 +60,7 @@ The solution consists of four main projects:
 - **Drag & Drop Queuing:** Drag image files or whole folders anywhere onto the application window to automatically queue and batch-process scans.
 - **Multi-Scan Aware Undo/Redo (`Ctrl+Z` / `Ctrl+Y`):** Full undo/redo stack managing deletions, rotations, manual crops, and edge refinements across multiple loaded scans, automatically switching scans when undoing.
 - **Original Scanner DPI Preservation:** Preserves original scanner resolution metadata (JFIF APP0 markers for JPEG, `pHYs` chunks for PNG) for 1:1 physical printing scale (e.g., 300, 600, 1200 DPI).
-- **Real-Time Batch Progress Reporting:** Live progress bars and counters during multi-scan processing and batch exporting.
+- **Real-Time Batch Progress Reporting:** Live progress bars and counters during multi-scan processing and parallel multi-core batch exporting.
 - **Focus-Defeat & Keyboard Event Tunneling:** Non-focusable sidebar controls and tunneling key events ensure instant keyboard navigation without text box focus stealing.
 - **Multi-Language Localization:** Runtime localization in English (`en-US`), Spanish (`es-ES`), and Catalan (`ca-ES`) with persistent user settings.
 
@@ -77,6 +80,7 @@ The codebase strictly enforces the highest standard of static analysis and memor
 
 | Shortcut | Action |
 |----------|--------|
+| `T` | ⚡ Auto-Tune detection parameters on active scan |
 | `Left / Right` | Navigate between cropped photos |
 | `Up / Down` / `PageUp / PageDown` | Switch between original loaded scans |
 | `R` | Rotate the current cropped photo 90° clockwise |
@@ -117,6 +121,12 @@ dotnet run --project PhotoCropperCli -- scan001.jpg
 # Process a folder of scans recursively, saving as PNG with color restoration in a custom directory
 dotnet run --project PhotoCropperCli -- D:\Scans -o D:\Cropped -f PNG -r
 
+# Batch process with parallel worker threads and auto-tuning enabled
+dotnet run --project PhotoCropperCli -- D:\Scans -o D:\Cropped --auto-tune -j 8
+
+# Batch process and isolate undetected scans for review
+dotnet run --project PhotoCropperCli -- D:\Scans -o D:\Cropped --copy-undetected D:\NeedsReview
+
 # Display all CLI options and flags
 dotnet run --project PhotoCropperCli -- --help
 ```
@@ -134,6 +144,9 @@ dotnet run --project PhotoCropperCli -- --help
 | `--min-size <percent>` | Minimum photo size as % of total scan area | `15` |
 | `--max-size <percent>` | Maximum photo size as % of total scan area | `90` |
 | `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
+| `--auto-tune` | Automatically search optimal detection parameters on difficult scans | `false` |
+| `--copy-undetected <dir>` | Copy scans with 0 detected photos to a designated review directory | `null` |
+| `-y, --non-interactive` | Disable interactive prompts (e.g. post-batch auto-tune review prompt) | `false` |
 | `--auto-orient` / `--no-auto-orient` | Enable or disable AI face & landscape orientation detection | `true` |
 | `--restore-colors` / `--no-restore-colors` | Enable or disable vintage photo color & contrast restoration | `true` |
 | `--remove-dust` / `--no-remove-dust` | Enable or disable automated dust and hairline scratch inpainting | `true` |

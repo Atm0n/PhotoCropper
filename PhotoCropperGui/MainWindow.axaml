@@ -385,12 +385,17 @@
 							<TextBlock Text="{DynamicResource HelpRemoveDustTitle}" FontWeight="Bold" Foreground="#3399ff"/>
 							<TextBlock Text="{DynamicResource HelpRemoveDustDesc}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
 						</StackPanel>
+						<StackPanel Grid.Row="5" Grid.Column="1" Margin="10" Spacing="5">
+							<TextBlock Text="{DynamicResource HelpAutoTuneTitle}" FontWeight="Bold" Foreground="#3399ff"/>
+							<TextBlock Text="{DynamicResource HelpAutoTuneDesc}" TextWrapping="Wrap" Foreground="#aaaaaa"/>
+						</StackPanel>
 					</Grid>
 
 					<Border Background="#1e1e1e" Padding="20" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
 						<StackPanel Spacing="15">
 							<TextBlock Text="{DynamicResource HelpShortcutsTitle}" FontSize="20" FontWeight="Bold"/>
 							<UniformGrid Columns="2">
+								<TextBlock Text="{DynamicResource HelpShortcutAutoTune}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutRotate}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutDelete}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutNextScan}" Margin="5"/>

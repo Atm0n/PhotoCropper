@@ -28,7 +28,7 @@
 	<sys:String x:Key="BtnAccept">Aceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rechazar (Retroceso)</sys:String>
 	<sys:String x:Key="StatusReady">Listo</sys:String>
-	<sys:String x:Key="StatusShortcuts">Atajos: [↑/↓] Cambiar Escaneo | [←/→] Navegar Fotos | [R] Rotar | [Espacio] Comparar Original | [Ctrl+Z/Y] Deshacer/Rehacer</sys:String>
+	<sys:String x:Key="StatusShortcuts">Atajos: [↑/↓] Cambiar Escaneo | [←/→] Navegar Fotos | [T] Auto-Ajustar | [R] Rotar | [Espacio] Comparar Original | [Ctrl+Z/Y] Deshacer/Rehacer</sys:String>
 	<sys:String x:Key="MsgUndo">Deshecho: {0}.</sys:String>
 	<sys:String x:Key="MsgRedo">Rehecho: {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
@@ -66,7 +66,10 @@
 	<sys:String x:Key="HelpRestoreColorsDesc">Corrige el tono amarillento/sepia por envejecimiento, recupera contraste con LAB CLAHE y realza pigmentos desvaídos.</sys:String>
 	<sys:String x:Key="HelpRemoveDustTitle">Eliminación de Polvo y Rayaduras</sys:String>
 	<sys:String x:Key="HelpRemoveDustDesc">Detecta motas de polvo, fibras y rayaduras finas mediante filtros morfológicos y las repara con inpainting de OpenCV.</sys:String>
+	<sys:String x:Key="HelpAutoTuneTitle">⚡ Auto-Ajuste de Detección</sys:String>
+	<sys:String x:Key="HelpAutoTuneDesc">Realiza un barrido automático de tolerancias, umbrales de borde y tamaños mínimos para descubrir fotos difíciles sin tocar los controles.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Atajos de Teclado</sys:String>
+	<sys:String x:Key="HelpShortcutAutoTune">[T] Auto-ajustar escaneo actual</sys:String>
 	<sys:String x:Key="HelpShortcutRotate">[R] Rotar foto 90°</sys:String>
 	<sys:String x:Key="HelpShortcutDelete">[X] o [Supr] Descartar foto</sys:String>
 	<sys:String x:Key="HelpShortcutNextScan">[Re Pág / Av Pág] o [↑ / ↓] Cambiar escaneo</sys:String>
@@ -96,7 +99,7 @@
 	<sys:String x:Key="BtnResetBackground">Fondo Automático</sys:String>
 	<sys:String x:Key="MsgClickToSample">Haga clic en cualquier parte del fondo del escaneo para muestrear su color...</sys:String>
 	<sys:String x:Key="BtnAutoTune">Auto-Ajustar</sys:String>
-	<sys:String x:Key="TipAutoTune">Busca automáticamente los parámetros de detección óptimos para este escaneo.</sys:String>
+	<sys:String x:Key="TipAutoTune">Busca automáticamente los parámetros de detección óptimos para este escaneo. (Atajo: T)</sys:String>
 	<sys:String x:Key="MsgAutoTuning">Auto-ajustando parámetros de detección...</sys:String>
 	<sys:String x:Key="MsgAutoTuneSuccess">Auto-ajustado: se encontraron {0} fotos (Tolerancia: {1:0}, Borde: {2:0}).</sys:String>
 	<sys:String x:Key="MsgAutoTuneFailed">El auto-ajuste no encontró fotos adicionales.</sys:String>

@@ -28,7 +28,7 @@
 	<sys:String x:Key="BtnAccept">Acceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rebutjar (Retrocés)</sys:String>
 	<sys:String x:Key="StatusReady">Llest</sys:String>
-	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [R] Girar | [Espai] Comparar Original | [Ctrl+Z/Y] Desfer/Refer</sys:String>
+	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [T] Auto-Ajustar | [R] Girar | [Espai] Comparar Original | [Ctrl+Z/Y] Desfer/Refer</sys:String>
 	<sys:String x:Key="MsgUndo">Desfet: {0}.</sys:String>
 	<sys:String x:Key="MsgRedo">Refet: {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
@@ -66,7 +66,10 @@
 	<sys:String x:Key="HelpRestoreColorsDesc">Corregeix el to groguenc/sèpia per envelliment, recupera contrast amb LAB CLAHE i realça pigments descolorits.</sys:String>
 	<sys:String x:Key="HelpRemoveDustTitle">Eliminació de Pols i Ratllades</sys:String>
 	<sys:String x:Key="HelpRemoveDustDesc">Detecta borrissol, pols i ratllades fines amb filtres morfològics i les repara amb inpainting d'OpenCV.</sys:String>
+	<sys:String x:Key="HelpAutoTuneTitle">⚡ Auto-Ajust de Detecció</sys:String>
+	<sys:String x:Key="HelpAutoTuneDesc">Realitza un escombrat automàtic de toleràncies, llindars de vora i mides mínimes per descobrir fotos difícils sense tocar els controls.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Dreceres de Teclat</sys:String>
+	<sys:String x:Key="HelpShortcutAutoTune">[T] Auto-ajustar escaneig actual</sys:String>
 	<sys:String x:Key="HelpShortcutRotate">[R] Girar foto 90°</sys:String>
 	<sys:String x:Key="HelpShortcutDelete">[X] o [Supr] Descartar foto</sys:String>
 	<sys:String x:Key="HelpShortcutNextScan">[Re Pàg / Av Pàg] o [↑ / ↓] Canviar escaneig</sys:String>
@@ -96,7 +99,7 @@
 	<sys:String x:Key="BtnResetBackground">Fons Automàtic</sys:String>
 	<sys:String x:Key="MsgClickToSample">Faci clic a qualsevol part del fons de l'escaneig per mostrejar-ne el color...</sys:String>
 	<sys:String x:Key="BtnAutoTune">Auto-Ajustar</sys:String>
-	<sys:String x:Key="TipAutoTune">Cerca automàticament els paràmetres de detecció òptims per a aquest escaneig.</sys:String>
+	<sys:String x:Key="TipAutoTune">Cerca automàticament els paràmetres de detecció òptims per a aquest escaneig. (Drecera: T)</sys:String>
 	<sys:String x:Key="MsgAutoTuning">Auto-ajustant paràmetres de detecció...</sys:String>
 	<sys:String x:Key="MsgAutoTuneSuccess">Auto-ajustat: s'han trobat {0} fotos (Tolerància: {1:0}, Vora: {2:0}).</sys:String>
 	<sys:String x:Key="MsgAutoTuneFailed">L'auto-ajust no ha trobat fotos addicionals.</sys:String>
