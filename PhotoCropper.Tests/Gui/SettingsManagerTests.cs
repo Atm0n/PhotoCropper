@@ -1,23 +1,23 @@
+using PhotoCropper.Tests.Helpers;
 using PhotoCropperGui;
 
-namespace PhotoCropper.Tests;
+namespace PhotoCropper.Tests.Gui;
 
 public sealed class SettingsManagerTests : IDisposable
 {
-    private readonly string _tempDirectory;
-    private readonly string _tempSettingsPath;
+    private readonly string _tempDir;
+    private readonly string _settingsPath;
 
     public SettingsManagerTests()
     {
-        _tempDirectory = Path.Combine(Path.GetTempPath(), $"PhotoCropperSettingsTests_{Guid.NewGuid()}");
-        Directory.CreateDirectory(_tempDirectory);
-        _tempSettingsPath = Path.Combine(_tempDirectory, "settings_test.json");
+        _tempDir = TestImageFactory.CreateTempDirectory("SettingsTests");
+        _settingsPath = Path.Combine(_tempDir, "settings_test.json");
     }
 
     [Fact]
     public void SettingsManager_DefaultInitialization()
     {
-        var manager = new SettingsManager(_tempSettingsPath);
+        var manager = new SettingsManager(_settingsPath);
         manager.Load();
 
         Assert.NotNull(manager.Settings);
@@ -36,7 +36,7 @@ public sealed class SettingsManagerTests : IDisposable
     [Fact]
     public void SettingsManager_SaveAndLoad_ShouldPersistValues()
     {
-        var manager = new SettingsManager(_tempSettingsPath);
+        var manager = new SettingsManager(_settingsPath);
         manager.Load();
 
         // Modify values
@@ -52,7 +52,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Save();
 
         // Create new manager instance referencing the same file
-        var secondManager = new SettingsManager(_tempSettingsPath);
+        var secondManager = new SettingsManager(_settingsPath);
         secondManager.Load();
 
         Assert.Equal("ca-ES", secondManager.Settings.Language);
@@ -68,10 +68,9 @@ public sealed class SettingsManagerTests : IDisposable
     [Fact]
     public void SettingsManager_ResetDetectionDefaults_ShouldOnlyResetDetectionParameters()
     {
-        var manager = new SettingsManager(_tempSettingsPath);
+        var manager = new SettingsManager(_settingsPath);
         manager.Load();
 
-        // Set custom settings
         manager.Settings.Language = "es-ES";
         manager.Settings.ZoomLevel = 3.0;
         manager.Settings.AdvancedVisible = true;
@@ -82,17 +81,13 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.CannyLowThreshold = 40;
 
         manager.Save();
-
-        // Perform detection reset
         manager.ResetDetectionDefaults();
 
-        // Verify detection settings are reset
         Assert.Equal(25, manager.Settings.BackgroundTolerance);
         Assert.Equal(15, manager.Settings.MinAreaFactor);
         Assert.Equal(90, manager.Settings.MaxAreaFactor);
         Assert.Equal(20, manager.Settings.CannyLowThreshold);
 
-        // Verify other user experience settings are intact
         Assert.Equal("es-ES", manager.Settings.Language);
         Assert.Equal(3.0, manager.Settings.ZoomLevel);
         Assert.True(manager.Settings.AdvancedVisible);
@@ -101,12 +96,9 @@ public sealed class SettingsManagerTests : IDisposable
     [Fact]
     public void SettingsManager_GracefulDegradation_OnCorruptJson()
     {
-        // Write invalid corrupted json text to file
-        File.WriteAllText(_tempSettingsPath, "{ INVALID JSON CORRUPTED TEXT ]");
+        File.WriteAllText(_settingsPath, "{ INVALID JSON CORRUPTED TEXT ]");
 
-        var manager = new SettingsManager(_tempSettingsPath);
-
-        // This should not throw an exception, but gracefully load defaults
+        var manager = new SettingsManager(_settingsPath);
         var exception = Record.Exception(() => manager.Load());
         Assert.Null(exception);
 
@@ -117,16 +109,9 @@ public sealed class SettingsManagerTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDirectory))
+        if (Directory.Exists(_tempDir))
         {
-            try
-            {
-                Directory.Delete(_tempDirectory, true);
-            }
-            catch
-            {
-                // Ignore cleanup errors
-            }
+            try { Directory.Delete(_tempDir, true); } catch { }
         }
     }
 }
