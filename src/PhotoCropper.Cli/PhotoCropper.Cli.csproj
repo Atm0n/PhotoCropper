@@ -12,6 +12,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="PhotoCropper.Cli.Tests" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Emgu.CV" />
 		<PackageReference Include="Emgu.CV.runtime.windows" />
 		<PackageReference Include="Emgu.CV.runtime.ubuntu-24.04-x64" />
