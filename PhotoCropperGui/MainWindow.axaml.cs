@@ -356,7 +356,7 @@ internal sealed partial class MainWindow : Window
         {
             await Task.Run(() =>
             {
-                foreach (var originalPhoto in OriginalPhotos)
+                Parallel.ForEach(OriginalPhotos, (originalPhoto) =>
                 {
                     originalPhoto.SaveDetectedPhotos(
                         settings.CustomOutputDirectory,
@@ -370,7 +370,7 @@ internal sealed partial class MainWindow : Window
                                 lblStatus.Text = string.Format(savingMsg, done, grandTotal);
                             });
                         });
-                }
+                });
             });
         }, string.Format(msgFormat, grandTotal));
     }
