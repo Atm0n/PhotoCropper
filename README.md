@@ -130,6 +130,7 @@ dotnet run --project PhotoCropperCli -- --help
 | `-f, --format <fmt>` | Output file format: `JPEG` or `PNG` | `JPEG` |
 | `-q, --quality <1-100>` | JPEG compression quality | `90` |
 | `-t, --tolerance <num>` | Background color detection tolerance | `25` |
+| `-j, --threads <num>` | Number of concurrent CPU worker threads for batch processing | *CPU Cores* |
 | `--min-size <percent>` | Minimum photo size as % of total scan area | `15` |
 | `--max-size <percent>` | Maximum photo size as % of total scan area | `90` |
 | `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |

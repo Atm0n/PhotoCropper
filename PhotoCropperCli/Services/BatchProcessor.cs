@@ -48,15 +48,20 @@ internal static class BatchProcessor
 
         int totalExtracted = 0;
         int errorCount = 0;
+        int completedCount = 0;
         var totalStopwatch = Stopwatch.StartNew();
+        var consoleLock = new object();
 
-        for (int i = 0; i < scanFiles.Count; i++)
+        var parallelOptions = new ParallelOptions
         {
-            string scanPath = scanFiles[i];
-            string fileName = Path.GetFileName(scanPath);
-            Console.Write(string.Format(CultureInfo.InvariantCulture, "[{0}/{1}] Processing {2}... ", i + 1, scanFiles.Count, fileName));
+            MaxDegreeOfParallelism = Math.Max(1, options.Threads)
+        };
 
+        Parallel.ForEach(scanFiles, parallelOptions, (scanPath) =>
+        {
+            string fileName = Path.GetFileName(scanPath);
             var fileStopwatch = Stopwatch.StartNew();
+
             try
             {
                 using var engine = new PhotoCropperEngine(scanPath);
@@ -73,40 +78,58 @@ internal static class BatchProcessor
                         options.Format,
                         options.JpegQuality);
 
-                    totalExtracted += photoCount;
+                    Interlocked.Add(ref totalExtracted, photoCount);
                     fileStopwatch.Stop();
 
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.Write(string.Format(CultureInfo.InvariantCulture, "✓ {0} photo(s) extracted ", photoCount));
-                    Console.ResetColor();
-                    Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "({0}ms)", fileStopwatch.ElapsedMilliseconds));
+                    int currentDone = Interlocked.Increment(ref completedCount);
 
-                    if (options.Verbose)
+                    lock (consoleLock)
                     {
-                        for (int p = 0; p < photoCount; p++)
+                        Console.Write(string.Format(CultureInfo.InvariantCulture, "[{0}/{1}] Processing {2}... ", currentDone, scanFiles.Count, fileName));
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.Write(string.Format(CultureInfo.InvariantCulture, "✓ {0} photo(s) extracted ", photoCount));
+                        Console.ResetColor();
+                        Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "({0}ms)", fileStopwatch.ElapsedMilliseconds));
+
+                        if (options.Verbose)
                         {
-                            var mat = engine.DetectedPhotos[p];
-                            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "    -> Photo #{0}: {1}x{2} px", p + 1, mat.Width, mat.Height));
+                            for (int p = 0; p < photoCount; p++)
+                            {
+                                var mat = engine.DetectedPhotos[p];
+                                Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "    -> Photo #{0}: {1}x{2} px", p + 1, mat.Width, mat.Height));
+                            }
                         }
                     }
                 }
                 else
                 {
                     fileStopwatch.Stop();
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "No photos detected ({0}ms)", fileStopwatch.ElapsedMilliseconds));
-                    Console.ResetColor();
+                    int currentDone = Interlocked.Increment(ref completedCount);
+
+                    lock (consoleLock)
+                    {
+                        Console.Write(string.Format(CultureInfo.InvariantCulture, "[{0}/{1}] Processing {2}... ", currentDone, scanFiles.Count, fileName));
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "No photos detected ({0}ms)", fileStopwatch.ElapsedMilliseconds));
+                        Console.ResetColor();
+                    }
                 }
             }
             catch (Exception ex)
             {
                 fileStopwatch.Stop();
-                errorCount++;
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "FAILED: {0}", ex.Message));
-                Console.ResetColor();
+                Interlocked.Increment(ref errorCount);
+                int currentDone = Interlocked.Increment(ref completedCount);
+
+                lock (consoleLock)
+                {
+                    Console.Write(string.Format(CultureInfo.InvariantCulture, "[{0}/{1}] Processing {2}... ", currentDone, scanFiles.Count, fileName));
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "FAILED: {0}", ex.Message));
+                    Console.ResetColor();
+                }
             }
-        }
+        });
 
         totalStopwatch.Stop();
         Console.WriteLine();

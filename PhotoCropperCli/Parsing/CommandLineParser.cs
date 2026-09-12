@@ -58,6 +58,13 @@ internal static class CommandLineParser
                     options.CannyLow = canny;
                 }
             }
+            else if (arg is "-j" or "--threads" && i + 1 < args.Length)
+            {
+                if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int th))
+                {
+                    options.Threads = Math.Max(1, th);
+                }
+            }
             else if (arg is "-r" or "--recursive")
             {
                 options.Recursive = true;
@@ -116,6 +123,7 @@ internal static class CommandLineParser
         Console.WriteLine("  -f, --format <fmt>      Output format: JPEG (default) or PNG");
         Console.WriteLine("  -q, --quality <1-100>   JPEG compression quality (default: 90)");
         Console.WriteLine("  -t, --tolerance <num>   Background color detection tolerance (default: 25)");
+        Console.WriteLine("  -j, --threads <num>     Number of parallel CPU worker threads (default: CPU core count)");
         Console.WriteLine("  --min-size <percent>    Minimum photo size as % of scan area (default: 15)");
         Console.WriteLine("  --max-size <percent>    Maximum photo size as % of scan area (default: 90)");
         Console.WriteLine("  --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)");
