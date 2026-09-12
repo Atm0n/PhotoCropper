@@ -54,6 +54,27 @@ public class PhotoCropperEngine : IDisposable
         RemoveDustAndScratches = options.RemoveDustAndScratches;
     }
 
+    public DetectionOptions CurrentOptions => new()
+    {
+        BackgroundTolerance = BackgroundTolerance,
+        MinAreaFactor = MinAreaFactor,
+        MaxAreaFactor = MaxAreaFactor,
+        CannyLowThreshold = CannyLowThreshold,
+        CannyHighThreshold = CannyHighThreshold,
+        CustomBackgroundColorHsv = CustomBackgroundColorHsv,
+        AutoOrientPhotos = AutoOrientPhotos,
+        RestoreVintageColors = RestoreVintageColors,
+        RemoveDustAndScratches = RemoveDustAndScratches
+    };
+
+    public AutoTuneResult AutoTune()
+    {
+        var tuneResult = AutoTuneService.Tune(Original, CurrentOptions);
+        ApplyOptions(tuneResult.BestOptions);
+        DetectPhotos();
+        return tuneResult;
+    }
+
     private void ResetState()
     {
         foreach (var photo in DetectedPhotos) photo.Dispose();

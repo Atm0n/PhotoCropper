@@ -16,4 +16,6 @@ internal sealed class CliOptions
     public int Threads { get; set; } = Math.Max(1, Environment.ProcessorCount);
     public bool Recursive { get; set; }
     public bool Verbose { get; set; }
+    public bool AutoTune { get; set; }
+    public string? CopyUndetectedDirectory { get; set; }
 }
