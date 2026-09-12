@@ -827,6 +827,12 @@ internal sealed partial class MainWindow : Window
                 StartRefineMode();
                 e.Handled = true;
                 break;
+
+            case Avalonia.Input.Key.T:
+                FocusManager?.Focus(null);
+                BtnAutoTune_Click(null, new RoutedEventArgs());
+                e.Handled = true;
+                break;
         }
     }
 
