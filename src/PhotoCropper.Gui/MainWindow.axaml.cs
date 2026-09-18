@@ -7,6 +7,8 @@ using Emgu.CV;
 using Emgu.CV.Structure;
 using PhotoCropper.Core;
 using PhotoCropper.Core.Models;
+using PhotoCropper.Core.Scanning;
+using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
 using System.Diagnostics.CodeAnalysis;
 
@@ -25,8 +27,20 @@ internal sealed partial class MainWindow : Window
     private bool isSyncingSelection;
     private bool isUpdatingUiFromScan;
 
-    public MainWindow()
+    private readonly IScannerService _scannerService;
+    private readonly List<ScannerDeviceInfo> _availableScanners = [];
+    private WorkspaceSessionState? _workspaceSession;
+
+    public MainWindow() : this(new Naps2ScannerService())
     {
+    }
+
+    public MainWindow(IScannerService scannerService)
+    {
+        ArgumentNullException.ThrowIfNull(scannerService);
+
+        _scannerService = scannerService;
+
         InitializeComponent();
 
         // Register key handlers in Tunnel phase
@@ -36,6 +50,8 @@ internal sealed partial class MainWindow : Window
         // Register Drag & Drop event handlers
         AddHandler(DragDrop.DragOverEvent, Window_DragOver);
         AddHandler(DragDrop.DropEvent, Window_Drop);
+
+        Loaded += MainWindow_Loaded;
 
         PopulateLanguageMenu();
         ApplySettingsToUi();
@@ -159,6 +175,22 @@ internal sealed partial class MainWindow : Window
         {
             pnlJpegQuality.IsVisible = !string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase);
         }
+
+        if (txtWorkDirBtn != null && !string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory))
+        {
+            txtWorkDirBtn.Text = Path.GetFileName(settings.WorkDirectory);
+            ToolTip.SetTip(btnWorkDir, settings.WorkDirectory);
+        }
+
+        if (cbScannerDpi != null)
+        {
+            cbScannerDpi.SelectedIndex = settings.ScannerDpi switch
+            {
+                150 => 0,
+                600 => 2,
+                _ => 1
+            };
+        }
     }
 
     private void SyncUiWithScanOptions(DetectionOptions options)
@@ -266,16 +298,30 @@ internal sealed partial class MainWindow : Window
         }
     }
 
-    private async Task ExecuteWithLoadingAsync(string statusText, Func<Task> action, string? completionText = null)
+    private CancellationTokenSource? _activeOperationCts;
+
+    private async Task ExecuteWithLoadingAsync(
+        string statusText,
+        Func<CancellationToken, Task> action,
+        string? completionText = null,
+        bool canCancel = false,
+        TimeSpan? timeout = null)
     {
         if (isLoading) return;
         isLoading = true;
         pnlLoadingOverlay.IsVisible = true;
+        btnCancelLoading.IsVisible = canCancel;
+        txtLoadingText.Text = statusText;
         lblStatus.Text = statusText;
+
+        using var cts = timeout.HasValue
+            ? new CancellationTokenSource(timeout.Value)
+            : new CancellationTokenSource();
+        _activeOperationCts = cts;
 
         try
         {
-            await action();
+            await action(cts.Token);
             if (completionText != null)
             {
                 lblStatus.Text = completionText;
@@ -283,9 +329,21 @@ internal sealed partial class MainWindow : Window
         }
         finally
         {
+            _activeOperationCts = null;
+            btnCancelLoading.IsVisible = false;
             pnlLoadingOverlay.IsVisible = false;
             isLoading = false;
         }
+    }
+
+    private Task ExecuteWithLoadingAsync(string statusText, Func<Task> action, string? completionText = null)
+    {
+        return ExecuteWithLoadingAsync(statusText, _ => action(), completionText, canCancel: false);
+    }
+
+    private void BtnCancelLoading_Click(object? sender, RoutedEventArgs e)
+    {
+        _activeOperationCts?.Cancel();
     }
 
 
@@ -362,6 +420,61 @@ internal sealed partial class MainWindow : Window
         ScanSessions[currentIndex].Deactivate();
         currentIndex = (currentIndex + 1) % ScanSessions.Count;
         await LoadPhotosToGuiAsync();
+    }
+
+    private async void BtnDeleteScan_Click(object? sender, RoutedEventArgs e)
+    {
+        await DeleteCurrentScanAsync();
+    }
+
+    private async Task DeleteCurrentScanAsync()
+    {
+        if (isLoading || ScanSessions.Count == 0) return;
+
+        var sessionItem = ScanSessions[currentIndex];
+        string filePath = sessionItem.FilePath;
+        string fileName = Path.GetFileName(filePath);
+
+        sessionItem.Dispose();
+        ScanSessions.RemoveAt(currentIndex);
+
+        var settings = SettingsManager.Instance.Settings;
+        if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory))
+        {
+            ProjectWorkspaceService.DeleteScan(settings.WorkDirectory, filePath, _workspaceSession);
+        }
+        else if (File.Exists(filePath))
+        {
+            try
+            {
+                File.Delete(filePath);
+            }
+            catch (IOException)
+            {
+            }
+        }
+
+        string msgTemplate = Application.Current?.FindResource("MsgScanDeleted")?.ToString() ?? "Scan '{0}' deleted.";
+        string statusMsg = string.Format(msgTemplate, fileName);
+
+        if (ScanSessions.Count == 0)
+        {
+            currentIndex = 0;
+            img.Source = null;
+            slides.Items.Clear();
+            txtFileCounter.Text = Application.Current?.FindResource("TxtNoFiles")?.ToString() ?? "No files loaded";
+            lblPhotoInfo.Text = "";
+            lblStatus.Text = statusMsg;
+        }
+        else
+        {
+            if (currentIndex >= ScanSessions.Count)
+            {
+                currentIndex = ScanSessions.Count - 1;
+            }
+            await LoadPhotosToGuiAsync();
+            lblStatus.Text = statusMsg;
+        }
     }
 
     private async void BtnSaveImages_Click(object? sender, RoutedEventArgs e)
@@ -740,6 +853,20 @@ internal sealed partial class MainWindow : Window
             }
         }
 
+        if (pnlErrorOverlay.IsVisible && e.Key == Avalonia.Input.Key.Escape)
+        {
+            pnlErrorOverlay.IsVisible = false;
+            e.Handled = true;
+            return;
+        }
+
+        if (pnlLoadingOverlay.IsVisible && btnCancelLoading.IsVisible && e.Key == Avalonia.Input.Key.Escape)
+        {
+            _activeOperationCts?.Cancel();
+            e.Handled = true;
+            return;
+        }
+
         if (pnlHelpOverlay.IsVisible && e.Key == Avalonia.Input.Key.Escape)
         {
             pnlHelpOverlay.IsVisible = false;
@@ -766,7 +893,21 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
+        if (e.Key == Avalonia.Input.Key.F5)
+        {
+            BtnScan_Click(null, new RoutedEventArgs());
+            e.Handled = true;
+            return;
+        }
+
         if (ScanSessions.Count == 0) return;
+
+        if (e.Key == Avalonia.Input.Key.Delete && e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Shift))
+        {
+            await DeleteCurrentScanAsync();
+            e.Handled = true;
+            return;
+        }
 
         var key = e.Key;
         if (key == Avalonia.Input.Key.OemPlus) key = Avalonia.Input.Key.Add;
@@ -1257,6 +1398,301 @@ internal sealed partial class MainWindow : Window
         }, completeMsg);
     }
 
+    private async void MainWindow_Loaded(object? sender, RoutedEventArgs e)
+    {
+        var workDir = SettingsManager.Instance.Settings.WorkDirectory;
+        if (!string.IsNullOrEmpty(workDir) && Directory.Exists(workDir) && ProjectWorkspaceService.HasRecoverableSession(workDir) && ScanSessions.Count == 0)
+        {
+            await ResumeWorkspaceSessionAsync(workDir);
+        }
+
+        _ = RefreshScannersAsync();
+    }
+
+    private async Task ResumeWorkspaceSessionAsync(string workDir)
+    {
+        _workspaceSession = ProjectWorkspaceService.LoadSession(workDir);
+        if (_workspaceSession == null || _workspaceSession.Scans.Count == 0)
+        {
+            _workspaceSession = ProjectWorkspaceService.ReconstructSessionFromRawFiles(workDir);
+        }
+
+        if (_workspaceSession?.Scans.Count > 0)
+        {
+            var rawPaths = _workspaceSession.Scans
+                .Select(s => Path.IsPathRooted(s.RelativePath) ? s.RelativePath : Path.Combine(workDir, s.RelativePath))
+                .Where(File.Exists)
+                .ToList();
+
+            if (rawPaths.Count > 0)
+            {
+                await LoadScansFromPathsAsync(rawPaths);
+                string resumedTemplate = Application.Current?.FindResource("MsgScanSuccess")?.ToString() ?? "Workspace: loaded {0} scans.";
+                lblStatus.Text = string.Format(resumedTemplate, rawPaths.Count);
+            }
+        }
+    }
+
+    private async void BtnWorkDir_Click(object? sender, RoutedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider == null) return;
+
+        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = Application.Current?.FindResource("BtnWorkDir")?.ToString() ?? "Select Work Directory",
+            AllowMultiple = false
+        });
+
+        if (folders.Count > 0)
+        {
+            string chosenDir = folders[0].Path.LocalPath;
+            ProjectWorkspaceService.InitializeWorkspace(chosenDir);
+
+            var settings = SettingsManager.Instance.Settings;
+            settings.WorkDirectory = chosenDir;
+            SettingsManager.Instance.Save();
+
+            txtWorkDirBtn.Text = Path.GetFileName(chosenDir);
+            ToolTip.SetTip(btnWorkDir, chosenDir);
+
+            if (ProjectWorkspaceService.HasRecoverableSession(chosenDir))
+            {
+                await ResumeWorkspaceSessionAsync(chosenDir);
+            }
+        }
+    }
+
+    private async void BtnScan_Click(object? sender, RoutedEventArgs e)
+    {
+        if (isLoading) return;
+
+        // 1. Ensure Work Directory
+        var settings = SettingsManager.Instance.Settings;
+        string? workDir = settings.WorkDirectory;
+        if (string.IsNullOrEmpty(workDir) || !Directory.Exists(workDir))
+        {
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel?.StorageProvider != null)
+            {
+                var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+                {
+                    Title = Application.Current?.FindResource("BtnWorkDir")?.ToString() ?? "Select Work Directory for Raw Scans",
+                    AllowMultiple = false
+                });
+
+                if (folders.Count > 0)
+                {
+                    workDir = folders[0].Path.LocalPath;
+                    settings.WorkDirectory = workDir;
+                    SettingsManager.Instance.Save();
+                    txtWorkDirBtn.Text = Path.GetFileName(workDir);
+                    ToolTip.SetTip(btnWorkDir, workDir);
+                }
+            }
+
+            if (string.IsNullOrEmpty(workDir))
+            {
+                string picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                if (string.IsNullOrEmpty(picturesDir)) picturesDir = Path.GetTempPath();
+                workDir = Path.Combine(picturesDir, "PhotoCropper_Workspace");
+                settings.WorkDirectory = workDir;
+                SettingsManager.Instance.Save();
+                txtWorkDirBtn.Text = Path.GetFileName(workDir);
+                ToolTip.SetTip(btnWorkDir, workDir);
+            }
+        }
+
+        ProjectWorkspaceService.InitializeWorkspace(workDir);
+
+        // 2. Discover scanner if needed
+        if (_availableScanners.Count == 0)
+        {
+            await RefreshScannersAsync();
+        }
+
+        if (_availableScanners.Count == 0)
+        {
+            string noScannerTitle = Application.Current?.FindResource("TitleNoScanner")?.ToString() ?? "No Scanner Detected";
+            string noScannerMsg = Application.Current?.FindResource("MsgNoScannerDetails")?.ToString() ??
+                "No scanner was detected on your system.\n\n• Check that your scanner is plugged in and powered on.\n• Ensure USB cable or Wi-Fi network connection is stable.\n• Make sure drivers (WIA, TWAIN, or SANE) are installed.\n• Click 'Refresh Scanners' to detect connected hardware.";
+
+            lblStatus.Text = Application.Current?.FindResource("MsgNoScannerFound")?.ToString() ?? "No scanner detected.";
+            ShowScannerError(noScannerTitle, noScannerMsg);
+            return;
+        }
+
+        var selectedDevice = _availableScanners.FirstOrDefault(s => s.Id == settings.SelectedScannerId)
+                             ?? _availableScanners[0];
+
+        int dpi = settings.ScannerDpi > 0 ? settings.ScannerDpi : 300;
+
+        var scannerOptions = new ScannerOptions
+        {
+            Device = selectedDevice,
+            Dpi = dpi,
+            ColorMode = ScannerColorMode.Color
+        };
+
+        string scanningMsg = string.Format(
+            Application.Current?.FindResource("MsgScanning")?.ToString() ?? "Scanning image from {0}...",
+            selectedDevice.Name);
+
+        var stagedPaths = new List<string>();
+        try
+        {
+            btnScan.IsEnabled = false;
+            await ExecuteWithLoadingAsync(scanningMsg, async (token) =>
+            {
+                var scannedMats = await _scannerService.ScanAsync(scannerOptions, token).ConfigureAwait(false);
+                if (scannedMats.Count == 0) return;
+
+                foreach (var mat in scannedMats)
+                {
+                    using (mat)
+                    {
+                        string stagedPath = ProjectWorkspaceService.StageRawScanFromMat(workDir, mat);
+                        stagedPaths.Add(stagedPath);
+
+                        string relativePath = Path.GetRelativePath(workDir, stagedPath);
+                        _workspaceSession ??= new WorkspaceSessionState();
+                        _workspaceSession.Scans.Add(new WorkspaceScanEntry
+                        {
+                            RelativePath = relativePath,
+                            OriginalFileName = Path.GetFileName(stagedPath),
+                            StagedAtUtc = DateTime.UtcNow
+                        });
+                    }
+                }
+
+                if (_workspaceSession != null)
+                {
+                    ProjectWorkspaceService.SaveSession(workDir, _workspaceSession);
+                }
+            }, null, canCancel: true, timeout: TimeSpan.FromSeconds(45));
+        }
+        catch (OperationCanceledException)
+        {
+            string cancelledMsg = Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Scanning was cancelled or timed out.";
+            lblStatus.Text = cancelledMsg;
+            return;
+        }
+        catch (ScannerNotFoundException ex)
+        {
+            string notFoundTitle = Application.Current?.FindResource("TitleScannerNotFound")?.ToString() ?? "Scanner Not Found";
+            string notFoundTemplate = Application.Current?.FindResource("MsgScannerNotFoundDetails")?.ToString() ??
+                "{0}\n\n• Verify your scanner is powered on and connected.\n• Make sure no other application is using the scanner.\n• Reconnect the scanner and click 'Refresh Scanners'.";
+            string notFoundDetails = string.Format(notFoundTemplate, ex.Message);
+
+            lblStatus.Text = ex.Message;
+            ShowScannerError(notFoundTitle, notFoundDetails);
+            return;
+        }
+        catch (Exception ex)
+        {
+            string failedTemplate = Application.Current?.FindResource("MsgScanFailed")?.ToString() ?? "Scanning failed: {0}";
+            string errorTitle = Application.Current?.FindResource("TitleScannerError")?.ToString() ?? "Scanner Communication Error";
+            string errorTemplate = Application.Current?.FindResource("MsgScannerErrorDetails")?.ToString() ??
+                "Failed to communicate with scanner '{0}':\n\n{1}\n\nTroubleshooting:\n• Check scanner power and USB/network cables.\n• Verify scanner driver status in your operating system.\n• Restart the scanner and click 'Refresh Scanners'.";
+            string errorDetails = string.Format(errorTemplate, selectedDevice.Name, ex.Message);
+
+            lblStatus.Text = string.Format(failedTemplate, ex.Message);
+            ShowScannerError(errorTitle, errorDetails);
+            return;
+        }
+        finally
+        {
+            btnScan.IsEnabled = true;
+        }
+
+        if (stagedPaths.Count > 0)
+        {
+            var options = GetDetectionOptionsFromUi();
+            foreach (var path in stagedPaths)
+            {
+                ScanSessions.Add(new ScanSessionItem(path, options));
+            }
+
+            currentIndex = ScanSessions.Count - stagedPaths.Count;
+            await LoadPhotosToGuiAsync();
+        }
+    }
+
+    private async Task RefreshScannersAsync()
+    {
+        try
+        {
+            var devices = await _scannerService.GetDevicesAsync().ConfigureAwait(false);
+            _availableScanners.Clear();
+            _availableScanners.AddRange(devices);
+
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (cbScanner != null)
+                {
+                    cbScanner.ItemsSource = _availableScanners.Select(d => d.ToString()).ToList();
+
+                    var settings = SettingsManager.Instance.Settings;
+                    int selectedIdx = _availableScanners.FindIndex(d => d.Id == settings.SelectedScannerId);
+                    if (selectedIdx >= 0)
+                    {
+                        cbScanner.SelectedIndex = selectedIdx;
+                    }
+                    else if (_availableScanners.Count > 0)
+                    {
+                        cbScanner.SelectedIndex = 0;
+                    }
+                }
+            });
+        }
+        catch
+        {
+            // Scanner enumeration failed or unsupported platform
+        }
+    }
+
+    private void CbScanner_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (cbScanner.SelectedIndex >= 0 && cbScanner.SelectedIndex < _availableScanners.Count)
+        {
+            var selected = _availableScanners[cbScanner.SelectedIndex];
+            SettingsManager.Instance.Settings.SelectedScannerId = selected.Id;
+            SettingsManager.Instance.Save();
+        }
+    }
+
+    private void CbScannerDpi_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (cbScannerDpi?.SelectedItem is ComboBoxItem item && int.TryParse(item.Content?.ToString(), out int dpi))
+        {
+            SettingsManager.Instance.Settings.ScannerDpi = dpi;
+            SettingsManager.Instance.Save();
+        }
+    }
+
+    private void ShowScannerError(string title, string message)
+    {
+        txtErrorTitle.Text = title;
+        txtErrorMessage.Text = message;
+        pnlErrorOverlay.IsVisible = true;
+    }
+
+    private void BtnCloseError_Click(object? sender, RoutedEventArgs e)
+    {
+        pnlErrorOverlay.IsVisible = false;
+    }
+
+    private async void BtnErrorRefresh_Click(object? sender, RoutedEventArgs e)
+    {
+        pnlErrorOverlay.IsVisible = false;
+        await RefreshScannersAsync();
+    }
+
+    private async void BtnRefreshScanners_Click(object? sender, RoutedEventArgs e)
+    {
+        await RefreshScannersAsync();
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         var settings = SettingsManager.Instance.Settings;
@@ -1280,9 +1716,15 @@ internal sealed partial class MainWindow : Window
             settings.CustomOutputDirectory = string.IsNullOrEmpty(txtOutputDir.Text) ? null : txtOutputDir.Text;
         }
 
+        if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory) && _workspaceSession != null)
+        {
+            ProjectWorkspaceService.SaveSession(settings.WorkDirectory, _workspaceSession);
+        }
+
         SettingsManager.Instance.Save();
 
         base.OnClosed(e);
+        _scannerService.Dispose();
         undoHistory.Dispose();
         foreach (var session in ScanSessions)
         {

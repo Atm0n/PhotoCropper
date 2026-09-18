@@ -1,9 +1,9 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
-	<sys:String x:Key="BtnOpenScans">Open Scans</sys:String>
-	<sys:String x:Key="BtnSaveResults">Save All Results</sys:String>
-	<sys:String x:Key="LblDetectionSensitivity">Detection Sensitivity</sys:String>
+	<sys:String x:Key="BtnOpenScans">Open</sys:String>
+	<sys:String x:Key="BtnSaveResults">Save</sys:String>
+	<sys:String x:Key="LblDetectionSensitivity">Sensitivity</sys:String>
 	<sys:String x:Key="LblZoom">Zoom</sys:String>
 	<sys:String x:Key="BtnAdvanced">Advanced</sys:String>
 	<sys:String x:Key="LblMinPhotoSize">Min Photo Size</sys:String>
@@ -69,6 +69,7 @@
 	<sys:String x:Key="HelpAutoTuneTitle">⚡ Detection Auto-Tune</sys:String>
 	<sys:String x:Key="HelpAutoTuneDesc">Automatically sweeps background tolerance, edge thresholds, and size parameters to discover difficult or faint photos without touching sliders.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Keyboard Shortcuts</sys:String>
+	<sys:String x:Key="HelpShortcutScan">[F5] Scan from flatbed</sys:String>
 	<sys:String x:Key="HelpShortcutAutoTune">[T] Auto-tune active scan</sys:String>
 	<sys:String x:Key="HelpShortcutRotate">[R] Rotate photo 90°</sys:String>
 	<sys:String x:Key="HelpShortcutDelete">[X] or [Delete] Discard photo</sys:String>
@@ -103,4 +104,30 @@
 	<sys:String x:Key="MsgAutoTuning">Auto-tuning detection parameters...</sys:String>
 	<sys:String x:Key="MsgAutoTuneSuccess">Auto-tuned: found {0} photos (Tolerance: {1:0}, Edge: {2:0}).</sys:String>
 	<sys:String x:Key="MsgAutoTuneFailed">Auto-tune did not find additional photos.</sys:String>
+	<sys:String x:Key="BtnScan">Scan</sys:String>
+	<sys:String x:Key="TipScan">Acquire scan from flatbed scanner (Shortcut: F5)</sys:String>
+	<sys:String x:Key="BtnWorkDir">Folder</sys:String>
+	<sys:String x:Key="TipWorkDir">Select a work directory for automatic raw scan staging and session recovery</sys:String>
+	<sys:String x:Key="MsgScanning">Scanning image from {0}...</sys:String>
+	<sys:String x:Key="MsgScanSuccess">Scan acquired and saved to workspace: {0}</sys:String>
+	<sys:String x:Key="MsgNoScannerFound">No scanner detected. Please make sure your scanner is turned on and connected.</sys:String>
+	<sys:String x:Key="MsgScanFailed">Scanning failed: {0}</sys:String>
+	<sys:String x:Key="MsgResumeSession">A previous scanning session was detected in this folder ({0} scans). Would you like to resume it?</sys:String>
+	<sys:String x:Key="TitleResumeSession">Resume Scanning Session</sys:String>
+	<sys:String x:Key="LblWorkDirStatus">Work Folder: {0}</sys:String>
+	<sys:String x:Key="LblNoWorkDir">No Work Folder</sys:String>
+	<sys:String x:Key="BtnDeleteScan">Delete Scan</sys:String>
+	<sys:String x:Key="TipDeleteScan">Delete this entire scan from workspace and disk (Shortcut: Shift+Delete)</sys:String>
+	<sys:String x:Key="MsgScanDeleted">Scan '{0}' deleted.</sys:String>
+	<sys:String x:Key="HelpShortcutDeleteScan">[Shift+Delete] Delete entire scan</sys:String>
+	<sys:String x:Key="BtnCancel">Cancel</sys:String>
+	<sys:String x:Key="BtnOk">OK</sys:String>
+	<sys:String x:Key="BtnRefreshScanners">Refresh Scanners</sys:String>
+	<sys:String x:Key="TitleNoScanner">No Scanner Detected</sys:String>
+	<sys:String x:Key="MsgNoScannerDetails">No scanner was detected on your system.&#x0a;&#x0a;• Check that your scanner is plugged in and powered on.&#x0a;• Verify the USB cable or Wi-Fi network connection.&#x0a;• Ensure scanner drivers (WIA, TWAIN, or SANE) are installed.&#x0a;• Click 'Refresh Scanners' to detect connected hardware.</sys:String>
+	<sys:String x:Key="TitleScannerNotFound">Scanner Not Found</sys:String>
+	<sys:String x:Key="MsgScannerNotFoundDetails">{0}&#x0a;&#x0a;• Verify your scanner is powered on and connected.&#x0a;• Make sure no other application is using the scanner.&#x0a;• Reconnect the scanner and click 'Refresh Scanners'.</sys:String>
+	<sys:String x:Key="TitleScannerError">Scanner Communication Error</sys:String>
+	<sys:String x:Key="MsgScannerErrorDetails">Failed to communicate with scanner '{0}':&#x0a;&#x0a;{1}&#x0a;&#x0a;Troubleshooting:&#x0a;• Check scanner power and USB/network cables.&#x0a;• Verify scanner driver status in your operating system.&#x0a;• Restart the scanner and click 'Refresh Scanners'.</sys:String>
+	<sys:String x:Key="MsgScanCancelled">Scanning was cancelled or timed out.</sys:String>
 </ResourceDictionary>
