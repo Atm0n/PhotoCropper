@@ -1,8 +1,8 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
-	<sys:String x:Key="BtnOpenScans">Abrir Escaneos</sys:String>
-	<sys:String x:Key="BtnSaveResults">Guardar Todo</sys:String>
+	<sys:String x:Key="BtnOpenScans">Abrir</sys:String>
+	<sys:String x:Key="BtnSaveResults">Guardar</sys:String>
 	<sys:String x:Key="LblDetectionSensitivity">Sensibilidad</sys:String>
 	<sys:String x:Key="LblZoom">Zoom</sys:String>
 	<sys:String x:Key="BtnAdvanced">Avanzado</sys:String>
@@ -36,6 +36,7 @@
 	<sys:String x:Key="ProcessingScan">Procesando...</sys:String>
 	<sys:String x:Key="MsgSavingProgress">Exportando foto {0} de {1}...</sys:String>
 	<sys:String x:Key="MsgSaved">Se han guardado {0} fotos con éxito.</sys:String>
+	<sys:String x:Key="MsgAllScansAlreadySaved">Todos los {0} escaneos ya están guardados en 'Cropped'. No hay cambios por exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocesando con nuevos ajustes...</sys:String>
 	<sys:String x:Key="MsgDetectionComplete">Detección finalizada. Encontradas {0} fotos.</sys:String>
 	<sys:String x:Key="MsgPhotoDeleted">Foto eliminada.</sys:String>
@@ -69,7 +70,8 @@
 	<sys:String x:Key="HelpAutoTuneTitle">⚡ Auto-Ajuste de Detección</sys:String>
 	<sys:String x:Key="HelpAutoTuneDesc">Realiza un barrido automático de tolerancias, umbrales de borde y tamaños mínimos para descubrir fotos difíciles sin tocar los controles.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Atajos de Teclado</sys:String>
-	<sys:String x:Key="HelpShortcutAutoTune">[T] Auto-ajustar escaneo actual</sys:String>
+	<sys:String x:Key="HelpShortcutScan">[F5] Escanear desde el escáner</sys:String>
+	<sys:String x:Key="HelpShortcutAutoTune">[T] Auto-ajustar escaneo activo</sys:String>
 	<sys:String x:Key="HelpShortcutRotate">[R] Rotar foto 90°</sys:String>
 	<sys:String x:Key="HelpShortcutDelete">[X] o [Supr] Descartar foto</sys:String>
 	<sys:String x:Key="HelpShortcutNextScan">[Re Pág / Av Pág] o [↑ / ↓] Cambiar escaneo</sys:String>
@@ -103,4 +105,38 @@
 	<sys:String x:Key="MsgAutoTuning">Auto-ajustando parámetros de detección...</sys:String>
 	<sys:String x:Key="MsgAutoTuneSuccess">Auto-ajustado: se encontraron {0} fotos (Tolerancia: {1:0}, Borde: {2:0}).</sys:String>
 	<sys:String x:Key="MsgAutoTuneFailed">El auto-ajuste no encontró fotos adicionales.</sys:String>
+	<sys:String x:Key="BtnScan">Escanear</sys:String>
+	<sys:String x:Key="TipScan">Adquirir escaneo desde el escáner plano (Atajo: F5)</sys:String>
+	<sys:String x:Key="BtnWorkDir">Carpeta</sys:String>
+	<sys:String x:Key="TipWorkDir">Seleccionar una carpeta de trabajo para almacenamiento automático y recuperación de sesión</sys:String>
+	<sys:String x:Key="MsgScanning">Escaneando imagen desde {0}...</sys:String>
+	<sys:String x:Key="MsgScanSuccess">Escaneo adquirido y guardado en el espacio de trabajo: {0}</sys:String>
+	<sys:String x:Key="MsgNoScannerFound">No se detectó ningún escáner. Asegúrese de que esté encendido y conectado.</sys:String>
+	<sys:String x:Key="MsgScanFailed">Error al escanear: {0}</sys:String>
+	<sys:String x:Key="MsgResumeSession">Se detectó una sesión previa en esta carpeta ({0} escaneos). ¿Desea reanudarla?</sys:String>
+	<sys:String x:Key="TitleResumeSession">Reanudar Sesión de Escaneo</sys:String>
+	<sys:String x:Key="LblWorkDirStatus">Carpeta: {0}</sys:String>
+	<sys:String x:Key="LblNoWorkDir">Sin Carpeta de Trabajo</sys:String>
+	<sys:String x:Key="BtnDeleteScan">Eliminar Escaneo</sys:String>
+	<sys:String x:Key="TipDeleteScan">Eliminar este escaneo completo del espacio de trabajo y disco (Atajo: Shift+Supr)</sys:String>
+	<sys:String x:Key="MsgScanDeleted">Escaneo '{0}' eliminado.</sys:String>
+	<sys:String x:Key="HelpShortcutDeleteScan">[Shift+Supr] Eliminar escaneo completo</sys:String>
+	<sys:String x:Key="BtnCancel">Cancelar</sys:String>
+	<sys:String x:Key="BtnOk">Aceptar</sys:String>
+	<sys:String x:Key="BtnRefreshScanners">Actualizar Escáneres</sys:String>
+	<sys:String x:Key="TitleNoScanner">No Se Detectó Ningún Escáner</sys:String>
+	<sys:String x:Key="MsgNoScannerDetails">No se detectó ningún escáner en su sistema.&#x0a;&#x0a;• Compruebe que el escáner esté encendido y enchufado.&#x0a;• Verifique la conexión por cable USB o Wi-Fi.&#x0a;• Asegúrese de tener instalados los controladores (WIA, TWAIN o SANE).&#x0a;• Haga clic en 'Actualizar Escáneres' para volver a detectar.</sys:String>
+	<sys:String x:Key="TitleScannerNotFound">Escáner No Encontrado</sys:String>
+	<sys:String x:Key="MsgScannerNotFoundDetails">{0}&#x0a;&#x0a;• Verifique que el escáner esté encendido y los cables bien conectados.&#x0a;• Asegúrese de que ningún otro programa esté utilizando el escáner.&#x0a;• Reconecte el escáner y haga clic en 'Actualizar Escáneres'.</sys:String>
+	<sys:String x:Key="TitleScannerError">Error de Comunicación con el Escáner</sys:String>
+	<sys:String x:Key="MsgScannerErrorDetails">Error al comunicarse con el escáner '{0}':&#x0a;&#x0a;{1}&#x0a;&#x0a;Solución de problemas:&#x0a;• Compruebe la alimentación y cables del escáner.&#x0a;• Verifique el estado del controlador en su sistema operativo.&#x0a;• Reinicie el escáner y haga clic en 'Actualizar Escáneres'.</sys:String>
+	<sys:String x:Key="MsgScanCancelled">El escaneo fue cancelado o expiró el tiempo de espera.</sys:String>
+	<sys:String x:Key="LblNetworkScanners">Buscar en red (Wi-Fi / eSCL)</sys:String>
+	<sys:String x:Key="TipNetworkScanners">Busca escáneres inalámbricos en la red local mediante Apple AirScan / eSCL (puede solicitar permiso del cortafuegos).</sys:String>
+	<sys:String x:Key="LblNoProject">Sin Proyecto</sys:String>
+	<sys:String x:Key="LblProjectFormat">Proyecto: {0}</sys:String>
+	<sys:String x:Key="TipActiveProject">Proyecto activo: {0}&#x0a;Ruta: {1}&#x0a;&#x0a;Haga clic para cambiar de proyecto o carpeta de trabajo.</sys:String>
+	<sys:String x:Key="BtnNewProject">Nuevo Lote</sys:String>
+	<sys:String x:Key="TipNewProject">Iniciar un nuevo proyecto / lote de fotos en una carpeta separada</sys:String>
+	<sys:String x:Key="MsgNewProjectReady">Proyecto '{0}' listo. Haga clic en Escanear o Abrir Archivos para comenzar.</sys:String>
 </ResourceDictionary>

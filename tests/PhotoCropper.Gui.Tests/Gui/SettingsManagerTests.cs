@@ -47,6 +47,9 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.ZoomLevel = 2.5;
         manager.Settings.AdvancedVisible = true;
         manager.Settings.CustomOutputDirectory = "C:\\CroppedPhotos";
+        manager.Settings.WorkDirectory = "C:\\ScannerWorkspace";
+        manager.Settings.SelectedScannerId = "canon-lide-400";
+        manager.Settings.ScannerDpi = 600;
 
         manager.Save();
 
@@ -62,6 +65,9 @@ public sealed class SettingsManagerTests : IDisposable
         secondManager.Settings.ZoomLevel.ShouldBe(2.5);
         secondManager.Settings.AdvancedVisible.ShouldBeTrue();
         secondManager.Settings.CustomOutputDirectory.ShouldBe("C:\\CroppedPhotos");
+        secondManager.Settings.WorkDirectory.ShouldBe("C:\\ScannerWorkspace");
+        secondManager.Settings.SelectedScannerId.ShouldBe("canon-lide-400");
+        secondManager.Settings.ScannerDpi.ShouldBe(600);
     }
 
     [Fact]

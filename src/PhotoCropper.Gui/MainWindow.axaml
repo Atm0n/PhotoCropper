@@ -14,78 +14,105 @@
 	<Grid>
 		<DockPanel>
 			<!-- Header / Toolbar -->
-		<Border DockPanel.Dock="Top" Background="#2d2d2d" MinHeight="60" BorderBrush="#3f3f3f" BorderThickness="0,0,0,1">
+		<Border DockPanel.Dock="Top" Background="#2d2d2d" MinHeight="50" BorderBrush="#3f3f3f" BorderThickness="0,0,0,1">
 			<StackPanel>
-				<Grid ColumnDefinitions="Auto, *, Auto" Height="60">
-					<StackPanel Grid.Column="0" Orientation="Horizontal" Margin="15,0" Spacing="10">
-						<Button x:Name="btnOpenFiles" Click="BtnOpenFiles_Click" Padding="15,8" Background="#3399ff" Foreground="White" Focusable="False">
-							<StackPanel Orientation="Horizontal" Spacing="8">
+				<Grid ColumnDefinitions="Auto, *, Auto" Height="50">
+					<!-- Left Section: Scan & File Actions -->
+					<StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0" Spacing="6" VerticalAlignment="Center">
+						<Button x:Name="btnScan" Click="BtnScan_Click" Padding="10,6" Background="#28a745" Foreground="White" Focusable="False" ToolTip.Tip="{DynamicResource TipScan}">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="🖨️"/>
+								<TextBlock Text="{DynamicResource BtnScan}" FontWeight="SemiBold"/>
+							</StackPanel>
+						</Button>
+						<Button x:Name="btnWorkDir" Click="BtnWorkDir_Click" Padding="10,6" Background="#3a3a3a" Foreground="White" Focusable="False" ToolTip.Tip="{DynamicResource TipWorkDir}">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="🗂️"/>
+								<TextBlock x:Name="txtWorkDirBtn" Text="{DynamicResource BtnWorkDir}" FontWeight="SemiBold"/>
+							</StackPanel>
+						</Button>
+						<Button x:Name="btnNewProject" Click="BtnNewProject_Click" Padding="8,6" Background="#3a3a3a" Foreground="White" Focusable="False" ToolTip.Tip="{DynamicResource TipNewProject}">
+							<StackPanel Orientation="Horizontal" Spacing="4">
+								<TextBlock Text="➕"/>
+								<TextBlock Text="{DynamicResource BtnNewProject}" FontWeight="SemiBold"/>
+							</StackPanel>
+						</Button>
+						<Button x:Name="btnOpenFiles" Click="BtnOpenFiles_Click" Padding="10,6" Background="#3399ff" Foreground="White" Focusable="False">
+							<StackPanel Orientation="Horizontal" Spacing="6">
 								<TextBlock Text="📁"/>
 								<TextBlock Text="{DynamicResource BtnOpenScans}"/>
 							</StackPanel>
 						</Button>
-						<Button x:Name="btnSave" Click="BtnSaveImages_Click" Padding="15,8" Focusable="False">
-							<StackPanel Orientation="Horizontal" Spacing="8">
+						<Button x:Name="btnSave" Click="BtnSaveImages_Click" Padding="10,6" Focusable="False">
+							<StackPanel Orientation="Horizontal" Spacing="6">
 								<TextBlock Text="💾"/>
 								<TextBlock Text="{DynamicResource BtnSaveResults}"/>
 							</StackPanel>
 						</Button>
 
-						<ToggleButton x:Name="tglColorPicker" Click="TglColorPicker_Click" Padding="15,8" Focusable="False">
-							<StackPanel Orientation="Horizontal" Spacing="8">
-								<TextBlock Text="🎨"/>
-								<TextBlock Text="{DynamicResource BtnSampleBackground}"/>
-							</StackPanel>
+						<Rectangle Width="1" Height="22" Fill="#444444" Margin="2,0"/>
+
+						<ToggleButton x:Name="tglColorPicker" Click="TglColorPicker_Click" Padding="8,6" Focusable="False" ToolTip.Tip="{DynamicResource BtnSampleBackground}">
+							<TextBlock Text="🎨" FontSize="13"/>
 						</ToggleButton>
-						<Button x:Name="btnResetBackground" Click="BtnResetBackground_Click" Padding="15,8" Focusable="False" IsEnabled="False">
-							<StackPanel Orientation="Horizontal" Spacing="8">
-								<TextBlock Text="🔄"/>
-								<TextBlock Text="{DynamicResource BtnResetBackground}"/>
-							</StackPanel>
-						</Button>
-
-						<Menu Background="Transparent" VerticalAlignment="Center" Margin="5,0" Focusable="False" IsTabStop="False" KeyboardNavigation.TabNavigation="None">
-							<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuLanguage" Focusable="False" IsTabStop="False"/>
-						</Menu>
-
-						<Button x:Name="btnHelp" Click="BtnHelp_Click" Padding="10,8" Background="Transparent" BorderThickness="0" Focusable="False">
-							<TextBlock Text="❓" FontSize="18"/>
+						<Button x:Name="btnResetBackground" Click="BtnResetBackground_Click" Padding="8,6" Focusable="False" IsEnabled="False" ToolTip.Tip="{DynamicResource BtnResetBackground}">
+							<TextBlock Text="🔄" FontSize="13"/>
 						</Button>
 					</StackPanel>
 
-					<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
+					<!-- Center Section: Tuning & Zoom (clipped to prevent overlap into adjacent columns) -->
+					<Grid Grid.Column="1" HorizontalAlignment="Center" ClipToBounds="True">
 						<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
-							<TextBlock Text="{DynamicResource LblDetectionSensitivity}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#aaaaaa"/>
-							<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="25" Width="120" 
+							<TextBlock Text="{DynamicResource LblDetectionSensitivity}" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" Foreground="#aaaaaa"/>
+							<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="25" Width="75" 
 									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
 							<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" 
-									   VerticalAlignment="Center" Width="35" FontWeight="Bold"/>
-							<Button x:Name="btnAutoTune" Click="BtnAutoTune_Click" Padding="10,6" Background="#2a5a8c" ToolTip.Tip="{DynamicResource TipAutoTune}" Focusable="False">
-								<StackPanel Orientation="Horizontal" Spacing="5">
-									<TextBlock Text="⚡"/>
+									   VerticalAlignment="Center" Width="30" FontSize="11" FontWeight="Bold"/>
+							<Button x:Name="btnAutoTune" Click="BtnAutoTune_Click" Padding="6,4" Background="#2a5a8c" ToolTip.Tip="{DynamicResource TipAutoTune}" Focusable="False">
+								<StackPanel Orientation="Horizontal" Spacing="4">
+									<TextBlock Text="⚡" FontSize="11"/>
 									<TextBlock Text="{DynamicResource BtnAutoTune}" FontSize="11" FontWeight="SemiBold"/>
 								</StackPanel>
 							</Button>
-						</StackPanel>
 
-						<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
-							<TextBlock Text="{DynamicResource LblZoom}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#aaaaaa"/>
-							<Slider x:Name="sldZoom" Minimum="1" Maximum="10" Value="1" Width="150" 
+							<Rectangle Width="1" Height="20" Fill="#444444" Margin="3,0"/>
+
+							<TextBlock Text="{DynamicResource LblZoom}" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" Foreground="#aaaaaa"/>
+							<Slider x:Name="sldZoom" Minimum="1" Maximum="10" Value="1" Width="70" 
 									PropertyChanged="SldZoom_PropertyChanged" VerticalAlignment="Center" Focusable="False"/>
 							<TextBlock Text="{Binding #sldZoom.Value, StringFormat='{}{0:0}x'}" 
-									   VerticalAlignment="Center" Width="40" FontWeight="Bold"/>
+									   VerticalAlignment="Center" Width="26" FontSize="11" FontWeight="Bold"/>
+
+							<Rectangle Width="1" Height="20" Fill="#444444" Margin="3,0"/>
+
+							<ToggleButton x:Name="tglAdvanced" Content="{DynamicResource BtnAdvanced}" Padding="8,4" FontSize="11" VerticalAlignment="Center" Focusable="False"/>
 						</StackPanel>
+					</Grid>
 
-						<ToggleButton x:Name="tglAdvanced" Content="{DynamicResource BtnAdvanced}" Margin="10,0" Padding="10,5" VerticalAlignment="Center" Focusable="False"/>
-					</StackPanel>
+					<!-- Right Section: Navigation, Language & Help -->
+					<StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10,0" VerticalAlignment="Center" Spacing="6">
+						<Border Background="#252525" CornerRadius="6" Padding="3,2" BorderBrush="#3f3f3f" BorderThickness="1">
+							<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+								<Button x:Name="btnPrevScan" Click="BtnPrevScan_Click" Padding="6,4" Background="Transparent" BorderThickness="0" Focusable="False" ToolTip.Tip="Previous Scan (PageUp / ↑)">
+									<TextBlock Text="◀" FontSize="10"/>
+								</Button>
+								<TextBlock x:Name="txtFileCounter" Text="{DynamicResource TxtNoFiles}" Foreground="#aaaaaa" VerticalAlignment="Center" Margin="4,0" FontSize="11"/>
+								<Button x:Name="btnNextScan" Click="BtnNextScan_Click" Padding="6,4" Background="Transparent" BorderThickness="0" Focusable="False" ToolTip.Tip="Next Scan (PageDown / ↓)">
+									<TextBlock Text="▶" FontSize="10"/>
+								</Button>
+								<Rectangle Width="1" Height="16" Fill="#3f3f3f" Margin="2,0"/>
+								<Button x:Name="btnDeleteScan" Click="BtnDeleteScan_Click" Padding="6,4" Background="Transparent" BorderThickness="0" Focusable="False" ToolTip.Tip="{DynamicResource TipDeleteScan}">
+									<TextBlock Text="🗑️" FontSize="11"/>
+								</Button>
+							</StackPanel>
+						</Border>
 
-					<StackPanel Grid.Column="2" Orientation="Horizontal" Margin="15,0" VerticalAlignment="Center" Spacing="8">
-						<Button x:Name="btnPrevScan" Click="BtnPrevScan_Click" Padding="8,4" Background="#333333" Focusable="False">
-							<TextBlock Text="◀" FontSize="10"/>
-						</Button>
-						<TextBlock x:Name="txtFileCounter" Text="{DynamicResource TxtNoFiles}" Foreground="#888888" VerticalAlignment="Center" Margin="5,0"/>
-						<Button x:Name="btnNextScan" Click="BtnNextScan_Click" Padding="8,4" Background="#333333" Focusable="False">
-							<TextBlock Text="▶" FontSize="10"/>
+						<Menu Background="Transparent" VerticalAlignment="Center" Margin="2,0" Focusable="False" IsTabStop="False" KeyboardNavigation.TabNavigation="None">
+							<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuLanguage" Focusable="False" IsTabStop="False" FontSize="11"/>
+						</Menu>
+
+						<Button x:Name="btnHelp" Click="BtnHelp_Click" Padding="6,4" Background="Transparent" BorderThickness="0" Focusable="False" ToolTip.Tip="{DynamicResource BtnHelp}">
+							<TextBlock Text="❓" FontSize="15"/>
 						</Button>
 					</StackPanel>
 				</Grid>
@@ -153,6 +180,28 @@
 								</Button>
 							</StackPanel>
 						</StackPanel>
+
+						<!-- Row 3: Scanner Settings -->
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="25">
+							<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+								<TextBlock Text="Scanner:" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
+								<ComboBox x:Name="cbScanner" Width="260" SelectionChanged="CbScanner_SelectionChanged" Focusable="False" FontSize="11"/>
+								<Button x:Name="btnRefreshScanners" Click="BtnRefreshScanners_Click" Padding="8,4" FontSize="11" Background="#444444" VerticalAlignment="Center" Focusable="False" ToolTip.Tip="Refresh connected scanners">
+									<TextBlock Text="🔄"/>
+								</Button>
+							</StackPanel>
+
+							<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+								<TextBlock Text="DPI:" VerticalAlignment="Center" FontSize="11" Foreground="#888888"/>
+								<ComboBox x:Name="cbScannerDpi" SelectedIndex="1" Width="80" SelectionChanged="CbScannerDpi_SelectionChanged" Focusable="False" FontSize="11">
+									<ComboBoxItem Content="150"/>
+									<ComboBoxItem Content="300"/>
+									<ComboBoxItem Content="600"/>
+								</ComboBox>
+							</StackPanel>
+
+							<CheckBox x:Name="chkNetworkScanners" Content="{DynamicResource LblNetworkScanners}" ToolTip.Tip="{DynamicResource TipNetworkScanners}" IsCheckedChanged="ChkNetworkScanners_IsCheckedChanged" VerticalAlignment="Center" FontSize="11" Focusable="False"/>
+						</StackPanel>
 					</StackPanel>
 				</Border>
 			</StackPanel>
@@ -160,13 +209,22 @@
 
 		<!-- Footer / Status Bar -->
 		<Border DockPanel.Dock="Bottom" Background="#252525" Height="30" BorderBrush="#3f3f3f" BorderThickness="0,1,0,0">
-			<Grid ColumnDefinitions="*, Auto">
-				<StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0" Spacing="20">
+			<Grid ColumnDefinitions="Auto, *, Auto">
+				<!-- Project Indicator Badge -->
+				<Border Grid.Column="0" Margin="8,3" Background="#1e1e1e" BorderBrush="#3a3a3a" BorderThickness="1" CornerRadius="4" Padding="8,2"
+						PointerPressed="LblCurrentProject_PointerPressed" Cursor="Hand" ToolTip.Tip="{DynamicResource TipWorkDir}">
+					<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+						<TextBlock Text="🗂️" FontSize="11" VerticalAlignment="Center"/>
+						<TextBlock x:Name="lblCurrentProject" Text="{DynamicResource LblNoProject}" FontSize="11" FontWeight="SemiBold" Foreground="#3399ff" VerticalAlignment="Center"/>
+					</StackPanel>
+				</Border>
+
+				<StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0" Spacing="20" VerticalAlignment="Center">
 					<TextBlock x:Name="lblStatus" Text="{DynamicResource StatusReady}" VerticalAlignment="Center" FontSize="12" Foreground="#888888"/>
 					<TextBlock Text="{DynamicResource StatusShortcuts}" 
 							   VerticalAlignment="Center" FontSize="11" Foreground="#555555"/>
 				</StackPanel>
-				<TextBlock Grid.Column="1" x:Name="lblPhotoInfo" Text="" Margin="10,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#3399ff"/>
+				<TextBlock Grid.Column="2" x:Name="lblPhotoInfo" Text="" Margin="10,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#3399ff"/>
 			</Grid>
 		</Border>
 
@@ -327,11 +385,19 @@
 			</Grid>
 		</Panel>
 		<!-- Loading Overlay -->
-		<Panel x:Name="pnlLoadingOverlay" Background="#80000000" IsVisible="False" ZIndex="200">
-			<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="20">
-				<ProgressBar IsIndeterminate="True" Width="200" Height="20" Foreground="#3399ff"/>
-				<TextBlock Text="{DynamicResource ProcessingScan}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
-			</StackPanel>
+		<Panel x:Name="pnlLoadingOverlay" Background="#90000000" IsVisible="False" ZIndex="200">
+			<Border Background="#252525" BorderBrush="#3f3f3f" BorderThickness="1" CornerRadius="10" Padding="30,25" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="320">
+				<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+					<ProgressBar IsIndeterminate="True" Width="240" Height="8" Foreground="#3399ff"/>
+					<TextBlock x:Name="txtLoadingText" Text="{DynamicResource ProcessingScan}" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="320"/>
+					<Button x:Name="btnCancelLoading" Click="BtnCancelLoading_Click" IsVisible="False" Padding="16,6" Background="#3a3a3a" Foreground="#ff8888" CornerRadius="6" HorizontalAlignment="Center" Focusable="False">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<TextBlock Text="✖" FontSize="11"/>
+							<TextBlock Text="{DynamicResource BtnCancel}" FontSize="12" FontWeight="SemiBold"/>
+						</StackPanel>
+					</Button>
+				</StackPanel>
+			</Border>
 		</Panel>
 
 		<!-- Help Overlay -->
@@ -395,9 +461,11 @@
 						<StackPanel Spacing="15">
 							<TextBlock Text="{DynamicResource HelpShortcutsTitle}" FontSize="20" FontWeight="Bold"/>
 							<UniformGrid Columns="2">
+								<TextBlock Text="{DynamicResource HelpShortcutScan}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutAutoTune}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutRotate}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutDelete}" Margin="5"/>
+								<TextBlock Text="{DynamicResource HelpShortcutDeleteScan}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutNextScan}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutNextPhoto}" Margin="5"/>
 								<TextBlock Text="{DynamicResource HelpShortcutCompare}" Margin="5"/>
@@ -428,6 +496,36 @@
 					</Button>
 				</StackPanel>
 			</ScrollViewer>
+		</Panel>
+ 
+		<!-- Error / Alert Modal Overlay -->
+		<Panel x:Name="pnlErrorOverlay" Background="#A0000000" IsVisible="False" ZIndex="400">
+			<Border Background="#252525" BorderBrush="#ff4444" BorderThickness="1" CornerRadius="12" Padding="25" 
+					HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Margin="20">
+				<StackPanel Spacing="18">
+					<StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+						<Border Background="#3a1a1a" CornerRadius="20" Width="40" Height="40">
+							<TextBlock Text="⚠️" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						</Border>
+						<TextBlock x:Name="txtErrorTitle" Text="{DynamicResource TitleScannerError}" FontSize="18" FontWeight="Bold" Foreground="#ff6666" VerticalAlignment="Center"/>
+					</StackPanel>
+
+					<TextBlock x:Name="txtErrorMessage" Text="An error occurred while communicating with the scanner." 
+							   TextWrapping="Wrap" Foreground="#cccccc" FontSize="13" LineHeight="20"/>
+
+					<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,10,0,0">
+						<Button x:Name="btnErrorRefresh" Click="BtnErrorRefresh_Click" Padding="16,8" Background="#333333" Foreground="White" CornerRadius="6" Focusable="False">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="🔄"/>
+								<TextBlock Text="{DynamicResource BtnRefreshScanners}"/>
+							</StackPanel>
+						</Button>
+						<Button x:Name="btnCloseError" Click="BtnCloseError_Click" Padding="20,8" Background="#3399ff" Foreground="White" CornerRadius="6" FontWeight="SemiBold" Focusable="False">
+							<TextBlock Text="{DynamicResource BtnOk}"/>
+						</Button>
+					</StackPanel>
+				</StackPanel>
+			</Border>
 		</Panel>
 
 	</Grid>

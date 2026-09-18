@@ -1,6 +1,7 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using Emgu.CV.Util;
 using PhotoCropper.TestHelpers;
 using System.Drawing;
 
@@ -324,6 +325,45 @@ public sealed class PhotoCropperEngineTests : IDisposable
         Directory.Exists(outDir).ShouldBeTrue();
         var files = Directory.GetFiles(outDir, "*.png");
         files.Length.ShouldBe(cropper.DetectedPhotos.Count);
+    }
+
+    [Fact]
+    public void DetectPhotos_ScannerWithBezel_ShouldDetectAllPhotos()
+    {
+        string bezelScanPath = Path.Combine(_tempDir, "bezel_scan.jpg");
+        TestImageFactory.CreateScannerBezelScan(bezelScanPath, bezelThickness: 15);
+
+        using var cropper = new PhotoCropperEngine(bezelScanPath);
+        cropper.DetectPhotos();
+
+        cropper.DetectedPhotos.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void DetectPhotos_SlightlyTiltedPhoto_ShouldDetectInclinationAndStraighten()
+    {
+        string tiltedScanPath = Path.Combine(_tempDir, "tilted_scan.jpg");
+        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(255, 255, 255));
+            // Photo tilted by ~3 degrees: center at (600, 600), size (400, 500), angle = 3.0
+            RotatedRect targetRect = new(new PointF(600, 600), new SizeF(400, 500), 3.0f);
+            PointF[] vertices = targetRect.GetVertices();
+            Point[] polyPoints = vertices.Select(v => Point.Round(v)).ToArray();
+            using var vp = new VectorOfPoint(polyPoints);
+            CvInvoke.FillConvexPoly(scan, vp, new MCvScalar(20, 20, 20));
+            scan.Save(tiltedScanPath);
+        }
+
+        using var cropper = new PhotoCropperEngine(tiltedScanPath);
+        cropper.DetectPhotos();
+
+        cropper.DetectedPhotos.Count.ShouldBe(1);
+        var detected = cropper.DetectedPhotos[0];
+        int minDim = Math.Min(detected.Width, detected.Height);
+        int maxDim = Math.Max(detected.Width, detected.Height);
+        minDim.ShouldBeInRange(380, 420);
+        maxDim.ShouldBeInRange(480, 520);
     }
 
     public void Dispose()

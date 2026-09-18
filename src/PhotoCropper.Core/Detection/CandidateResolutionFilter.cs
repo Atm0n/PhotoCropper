@@ -60,8 +60,8 @@ public static class CandidateResolutionFilter
                 var child = candidates[j];
 
                 // Child must be distinctly smaller than parent and have reasonable rectangularity
-                if (child.Area >= parent.Area * 0.85 || child.Area < parent.Area * 0.15) continue;
-                if (child.Rectangularity < 0.65) continue;
+                if (child.Area >= parent.Area * 0.85 || child.Area < parent.Area * 0.02) continue;
+                if (child.Rectangularity < 0.60) continue;
 
                 double overlap = CalculatePolygonIntersectionArea(child.ShapePoints, child.Rect, parent.ShapePoints, parent.Rect);
                 // Child is mostly contained inside parent
@@ -71,7 +71,7 @@ public static class CandidateResolutionFilter
                 }
             }
 
-            // Check if parent contains at least 2 mutually disjoint sub-candidates
+            // If parent contains at least 2 distinct photos, it is a composite merged box
             if (subCandidates.Count >= 2)
             {
                 bool foundDisjointPair = false;
@@ -84,8 +84,7 @@ public static class CandidateResolutionFilter
                         double subOverlap = CalculatePolygonIntersectionArea(candA.ShapePoints, candA.Rect, candB.ShapePoints, candB.Rect);
                         double minSubArea = Math.Min(candA.Area, candB.Area);
 
-                        // If two sub-candidates don't heavily overlap each other and their combined area accounts for > 45% of parent
-                        if (subOverlap / minSubArea < 0.25 && (candA.Area + candB.Area) >= parent.Area * 0.45)
+                        if (minSubArea > 0 && subOverlap / minSubArea < 0.30)
                         {
                             foundDisjointPair = true;
                             break;
@@ -97,6 +96,11 @@ public static class CandidateResolutionFilter
                 {
                     compositeIndices.Add(i);
                 }
+            }
+            // If parent occupies a huge portion of the scan bed (> 70%) and contains any sub-candidate, it is the scanner bed
+            else if (subCandidates.Count == 1 && parent.Area >= candidates.Max(c => c.Area) * 0.95 && parent.Area > (double)parent.Rect.Width * parent.Rect.Height * 0.70)
+            {
+                compositeIndices.Add(i);
             }
         }
 

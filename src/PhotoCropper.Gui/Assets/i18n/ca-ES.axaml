@@ -1,8 +1,8 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
-	<sys:String x:Key="BtnOpenScans">Obrir Escanejos</sys:String>
-	<sys:String x:Key="BtnSaveResults">Guardar Tot</sys:String>
+	<sys:String x:Key="BtnOpenScans">Obrir</sys:String>
+	<sys:String x:Key="BtnSaveResults">Desar</sys:String>
 	<sys:String x:Key="LblDetectionSensitivity">Sensibilitat</sys:String>
 	<sys:String x:Key="LblZoom">Zoom</sys:String>
 	<sys:String x:Key="BtnAdvanced">Avançat</sys:String>
@@ -36,6 +36,7 @@
 	<sys:String x:Key="ProcessingScan">Processant...</sys:String>
 	<sys:String x:Key="MsgSavingProgress">Exportant foto {0} de {1}...</sys:String>
 	<sys:String x:Key="MsgSaved">S'han guardat {0} fotos correctament.</sys:String>
+	<sys:String x:Key="MsgAllScansAlreadySaved">Tots els {0} escanejos ja estan guardats a 'Cropped'. No hi ha canvis per exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessant amb nous ajustos...</sys:String>
 	<sys:String x:Key="MsgDetectionComplete">Detecció finalitzada. Trobades {0} fotos.</sys:String>
 	<sys:String x:Key="MsgPhotoDeleted">Foto esborrada.</sys:String>
@@ -69,7 +70,8 @@
 	<sys:String x:Key="HelpAutoTuneTitle">⚡ Auto-Ajust de Detecció</sys:String>
 	<sys:String x:Key="HelpAutoTuneDesc">Realitza un escombrat automàtic de toleràncies, llindars de vora i mides mínimes per descobrir fotos difícils sense tocar els controls.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Dreceres de Teclat</sys:String>
-	<sys:String x:Key="HelpShortcutAutoTune">[T] Auto-ajustar escaneig actual</sys:String>
+	<sys:String x:Key="HelpShortcutScan">[F5] Escanejar des de l'escàner</sys:String>
+	<sys:String x:Key="HelpShortcutAutoTune">[T] Auto-ajustar escaneig actiu</sys:String>
 	<sys:String x:Key="HelpShortcutRotate">[R] Girar foto 90°</sys:String>
 	<sys:String x:Key="HelpShortcutDelete">[X] o [Supr] Descartar foto</sys:String>
 	<sys:String x:Key="HelpShortcutNextScan">[Re Pàg / Av Pàg] o [↑ / ↓] Canviar escaneig</sys:String>
@@ -103,4 +105,38 @@
 	<sys:String x:Key="MsgAutoTuning">Auto-ajustant paràmetres de detecció...</sys:String>
 	<sys:String x:Key="MsgAutoTuneSuccess">Auto-ajustat: s'han trobat {0} fotos (Tolerància: {1:0}, Vora: {2:0}).</sys:String>
 	<sys:String x:Key="MsgAutoTuneFailed">L'auto-ajust no ha trobat fotos addicionals.</sys:String>
+	<sys:String x:Key="BtnScan">Escanejar</sys:String>
+	<sys:String x:Key="TipScan">Adquirir escaneig des de l'escàner pla (Drecera: F5)</sys:String>
+	<sys:String x:Key="BtnWorkDir">Carpeta</sys:String>
+	<sys:String x:Key="TipWorkDir">Seleccionar una carpeta de treball per a emmagatzematge automàtic i recuperació de sessió</sys:String>
+	<sys:String x:Key="MsgScanning">Escanejant imatge des de {0}...</sys:String>
+	<sys:String x:Key="MsgScanSuccess">Escaneig adquirit i desat a l'espai de treball: {0}</sys:String>
+	<sys:String x:Key="MsgNoScannerFound">No s'ha detectat cap escàner. Asseguri's que estigui encès i connectat.</sys:String>
+	<sys:String x:Key="MsgScanFailed">Error en escanejar: {0}</sys:String>
+	<sys:String x:Key="MsgResumeSession">S'ha detectat una sessió anterior en aquesta carpeta ({0} escanejos). Vol reprendre-la?</sys:String>
+	<sys:String x:Key="TitleResumeSession">Reprendre Sessió d'Escaneig</sys:String>
+	<sys:String x:Key="LblWorkDirStatus">Carpeta: {0}</sys:String>
+	<sys:String x:Key="LblNoWorkDir">Sense Carpeta de Treball</sys:String>
+	<sys:String x:Key="BtnDeleteScan">Eliminar Escaneig</sys:String>
+	<sys:String x:Key="TipDeleteScan">Eliminar aquest escaneig sencer de l'espai de treball i disc (Drecera: Shift+Supr)</sys:String>
+	<sys:String x:Key="MsgScanDeleted">Escaneig '{0}' eliminat.</sys:String>
+	<sys:String x:Key="HelpShortcutDeleteScan">[Shift+Supr] Eliminar escaneig sencer</sys:String>
+	<sys:String x:Key="BtnCancel">Cancel·lar</sys:String>
+	<sys:String x:Key="BtnOk">D'acord</sys:String>
+	<sys:String x:Key="BtnRefreshScanners">Actualitzar Escàners</sys:String>
+	<sys:String x:Key="TitleNoScanner">No S'ha Detectat Cap Escàner</sys:String>
+	<sys:String x:Key="MsgNoScannerDetails">No s'ha detectat cap escàner al vostre sistema.&#x0a;&#x0a;• Comproveu que l'escàner estigui encès i endollat.&#x0a;• Verifiqueu la connexió per cable USB o Wi-Fi.&#x0a;• Assegureu-vos de tenir instal·lats els controladors (WIA, TWAIN o SANE).&#x0a;• Feu clic a 'Actualitzar Escàners' per tornar a detectar.</sys:String>
+	<sys:String x:Key="TitleScannerNotFound">Escàner No Trobat</sys:String>
+	<sys:String x:Key="MsgScannerNotFoundDetails">{0}&#x0a;&#x0a;• Verifiqueu que l'escàner estigui encès i els cables ben connectats.&#x0a;• Assegureu-vos que cap altre programa estigui utilitzant l'escàner.&#x0a;• Reconnecteu l'escàner i feu clic a 'Actualitzar Escàners'.</sys:String>
+	<sys:String x:Key="TitleScannerError">Error de Comunicació amb l'Escàner</sys:String>
+	<sys:String x:Key="MsgScannerErrorDetails">Error al comunicar-se amb l'escàner '{0}':&#x0a;&#x0a;{1}&#x0a;&#x0a;Solució de problemes:&#x0a;• Comproveu l'alimentació i cables de l'escàner.&#x0a;• Verifiqueu l'estat del controlador al vostre sistema operatiu.&#x0a;• Reinicieu l'escàner i feu clic a 'Actualitzar Escàners'.</sys:String>
+	<sys:String x:Key="MsgScanCancelled">L'escaneig s'ha cancel·lat o s'ha esgotat el temps d'espera.</sys:String>
+	<sys:String x:Key="LblNetworkScanners">Cercar a la xarxa (Wi-Fi / eSCL)</sys:String>
+	<sys:String x:Key="TipNetworkScanners">Cerca escàners sense fil a la xarxa local mitjançant Apple AirScan / eSCL (pot demanar permís del tallafoc).</sys:String>
+	<sys:String x:Key="LblNoProject">Sense Projecte</sys:String>
+	<sys:String x:Key="LblProjectFormat">Projecte: {0}</sys:String>
+	<sys:String x:Key="TipActiveProject">Projecte actiu: {0}&#x0a;Ruta: {1}&#x0a;&#x0a;Feu clic per canviar de projecte o carpeta de treball.</sys:String>
+	<sys:String x:Key="BtnNewProject">Nou Lot</sys:String>
+	<sys:String x:Key="TipNewProject">Començar un nou projecte / lot de fotos en una carpeta separada</sys:String>
+	<sys:String x:Key="MsgNewProjectReady">Projecte '{0}' a punt. Feu clic a Escanejar o Obrir Fitxers per començar.</sys:String>
 </ResourceDictionary>

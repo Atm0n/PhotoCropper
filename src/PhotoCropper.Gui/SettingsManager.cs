@@ -20,6 +20,10 @@ internal sealed class UserSettings
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; } = true;
     public bool RemoveDustAndScratches { get; set; } = true;
+    public string? WorkDirectory { get; set; }
+    public string? SelectedScannerId { get; set; }
+    public int ScannerDpi { get; set; } = 300;
+    public bool IncludeNetworkScanners { get; set; }
 }
 
 internal sealed class SettingsManager

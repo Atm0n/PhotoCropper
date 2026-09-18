@@ -6,7 +6,23 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <NoWarn>$(NoWarn);CA2007;CA1305;CA1707;CA1031;NETSDK1206</NoWarn>
+    <EnablePreviewFeatures>true</EnablePreviewFeatures>
+    <NoWarn>$(NoWarn);CA2007;CA1305;CA1707;CA1031;NETSDK1206;CA2252</NoWarn>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+  </PropertyGroup>
+
+  <Target Name="RemoveSymbolsAndDocFromPublish" AfterTargets="Publish" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <_PublishSymbolsToDelete Include="$(PublishDir)**\*.pdb" />
+      <_PublishSymbolsToDelete Include="$(PublishDir)**\*.xml" />
+      <_PublishSymbolsToDelete Include="$(PublishDir)**\*.dbg" />
+    </ItemGroup>
+    <Delete Files="@(_PublishSymbolsToDelete)" TreatErrorsAsWarnings="true" />
+  </Target>
 </Project>
