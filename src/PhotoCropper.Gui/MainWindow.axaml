@@ -31,6 +31,12 @@
 								<TextBlock x:Name="txtWorkDirBtn" Text="{DynamicResource BtnWorkDir}" FontWeight="SemiBold"/>
 							</StackPanel>
 						</Button>
+						<Button x:Name="btnNewProject" Click="BtnNewProject_Click" Padding="8,6" Background="#3a3a3a" Foreground="White" Focusable="False" ToolTip.Tip="{DynamicResource TipNewProject}">
+							<StackPanel Orientation="Horizontal" Spacing="4">
+								<TextBlock Text="➕"/>
+								<TextBlock Text="{DynamicResource BtnNewProject}" FontWeight="SemiBold"/>
+							</StackPanel>
+						</Button>
 						<Button x:Name="btnOpenFiles" Click="BtnOpenFiles_Click" Padding="10,6" Background="#3399ff" Foreground="White" Focusable="False">
 							<StackPanel Orientation="Horizontal" Spacing="6">
 								<TextBlock Text="📁"/>

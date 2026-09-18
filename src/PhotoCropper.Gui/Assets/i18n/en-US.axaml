@@ -135,4 +135,7 @@
 	<sys:String x:Key="LblNoProject">No Project</sys:String>
 	<sys:String x:Key="LblProjectFormat">Project: {0}</sys:String>
 	<sys:String x:Key="TipActiveProject">Active Project: {0}&#x0a;Path: {1}&#x0a;&#x0a;Click to switch project or work directory.</sys:String>
+	<sys:String x:Key="BtnNewProject">New Batch</sys:String>
+	<sys:String x:Key="TipNewProject">Start a new project / photo batch in a separate folder</sys:String>
+	<sys:String x:Key="MsgNewProjectReady">Project '{0}' ready. Click Scan or Open Files to begin.</sys:String>
 </ResourceDictionary>

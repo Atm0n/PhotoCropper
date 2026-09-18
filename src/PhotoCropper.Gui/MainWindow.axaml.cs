@@ -28,7 +28,7 @@ internal sealed partial class MainWindow : Window
     private bool isSyncingSelection;
     private bool isUpdatingUiFromScan;
 
-    private readonly IScannerService _scannerService;
+    private IScannerService _scannerService;
     private readonly List<ScannerDeviceInfo> _availableScanners = [];
     private WorkspaceSessionState? _workspaceSession;
 
@@ -314,6 +314,7 @@ internal sealed partial class MainWindow : Window
         isLoading = true;
         pnlLoadingOverlay.IsVisible = true;
         btnCancelLoading.IsVisible = canCancel;
+        btnCancelLoading.IsEnabled = true;
         txtLoadingText.Text = statusText;
         lblStatus.Text = statusText;
 
@@ -322,9 +323,21 @@ internal sealed partial class MainWindow : Window
             : new CancellationTokenSource();
         _activeOperationCts = cts;
 
+        var cancelTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cancelReg = cts.Token.Register(() => cancelTcs.TrySetResult(true));
+
         try
         {
-            await action(cts.Token);
+            var actionTask = action(cts.Token);
+            var completedTask = await Task.WhenAny(actionTask, cancelTcs.Task).ConfigureAwait(true);
+
+            if (completedTask == cancelTcs.Task)
+            {
+                throw new OperationCanceledException(cts.Token);
+            }
+
+            await actionTask.ConfigureAwait(true);
+
             if (completionText != null)
             {
                 lblStatus.Text = completionText;
@@ -346,6 +359,8 @@ internal sealed partial class MainWindow : Window
 
     private void BtnCancelLoading_Click(object? sender, RoutedEventArgs e)
     {
+        btnCancelLoading.IsEnabled = false;
+        txtLoadingText.Text = Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Cancelling...";
         _activeOperationCts?.Cancel();
     }
 
@@ -871,6 +886,8 @@ internal sealed partial class MainWindow : Window
 
         if (pnlLoadingOverlay.IsVisible && btnCancelLoading.IsVisible && e.Key == Avalonia.Input.Key.Escape)
         {
+            btnCancelLoading.IsEnabled = false;
+            txtLoadingText.Text = Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Cancelling...";
             _activeOperationCts?.Cancel();
             e.Handled = true;
             return;
@@ -1503,6 +1520,89 @@ internal sealed partial class MainWindow : Window
         BtnWorkDir_Click(sender, e);
     }
 
+    private void ResetScannerService()
+    {
+        try
+        {
+            _scannerService.Dispose();
+        }
+        catch
+        {
+        }
+        _scannerService = new Naps2ScannerService();
+    }
+
+    private void ClearActiveScansFromGui()
+    {
+        undoHistory.Clear();
+        foreach (var session in ScanSessions)
+        {
+            session.Dispose();
+        }
+        ScanSessions.Clear();
+        currentIndex = 0;
+        if (img != null) img.Source = null;
+        slides?.Items.Clear();
+        lstGallery?.Items.Clear();
+        if (txtFileCounter != null)
+        {
+            txtFileCounter.Text = Application.Current?.FindResource("TxtNoFiles")?.ToString() ?? "No files loaded";
+        }
+        if (lblPhotoInfo != null) lblPhotoInfo.Text = "";
+    }
+
+    private async Task SwitchToProjectAsync(string newWorkDir)
+    {
+        var settings = SettingsManager.Instance.Settings;
+        string? oldWorkDir = settings.WorkDirectory;
+
+        // 1. Save existing session before switching
+        if (!string.IsNullOrEmpty(oldWorkDir) && Directory.Exists(oldWorkDir) && _workspaceSession != null)
+        {
+            ProjectWorkspaceService.SaveSession(oldWorkDir, _workspaceSession);
+        }
+
+        // 2. Clear current scans from GUI so previous photos do not linger
+        ClearActiveScansFromGui();
+
+        // 3. Initialize workspace for new folder
+        ProjectWorkspaceService.InitializeWorkspace(newWorkDir);
+        settings.WorkDirectory = newWorkDir;
+        SettingsManager.Instance.Save();
+        UpdateWorkspaceUi(newWorkDir);
+
+        // 4. If new folder has an existing session, load it; otherwise show clean project ready
+        if (ProjectWorkspaceService.HasRecoverableSession(newWorkDir))
+        {
+            await ResumeWorkspaceSessionAsync(newWorkDir);
+        }
+        else
+        {
+            _workspaceSession = new WorkspaceSessionState();
+            string newProjectReady = Application.Current?.FindResource("MsgNewProjectReady")?.ToString() ?? "Project '{0}' ready. Click Scan or Open Files to begin.";
+            string cleanName = Path.GetFileName(Path.TrimEndingDirectorySeparator(newWorkDir));
+            lblStatus.Text = string.Format(newProjectReady, cleanName);
+        }
+    }
+
+    private async void BtnNewProject_Click(object? sender, RoutedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider == null) return;
+
+        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = Application.Current?.FindResource("BtnNewProject")?.ToString() ?? "Select Folder for New Batch",
+            AllowMultiple = false
+        });
+
+        if (folders.Count > 0)
+        {
+            string chosenDir = folders[0].Path.LocalPath;
+            await SwitchToProjectAsync(chosenDir);
+        }
+    }
+
     private async void BtnWorkDir_Click(object? sender, RoutedEventArgs e)
     {
         var topLevel = TopLevel.GetTopLevel(this);
@@ -1517,18 +1617,7 @@ internal sealed partial class MainWindow : Window
         if (folders.Count > 0)
         {
             string chosenDir = folders[0].Path.LocalPath;
-            ProjectWorkspaceService.InitializeWorkspace(chosenDir);
-
-            var settings = SettingsManager.Instance.Settings;
-            settings.WorkDirectory = chosenDir;
-            SettingsManager.Instance.Save();
-
-            UpdateWorkspaceUi(chosenDir);
-
-            if (ProjectWorkspaceService.HasRecoverableSession(chosenDir))
-            {
-                await ResumeWorkspaceSessionAsync(chosenDir);
-            }
+            await SwitchToProjectAsync(chosenDir);
         }
     }
 
@@ -1640,12 +1729,14 @@ internal sealed partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
+            ResetScannerService();
             string cancelledMsg = Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Scanning was cancelled or timed out.";
             lblStatus.Text = cancelledMsg;
             return;
         }
         catch (ScannerNotFoundException ex)
         {
+            ResetScannerService();
             string notFoundTitle = Application.Current?.FindResource("TitleScannerNotFound")?.ToString() ?? "Scanner Not Found";
             string notFoundTemplate = Application.Current?.FindResource("MsgScannerNotFoundDetails")?.ToString() ??
                 "{0}\n\n• Verify your scanner is powered on and connected.\n• Make sure no other application is using the scanner.\n• Reconnect the scanner and click 'Refresh Scanners'.";
@@ -1657,6 +1748,7 @@ internal sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            ResetScannerService();
             string failedTemplate = Application.Current?.FindResource("MsgScanFailed")?.ToString() ?? "Scanning failed: {0}";
             string errorTitle = Application.Current?.FindResource("TitleScannerError")?.ToString() ?? "Scanner Communication Error";
             string errorTemplate = Application.Current?.FindResource("MsgScannerErrorDetails")?.ToString() ??

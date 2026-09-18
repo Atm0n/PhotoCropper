@@ -135,4 +135,7 @@
 	<sys:String x:Key="LblNoProject">Sense Projecte</sys:String>
 	<sys:String x:Key="LblProjectFormat">Projecte: {0}</sys:String>
 	<sys:String x:Key="TipActiveProject">Projecte actiu: {0}&#x0a;Ruta: {1}&#x0a;&#x0a;Feu clic per canviar de projecte o carpeta de treball.</sys:String>
+	<sys:String x:Key="BtnNewProject">Nou Lot</sys:String>
+	<sys:String x:Key="TipNewProject">Començar un nou projecte / lot de fotos en una carpeta separada</sys:String>
+	<sys:String x:Key="MsgNewProjectReady">Projecte '{0}' a punt. Feu clic a Escanejar o Obrir Fitxers per començar.</sys:String>
 </ResourceDictionary>

@@ -135,7 +135,9 @@ public sealed class Naps2ScannerService : IScannerService
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var twainDevices = await _controller.GetDeviceList(Driver.Twain).ConfigureAwait(false);
+                var twainDevices = await _controller.GetDeviceList(Driver.Twain)
+                    .WaitAsync(TimeSpan.FromSeconds(5), cancellationToken)
+                    .ConfigureAwait(false);
                 allDevices.AddRange(twainDevices);
             }
             catch (OperationCanceledException)
@@ -144,14 +146,16 @@ public sealed class Naps2ScannerService : IScannerService
             }
             catch
             {
-                // TWAIN subsystem not present or threw error
+                // TWAIN subsystem not present, timed out, or threw error
             }
 
             // 2. Enumerate WIA devices
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var wiaDevices = await _controller.GetDeviceList(Driver.Wia).ConfigureAwait(false);
+                var wiaDevices = await _controller.GetDeviceList(Driver.Wia)
+                    .WaitAsync(TimeSpan.FromSeconds(5), cancellationToken)
+                    .ConfigureAwait(false);
                 allDevices.AddRange(wiaDevices);
             }
             catch (OperationCanceledException)
@@ -160,7 +164,7 @@ public sealed class Naps2ScannerService : IScannerService
             }
             catch
             {
-                // WIA service not available
+                // WIA service not available, timed out, or threw error
             }
         }
         else if (OperatingSystem.IsLinux())

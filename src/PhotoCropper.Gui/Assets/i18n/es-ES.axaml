@@ -135,4 +135,7 @@
 	<sys:String x:Key="LblNoProject">Sin Proyecto</sys:String>
 	<sys:String x:Key="LblProjectFormat">Proyecto: {0}</sys:String>
 	<sys:String x:Key="TipActiveProject">Proyecto activo: {0}&#x0a;Ruta: {1}&#x0a;&#x0a;Haga clic para cambiar de proyecto o carpeta de trabajo.</sys:String>
+	<sys:String x:Key="BtnNewProject">Nuevo Lote</sys:String>
+	<sys:String x:Key="TipNewProject">Iniciar un nuevo proyecto / lote de fotos en una carpeta separada</sys:String>
+	<sys:String x:Key="MsgNewProjectReady">Proyecto '{0}' listo. Haga clic en Escanear o Abrir Archivos para comenzar.</sys:String>
 </ResourceDictionary>
