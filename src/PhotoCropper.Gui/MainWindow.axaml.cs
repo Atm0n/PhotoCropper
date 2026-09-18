@@ -494,6 +494,12 @@ internal sealed partial class MainWindow : Window
         string savingMsg = Application.Current?.FindResource("MsgSavingProgress")?.ToString() ?? "Exporting scan {0} of {1} ({2} photos saved)...";
         string msgFormat = Application.Current?.FindResource("MsgSaved")?.ToString() ?? "Successfully saved {0} photos to 'cropped' folders.";
 
+        string? targetOutputFolder = settings.CustomOutputDirectory;
+        if (string.IsNullOrEmpty(targetOutputFolder) && !string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory))
+        {
+            targetOutputFolder = ProjectWorkspaceService.GetCroppedDirectory(settings.WorkDirectory);
+        }
+
         int maxConcurrency = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
 
         await ExecuteWithLoadingAsync(string.Format(savingMsg, 1, totalScans, 0), async () =>
@@ -507,7 +513,7 @@ internal sealed partial class MainWindow : Window
                     try
                     {
                         engine.SaveDetectedPhotos(
-                            settings.CustomOutputDirectory,
+                            targetOutputFolder,
                             settings.PreferredFormat,
                             settings.JpegQuality);
 
