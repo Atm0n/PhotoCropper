@@ -20,7 +20,18 @@ public sealed class Naps2ScannerService : IScannerService
         _context = new ScanningContext(new ImageSharpImageContext());
         if (OperatingSystem.IsWindows())
         {
-            _context.SetUpWin32Worker();
+            string workerPath = Path.Combine(AppContext.BaseDirectory, "NAPS2.Worker.exe");
+            if (File.Exists(workerPath))
+            {
+                try
+                {
+                    _context.SetUpWin32Worker();
+                }
+                catch
+                {
+                    // Fall back to native WIA / 64-bit scanning
+                }
+            }
         }
         _controller = new ScanController(_context);
     }

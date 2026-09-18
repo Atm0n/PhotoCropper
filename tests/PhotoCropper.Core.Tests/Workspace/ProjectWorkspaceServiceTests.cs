@@ -145,6 +145,32 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
+    public void ReconstructSessionFromRawFiles_WithExistingCroppedPhotos_ShouldMarkProcessed()
+    {
+        string workDir = Path.Combine(_tempDir, "Project9B");
+        ProjectWorkspaceService.InitializeWorkspace(workDir);
+        string rawDir = ProjectWorkspaceService.GetRawScansDirectory(workDir);
+        string croppedDir = ProjectWorkspaceService.GetCroppedDirectory(workDir);
+
+        File.WriteAllText(Path.Combine(rawDir, "scan_0001.png"), "");
+        File.WriteAllText(Path.Combine(rawDir, "scan_0002.png"), "");
+
+        File.WriteAllText(Path.Combine(croppedDir, "scan_0001_1.jpg"), "");
+        File.WriteAllText(Path.Combine(croppedDir, "scan_0001_2.jpg"), "");
+
+        var state = ProjectWorkspaceService.ReconstructSessionFromRawFiles(workDir);
+
+        state.Scans.Count.ShouldBe(2);
+        state.Scans[0].OriginalFileName.ShouldBe("scan_0001.png");
+        state.Scans[0].IsProcessed.ShouldBeTrue();
+        state.Scans[0].ExtractedPhotoCount.ShouldBe(2);
+
+        state.Scans[1].OriginalFileName.ShouldBe("scan_0002.png");
+        state.Scans[1].IsProcessed.ShouldBeFalse();
+        state.Scans[1].ExtractedPhotoCount.ShouldBe(0);
+    }
+
+    [Fact]
     public void DeleteScan_ShouldRemoveFileAndSessionEntry()
     {
         string workDir = Path.Combine(_tempDir, "Project10");

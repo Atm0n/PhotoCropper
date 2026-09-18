@@ -11,7 +11,6 @@
 		<PackageReference Include="Emgu.CV.Bitmap" />
 		<PackageReference Include="NAPS2.Sdk" />
 		<PackageReference Include="NAPS2.Images.ImageSharp" />
-		<PackageReference Include="NAPS2.Sdk.Worker.Win32" />
 	</ItemGroup>
 
 	<ItemGroup>

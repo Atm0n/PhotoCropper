@@ -36,6 +36,7 @@
 	<sys:String x:Key="ProcessingScan">Procesando...</sys:String>
 	<sys:String x:Key="MsgSavingProgress">Exportando foto {0} de {1}...</sys:String>
 	<sys:String x:Key="MsgSaved">Se han guardado {0} fotos con éxito.</sys:String>
+	<sys:String x:Key="MsgAllScansAlreadySaved">Todos los {0} escaneos ya están guardados en 'Cropped'. No hay cambios por exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocesando con nuevos ajustes...</sys:String>
 	<sys:String x:Key="MsgDetectionComplete">Detección finalizada. Encontradas {0} fotos.</sys:String>
 	<sys:String x:Key="MsgPhotoDeleted">Foto eliminada.</sys:String>

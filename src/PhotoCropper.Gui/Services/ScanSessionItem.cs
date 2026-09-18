@@ -13,14 +13,18 @@ internal sealed class ScanSessionItem : IDisposable
     public bool IsActive => Engine != null;
     public int PhotoCount => Engine?.DetectedPhotos.Count ?? CachedPhotoCount;
     public int CachedPhotoCount { get; private set; }
+    public bool IsSaved { get; set; }
+    public bool IsModified { get; set; }
 
-    public ScanSessionItem(string filePath, DetectionOptions defaultOptions)
+    public ScanSessionItem(string filePath, DetectionOptions defaultOptions, bool isSaved = false, bool isModified = true)
     {
         ArgumentNullException.ThrowIfNull(filePath);
         ArgumentNullException.ThrowIfNull(defaultOptions);
 
         FilePath = filePath;
         Options = defaultOptions with { };
+        IsSaved = isSaved;
+        IsModified = isModified;
     }
 
     public PhotoCropperEngine Activate()

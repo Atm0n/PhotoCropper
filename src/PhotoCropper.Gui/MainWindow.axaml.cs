@@ -115,9 +115,47 @@ internal sealed partial class MainWindow : Window
         foreach (var path in paths)
         {
             if (!File.Exists(path)) continue;
-            ScanSessions.Add(new ScanSessionItem(path, options));
+            bool isAlreadyExported = CheckIfScanAlreadyExported(path);
+            ScanSessions.Add(new ScanSessionItem(path, options, isSaved: isAlreadyExported, isModified: !isAlreadyExported));
         }
         await LoadPhotosToGuiAsync();
+    }
+
+    private static bool CheckIfScanAlreadyExported(string scanFilePath)
+    {
+        var settings = SettingsManager.Instance.Settings;
+        string? targetOutputFolder = settings.CustomOutputDirectory;
+        if (string.IsNullOrEmpty(targetOutputFolder) && !string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory))
+        {
+            targetOutputFolder = ProjectWorkspaceService.GetCroppedDirectory(settings.WorkDirectory);
+        }
+        else if (string.IsNullOrEmpty(targetOutputFolder))
+        {
+            string? directory = Path.GetDirectoryName(scanFilePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                string folderName = Path.GetFileName(directory);
+                if (string.Equals(folderName, ProjectWorkspaceService.RawScansFolderName, StringComparison.OrdinalIgnoreCase))
+                {
+                    string? parentDir = Path.GetDirectoryName(directory);
+                    targetOutputFolder = !string.IsNullOrEmpty(parentDir)
+                        ? Path.Combine(parentDir, ProjectWorkspaceService.CroppedFolderName)
+                        : Path.Combine(directory, "cropped");
+                }
+                else
+                {
+                    targetOutputFolder = Path.Combine(directory, "cropped");
+                }
+            }
+        }
+
+        if (string.IsNullOrEmpty(targetOutputFolder) || !Directory.Exists(targetOutputFolder))
+        {
+            return false;
+        }
+
+        string baseName = Path.GetFileNameWithoutExtension(scanFilePath);
+        return Directory.EnumerateFiles(targetOutputFolder, $"{baseName}_*.*").Any();
     }
 
     private async void BtnOpenFiles_Click(object? sender, RoutedEventArgs e)
@@ -259,6 +297,7 @@ internal sealed partial class MainWindow : Window
         if (isLoading || ScanSessions.Count == 0) return;
 
         var session = ScanSessions[currentIndex];
+        session.IsModified = true;
         var photo = session.Activate();
         photo.ApplyOptions(GetDetectionOptionsFromUi());
 
@@ -499,8 +538,17 @@ internal sealed partial class MainWindow : Window
     {
         if (isLoading || ScanSessions.Count == 0) return;
 
+        var pendingSessions = ScanSessions.Where(s => !s.IsSaved || s.IsModified).ToList();
+        if (pendingSessions.Count == 0)
+        {
+            string alreadySavedMsg = Application.Current?.FindResource("MsgAllScansAlreadySaved")?.ToString() 
+                ?? "All {0} scans are already saved to 'Cropped'. No changes to export.";
+            lblStatus.Text = string.Format(alreadySavedMsg, ScanSessions.Count);
+            return;
+        }
+
         var settings = SettingsManager.Instance.Settings;
-        int totalScans = ScanSessions.Count;
+        int totalScans = pendingSessions.Count;
         int completedScans = 0;
         int totalSavedPhotos = 0;
 
@@ -519,7 +567,7 @@ internal sealed partial class MainWindow : Window
         {
             await Task.Run(() =>
             {
-                Parallel.ForEach(ScanSessions, new ParallelOptions { MaxDegreeOfParallelism = maxConcurrency }, (session) =>
+                Parallel.ForEach(pendingSessions, new ParallelOptions { MaxDegreeOfParallelism = maxConcurrency }, (session) =>
                 {
                     bool wasActive = session.IsActive;
                     var engine = session.Activate();
@@ -532,6 +580,21 @@ internal sealed partial class MainWindow : Window
 
                         int savedCount = engine.DetectedPhotos.Count;
                         Interlocked.Add(ref totalSavedPhotos, savedCount);
+
+                        session.IsSaved = true;
+                        session.IsModified = false;
+
+                        if (_workspaceSession != null)
+                        {
+                            var entry = _workspaceSession.Scans.FirstOrDefault(s =>
+                                string.Equals(s.RelativePath, session.FilePath, StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(Path.GetFileName(s.RelativePath), Path.GetFileName(session.FilePath), StringComparison.OrdinalIgnoreCase));
+                            if (entry != null)
+                            {
+                                entry.IsProcessed = true;
+                                entry.ExtractedPhotoCount = savedCount;
+                            }
+                        }
                     }
                     finally
                     {
@@ -552,6 +615,11 @@ internal sealed partial class MainWindow : Window
                         lblStatus.Text = string.Format(savingMsg, done, totalScans, totalSavedPhotos);
                     });
                 });
+
+                if (_workspaceSession != null && !string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory))
+                {
+                    ProjectWorkspaceService.SaveSession(settings.WorkDirectory, _workspaceSession);
+                }
             });
 
             PhotoCropper.Core.Utils.NotificationSound.PlayCompletionSound();
@@ -570,6 +638,7 @@ internal sealed partial class MainWindow : Window
         int photoIndex = slides.SelectedIndex;
         if (photoIndex < 0) return;
 
+        ScanSessions[currentIndex].IsModified = true;
         var currentEngine = ScanSessions[currentIndex].Activate();
         var matToDelete = currentEngine.DetectedPhotos[photoIndex];
         undoHistory.PushDelete(currentIndex, photoIndex, matToDelete);
@@ -596,6 +665,7 @@ internal sealed partial class MainWindow : Window
         if (isLoading || ScanSessions.Count == 0 || slides.SelectedIndex < 0) return;
 
         int photoIndex = slides.SelectedIndex;
+        ScanSessions[currentIndex].IsModified = true;
         undoHistory.PushRotate(currentIndex, photoIndex);
 
         string rotatingMsg = Application.Current?.FindResource("MsgRotating")?.ToString() ?? "Rotating...";
@@ -636,6 +706,7 @@ internal sealed partial class MainWindow : Window
         await ExecuteWithLoadingAsync(tuningMsg, async () =>
         {
             var result = await Task.Run(() => photo.AutoTune());
+            ScanSessions[currentIndex].IsModified = true;
             SyncUiWithScanOptions(photo.CurrentOptions);
             img.Source = MatBitmapConverter.ToAvaloniaBitmap(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
@@ -798,6 +869,11 @@ internal sealed partial class MainWindow : Window
         var action = undoHistory.Undo(idx => idx >= 0 && idx < ScanSessions.Count ? ScanSessions[idx].Activate() : null);
         if (action != null)
         {
+            if (action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
+            {
+                ScanSessions[action.ScanIndex].IsModified = true;
+            }
+
             if (action.ScanIndex != currentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
             {
                 ScanSessions[currentIndex].Deactivate();
@@ -826,6 +902,11 @@ internal sealed partial class MainWindow : Window
         var action = undoHistory.Redo(idx => idx >= 0 && idx < ScanSessions.Count ? ScanSessions[idx].Activate() : null);
         if (action != null)
         {
+            if (action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
+            {
+                ScanSessions[action.ScanIndex].IsModified = true;
+            }
+
             if (action.ScanIndex != currentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
             {
                 ScanSessions[currentIndex].Deactivate();
@@ -1169,6 +1250,7 @@ internal sealed partial class MainWindow : Window
         await ExecuteWithLoadingAsync(extractingMsg, async () =>
         {
             int prevCount = photo.DetectedPhotos.Count;
+            ScanSessions[currentIndex].IsModified = true;
             await Task.Run(() => photo.AddManualCrop(cropRect));
             if (photo.DetectedPhotos.Count > prevCount)
             {
@@ -1311,6 +1393,7 @@ internal sealed partial class MainWindow : Window
 
         await ExecuteWithLoadingAsync(applyingMsg, async () =>
         {
+            ScanSessions[currentIndex].IsModified = true;
             await Task.Run(() => currentEngine.ApplyCropToPhoto(photoIndex, currentRefineRect));
             undoHistory.PushReplace(currentIndex, photoIndex, beforeMat, currentEngine.DetectedPhotos[photoIndex]);
             beforeMat.Dispose();
@@ -1396,6 +1479,7 @@ internal sealed partial class MainWindow : Window
 
         await ExecuteWithLoadingAsync(samplingMsg, async () =>
         {
+            ScanSessions[currentIndex].IsModified = true;
             await Task.Run(() =>
             {
                 photo.SetCustomBackgroundFromPixel(pixel.X, pixel.Y);
@@ -1412,6 +1496,7 @@ internal sealed partial class MainWindow : Window
         var photo = ScanSessions[currentIndex].Activate();
 
         photo.CustomBackgroundColorHsv = null;
+        ScanSessions[currentIndex].IsModified = true;
         btnResetBackground.IsEnabled = false;
 
         string reprocessingMsg = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing with automatic background...";
@@ -1769,7 +1854,7 @@ internal sealed partial class MainWindow : Window
             var options = GetDetectionOptionsFromUi();
             foreach (var path in stagedPaths)
             {
-                ScanSessions.Add(new ScanSessionItem(path, options));
+                ScanSessions.Add(new ScanSessionItem(path, options, isSaved: false, isModified: true));
             }
 
             currentIndex = ScanSessions.Count - stagedPaths.Count;

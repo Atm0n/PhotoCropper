@@ -169,16 +169,24 @@ public static partial class ProjectWorkspaceService
 
         InitializeWorkspace(workDirectory);
         string rawDir = GetRawScansDirectory(workDirectory);
+        string croppedDir = GetCroppedDirectory(workDirectory);
         var files = Directory.GetFiles(rawDir).OrderBy(f => f).ToList();
 
         var state = new WorkspaceSessionState();
         foreach (string file in files)
         {
+            string baseName = Path.GetFileNameWithoutExtension(file);
+            int existingCroppedCount = Directory.Exists(croppedDir)
+                ? Directory.EnumerateFiles(croppedDir, $"{baseName}_*.*").Count()
+                : 0;
+
             state.Scans.Add(new WorkspaceScanEntry
             {
                 RelativePath = Path.GetRelativePath(workDirectory, file),
                 OriginalFileName = Path.GetFileName(file),
-                StagedAtUtc = File.GetCreationTimeUtc(file)
+                StagedAtUtc = File.GetCreationTimeUtc(file),
+                IsProcessed = existingCroppedCount > 0,
+                ExtractedPhotoCount = existingCroppedCount
             });
         }
 
