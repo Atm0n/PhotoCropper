@@ -4,6 +4,7 @@ using Xunit;
 
 namespace PhotoCropper.Core.Tests.Scanning;
 
+[Collection("ScannerServiceTests")]
 public sealed class ScannerServiceTests
 {
     [Fact]

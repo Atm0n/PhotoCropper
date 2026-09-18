@@ -44,7 +44,8 @@ jobs:
             libgomp1 libgl1 libtbb12 libglib2.0-0 libicu-dev libatlas-base-dev libjpeg-dev libx11-6 \
             libgeotiff-dev libhdf5-dev libvtk9-dev \
             libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libsane1 sane-utils
 
       - name: Restore Dependencies
         run: dotnet restore PhotoCropper.slnx
@@ -53,17 +54,17 @@ jobs:
         run: dotnet build PhotoCropper.slnx -c Release --no-restore
 
       - name: Run Core Tests
-        run: dotnet run --project tests/PhotoCropper.Core.Tests/PhotoCropper.Core.Tests.csproj -c Release --no-build
+        run: dotnet run --project tests/PhotoCropper.Core.Tests/PhotoCropper.Core.Tests.csproj -c Release --no-build -- -parallelMode none
 
       - name: Run CLI Tests
-        run: dotnet run --project tests/PhotoCropper.Cli.Tests/PhotoCropper.Cli.Tests.csproj -c Release --no-build
+        run: dotnet run --project tests/PhotoCropper.Cli.Tests/PhotoCropper.Cli.Tests.csproj -c Release --no-build -- -parallelMode none
 
       - name: Run GUI Tests
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run dotnet run --project tests/PhotoCropper.Gui.Tests/PhotoCropper.Gui.Tests.csproj -c Release --no-build
+            xvfb-run dotnet run --project tests/PhotoCropper.Gui.Tests/PhotoCropper.Gui.Tests.csproj -c Release --no-build -- -parallelMode none
           else
-            dotnet run --project tests/PhotoCropper.Gui.Tests/PhotoCropper.Gui.Tests.csproj -c Release --no-build
+            dotnet run --project tests/PhotoCropper.Gui.Tests/PhotoCropper.Gui.Tests.csproj -c Release --no-build -- -parallelMode none
           fi
         shell: bash
 
