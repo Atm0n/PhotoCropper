@@ -39,6 +39,16 @@ public static class AutoTuneService
         CvInvoke.CvtColor(detMat, detHsv, ColorConversion.Bgr2Hsv);
 
         MCvScalar avgBgColorHsv = currentOptions.CustomBackgroundColorHsv ?? BackgroundAnalyzer.SampleBackgroundColor(detHsv);
+        MCvScalar bgBgr = BackgroundAnalyzer.HsvToBgr(avgBgColorHsv);
+        var bezel = BackgroundAnalyzer.DetectBezelMargins(detMat, avgBgColorHsv, currentOptions.BackgroundTolerance);
+        if (bezel.Top > 0 || bezel.Bottom > 0 || bezel.Left > 0 || bezel.Right > 0)
+        {
+            if (bezel.Top > 0) CvInvoke.Rectangle(detMat, new Rectangle(0, 0, detMat.Width, bezel.Top), bgBgr, -1);
+            if (bezel.Bottom > 0) CvInvoke.Rectangle(detMat, new Rectangle(0, detMat.Height - bezel.Bottom, detMat.Width, bezel.Bottom), bgBgr, -1);
+            if (bezel.Left > 0) CvInvoke.Rectangle(detMat, new Rectangle(0, 0, bezel.Left, detMat.Height), bgBgr, -1);
+            if (bezel.Right > 0) CvInvoke.Rectangle(detMat, new Rectangle(detMat.Width - bezel.Right, 0, bezel.Right, detMat.Height), bgBgr, -1);
+            CvInvoke.CvtColor(detMat, detHsv, ColorConversion.Bgr2Hsv);
+        }
 
         int pad = (int)Math.Round(Math.Max(originalW, originalH) * 0.05);
         int scaledPad = (int)Math.Round(pad * scale);
@@ -176,22 +186,23 @@ public static class AutoTuneService
 
         foreach (var cand in candidates)
         {
-            Point[] fullPoints = new Point[cand.ShapePoints.Length];
-            for (int p = 0; p < cand.ShapePoints.Length; p++)
+            PointF fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
+            SizeF fullSize = new SizeF((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
+            RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
+
+            PointF[] fullVerts = fullRr.GetVertices();
+            Point[] fullPoints = new Point[4];
+            for (int p = 0; p < 4; p++)
             {
                 fullPoints[p] = new Point(
-                    Math.Clamp((int)Math.Round(cand.ShapePoints[p].X * invScale), 0, originalW - 1),
-                    Math.Clamp((int)Math.Round(cand.ShapePoints[p].Y * invScale), 0, originalH - 1)
+                    Math.Clamp((int)Math.Round(fullVerts[p].X), 0, originalW - 1),
+                    Math.Clamp((int)Math.Round(fullVerts[p].Y), 0, originalH - 1)
                 );
             }
 
             using VectorOfPoint fullShape = new(fullPoints);
-            RotatedRect fullRr = PhotoExtractionEngine.RegularizeNearRightAngles(CvInvoke.MinAreaRect(fullShape));
-            double fullArea = CvInvoke.ContourArea(fullShape);
-            double rrArea = Math.Max(1.0, (double)fullRr.Size.Width * fullRr.Size.Height);
-            double rectScore = Math.Clamp(fullArea / rrArea, 0.0, 1.0);
-            double quality = Math.Pow(rectScore, 3) * Math.Pow(cand.Convexity, 2);
-            double score = fullArea * quality;
+            double fullArea = (double)fullSize.Width * fullSize.Height;
+            double score = fullArea * Math.Pow(cand.Rectangularity, 3) * Math.Pow(cand.Convexity, 2);
 
             fullCandidates.Add(new CropCandidate(
                 fullPoints,
@@ -199,7 +210,7 @@ public static class AutoTuneService
                 score,
                 fullRr,
                 fullArea,
-                rectScore,
+                cand.Rectangularity,
                 cand.Convexity));
         }
 
@@ -221,9 +232,9 @@ public static class AutoTuneService
         }
 
         // Single candidate occupying virtually entire scan bed is likely background/border false positive
-        if (accepted.Count == 1 && (coveredArea / totalArea) > 0.95)
+        if (accepted.Count == 1 && (coveredArea / totalArea) > 0.75)
         {
-            scoreSum *= 0.1;
+            scoreSum *= 0.001;
         }
 
         // Discrete bonus for separating into valid multiple photos

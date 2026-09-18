@@ -21,14 +21,6 @@ public static class ForegroundMaskGenerator
         Mat edges = new();
         CvInvoke.Canny(smoothed, edges, lowThreshold, highThreshold);
 
-        int minDim = Math.Min(source.Width, source.Height);
-
-        // Seal faint low-contrast borders (e.g. white photo borders) using dynamic Adaptive Thresholding
-        int adaptiveBlockSize = Math.Max(5, (minDim / 150) | 1); // Resolution-aware block size
-        using Mat adaptive = new();
-        CvInvoke.AdaptiveThreshold(smoothed, adaptive, 255, AdaptiveThresholdType.GaussianC, ThresholdType.BinaryInv, adaptiveBlockSize, 7);
-        CvInvoke.BitwiseOr(edges, adaptive, edges);
-
         return edges;
     }
 
@@ -71,7 +63,7 @@ public static class ForegroundMaskGenerator
         int openSize = Math.Max(3, (minDim / 400) | 1);  // Ensure odd integer, min 3
         int closeSize = Math.Max(3, (minDim / 500) | 1); // Ensure odd integer, min 3
 
-        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(openSize, openSize), new Point(-1, -1));
+        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(openSize, openSize), new Point(-1, -1));
         CvInvoke.MorphologyEx(outputForeground, outputForeground, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
 
         using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(closeSize, closeSize), new Point(-1, -1));

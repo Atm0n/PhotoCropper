@@ -110,7 +110,19 @@ public static class PhotoExporter
         {
             string? directory = Path.GetDirectoryName(originalFilePath);
             if (string.IsNullOrEmpty(directory)) return;
-            outputFolder = Path.Combine(directory, "cropped");
+
+            string folderName = Path.GetFileName(directory);
+            if (string.Equals(folderName, Workspace.ProjectWorkspaceService.RawScansFolderName, StringComparison.OrdinalIgnoreCase))
+            {
+                string? parentDir = Path.GetDirectoryName(directory);
+                outputFolder = !string.IsNullOrEmpty(parentDir)
+                    ? Path.Combine(parentDir, Workspace.ProjectWorkspaceService.CroppedFolderName)
+                    : Path.Combine(directory, Workspace.ProjectWorkspaceService.CroppedFolderName);
+            }
+            else
+            {
+                outputFolder = Path.Combine(directory, "cropped");
+            }
         }
 
         Directory.CreateDirectory(outputFolder);

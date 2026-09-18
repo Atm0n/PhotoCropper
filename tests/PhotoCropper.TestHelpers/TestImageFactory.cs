@@ -177,4 +177,28 @@ public static class TestImageFactory
 
         return mat;
     }
+
+    public static void CreateScannerBezelScan(string path, int bezelThickness = 15, int width = 2000, int height = 2000)
+    {
+        using Mat scan = new(height, width, DepthType.Cv8U, 3);
+        scan.SetTo(new MCvScalar(255, 255, 255)); // White scanner background
+
+        // Photo 1: Straight Dark Square (400x400 at 200, 200)
+        CvInvoke.Rectangle(scan, new Rectangle(200, 200, 400, 400), new MCvScalar(20, 20, 20), -1);
+
+        // Photo 2: Dark Rectangle (400x300 at 1000, 1000)
+        CvInvoke.Rectangle(scan, new Rectangle(1000, 1000, 400, 300), new MCvScalar(40, 40, 40), -1);
+
+        // Simulated scanner dark bezel around the perimeter (typical of flatbed scanners like Canon LiDE 400)
+        if (bezelThickness > 0)
+        {
+            MCvScalar bezelColor = new(10, 10, 10);
+            CvInvoke.Rectangle(scan, new Rectangle(0, 0, width, bezelThickness), bezelColor, -1); // Top
+            CvInvoke.Rectangle(scan, new Rectangle(0, height - bezelThickness, width, bezelThickness), bezelColor, -1); // Bottom
+            CvInvoke.Rectangle(scan, new Rectangle(0, 0, bezelThickness, height), bezelColor, -1); // Left
+            CvInvoke.Rectangle(scan, new Rectangle(width - bezelThickness, 0, bezelThickness, height), bezelColor, -1); // Right
+        }
+
+        scan.Save(path);
+    }
 }

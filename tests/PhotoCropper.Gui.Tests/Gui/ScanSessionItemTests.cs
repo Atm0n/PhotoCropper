@@ -79,6 +79,22 @@ public sealed class ScanSessionItemTests : IDisposable
         item.PhotoCount.ShouldBeGreaterThanOrEqualTo(2);
     }
 
+    [Fact]
+    public void ScanSessionItem_TrackingProperties_ShouldReflectAssignedState()
+    {
+        var options = new DetectionOptions { BackgroundTolerance = 30.0 };
+        using var defaultItem = new ScanSessionItem(_scanPath, options);
+        defaultItem.IsSaved.ShouldBeFalse();
+        defaultItem.IsModified.ShouldBeTrue();
+
+        using var savedItem = new ScanSessionItem(_scanPath, options, isSaved: true, isModified: false);
+        savedItem.IsSaved.ShouldBeTrue();
+        savedItem.IsModified.ShouldBeFalse();
+
+        savedItem.IsModified = true;
+        savedItem.IsModified.ShouldBeTrue();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

@@ -10,6 +10,8 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **`Detection/`**: Dedicated pipeline stages (`BackgroundAnalyzer`, `ForegroundMaskGenerator`, `CandidateExtractor`, `CandidateResolutionFilter`).
   - **`Extraction/`**: Photo extraction, local ROI perspective warps, border refinement, orientation, and color restoration (`PhotoExtractionEngine`, `EdgeRefinementService`, `FaceOrientationService`, `AutoOrientationService`, `PhotoRestorationService`).
   - **`Export/`**: Output serialization supporting lossless PNG, customizable JPEG quality, and DPI preservation (`PhotoExporter`).
+  - **`Scanning/`**: Cross-platform hardware scanner integration (`IScannerService`, `Naps2ScannerService`, `ScannerOptions`, `ScannerDeviceInfo`) supporting TWAIN, WIA, SANE, and eSCL.
+  - **`Workspace/`**: Project folder management, raw scan disk-staging, and crash recovery session manager (`ProjectWorkspaceService`, `WorkspaceSessionState`, `WorkspaceScanEntry`).
   - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
 - **`src/PhotoCropper.Gui` (Avalonia Desktop App):** A high-performance GUI using a modern dark theme, custom-drawn interactive canvas widgets, multi-language localization (EN, ES, CA), undo/redo history, and persistent configuration.
 - **`tests/` (Modular xUnit & Shouldly Test Suites):**
@@ -67,6 +69,18 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 - **Focus-Defeat & Keyboard Event Tunneling:** Non-focusable sidebar controls and tunneling key events ensure instant keyboard navigation without text box focus stealing.
 - **Multi-Language Localization:** Runtime localization in English (`en-US`), Spanish (`es-ES`), and Catalan (`ca-ES`) with persistent user settings.
 
+### 5. Hardware Scanner Integration (TWAIN, WIA, SANE & eSCL)
+- **Direct Flatbed Scanning (`F5` / Scan Button):** Acquire scans straight from connected flatbed scanners directly into PhotoCropper without using slow third-party scanning utilities.
+- **Cross-Platform Driver Engine via NAPS2.Sdk:** Powered by the open-source NAPS2 SDK:
+  - **Windows**: Supports 32-bit and 64-bit TWAIN drivers (with transparent 32-bit IPC worker thunking via `NAPS2.Sdk.Worker.Win32`) and native 64-bit WIA (Windows Image Acquisition). Battle-tested with hardware like the Canon CanoScan LiDE 400.
+  - **Linux / macOS**: Direct integration with SANE (`libsane` / `scanimage`) and modern network eSCL / AirScan scanners.
+- **Configurable Scanner Profiles:** Set scan resolution (150, 300, 600 DPI) and color modes with one-click hardware enumeration and hot-reloading.
+
+### 6. Project Work Directory & Automatic Crash Recovery
+- **Safe Raw Scan Auto-Staging (`RawScans/`):** When scanning or importing, images are immediately written to disk inside the project's `RawScans/` directory (`scan_0001.png`, `scan_0002.png`, etc.). Raw scans are never left stranded in volatile memory.
+- **Crash-Proof Session Persistence (`session.json`):** Tracks all scan files, individual detection settings, 90° rotations, and manual crops in real time. If the app is closed or interrupted by a system crash or power outage, launching the workspace prompts to resume the session instantly.
+- **Automatic Session Reconstruction:** Even if `session.json` is missing or accidentally removed, the workspace engine inspects the `RawScans/` directory on startup and reconstructs the session automatically.
+
 ---
 
 ## Clean Code & Analysis Standards
@@ -83,12 +97,14 @@ The codebase strictly enforces the highest standard of static analysis and memor
 
 | Shortcut | Action |
 |----------|--------|
+| `F5` | 🖨️ Acquire scan from flatbed scanner |
 | `T` | ⚡ Auto-Tune detection parameters on active scan |
 | `Left / Right` | Navigate between cropped photos |
 | `Up / Down` / `PageUp / PageDown` | Switch between original loaded scans |
 | `R` | Rotate the current cropped photo 90° clockwise |
 | `Space` / `B` | Hold to compare with the unedited raw scan crop |
 | `X` / `Delete` | Permanently delete the currently selected photo |
+| `Shift + Delete` | 🗑️ Delete active scan from workspace and disk |
 | `Ctrl + Z` | Undo last photo operation (delete, rotate, manual crop, refinement) |
 | `Ctrl + Y` | Redo last undone operation |
 | `N` / `Ñ` | Enter Interactive Refinement Mode |
@@ -205,6 +221,7 @@ dotnet publish src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -c Release -r linux-
   - Licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 - **Emgu.CV**: .NET cross-platform wrapper for OpenCV ([Emgu CV](https://www.emgu.com/)).
 - **Avalonia UI**: Cross-platform desktop XAML UI framework ([Avalonia UI](https://avaloniaui.net/)).
+- **NAPS2.Sdk**: Cross-platform scanning framework supporting TWAIN, WIA, SANE, and eSCL by Ben Olden-Cooligan ([NAPS2](https://www.naps2.com/sdk)).
 
 ---
 

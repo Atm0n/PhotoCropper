@@ -103,6 +103,13 @@ public static class PhotoExtractionEngine
 
         RotatedRect rawRect = CvInvoke.MinAreaRect(shapeInScanSpace);
         RotatedRect rect = RegularizeNearRightAngles(rawRect);
+        return ExtractPhotoFromRotatedRect(rect, original, paddedSource, padOffset);
+    }
+
+    public static Mat ExtractPhotoFromRotatedRect(RotatedRect rect, Mat original, Mat? paddedSource = null, int padOffset = 0)
+    {
+        ArgumentNullException.ThrowIfNull(original);
+
         PointF[] srcPoints = OrderBoxPoints(rect.GetVertices());
 
         // If extracting from the padded source, shift the crop quad coordinates to padded space

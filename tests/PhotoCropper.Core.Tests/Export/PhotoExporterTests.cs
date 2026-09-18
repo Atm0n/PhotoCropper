@@ -104,6 +104,36 @@ public sealed class PhotoExporterTests : IDisposable
         Path.GetFileName(exported[0]).ShouldContain("còpia");
     }
 
+    [Fact]
+    public void SavePhotos_WhenSourceIsInRawScansDirectory_ShouldExportToCroppedSiblingDirectory()
+    {
+        string workspaceDir = Path.Combine(_tempDir, "workspace");
+        string rawScansDir = Path.Combine(workspaceDir, "RawScans");
+        Directory.CreateDirectory(rawScansDir);
+
+        string scanFile = Path.Combine(rawScansDir, "scan_0001.jpg");
+        using (Mat scan = new(100, 100, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(200, 200, 200));
+            scan.Save(scanFile);
+        }
+
+        using Mat photo = new(50, 50, DepthType.Cv8U, 3);
+        photo.SetTo(new MCvScalar(100, 100, 100));
+
+        // When customOutputFolder is null, it should detect RawScans and export to workspace/Cropped
+        PhotoExporter.SavePhotos([photo], scanFile, customOutputFolder: null, "JPEG", 90);
+
+        string expectedCroppedDir = Path.Combine(workspaceDir, "Cropped");
+        Directory.Exists(expectedCroppedDir).ShouldBeTrue();
+        string[] files = Directory.GetFiles(expectedCroppedDir, "*.jpg");
+        files.Length.ShouldBe(1);
+        Path.GetFileName(files[0]).ShouldBe("scan_0001_1.jpg");
+
+        // Ensure no nested rawScans/cropped was created
+        Directory.Exists(Path.Combine(rawScansDir, "cropped")).ShouldBeFalse();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

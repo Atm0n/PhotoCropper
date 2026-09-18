@@ -72,4 +72,59 @@ public sealed class BackgroundAnalyzerTests
         mask.Width.ShouldBe(200);
         mask.Height.ShouldBe(200);
     }
+
+    [Fact]
+    public void SampleBackgroundColor_WithScannerBezel_ShouldIgnoreBezelAndSampleBed()
+    {
+        using Mat bgr = new(1000, 1000, DepthType.Cv8U, 3);
+        bgr.SetTo(new MCvScalar(255, 255, 255)); // White bed
+
+        // 12px dark bezel on all edges (typical of flatbed scanners)
+        MCvScalar bezel = new(10, 10, 10);
+        CvInvoke.Rectangle(bgr, new Rectangle(0, 0, 1000, 12), bezel, -1);
+        CvInvoke.Rectangle(bgr, new Rectangle(0, 988, 1000, 12), bezel, -1);
+        CvInvoke.Rectangle(bgr, new Rectangle(0, 0, 12, 1000), bezel, -1);
+        CvInvoke.Rectangle(bgr, new Rectangle(988, 0, 12, 1000), bezel, -1);
+
+        using Mat hsv = new();
+        CvInvoke.CvtColor(bgr, hsv, ColorConversion.Bgr2Hsv);
+
+        MCvScalar bgHsv = BackgroundAnalyzer.SampleBackgroundColor(hsv);
+        bgHsv.V2.ShouldBeGreaterThanOrEqualTo(240); // Should accurately sample the white bed, not the bezel
+    }
+
+    [Fact]
+    public void DetectBezelMargins_WithPerimeterBezel_ShouldAccuratelyDetectThickness()
+    {
+        using Mat bgr = new(1000, 1000, DepthType.Cv8U, 3);
+        bgr.SetTo(new MCvScalar(255, 255, 255)); // White bed
+
+        // Top 15px bezel, Left 12px bezel
+        MCvScalar bezel = new(10, 10, 10);
+        CvInvoke.Rectangle(bgr, new Rectangle(0, 0, 1000, 15), bezel, -1);
+        CvInvoke.Rectangle(bgr, new Rectangle(0, 0, 12, 1000), bezel, -1);
+
+        MCvScalar whiteHsv = new(0, 0, 255);
+        var margins = BackgroundAnalyzer.DetectBezelMargins(bgr, whiteHsv, 30);
+
+        margins.Top.ShouldBeInRange(10, 20);
+        margins.Left.ShouldBeInRange(10, 20);
+        margins.Bottom.ShouldBe(0);
+        margins.Right.ShouldBe(0);
+    }
+
+    [Fact]
+    public void DetectBezelMargins_WithoutBezel_ShouldReturnZeroes()
+    {
+        using Mat bgr = new(1000, 1000, DepthType.Cv8U, 3);
+        bgr.SetTo(new MCvScalar(255, 255, 255)); // White bed
+
+        MCvScalar whiteHsv = new(0, 0, 255);
+        var margins = BackgroundAnalyzer.DetectBezelMargins(bgr, whiteHsv, 30);
+
+        margins.Top.ShouldBe(0);
+        margins.Bottom.ShouldBe(0);
+        margins.Left.ShouldBe(0);
+        margins.Right.ShouldBe(0);
+    }
 }

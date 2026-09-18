@@ -91,6 +91,9 @@ jobs:
             -p:PublishReadyToRun=true `
             -o ./publish/cli/${{ matrix.runtime }}
 
+          # Remove any loose PDB symbols, Linux dbg symbols, or XML files from publish directories
+          Get-ChildItem -Path ./publish -Include *.pdb,*.dbg,*.xml -Recurse -File | Remove-Item -Force
+
           # Package separate zip archives
           Compress-Archive -Path ./publish/gui/${{ matrix.runtime }}/* -DestinationPath ./PhotoCropper-GUI-${{ matrix.platform }}.zip
           Compress-Archive -Path ./publish/cli/${{ matrix.runtime }}/* -DestinationPath ./PhotoCropper-CLI-${{ matrix.platform }}.zip
