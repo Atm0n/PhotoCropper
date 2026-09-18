@@ -37,7 +37,7 @@ public sealed class ScannerServiceTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
 
         // Enumerating devices should succeed across platforms even if no physical scanner is connected
-        var devices = await service.GetDevicesAsync(cts.Token);
+        var devices = await service.GetDevicesAsync(includeNetwork: false, cancellationToken: cts.Token);
         devices.ShouldNotBeNull();
     }
 

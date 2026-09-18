@@ -36,11 +36,16 @@ public class PhotoCropperEngine : IDisposable
     public PhotoCropperEngine(string originalFilePath)
     {
         OriginalFilePath = originalFilePath;
-        byte[] fileBytes = File.ReadAllBytes(originalFilePath);
-        using Mat rawMat = new();
-        CvInvoke.Imdecode(fileBytes, ImreadModes.AnyColor, rawMat);
-        Original = rawMat.Clone();
-        OriginalWithDetected = Original.Clone();
+        using (var stream = new FileStream(originalFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+        using (var ms = new MemoryStream((int)stream.Length))
+        {
+            stream.CopyTo(ms);
+            byte[] fileBytes = ms.ToArray();
+            using Mat rawMat = new();
+            CvInvoke.Imdecode(fileBytes, ImreadModes.AnyColor, rawMat);
+            Original = rawMat.Clone();
+            OriginalWithDetected = Original.Clone();
+        }
     }
 
     public void ApplyOptions(DetectionOptions options)

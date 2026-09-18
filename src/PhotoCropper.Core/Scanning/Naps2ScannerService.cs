@@ -18,23 +18,27 @@ public sealed class Naps2ScannerService : IScannerService
     public Naps2ScannerService()
     {
         _context = new ScanningContext(new ImageSharpImageContext());
+        if (OperatingSystem.IsWindows())
+        {
+            _context.SetUpWin32Worker();
+        }
         _controller = new ScanController(_context);
     }
 
-    public async Task<IReadOnlyList<ScannerDeviceInfo>> GetDevicesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ScannerDeviceInfo>> GetDevicesAsync(bool includeNetwork = false, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var devices = await _controller.GetDeviceList().ConfigureAwait(false);
+        var devices = await GetAllDevicesInternalAsync(includeNetwork, cancellationToken).ConfigureAwait(false);
         var result = new List<ScannerDeviceInfo>(devices.Count);
 
         foreach (var dev in devices)
         {
             result.Add(new ScannerDeviceInfo
             {
-                Id = dev.ID,
+                Id = $"{dev.Driver.ToString().ToUpperInvariant()}:{dev.ID}",
                 Name = dev.Name,
                 Driver = MapDriver(dev.Driver)
             });
@@ -121,10 +125,111 @@ public sealed class Naps2ScannerService : IScannerService
         return savedPaths.AsReadOnly();
     }
 
+    private async Task<IReadOnlyList<ScanDevice>> GetAllDevicesInternalAsync(bool includeNetwork = false, CancellationToken cancellationToken = default)
+    {
+        var allDevices = new List<ScanDevice>();
+
+        if (OperatingSystem.IsWindows())
+        {
+            // 1. Enumerate TWAIN devices (32-bit supported out-of-process via Win32 worker)
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var twainDevices = await _controller.GetDeviceList(Driver.Twain).ConfigureAwait(false);
+                allDevices.AddRange(twainDevices);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                // TWAIN subsystem not present or threw error
+            }
+
+            // 2. Enumerate WIA devices
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var wiaDevices = await _controller.GetDeviceList(Driver.Wia).ConfigureAwait(false);
+                allDevices.AddRange(wiaDevices);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                // WIA service not available
+            }
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            // SANE on Linux
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var saneDevices = await _controller.GetDeviceList(Driver.Sane).ConfigureAwait(false);
+                allDevices.AddRange(saneDevices);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+            }
+        }
+        else
+        {
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var defaultDevices = await _controller.GetDeviceList().ConfigureAwait(false);
+                allDevices.AddRange(defaultDevices);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+            }
+        }
+
+        // Only probe eSCL (Apple AirScan / Mopria network scanners) when explicitly requested
+        if (includeNetwork)
+        {
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var esclDevices = await _controller.GetDeviceList(Driver.Escl).ConfigureAwait(false);
+                foreach (var escl in esclDevices)
+                {
+                    if (!allDevices.Any(d => string.Equals(d.ID, escl.ID, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        allDevices.Add(escl);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+            }
+        }
+
+        return allDevices.AsReadOnly();
+    }
+
     private async Task<ScanOptions> BuildScanOptionsAsync(ScannerOptions options, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var allDevices = await _controller.GetDeviceList().ConfigureAwait(false);
+        bool includeNetwork = options.Device?.Driver == ScannerDriverType.Escl ||
+                              options.Device?.Id?.StartsWith("ESCL:", StringComparison.OrdinalIgnoreCase) == true;
+        var allDevices = await GetAllDevicesInternalAsync(includeNetwork, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
         ScanDevice? selectedDevice = null;
@@ -132,6 +237,17 @@ public sealed class Naps2ScannerService : IScannerService
         if (options.Device != null)
         {
             selectedDevice = allDevices.FirstOrDefault(d =>
+                string.Equals($"{d.Driver.ToString().ToUpperInvariant()}:{d.ID}", options.Device.Id, StringComparison.OrdinalIgnoreCase));
+
+            selectedDevice ??= allDevices.FirstOrDefault(d =>
+                string.Equals(d.ID, options.Device.Id, StringComparison.OrdinalIgnoreCase) &&
+                (options.Device.Driver == ScannerDriverType.Default || MapDriver(d.Driver) == options.Device.Driver));
+
+            selectedDevice ??= allDevices.FirstOrDefault(d =>
+                string.Equals(d.Name, options.Device.Name, StringComparison.OrdinalIgnoreCase) &&
+                (options.Device.Driver == ScannerDriverType.Default || MapDriver(d.Driver) == options.Device.Driver));
+
+            selectedDevice ??= allDevices.FirstOrDefault(d =>
                 string.Equals(d.ID, options.Device.Id, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(d.Name, options.Device.Name, StringComparison.OrdinalIgnoreCase));
 
@@ -152,7 +268,7 @@ public sealed class Naps2ScannerService : IScannerService
             selectedDevice = allDevices[0];
         }
 
-        return new ScanOptions
+        var scanOptions = new ScanOptions
         {
             Device = selectedDevice,
             Dpi = options.Dpi,
@@ -165,6 +281,8 @@ public sealed class Naps2ScannerService : IScannerService
             Brightness = options.Brightness,
             Contrast = options.Contrast
         };
+
+        return scanOptions;
     }
 
     private static ScannerDriverType MapDriver(Driver driver) => driver switch
