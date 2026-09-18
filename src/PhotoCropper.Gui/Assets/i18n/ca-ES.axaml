@@ -130,4 +130,6 @@
 	<sys:String x:Key="TitleScannerError">Error de Comunicació amb l'Escàner</sys:String>
 	<sys:String x:Key="MsgScannerErrorDetails">Error al comunicar-se amb l'escàner '{0}':&#x0a;&#x0a;{1}&#x0a;&#x0a;Solució de problemes:&#x0a;• Comproveu l'alimentació i cables de l'escàner.&#x0a;• Verifiqueu l'estat del controlador al vostre sistema operatiu.&#x0a;• Reinicieu l'escàner i feu clic a 'Actualitzar Escàners'.</sys:String>
 	<sys:String x:Key="MsgScanCancelled">L'escaneig s'ha cancel·lat o s'ha esgotat el temps d'espera.</sys:String>
+	<sys:String x:Key="LblNetworkScanners">Cercar a la xarxa (Wi-Fi / eSCL)</sys:String>
+	<sys:String x:Key="TipNetworkScanners">Cerca escàners sense fil a la xarxa local mitjançant Apple AirScan / eSCL (pot demanar permís del tallafoc).</sys:String>
 </ResourceDictionary>

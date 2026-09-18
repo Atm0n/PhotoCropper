@@ -130,4 +130,6 @@
 	<sys:String x:Key="TitleScannerError">Scanner Communication Error</sys:String>
 	<sys:String x:Key="MsgScannerErrorDetails">Failed to communicate with scanner '{0}':&#x0a;&#x0a;{1}&#x0a;&#x0a;Troubleshooting:&#x0a;• Check scanner power and USB/network cables.&#x0a;• Verify scanner driver status in your operating system.&#x0a;• Restart the scanner and click 'Refresh Scanners'.</sys:String>
 	<sys:String x:Key="MsgScanCancelled">Scanning was cancelled or timed out.</sys:String>
+	<sys:String x:Key="LblNetworkScanners">Search Network (Wi-Fi / eSCL)</sys:String>
+	<sys:String x:Key="TipNetworkScanners">Probes the local network for wireless scanners via Apple AirScan / eSCL (may prompt Windows Firewall permission).</sys:String>
 </ResourceDictionary>

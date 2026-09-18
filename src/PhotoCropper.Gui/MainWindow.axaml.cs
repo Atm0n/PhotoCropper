@@ -191,6 +191,11 @@ internal sealed partial class MainWindow : Window
                 _ => 1
             };
         }
+
+        if (chkNetworkScanners != null)
+        {
+            chkNetworkScanners.IsChecked = settings.IncludeNetworkScanners;
+        }
     }
 
     private void SyncUiWithScanOptions(DetectionOptions options)
@@ -1622,7 +1627,9 @@ internal sealed partial class MainWindow : Window
     {
         try
         {
-            var devices = await _scannerService.GetDevicesAsync().ConfigureAwait(false);
+            var settings = SettingsManager.Instance.Settings;
+            bool includeNetwork = settings.IncludeNetworkScanners;
+            var devices = await _scannerService.GetDevicesAsync(includeNetwork).ConfigureAwait(false);
             _availableScanners.Clear();
             _availableScanners.AddRange(devices);
 
@@ -1632,7 +1639,6 @@ internal sealed partial class MainWindow : Window
                 {
                     cbScanner.ItemsSource = _availableScanners.Select(d => d.ToString()).ToList();
 
-                    var settings = SettingsManager.Instance.Settings;
                     int selectedIdx = _availableScanners.FindIndex(d => d.Id == settings.SelectedScannerId);
                     if (selectedIdx >= 0)
                     {
@@ -1648,6 +1654,16 @@ internal sealed partial class MainWindow : Window
         catch
         {
             // Scanner enumeration failed or unsupported platform
+        }
+    }
+
+    private async void ChkNetworkScanners_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (chkNetworkScanners != null)
+        {
+            SettingsManager.Instance.Settings.IncludeNetworkScanners = chkNetworkScanners.IsChecked ?? false;
+            SettingsManager.Instance.Save();
+            await RefreshScannersAsync();
         }
     }
 

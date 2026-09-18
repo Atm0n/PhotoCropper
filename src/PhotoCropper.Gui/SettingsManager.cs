@@ -23,6 +23,7 @@ internal sealed class UserSettings
     public string? WorkDirectory { get; set; }
     public string? SelectedScannerId { get; set; }
     public int ScannerDpi { get; set; } = 300;
+    public bool IncludeNetworkScanners { get; set; }
 }
 
 internal sealed class SettingsManager

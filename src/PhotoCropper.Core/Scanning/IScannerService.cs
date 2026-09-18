@@ -8,9 +8,9 @@ namespace PhotoCropper.Core.Scanning;
 public interface IScannerService : IDisposable
 {
     /// <summary>
-    /// Enumerates all available scanners across supported drivers (TWAIN, WIA, SANE, eSCL).
+    /// Enumerates all available scanners across supported drivers (TWAIN, WIA, SANE, and optionally network eSCL).
     /// </summary>
-    Task<IReadOnlyList<ScannerDeviceInfo>> GetDevicesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ScannerDeviceInfo>> GetDevicesAsync(bool includeNetwork = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Performs a scan using the specified options and returns decoded BGR OpenCV Mats.
