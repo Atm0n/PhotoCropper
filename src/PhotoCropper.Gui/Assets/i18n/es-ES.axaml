@@ -132,4 +132,7 @@
 	<sys:String x:Key="MsgScanCancelled">El escaneo fue cancelado o expiró el tiempo de espera.</sys:String>
 	<sys:String x:Key="LblNetworkScanners">Buscar en red (Wi-Fi / eSCL)</sys:String>
 	<sys:String x:Key="TipNetworkScanners">Busca escáneres inalámbricos en la red local mediante Apple AirScan / eSCL (puede solicitar permiso del cortafuegos).</sys:String>
+	<sys:String x:Key="LblNoProject">Sin Proyecto</sys:String>
+	<sys:String x:Key="LblProjectFormat">Proyecto: {0}</sys:String>
+	<sys:String x:Key="TipActiveProject">Proyecto activo: {0}&#x0a;Ruta: {1}&#x0a;&#x0a;Haga clic para cambiar de proyecto o carpeta de trabajo.</sys:String>
 </ResourceDictionary>

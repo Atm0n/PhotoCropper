@@ -132,4 +132,7 @@
 	<sys:String x:Key="MsgScanCancelled">L'escaneig s'ha cancel·lat o s'ha esgotat el temps d'espera.</sys:String>
 	<sys:String x:Key="LblNetworkScanners">Cercar a la xarxa (Wi-Fi / eSCL)</sys:String>
 	<sys:String x:Key="TipNetworkScanners">Cerca escàners sense fil a la xarxa local mitjançant Apple AirScan / eSCL (pot demanar permís del tallafoc).</sys:String>
+	<sys:String x:Key="LblNoProject">Sense Projecte</sys:String>
+	<sys:String x:Key="LblProjectFormat">Projecte: {0}</sys:String>
+	<sys:String x:Key="TipActiveProject">Projecte actiu: {0}&#x0a;Ruta: {1}&#x0a;&#x0a;Feu clic per canviar de projecte o carpeta de treball.</sys:String>
 </ResourceDictionary>

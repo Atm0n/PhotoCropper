@@ -25,10 +25,10 @@
 								<TextBlock Text="{DynamicResource BtnScan}" FontWeight="SemiBold"/>
 							</StackPanel>
 						</Button>
-						<Button x:Name="btnWorkDir" Click="BtnWorkDir_Click" Padding="8,6" Background="#3a3a3a" Foreground="White" Focusable="False" ToolTip.Tip="{DynamicResource TipWorkDir}">
+						<Button x:Name="btnWorkDir" Click="BtnWorkDir_Click" Padding="10,6" Background="#3a3a3a" Foreground="White" Focusable="False" ToolTip.Tip="{DynamicResource TipWorkDir}">
 							<StackPanel Orientation="Horizontal" Spacing="6">
 								<TextBlock Text="🗂️"/>
-								<TextBlock x:Name="txtWorkDirBtn" Text="{DynamicResource BtnWorkDir}"/>
+								<TextBlock x:Name="txtWorkDirBtn" Text="{DynamicResource BtnWorkDir}" FontWeight="SemiBold"/>
 							</StackPanel>
 						</Button>
 						<Button x:Name="btnOpenFiles" Click="BtnOpenFiles_Click" Padding="10,6" Background="#3399ff" Foreground="White" Focusable="False">
@@ -203,13 +203,22 @@
 
 		<!-- Footer / Status Bar -->
 		<Border DockPanel.Dock="Bottom" Background="#252525" Height="30" BorderBrush="#3f3f3f" BorderThickness="0,1,0,0">
-			<Grid ColumnDefinitions="*, Auto">
-				<StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0" Spacing="20">
+			<Grid ColumnDefinitions="Auto, *, Auto">
+				<!-- Project Indicator Badge -->
+				<Border Grid.Column="0" Margin="8,3" Background="#1e1e1e" BorderBrush="#3a3a3a" BorderThickness="1" CornerRadius="4" Padding="8,2"
+						PointerPressed="LblCurrentProject_PointerPressed" Cursor="Hand" ToolTip.Tip="{DynamicResource TipWorkDir}">
+					<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+						<TextBlock Text="🗂️" FontSize="11" VerticalAlignment="Center"/>
+						<TextBlock x:Name="lblCurrentProject" Text="{DynamicResource LblNoProject}" FontSize="11" FontWeight="SemiBold" Foreground="#3399ff" VerticalAlignment="Center"/>
+					</StackPanel>
+				</Border>
+
+				<StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0" Spacing="20" VerticalAlignment="Center">
 					<TextBlock x:Name="lblStatus" Text="{DynamicResource StatusReady}" VerticalAlignment="Center" FontSize="12" Foreground="#888888"/>
 					<TextBlock Text="{DynamicResource StatusShortcuts}" 
 							   VerticalAlignment="Center" FontSize="11" Foreground="#555555"/>
 				</StackPanel>
-				<TextBlock Grid.Column="1" x:Name="lblPhotoInfo" Text="" Margin="10,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#3399ff"/>
+				<TextBlock Grid.Column="2" x:Name="lblPhotoInfo" Text="" Margin="10,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#3399ff"/>
 			</Grid>
 		</Border>
 

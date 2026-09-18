@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Emgu.CV;
 using Emgu.CV.Structure;
@@ -176,11 +177,7 @@ internal sealed partial class MainWindow : Window
             pnlJpegQuality.IsVisible = !string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase);
         }
 
-        if (txtWorkDirBtn != null && !string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory))
-        {
-            txtWorkDirBtn.Text = Path.GetFileName(settings.WorkDirectory);
-            ToolTip.SetTip(btnWorkDir, settings.WorkDirectory);
-        }
+        UpdateWorkspaceUi(settings.WorkDirectory);
 
         if (cbScannerDpi != null)
         {
@@ -296,6 +293,7 @@ internal sealed partial class MainWindow : Window
                 if (s is MenuItem mi && mi.Tag is string code)
                 {
                     LocalizationManager.SetLanguage(code);
+                    UpdateWorkspaceUi(SettingsManager.Instance.Settings.WorkDirectory);
                     FocusManager?.Focus(null);
                 }
             };
@@ -1444,6 +1442,67 @@ internal sealed partial class MainWindow : Window
         }
     }
 
+    private void UpdateWorkspaceUi(string? workDir)
+    {
+        if (!string.IsNullOrEmpty(workDir) && Directory.Exists(workDir))
+        {
+            string cleanDir = Path.TrimEndingDirectorySeparator(workDir);
+            string projectName = Path.GetFileName(cleanDir);
+            if (string.IsNullOrEmpty(projectName))
+            {
+                projectName = cleanDir;
+            }
+
+            string tipTemplate = Application.Current?.FindResource("TipActiveProject")?.ToString() ?? "Active Project: {0}\nPath: {1}\n\nClick to switch project or work directory.";
+            string tooltip = string.Format(tipTemplate, projectName, cleanDir);
+
+            if (txtWorkDirBtn != null)
+            {
+                txtWorkDirBtn.Text = projectName;
+            }
+            if (btnWorkDir != null)
+            {
+                btnWorkDir.Background = Brush.Parse("#264653");
+                ToolTip.SetTip(btnWorkDir, tooltip);
+            }
+            if (lblCurrentProject != null)
+            {
+                lblCurrentProject.Text = projectName;
+                ToolTip.SetTip(lblCurrentProject, tooltip);
+            }
+
+            Title = $"PhotoCropper - [{projectName}]";
+        }
+        else
+        {
+            string defaultBtn = Application.Current?.FindResource("BtnWorkDir")?.ToString() ?? "Folder";
+            string noProject = Application.Current?.FindResource("LblNoProject")?.ToString() ?? "No Project";
+            string defaultTip = Application.Current?.FindResource("TipWorkDir")?.ToString() ?? "Select a work directory for automatic raw scan staging and session recovery";
+
+            if (txtWorkDirBtn != null)
+            {
+                txtWorkDirBtn.Text = defaultBtn;
+            }
+            if (btnWorkDir != null)
+            {
+                btnWorkDir.Background = Brush.Parse("#3a3a3a");
+                ToolTip.SetTip(btnWorkDir, defaultTip);
+            }
+            if (lblCurrentProject != null)
+            {
+                lblCurrentProject.Text = noProject;
+                ToolTip.SetTip(lblCurrentProject, defaultTip);
+            }
+
+            Title = "PhotoCropper - Intelligent Photo Extractor";
+        }
+    }
+
+    private void LblCurrentProject_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    {
+        BtnWorkDir_Click(sender, e);
+    }
+
     private async void BtnWorkDir_Click(object? sender, RoutedEventArgs e)
     {
         var topLevel = TopLevel.GetTopLevel(this);
@@ -1464,8 +1523,7 @@ internal sealed partial class MainWindow : Window
             settings.WorkDirectory = chosenDir;
             SettingsManager.Instance.Save();
 
-            txtWorkDirBtn.Text = Path.GetFileName(chosenDir);
-            ToolTip.SetTip(btnWorkDir, chosenDir);
+            UpdateWorkspaceUi(chosenDir);
 
             if (ProjectWorkspaceService.HasRecoverableSession(chosenDir))
             {
@@ -1497,8 +1555,7 @@ internal sealed partial class MainWindow : Window
                     workDir = folders[0].Path.LocalPath;
                     settings.WorkDirectory = workDir;
                     SettingsManager.Instance.Save();
-                    txtWorkDirBtn.Text = Path.GetFileName(workDir);
-                    ToolTip.SetTip(btnWorkDir, workDir);
+                    UpdateWorkspaceUi(workDir);
                 }
             }
 
@@ -1509,8 +1566,7 @@ internal sealed partial class MainWindow : Window
                 workDir = Path.Combine(picturesDir, "PhotoCropper_Workspace");
                 settings.WorkDirectory = workDir;
                 SettingsManager.Instance.Save();
-                txtWorkDirBtn.Text = Path.GetFileName(workDir);
-                ToolTip.SetTip(btnWorkDir, workDir);
+                UpdateWorkspaceUi(workDir);
             }
         }
 
