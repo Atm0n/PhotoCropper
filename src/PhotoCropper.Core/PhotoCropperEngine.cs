@@ -130,6 +130,25 @@ public class PhotoCropperEngine : IDisposable
         using Mat padded = new();
         CvInvoke.CopyMakeBorder(Original, padded, pad, pad, pad, pad, BorderType.Constant, bgBgr);
 
+        // Neutralize scanner bezel / platen border margins in padded detection image
+        var bezel = BackgroundAnalyzer.DetectBezelMargins(Original, avgBackgroundColorHsv, BackgroundTolerance);
+        if (bezel.Top > 0)
+        {
+            CvInvoke.Rectangle(padded, new Rectangle(0, 0, padded.Width, pad + bezel.Top), bgBgr, -1);
+        }
+        if (bezel.Bottom > 0)
+        {
+            CvInvoke.Rectangle(padded, new Rectangle(0, padded.Height - pad - bezel.Bottom, padded.Width, pad + bezel.Bottom), bgBgr, -1);
+        }
+        if (bezel.Left > 0)
+        {
+            CvInvoke.Rectangle(padded, new Rectangle(0, 0, pad + bezel.Left, padded.Height), bgBgr, -1);
+        }
+        if (bezel.Right > 0)
+        {
+            CvInvoke.Rectangle(padded, new Rectangle(padded.Width - pad - bezel.Right, 0, pad + bezel.Right, padded.Height), bgBgr, -1);
+        }
+
         // Determine downscale factor for ultra-fast contour detection on high-DPI scans
         int maxDim = Math.Max(padded.Width, padded.Height);
         double scale = 1.0;
@@ -204,22 +223,23 @@ public class PhotoCropperEngine : IDisposable
                 double invScale = 1.0 / scale;
                 foreach (var cand in passCandidates)
                 {
-                    Point[] fullPoints = new Point[cand.ShapePoints.Length];
-                    for (int p = 0; p < cand.ShapePoints.Length; p++)
+                    PointF fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
+                    SizeF fullSize = new SizeF((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
+                    RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
+
+                    PointF[] fullVerts = fullRr.GetVertices();
+                    Point[] fullPoints = new Point[4];
+                    for (int p = 0; p < 4; p++)
                     {
                         fullPoints[p] = new Point(
-                            Math.Clamp((int)Math.Round(cand.ShapePoints[p].X * invScale), 0, originalW - 1),
-                            Math.Clamp((int)Math.Round(cand.ShapePoints[p].Y * invScale), 0, originalH - 1)
+                            Math.Clamp((int)Math.Round(fullVerts[p].X), 0, originalW - 1),
+                            Math.Clamp((int)Math.Round(fullVerts[p].Y), 0, originalH - 1)
                         );
                     }
 
                     using VectorOfPoint fullShape = new(fullPoints);
-                    RotatedRect fullRr = PhotoExtractionEngine.RegularizeNearRightAngles(CvInvoke.MinAreaRect(fullShape));
-                    double fullArea = CvInvoke.ContourArea(fullShape);
-                    double rrArea = Math.Max(1.0, (double)fullRr.Size.Width * fullRr.Size.Height);
-                    double rectScore = Math.Clamp(fullArea / rrArea, 0.0, 1.0);
-                    double quality = Math.Pow(rectScore, 3) * Math.Pow(cand.Convexity, 2);
-                    double score = fullArea * quality;
+                    double fullArea = (double)fullSize.Width * fullSize.Height;
+                    double score = fullArea * Math.Pow(cand.Rectangularity, 3) * Math.Pow(cand.Convexity, 2);
 
                     candidateDetections.Add(new CropCandidate(
                         fullPoints,
@@ -227,7 +247,7 @@ public class PhotoCropperEngine : IDisposable
                         score,
                         fullRr,
                         fullArea,
-                        rectScore,
+                        cand.Rectangularity,
                         cand.Convexity));
                 }
             }
@@ -256,8 +276,7 @@ public class PhotoCropperEngine : IDisposable
 
         Parallel.For(0, acceptedCandidates.Count, i =>
         {
-            using VectorOfPoint poly = new(acceptedCandidates[i].ShapePoints);
-            Mat extracted = PhotoExtractionEngine.ExtractPhotoFromContour(poly, Original, padded, pad);
+            Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(acceptedCandidates[i].Rotated, Original, padded, pad);
 
             // Orient photo if enabled (applies to raw as well so comparison geometry is identical)
             if (AutoOrientPhotos && !extracted.IsEmpty)

@@ -23,7 +23,7 @@ public static class CandidateExtractor
         var result = new List<CropCandidate>();
 
         using VectorOfVectorOfPoint contours = new();
-        CvInvoke.FindContours(foregroundMap, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
+        CvInvoke.FindContours(foregroundMap, contours, null, RetrType.Ccomp, ChainApproxMethod.ChainApproxSimple);
 
         double totalArea = (double)originalWidth * originalHeight;
         double minArea = totalArea * minAreaFactor;
@@ -39,28 +39,22 @@ public static class CandidateExtractor
             CvInvoke.ConvexHull(contours[i], hull);
             double hullArea = CvInvoke.ContourArea(hull);
 
-            // Polygon approximation to extract clean quadrilateral boundaries
-            double peri = CvInvoke.ArcLength(hull, true);
-            using VectorOfPoint approx = new();
-            CvInvoke.ApproxPolyDP(hull, approx, 0.02 * peri, true);
+            // MinAreaRect directly on the hull calculates the exact physical inclination of the photo
+            RotatedRect padRr = CvInvoke.MinAreaRect(hull);
+            RotatedRect scanRr = new(new PointF(padRr.Center.X - padOffset, padRr.Center.Y - padOffset), padRr.Size, padRr.Angle);
+            RotatedRect rr = PhotoExtractionEngine.RegularizeNearRightAngles(scanRr, 0.35f);
 
-            // If approximation has 4 to 8 vertices and is convex, use it; otherwise fallback to hull
-            Point[] rawPoints = (approx.Size >= 4 && approx.Size <= 8 && CvInvoke.IsContourConvex(approx))
-                ? approx.ToArray()
-                : hull.ToArray();
-
-            // Map coordinates back from padded space to original image space
-            Point[] shapePoints = new Point[rawPoints.Length];
-            for (int p = 0; p < rawPoints.Length; p++)
+            PointF[] boxPts = rr.GetVertices();
+            Point[] shapePoints = new Point[4];
+            for (int p = 0; p < 4; p++)
             {
                 shapePoints[p] = new Point(
-                    Math.Clamp(rawPoints[p].X - padOffset, 0, originalWidth - 1),
-                    Math.Clamp(rawPoints[p].Y - padOffset, 0, originalHeight - 1)
+                    Math.Clamp((int)Math.Round(boxPts[p].X), 0, originalWidth - 1),
+                    Math.Clamp((int)Math.Round(boxPts[p].Y), 0, originalHeight - 1)
                 );
             }
 
             using VectorOfPoint tempShape = new(shapePoints);
-            RotatedRect rr = PhotoExtractionEngine.RegularizeNearRightAngles(CvInvoke.MinAreaRect(tempShape));
 
             // Aspect ratio / compactness filter to discard thin line artifacts
             float w = rr.Size.Width;
