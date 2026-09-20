@@ -15,6 +15,65 @@
 
 	<Grid>
 		<DockPanel>
+			<!-- Hidden Classic Menu Bar (Toggled with ALT key) -->
+			<Border x:Name="pnlMenuBar" DockPanel.Dock="Top" Background="#1f1f1f" BorderBrush="#353535" BorderThickness="0,0,0,1" IsVisible="False">
+				<Menu Background="Transparent" FontSize="12">
+					<!-- File Menu -->
+					<MenuItem Header="_File">
+						<MenuItem Header="{DynamicResource BtnScan}" InputGesture="F5" Click="BtnScan_Click"/>
+						<MenuItem Header="{DynamicResource TitleScannerConfig}" Click="BtnScannerConfig_Click"/>
+						<Separator/>
+						<MenuItem Header="{DynamicResource BtnOpenScans}" InputGesture="Ctrl+O" Click="BtnOpenFiles_Click"/>
+						<MenuItem Header="{DynamicResource BtnSaveResults}" InputGesture="Ctrl+S" Click="BtnSaveImages_Click"/>
+						<Separator/>
+						<MenuItem Header="{DynamicResource BtnWorkDir}" Click="BtnWorkDir_Click"/>
+						<MenuItem Header="{DynamicResource BtnNewProject}" Click="BtnNewProject_Click"/>
+						<Separator/>
+						<MenuItem Header="{DynamicResource BtnDeleteScan}" InputGesture="Shift+Delete" Click="BtnDeleteScan_Click"/>
+						<MenuItem Header="{DynamicResource BtnReset}" Click="BtnReset_Click"/>
+						<Separator/>
+						<MenuItem Header="Exit" InputGesture="Alt+F4" Click="MenuExit_Click"/>
+					</MenuItem>
+
+					<!-- Edit Menu -->
+					<MenuItem Header="_Edit">
+						<MenuItem Header="Undo" InputGesture="Ctrl+Z" Click="MenuUndo_Click"/>
+						<MenuItem Header="Redo" InputGesture="Ctrl+Y" Click="MenuRedo_Click"/>
+						<Separator/>
+						<MenuItem Header="{DynamicResource BtnSelectAll}" InputGesture="Ctrl+A" Click="BtnSelectAll_Click"/>
+						<MenuItem Header="{DynamicResource BtnClearSelection}" InputGesture="Escape" Click="BtnClearSelection_Click"/>
+						<Separator/>
+						<MenuItem Header="{DynamicResource BtnRotate}" InputGesture="R" Click="BtnRotate_Click"/>
+						<MenuItem Header="{DynamicResource BtnDelete}" InputGesture="Delete" Click="BtnDelete_Click"/>
+						<MenuItem Header="{DynamicResource BtnRefine}" Click="BtnRefine_Click"/>
+						<Separator/>
+						<MenuItem Header="{DynamicResource BtnResetBackground}" Click="BtnResetBackground_Click"/>
+						<MenuItem Header="{DynamicResource BtnAutoTune}" Click="BtnAutoTune_Click"/>
+					</MenuItem>
+
+					<!-- View Menu -->
+					<MenuItem Header="_View">
+						<MenuItem Header="{DynamicResource ViewCarousel}" Click="MenuViewCarousel_Click"/>
+						<MenuItem Header="{DynamicResource ViewGrid}" Click="MenuViewGrid_Click"/>
+						<Separator/>
+						<MenuItem Header="{DynamicResource BtnPrevScan}" InputGesture="Up" Click="BtnPrevScan_Click"/>
+						<MenuItem Header="{DynamicResource BtnNextScan}" InputGesture="Down" Click="BtnNextScan_Click"/>
+						<MenuItem Header="{DynamicResource BtnPreviousCroppedImage}" InputGesture="Left" Click="BtnPreviousCroppedImage_Click"/>
+						<MenuItem Header="{DynamicResource BtnNextCroppedImage}" InputGesture="Right" Click="BtnNextCroppedImage_Click"/>
+						<Separator/>
+						<MenuItem Header="{DynamicResource BtnToggleAdvanced}" Click="BtnToggleAdvanced_Click"/>
+					</MenuItem>
+
+					<!-- Language Menu -->
+					<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuAltLanguage"/>
+
+					<!-- Help Menu -->
+					<MenuItem Header="_Help">
+						<MenuItem Header="{DynamicResource BtnHelp}" InputGesture="F1" Click="BtnHelp_Click"/>
+					</MenuItem>
+				</Menu>
+			</Border>
+
 			<!-- Header / Toolbar -->
 		<Border DockPanel.Dock="Top" Background="#262626" MinHeight="48" BorderBrush="#383838" BorderThickness="0,0,0,1">
 			<StackPanel>
@@ -141,10 +200,6 @@
 							<Menu Background="Transparent" VerticalAlignment="Center" Margin="0" Focusable="False" IsTabStop="False" KeyboardNavigation.TabNavigation="None">
 								<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuLanguage" Focusable="False" IsTabStop="False" FontSize="11"/>
 							</Menu>
-
-							<Button x:Name="btnHelp" Click="BtnHelp_Click" Padding="6,4" Background="Transparent" BorderThickness="0" Focusable="False" ToolTip.Tip="{DynamicResource BtnHelp}">
-								<TextBlock Text="❓" FontSize="14"/>
-							</Button>
 						</StackPanel>
 					</Border>
 				</WrapPanel>
@@ -250,7 +305,16 @@
 					<TextBlock Text="{DynamicResource StatusShortcuts}" 
 							   VerticalAlignment="Center" FontSize="11" Foreground="#555555" TextTrimming="CharacterEllipsis"/>
 				</StackPanel>
-				<TextBlock Grid.Column="2" x:Name="lblPhotoInfo" Text="" Margin="10,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#3399ff"/>
+
+				<StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0" Spacing="8" VerticalAlignment="Center">
+					<TextBlock x:Name="lblPhotoInfo" Text="" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#3399ff"/>
+					<Button x:Name="btnHelp" Click="BtnHelp_Click" Padding="6,2" Background="#1e1e1e" BorderBrush="#3a3a3a" BorderThickness="1" CornerRadius="4" Focusable="False" ToolTip.Tip="{DynamicResource BtnHelp}">
+						<StackPanel Orientation="Horizontal" Spacing="4">
+							<TextBlock Text="❓" FontSize="11" VerticalAlignment="Center"/>
+							<TextBlock Text="{DynamicResource BtnHelp}" FontSize="11" VerticalAlignment="Center"/>
+						</StackPanel>
+					</Button>
+				</StackPanel>
 			</Grid>
 		</Border>
 
