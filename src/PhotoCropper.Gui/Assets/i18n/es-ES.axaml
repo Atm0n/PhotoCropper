@@ -13,8 +13,12 @@
 	<sys:String x:Key="TipAutoOrient">Endereza y orienta automáticamente las fotos usando detección facial por IA y análisis de paisajes/agua.</sys:String>
 	<sys:String x:Key="LblRestoreColors">Restaurar Color y Contraste</sys:String>
 	<sys:String x:Key="TipRestoreColors">Neutraliza el amarilleo por envejecimiento, recupera sombras y luces con LAB CLAHE y revive colores desvaídos.</sys:String>
-	<sys:String x:Key="LblRemoveDust">Eliminar Polvo y Rayaduras</sys:String>
-	<sys:String x:Key="TipRemoveDust">Inpainting automático de rayaduras finas, motas de polvo y fibras del escáner.</sys:String>
+	<sys:String x:Key="LblRemoveDust">Eliminar Polvo y Arañazos</sys:String>
+	<sys:String x:Key="TipRemoveDust">Inpainting automatizado de arañazos finos, motas de polvo y pelusas.</sys:String>
+	<sys:String x:Key="LblShowNotifications">Notificaciones de Finalización</sys:String>
+	<sys:String x:Key="TipShowNotifications">Muestra una notificación emergente en la app cuando finaliza la exportación de fotos.</sys:String>
+	<sys:String x:Key="LblFlashTaskbar">Parpadear Barra de Tareas</sys:String>
+	<sys:String x:Key="TipFlashTaskbar">Hace parpadear el icono de la barra de tareas en Windows al finalizar la exportación en segundo plano.</sys:String>
 	<sys:String x:Key="TxtNoFiles">Sin archivos</sys:String>
 	<sys:String x:Key="HeaderOriginal">ESCANEO ORIGINAL (CLIC Y ARRASTRAR PARA RECORTAR)</sys:String>
 	<sys:String x:Key="HeaderDetected">FOTOS DETECTADAS</sys:String>

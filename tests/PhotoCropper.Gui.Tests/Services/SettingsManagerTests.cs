@@ -38,6 +38,9 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.DefaultYear.ShouldBeNull();
         manager.Settings.DefaultDescription.ShouldBeNull();
         manager.Settings.ApplyYearToAllScans.ShouldBeTrue();
+        manager.Settings.ShowNotifications.ShouldBeTrue();
+        manager.Settings.FlashTaskbarOnCompletion.ShouldBeTrue();
+        manager.Settings.PlaySoundOnCompletion.ShouldBeFalse();
     }
 
     [Fact]
@@ -64,6 +67,9 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.DefaultYear = 1985;
         manager.Settings.DefaultDescription = "Family Album";
         manager.Settings.ApplyYearToAllScans = false;
+        manager.Settings.ShowNotifications = false;
+        manager.Settings.FlashTaskbarOnCompletion = false;
+        manager.Settings.PlaySoundOnCompletion = true;
 
         manager.Save();
 
@@ -88,6 +94,9 @@ public sealed class SettingsManagerTests : IDisposable
         secondManager.Settings.DefaultYear.ShouldBe(1985);
         secondManager.Settings.DefaultDescription.ShouldBe("Family Album");
         secondManager.Settings.ApplyYearToAllScans.ShouldBeFalse();
+        secondManager.Settings.ShowNotifications.ShouldBeFalse();
+        secondManager.Settings.FlashTaskbarOnCompletion.ShouldBeFalse();
+        secondManager.Settings.PlaySoundOnCompletion.ShouldBeTrue();
     }
 
     [Fact]

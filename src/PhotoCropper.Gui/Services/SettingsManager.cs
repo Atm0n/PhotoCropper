@@ -30,6 +30,9 @@ internal sealed class UserSettings
     public int? DefaultYear { get; set; }
     public string? DefaultDescription { get; set; }
     public bool ApplyYearToAllScans { get; set; } = true;
+    public bool ShowNotifications { get; set; } = true;
+    public bool FlashTaskbarOnCompletion { get; set; } = true;
+    public bool PlaySoundOnCompletion { get; set; }
 }
 
 internal sealed class SettingsManager

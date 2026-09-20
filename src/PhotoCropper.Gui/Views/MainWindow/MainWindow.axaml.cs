@@ -24,6 +24,7 @@ internal sealed partial class MainWindow : Window
     }
     private IReadOnlyList<ScanSessionItem> ScanSessions => _sessionManager.Sessions;
     private readonly UndoRedoHistory undoHistory = new();
+    private readonly AppNotificationService _notificationService = new();
     private bool isLoading;
     private bool isComparingRaw;
     private bool isSyncingSelection;
@@ -42,6 +43,7 @@ internal sealed partial class MainWindow : Window
         _scannerService = scannerService;
 
         InitializeComponent();
+        _notificationService.Initialize(this);
 
         // Register key handlers in Tunnel phase
         AddHandler(KeyDownEvent, Window_KeyDown, RoutingStrategies.Tunnel);

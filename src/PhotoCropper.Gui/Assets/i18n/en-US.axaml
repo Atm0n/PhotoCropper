@@ -15,6 +15,10 @@
 	<sys:String x:Key="TipRestoreColors">Neutralizes aging yellow casts, recovers shadow/highlight contrast via LAB CLAHE, and revives faded photo pigments.</sys:String>
 	<sys:String x:Key="LblRemoveDust">Remove Dust &amp; Scratches</sys:String>
 	<sys:String x:Key="TipRemoveDust">Automated inpainting of hairline scratches, dust specks, and fibers.</sys:String>
+	<sys:String x:Key="LblShowNotifications">Completion Notifications</sys:String>
+	<sys:String x:Key="TipShowNotifications">Display an in-app popup notification when photo export completes.</sys:String>
+	<sys:String x:Key="LblFlashTaskbar">Flash Taskbar</sys:String>
+	<sys:String x:Key="TipFlashTaskbar">Flash the taskbar window icon on Windows when background export finishes.</sys:String>
 	<sys:String x:Key="TxtNoFiles">No files loaded</sys:String>
 	<sys:String x:Key="HeaderOriginal">ORIGINAL SCAN (CLICK &amp; DRAG TO MANUALLY CROP)</sys:String>
 	<sys:String x:Key="HeaderDetected">DETECTED PHOTOS</sys:String>
