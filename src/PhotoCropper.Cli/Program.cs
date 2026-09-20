@@ -17,7 +17,7 @@ internal static class Program
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.InputEncoding = System.Text.Encoding.UTF8;
 
-        if (args.Length == 0 || args.Contains("-h") || args.Contains("--help"))
+        if (args.Contains("-h") || args.Contains("--help"))
         {
             CommandLineParser.PrintHelp();
             return 0;
@@ -30,10 +30,26 @@ internal static class Program
         }
 
         CliOptions options = CommandLineParser.Parse(args);
+
+        if (options.Interactive || (args.Length == 0 && !Console.IsInputRedirected))
+        {
+            var wizardOptions = InteractiveWizard.Run(Spectre.Console.AnsiConsole.Console, options);
+            if (wizardOptions == null)
+            {
+                return 0;
+            }
+            options = wizardOptions;
+        }
+        else if (args.Length == 0)
+        {
+            CommandLineParser.PrintHelp();
+            return 0;
+        }
+
         if (options.Inputs.Count == 0)
         {
             Spectre.Console.AnsiConsole.MarkupLine("[bold red]Error:[/] No input files or directories specified.");
-            Spectre.Console.AnsiConsole.MarkupLine("[grey]Use --help for usage instructions.[/]");
+            Spectre.Console.AnsiConsole.MarkupLine("[grey]Use --help for usage instructions or -w / --wizard for guided setup.[/]");
             return 1;
         }
 

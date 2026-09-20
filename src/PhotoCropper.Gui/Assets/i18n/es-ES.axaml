@@ -214,4 +214,13 @@
 	<sys:String x:Key="HelpNamingDesc">Personalice nombres usando {original}, {index:02}, {year} y {total} con vista previa dinámica en tiempo real.</sys:String>
 	<sys:String x:Key="HelpMetadataTitle">Metadatos de Foto Antigua (EXIF)</sys:String>
 	<sys:String x:Key="HelpMetadataDesc">Etiquete escaneos con año y notas; inserta etiquetas estándar EXIF para organizarlas cronológicamente en gestores de fotos.</sys:String>
+	<sys:String x:Key="TitleExportSettings">Opciones de Guardado y Exportación</sys:String>
+	<sys:String x:Key="DescExportSettings">Configura el formato de salida, nombres de archivo, carpeta de destino y metadatos.</sys:String>
+	<sys:String x:Key="TipSaveSettings">Configurar carpeta de salida, formato, nombres y metadatos</sys:String>
+	<sys:String x:Key="TipDetectionSettings">Ajustar límites de tamaño, bordes y restauración</sys:String>
+	<sys:String x:Key="TabExport">Guardado y Exportación</sys:String>
+	<sys:String x:Key="TabDetection">Detección y Restauración</sys:String>
+	<sys:String x:Key="ChkPromptBeforeExport">Mostrar siempre estas opciones antes de guardar</sys:String>
+	<sys:String x:Key="BtnExportNow">Guardar fotos</sys:String>
+	<sys:String x:Key="BtnSavePreferences">Guardar configuración</sys:String>
 </ResourceDictionary>

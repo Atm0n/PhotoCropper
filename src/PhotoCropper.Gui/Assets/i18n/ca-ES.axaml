@@ -214,4 +214,13 @@
 	<sys:String x:Key="HelpNamingDesc">Personalitzeu noms usant {original}, {index:02}, {year} i {total} amb vista prèvia dinàmica en temps real.</sys:String>
 	<sys:String x:Key="HelpMetadataTitle">Metadades de Foto Antiga (EXIF)</sys:String>
 	<sys:String x:Key="HelpMetadataDesc">Etiqueteu escanejos amb l'any i notes; insereix etiquetes estàndard EXIF per organitzar-les cronològicament en gestors de fotos.</sys:String>
+	<sys:String x:Key="TitleExportSettings">Opcions de Desat i Exportació</sys:String>
+	<sys:String x:Key="DescExportSettings">Configura el format de sortida, noms de fitxer, carpeta de destinació i metadades.</sys:String>
+	<sys:String x:Key="TipSaveSettings">Configurar carpeta de sortida, format, noms i metadades</sys:String>
+	<sys:String x:Key="TipDetectionSettings">Ajustar límits de mida, vores i restauració</sys:String>
+	<sys:String x:Key="TabExport">Desat i Exportació</sys:String>
+	<sys:String x:Key="TabDetection">Detecció i Restauració</sys:String>
+	<sys:String x:Key="ChkPromptBeforeExport">Mostra sempre aquestes opcions abans de desar</sys:String>
+	<sys:String x:Key="BtnExportNow">Desa les fotos</sys:String>
+	<sys:String x:Key="BtnSavePreferences">Desa la configuració</sys:String>
 </ResourceDictionary>

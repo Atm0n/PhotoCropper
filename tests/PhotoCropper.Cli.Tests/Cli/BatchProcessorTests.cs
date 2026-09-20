@@ -94,6 +94,32 @@ public sealed class BatchProcessorTests : IDisposable
         Path.GetFileName(files[0]).ShouldStartWith("1975_scan01_");
     }
 
+    [Fact]
+    public void Execute_OverDetectedScan_FlagsAndLogsAudit()
+    {
+        string outputDir = Path.Combine(_tempDir, "output_over");
+        string copyUndetected = Path.Combine(_tempDir, "review_dir");
+        var options = new CliOptions
+        {
+            OutputDirectory = outputDir,
+            CopyUndetectedDirectory = copyUndetected,
+            Format = "JPEG",
+            Tolerance = 30,
+            MinAreaFactor = 0.01,
+            MaxExpectedPhotos = 1, // 2 photos in scan, so it will be over-detected
+            NonInteractive = true,
+            Threads = 1
+        };
+        options.Inputs.Add(_scanFile);
+
+        int exitCode = BatchProcessor.Execute(options, [_scanFile]);
+
+        exitCode.ShouldBe(0);
+        Directory.Exists(copyUndetected).ShouldBeTrue();
+        File.Exists(Path.Combine(copyUndetected, "scan01.jpg")).ShouldBeTrue();
+        File.Exists(Path.Combine(outputDir, "undetected_scans.txt")).ShouldBeTrue();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

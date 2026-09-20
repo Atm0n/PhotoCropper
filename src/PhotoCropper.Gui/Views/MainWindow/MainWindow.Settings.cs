@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Media;
 using PhotoCropper.Gui.Services;
 
@@ -29,57 +28,8 @@ internal sealed partial class MainWindow
         {
             chkRemoveDust.IsChecked = settings.RemoveDustAndScratches;
         }
-        if (chkShowNotifications != null)
-        {
-            chkShowNotifications.IsChecked = settings.ShowNotifications;
-        }
-        if (chkFlashTaskbar != null)
-        {
-            chkFlashTaskbar.IsChecked = settings.FlashTaskbarOnCompletion;
-        }
-
-        if (cbFormat != null)
-        {
-            cbFormat.SelectedIndex = string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        }
-        if (sldJpegQuality != null)
-        {
-            sldJpegQuality.Value = settings.JpegQuality;
-            UpdateQualityDisplay();
-        }
-        if (txtOutputDir != null)
-        {
-            txtOutputDir.Text = settings.CustomOutputDirectory ?? "";
-        }
-        if (pnlJpegQuality != null)
-        {
-            pnlJpegQuality.IsVisible = !string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase);
-        }
-
-        if (txtFileNamePattern != null)
-        {
-            txtFileNamePattern.Text = settings.FileNamePattern;
-        }
-        if (cbNamingPreset != null)
-        {
-            SyncNamingPresetDropdown(settings.FileNamePattern);
-        }
-        if (txtMetadataYear != null)
-        {
-            txtMetadataYear.Text = settings.DefaultYear?.ToString() ?? "";
-        }
-        if (txtMetadataDesc != null)
-        {
-            txtMetadataDesc.Text = settings.DefaultDescription ?? "";
-        }
-        if (chkApplyYearToAll != null)
-        {
-            chkApplyYearToAll.IsChecked = settings.ApplyYearToAllScans;
-        }
-        UpdateNamingPreview();
 
         UpdateWorkspaceUi(settings.WorkDirectory);
-
         UpdateCropStrokeColor(settings.DetectionBoxColor);
         PopulateThemeMenu();
         PopulateDetectionColorMenu();
@@ -336,19 +286,5 @@ internal sealed partial class MainWindow
             rectRefineCrop.Stroke = new SolidColorBrush(stroke);
             rectRefineCrop.Fill = new SolidColorBrush(fill);
         }
-    }
-
-    private void ChkShowNotifications_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (chkShowNotifications == null) return;
-        SettingsManager.Instance.Settings.ShowNotifications = chkShowNotifications.IsChecked == true;
-        SettingsManager.Instance.Save();
-    }
-
-    private void ChkFlashTaskbar_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (chkFlashTaskbar == null) return;
-        SettingsManager.Instance.Settings.FlashTaskbarOnCompletion = chkFlashTaskbar.IsChecked == true;
-        SettingsManager.Instance.Save();
     }
 }

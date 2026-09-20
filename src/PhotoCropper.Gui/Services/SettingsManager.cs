@@ -33,6 +33,7 @@ internal sealed class UserSettings
     public bool ShowNotifications { get; set; } = true;
     public bool FlashTaskbarOnCompletion { get; set; } = true;
     public bool PlaySoundOnCompletion { get; set; }
+    public bool PromptBeforeExport { get; set; }
 }
 
 internal sealed class SettingsManager
@@ -123,6 +124,7 @@ internal sealed class SettingsManager
         Settings.CannyLowThreshold = defaults.CannyLowThreshold;
         Settings.AutoOrientPhotos = defaults.AutoOrientPhotos;
         Settings.RestoreVintageColors = defaults.RestoreVintageColors;
+        Settings.RemoveDustAndScratches = defaults.RemoveDustAndScratches;
         Save();
     }
 }

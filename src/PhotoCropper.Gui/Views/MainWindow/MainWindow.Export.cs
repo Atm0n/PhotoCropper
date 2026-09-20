@@ -1,12 +1,10 @@
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
-using System.Globalization;
 
 namespace PhotoCropper.Gui;
 
@@ -19,7 +17,17 @@ internal sealed partial class MainWindow
 
     private async void BtnSaveImages_Click(object? sender, RoutedEventArgs e)
     {
-        await SavePendingScansAsync(closeAfterSave: false);
+        if (isLoading || !_sessionManager.HasScans) return;
+
+        var settings = SettingsManager.Instance.Settings;
+        if (settings.PromptBeforeExport)
+        {
+            await ShowExportSettingsAsync(triggerExportOnConfirm: true);
+        }
+        else
+        {
+            await SavePendingScansAsync(closeAfterSave: false);
+        }
     }
 
     private async Task<bool> SavePendingScansAsync(bool closeAfterSave)
@@ -222,192 +230,25 @@ internal sealed partial class MainWindow
         }
     }
 
-    private void CbFormat_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private async void BtnSaveSettings_Click(object? sender, RoutedEventArgs e)
     {
-        if (cbFormat == null || pnlJpegQuality == null) return;
-
-        bool isJpeg = cbFormat.SelectedIndex == 0;
-        pnlJpegQuality.IsVisible = isJpeg;
-
-        var settings = SettingsManager.Instance.Settings;
-        settings.PreferredFormat = isJpeg ? "JPEG" : "PNG";
-        SettingsManager.Instance.Save();
-        UpdateNamingPreview();
+        await ShowExportSettingsAsync(triggerExportOnConfirm: false);
     }
 
-    private void SldJpegQuality_ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    private async Task ShowExportSettingsAsync(bool triggerExportOnConfirm)
     {
-        UpdateQualityDisplay();
-    }
+        if (isLoading) return;
 
-    private void SldJpegQuality_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
-    {
-        if (sldJpegQuality == null) return;
-        int val = (int)Math.Round(sldJpegQuality.Value);
-        SettingsManager.Instance.Settings.JpegQuality = val;
-        SettingsManager.Instance.Save();
-        UpdateQualityDisplay();
-    }
-
-    private void UpdateQualityDisplay()
-    {
-        if (sldJpegQuality == null || txtQualityValue == null) return;
-        int val = (int)Math.Round(sldJpegQuality.Value);
-        txtQualityValue.Text = val >= 100 ? "100% (Max)" : $"{val}%";
-    }
-
-    private async void BtnBrowseDir_Click(object? sender, RoutedEventArgs e)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider == null) return;
-
-        var folderResult = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = Avalonia.Application.Current?.FindResource("LblOutputDir")?.ToString() ?? "Select Export Folder",
-            AllowMultiple = false
-        });
-
-        if (folderResult != null && folderResult.Count > 0)
-        {
-            var path = folderResult[0].Path.LocalPath;
-            txtOutputDir.Text = path;
-            SettingsManager.Instance.Settings.CustomOutputDirectory = path;
-            SettingsManager.Instance.Save();
-        }
-    }
-
-    private void BtnClearOutputDir_Click(object? sender, RoutedEventArgs e)
-    {
-        if (txtOutputDir == null) return;
-        txtOutputDir.Text = "";
-        SettingsManager.Instance.Settings.CustomOutputDirectory = null;
-        SettingsManager.Instance.Save();
-    }
-
-    private void CbNamingPreset_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (cbNamingPreset == null || txtFileNamePattern == null) return;
-        if (cbNamingPreset.SelectedItem is ComboBoxItem item && item.Content is string preset)
-        {
-            txtFileNamePattern.Text = preset;
-        }
-    }
-
-    private void TxtFileNamePattern_TextChanged(object? sender, TextChangedEventArgs e)
-    {
-        if (txtFileNamePattern == null) return;
-        string pattern = txtFileNamePattern.Text ?? "";
-        SettingsManager.Instance.Settings.FileNamePattern = pattern;
-        SettingsManager.Instance.Save();
-        SyncNamingPresetDropdown(pattern);
-        UpdateNamingPreview();
-    }
-
-    private void SyncNamingPresetDropdown(string pattern)
-    {
-        if (cbNamingPreset == null) return;
-        for (int i = 0; i < cbNamingPreset.Items.Count; i++)
-        {
-            if (cbNamingPreset.Items[i] is ComboBoxItem item && string.Equals(item.Content?.ToString(), pattern, StringComparison.Ordinal))
-            {
-                if (cbNamingPreset.SelectedIndex != i)
-                {
-                    cbNamingPreset.SelectedIndex = i;
-                }
-                return;
-            }
-        }
-        cbNamingPreset.SelectedIndex = -1;
-    }
-
-    private void BtnToken_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button btn || btn.Tag is not string token || txtFileNamePattern == null) return;
-
-        int caret = txtFileNamePattern.CaretIndex;
-        string current = txtFileNamePattern.Text ?? "";
-        if (caret >= 0 && caret <= current.Length)
-        {
-            txtFileNamePattern.Text = current.Insert(caret, token);
-            txtFileNamePattern.CaretIndex = caret + token.Length;
-        }
-        else
-        {
-            txtFileNamePattern.Text = current + token;
-        }
-    }
-
-    private void TxtMetadata_TextChanged(object? sender, TextChangedEventArgs e)
-    {
-        var settings = SettingsManager.Instance.Settings;
-        int? year = null;
-        if (txtMetadataYear != null && int.TryParse(txtMetadataYear.Text, CultureInfo.InvariantCulture, out int y))
-        {
-            year = y;
-        }
-        string? desc = string.IsNullOrWhiteSpace(txtMetadataDesc?.Text) ? null : txtMetadataDesc.Text;
-
-        settings.DefaultYear = year;
-        settings.DefaultDescription = desc;
-        SettingsManager.Instance.Save();
-
-        if (settings.ApplyYearToAllScans)
-        {
-            foreach (var session in ScanSessions)
-            {
-                session.Metadata.Year = year;
-                session.Metadata.Description = desc;
-            }
-        }
-        else if (ScanSessions.Count > 0 && currentIndex >= 0 && currentIndex < ScanSessions.Count)
-        {
-            ScanSessions[currentIndex].Metadata.Year = year;
-            ScanSessions[currentIndex].Metadata.Description = desc;
-        }
-
-        UpdateNamingPreview();
-    }
-
-    private void ChkApplyYearToAll_Click(object? sender, RoutedEventArgs e)
-    {
-        if (chkApplyYearToAll == null) return;
-        SettingsManager.Instance.Settings.ApplyYearToAllScans = chkApplyYearToAll.IsChecked ?? true;
-        SettingsManager.Instance.Save();
-    }
-
-    private void UpdateNamingPreview()
-    {
-        if (txtNamingPreview == null) return;
-        string pattern = txtFileNamePattern?.Text ?? FileNameTemplateHelper.DefaultPattern;
-        if (string.IsNullOrWhiteSpace(pattern)) pattern = FileNameTemplateHelper.DefaultPattern;
-
-        string sampleOriginal = ScanSessions.Count > 0 && currentIndex >= 0 && currentIndex < ScanSessions.Count
+        string sampleName = ScanSessions.Count > 0 && currentIndex >= 0 && currentIndex < ScanSessions.Count
             ? Path.GetFileNameWithoutExtension(ScanSessions[currentIndex].FilePath)
             : "Scan001";
 
-        string ext = cbFormat?.SelectedIndex == 1 ? ".png" : ".jpg";
+        var dialog = new Dialogs.ExportSettingsDialog(hasScans: _sessionManager.HasScans, sampleOriginal: sampleName);
+        var result = await dialog.ShowDialog<Dialogs.ExportSettingsResult>(this);
 
-        var meta = new PhotoExportMetadata();
-        if (txtMetadataYear != null && int.TryParse(txtMetadataYear.Text, CultureInfo.InvariantCulture, out int y))
+        if (result == Dialogs.ExportSettingsResult.SaveAndExport || (triggerExportOnConfirm && result == Dialogs.ExportSettingsResult.SaveSettings))
         {
-            meta.Year = y;
+            await SavePendingScansAsync(closeAfterSave: false);
         }
-        else if (SettingsManager.Instance.Settings.DefaultYear.HasValue)
-        {
-            meta.Year = SettingsManager.Instance.Settings.DefaultYear.Value;
-        }
-
-        if (txtMetadataDesc != null && !string.IsNullOrWhiteSpace(txtMetadataDesc.Text))
-        {
-            meta.Description = txtMetadataDesc.Text;
-        }
-        else if (!string.IsNullOrWhiteSpace(SettingsManager.Instance.Settings.DefaultDescription))
-        {
-            meta.Description = SettingsManager.Instance.Settings.DefaultDescription;
-        }
-
-        string previewFile = FileNameTemplateHelper.FormatPreview(pattern, sampleOriginal, 1, 4, meta, ext);
-        string previewFmt = Avalonia.Application.Current?.FindResource("LblNamingPreview")?.ToString() ?? "Preview: {0}";
-        txtNamingPreview.Text = string.Format(previewFmt, previewFile);
     }
 }

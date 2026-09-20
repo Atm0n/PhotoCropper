@@ -41,6 +41,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.ShowNotifications.ShouldBeTrue();
         manager.Settings.FlashTaskbarOnCompletion.ShouldBeTrue();
         manager.Settings.PlaySoundOnCompletion.ShouldBeFalse();
+        manager.Settings.PromptBeforeExport.ShouldBeFalse();
     }
 
     [Fact]
@@ -70,6 +71,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.ShowNotifications = false;
         manager.Settings.FlashTaskbarOnCompletion = false;
         manager.Settings.PlaySoundOnCompletion = true;
+        manager.Settings.PromptBeforeExport = true;
 
         manager.Save();
 
@@ -97,6 +99,7 @@ public sealed class SettingsManagerTests : IDisposable
         secondManager.Settings.ShowNotifications.ShouldBeFalse();
         secondManager.Settings.FlashTaskbarOnCompletion.ShouldBeFalse();
         secondManager.Settings.PlaySoundOnCompletion.ShouldBeTrue();
+        secondManager.Settings.PromptBeforeExport.ShouldBeTrue();
     }
 
     [Fact]
@@ -140,11 +143,17 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.Language = "es-ES";
         manager.Settings.ZoomLevel = 3.0;
         manager.Settings.AdvancedVisible = true;
+        manager.Settings.PromptBeforeExport = true;
+        manager.Settings.FileNamePattern = "{year}_{index}";
+        manager.Settings.PreferredFormat = "PNG";
 
         manager.Settings.BackgroundTolerance = 15;
         manager.Settings.MinAreaFactor = 12;
         manager.Settings.MaxAreaFactor = 75;
         manager.Settings.CannyLowThreshold = 40;
+        manager.Settings.AutoOrientPhotos = false;
+        manager.Settings.RestoreVintageColors = false;
+        manager.Settings.RemoveDustAndScratches = false;
 
         manager.Save();
         manager.ResetDetectionDefaults();
@@ -153,10 +162,17 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.MinAreaFactor.ShouldBe(25);
         manager.Settings.MaxAreaFactor.ShouldBe(90);
         manager.Settings.CannyLowThreshold.ShouldBe(20);
+        manager.Settings.AutoOrientPhotos.ShouldBeTrue();
+        manager.Settings.RestoreVintageColors.ShouldBeTrue();
+        manager.Settings.RemoveDustAndScratches.ShouldBeTrue();
 
+        // Non-detection / export settings should remain untouched
         manager.Settings.Language.ShouldBe("es-ES");
         manager.Settings.ZoomLevel.ShouldBe(3.0);
         manager.Settings.AdvancedVisible.ShouldBeTrue();
+        manager.Settings.PromptBeforeExport.ShouldBeTrue();
+        manager.Settings.FileNamePattern.ShouldBe("{year}_{index}");
+        manager.Settings.PreferredFormat.ShouldBe("PNG");
     }
 
     [Fact]

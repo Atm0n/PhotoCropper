@@ -65,6 +65,20 @@ internal static class CommandLineParser
                     options.Threads = Math.Max(1, th);
                 }
             }
+            else if (arg is "--min-photos" or "--expected-photos" && i + 1 < args.Length)
+            {
+                if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int mp))
+                {
+                    options.MinExpectedPhotos = Math.Max(1, mp);
+                }
+            }
+            else if (arg is "--max-photos" or "--max-expected-photos" && i + 1 < args.Length)
+            {
+                if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int maxP))
+                {
+                    options.MaxExpectedPhotos = Math.Max(1, maxP);
+                }
+            }
             else if (arg is "-r" or "--recursive")
             {
                 options.Recursive = true;
@@ -108,6 +122,10 @@ internal static class CommandLineParser
             else if (arg is "-y" or "--yes" or "--non-interactive")
             {
                 options.NonInteractive = true;
+            }
+            else if (arg is "-w" or "--wizard" or "--interactive")
+            {
+                options.Interactive = true;
             }
             else if (arg is "-p" or "--pattern" or "--naming-pattern" && i + 1 < args.Length)
             {
@@ -162,9 +180,12 @@ internal static class CommandLineParser
         Console.WriteLine("  -j, --threads <num>     Number of parallel CPU worker threads (default: CPU core count)");
         Console.WriteLine("  --min-size <percent>    Minimum photo size as % of scan area (default: 25)");
         Console.WriteLine("  --max-size <percent>    Maximum photo size as % of scan area (default: 90)");
+        Console.WriteLine("  --min-photos <num>      Minimum expected photos per scan to flag for review (default: 1)");
+        Console.WriteLine("  --max-photos <num>      Maximum expected photos per scan to flag for review (default: unlimited)");
         Console.WriteLine("  --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)");
         Console.WriteLine("  --auto-tune             Automatically search optimal detection parameters on difficult scans");
         Console.WriteLine("  --copy-undetected <dir> Copy undetected scans with 0 photos to a designated review directory");
+        Console.WriteLine("  -w, --wizard            Launch step-by-step interactive CLI wizard");
         Console.WriteLine("  -y, --non-interactive   Disable interactive prompts (e.g., auto-tune prompts at batch completion)");
         Console.WriteLine("  --auto-orient           Enable AI face & landscape auto-orientation detection (default: on)");
         Console.WriteLine("  --no-auto-orient        Disable auto-orientation detection and preserve raw scanner placement");

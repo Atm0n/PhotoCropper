@@ -103,19 +103,6 @@ internal sealed partial class MainWindow
             {
                 btnResetBackground.IsEnabled = currentPhoto.CustomBackgroundColorHsv != null;
             }
-
-            if (chkApplyYearToAll?.IsChecked != true)
-            {
-                if (txtMetadataYear != null)
-                {
-                    txtMetadataYear.Text = session.Metadata.Year?.ToString() ?? "";
-                }
-                if (txtMetadataDesc != null)
-                {
-                    txtMetadataDesc.Text = session.Metadata.Description ?? "";
-                }
-            }
-            UpdateNamingPreview();
         });
     }
 
@@ -209,6 +196,13 @@ internal sealed partial class MainWindow
         settings.CannyLowThreshold = sldEdge.Value;
         SettingsManager.Instance.Save();
 
+        var session = ScanSessions[currentIndex];
+        session.Options.BackgroundTolerance = sldSensitivity.Value;
+        session.Options.MinAreaFactor = sldMinArea.Value / 100.0;
+        session.Options.MaxAreaFactor = sldMaxArea.Value / 100.0;
+        session.Options.CannyLowThreshold = sldEdge.Value;
+        session.Options.CannyHighThreshold = sldEdge.Value * 2.5;
+
         await ReprocessCurrentScanAsync();
     }
 
@@ -245,6 +239,8 @@ internal sealed partial class MainWindow
         if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
         SettingsManager.Instance.Save();
+        var session = ScanSessions[currentIndex];
+        session.Options.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
         await ReprocessCurrentScanAsync();
     }
 
@@ -253,6 +249,8 @@ internal sealed partial class MainWindow
         if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
         SettingsManager.Instance.Save();
+        var session = ScanSessions[currentIndex];
+        session.Options.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
         await ReprocessCurrentScanAsync();
     }
 
@@ -261,6 +259,8 @@ internal sealed partial class MainWindow
         if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
         SettingsManager.Instance.Save();
+        var session = ScanSessions[currentIndex];
+        session.Options.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
         await ReprocessCurrentScanAsync();
     }
 

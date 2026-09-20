@@ -15,7 +15,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **`Workspace/`**: Project folder management, raw scan disk-staging, and crash recovery session manager (`ProjectWorkspaceService`, `WorkspaceSessionState`, `WorkspaceScanEntry`).
   - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
 - **`src/PhotoCropper.Gui` (Avalonia Desktop App):** A high-performance GUI featuring:
-  - **`Views/`**: Modular UI architecture including `MainWindow/` (split into clean partials by responsibility) and `Dialogs/` (`HelpWindow`, `ScannerConfigDialog`, `CustomColorDialog`, `SafeExitPromptDialog`).
+  - **`Views/`**: Modular UI architecture including `MainWindow/` (split into clean partials by responsibility) and `Dialogs/` (`HelpWindow`, `ScannerConfigDialog`, `CustomColorDialog`, `SafeExitPromptDialog`, `ExportSettingsDialog`).
   - **`Services/`**: Bounded undo/redo history, dynamic theme manager, hardware scanner coordination, localization manager, settings persistence, and decoupled scan session navigation (`ScanSessionManager`).
   - **`Models/`**: Clean GUI domain models such as `ScanSessionItem`.
   - Multi-language localization (EN, ES, CA), full Light/Dark/System runtime theming, and persistent configuration.
@@ -79,6 +79,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - `HelpWindow`: Non-modal documentation and shortcut reference (<kbd>F1</kbd>) that can be placed side-by-side or on secondary monitors.
   - `ScannerConfigDialog`: Hardware device selection, DPI configuration, and network scanner discovery.
   - `CustomColorDialog`: Interactive bounding box color adjustment.
+  - `ExportSettingsDialog`: Dedicated Save & Export preferences (output directory, format, quality, naming tokens, live preview, EXIF metadata).
   - `SafeExitPromptDialog`: Unsaved changes confirmation dialog.
 - **Bounded Undo/Redo Memory Management (`Ctrl+Z` / `Ctrl+Y`):** Bounded 30-action double-ended queue that automatically evicts and disposes the oldest cloned OpenCV `Mat`s, preventing memory growth during intensive editing sessions.
 - **Native Avalonia `Bitmap` Disposal:** Proactively disposes underlying unmanaged SKBitmap buffers on image replacement, re-detection, and scan navigation, keeping memory footprint low.
@@ -162,6 +163,9 @@ dotnet run --project src/PhotoCropper.Gui/PhotoCropper.Gui.csproj
 ### Run CLI (Unattended Batch Extractor)
 To run the unattended command-line utility:
 ```bash
+# Run the interactive step-by-step wizard (or run with no arguments in a terminal)
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --wizard
+
 # Process a single scan
 dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- scan001.jpg
 
@@ -194,9 +198,12 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `-j, --threads <num>` | Number of concurrent CPU worker threads for batch processing | *CPU Cores* |
 | `--min-size <percent>` | Minimum photo size as % of total scan area | `25` |
 | `--max-size <percent>` | Maximum photo size as % of total scan area | `90` |
+| `--min-photos <num>` | Minimum expected photos per scan to flag for review | `1` |
+| `--max-photos <num>` | Maximum expected photos per scan to flag for review | *Unlimited* |
 | `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
 | `--auto-tune` | Automatically search optimal detection parameters on difficult scans | `false` |
 | `--copy-undetected <dir>` | Copy scans with 0 detected photos to a designated review directory | `null` |
+| `-w, --wizard` | Launch step-by-step interactive CLI setup wizard | `false` |
 | `-y, --non-interactive` | Disable interactive prompts (e.g. post-batch auto-tune review prompt) | `false` |
 | `--auto-orient` / `--no-auto-orient` | Enable or disable AI face & landscape orientation detection | `true` |
 | `--restore-colors` / `--no-restore-colors` | Enable or disable vintage photo color & contrast restoration | `true` |

@@ -92,9 +92,9 @@ public class PhotoCropperEngine : IDisposable
         BoundingBoxColor = BoundingBoxColor
     };
 
-    public AutoTuneResult AutoTune()
+    public AutoTuneResult AutoTune(int minExpected = 1, int maxExpected = int.MaxValue)
     {
-        var tuneResult = AutoTuneService.Tune(Original, CurrentOptions);
+        var tuneResult = AutoTuneService.Tune(Original, CurrentOptions, minExpected, maxExpected);
         ApplyOptions(tuneResult.BestOptions);
         DetectPhotos();
         return tuneResult;
@@ -242,7 +242,9 @@ public class PhotoCropperEngine : IDisposable
                 (int)Math.Round(originalW * scale),
                 (int)Math.Round(originalH * scale),
                 MinAreaFactor,
-                MaxAreaFactor);
+                MaxAreaFactor,
+                detectionMat,
+                bgBgr);
 
             // If downscaled, map candidate coordinates back to original full resolution space
             if (scale < 0.999)

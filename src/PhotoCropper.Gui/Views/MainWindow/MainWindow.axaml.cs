@@ -188,6 +188,7 @@ internal sealed partial class MainWindow : Window
             tglAdvanced.IsChecked = !tglAdvanced.IsChecked;
         }
     }
+
     private void BtnReset_Click(object? sender, RoutedEventArgs e) => BtnResetDefaults_Click(sender, e);
 
     private Dialogs.HelpWindow? _helpWindow;
@@ -479,6 +480,7 @@ internal sealed partial class MainWindow : Window
         var oldSource = img.Source as IDisposable;
         img.Source = mat != null ? MatBitmapConverter.ToAvaloniaBitmap(mat) : null;
         oldSource?.Dispose();
+        UpdateCropCanvasSize();
     }
 
     internal void SetRefineImage(Emgu.CV.Mat? mat)
@@ -499,39 +501,6 @@ internal sealed partial class MainWindow : Window
         settings.MaxAreaFactor = sldMaxArea.Value;
         settings.CannyLowThreshold = sldEdge.Value;
         settings.AdvancedVisible = tglAdvanced.IsChecked ?? false;
-
-        if (cbFormat != null)
-        {
-            settings.PreferredFormat = cbFormat.SelectedIndex == 1 ? "PNG" : "JPEG";
-        }
-        if (sldJpegQuality != null)
-        {
-            settings.JpegQuality = (int)Math.Round(sldJpegQuality.Value);
-        }
-        if (txtOutputDir != null)
-        {
-            settings.CustomOutputDirectory = string.IsNullOrEmpty(txtOutputDir.Text) ? null : txtOutputDir.Text;
-        }
-        if (txtFileNamePattern != null && !string.IsNullOrWhiteSpace(txtFileNamePattern.Text))
-        {
-            settings.FileNamePattern = txtFileNamePattern.Text;
-        }
-        if (txtMetadataYear != null && int.TryParse(txtMetadataYear.Text, System.Globalization.CultureInfo.InvariantCulture, out int parsedYear))
-        {
-            settings.DefaultYear = parsedYear;
-        }
-        else if (txtMetadataYear != null && string.IsNullOrWhiteSpace(txtMetadataYear.Text))
-        {
-            settings.DefaultYear = null;
-        }
-        if (txtMetadataDesc != null)
-        {
-            settings.DefaultDescription = string.IsNullOrWhiteSpace(txtMetadataDesc.Text) ? null : txtMetadataDesc.Text;
-        }
-        if (chkApplyYearToAll != null)
-        {
-            settings.ApplyYearToAllScans = chkApplyYearToAll.IsChecked ?? true;
-        }
 
         if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory) && _workspaceSession != null)
         {

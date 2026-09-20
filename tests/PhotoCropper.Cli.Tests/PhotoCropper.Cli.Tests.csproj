@@ -19,6 +19,7 @@
 		<PackageReference Include="xunit.v3" />
 		<PackageReference Include="Emgu.CV.runtime.windows" />
 		<PackageReference Include="Emgu.CV.runtime.ubuntu-24.04-x64" />
+		<PackageReference Include="Spectre.Console.Testing" />
 	</ItemGroup>
 
 	<ItemGroup>

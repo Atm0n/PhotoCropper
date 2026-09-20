@@ -214,4 +214,13 @@
 	<sys:String x:Key="HelpNamingDesc">Customize output names using tokens like {original}, {index:02}, {year}, and {total} with live dynamic previews.</sys:String>
 	<sys:String x:Key="HelpMetadataTitle">Vintage Photo Metadata (EXIF)</sys:String>
 	<sys:String x:Key="HelpMetadataDesc">Tag scans with approximate capture year and notes; embeds standard EXIF tags so photo managers index them chronologically.</sys:String>
+	<sys:String x:Key="TitleExportSettings">Save &amp; Export Settings</sys:String>
+	<sys:String x:Key="DescExportSettings">Configure output format, file naming, destination folder, and metadata before saving.</sys:String>
+	<sys:String x:Key="TipSaveSettings">Configure export folder, format, naming pattern and metadata</sys:String>
+	<sys:String x:Key="TipDetectionSettings">Fine-tune photo size limits, edge detection, and image restoration</sys:String>
+	<sys:String x:Key="TabExport">Save &amp; Export</sys:String>
+	<sys:String x:Key="TabDetection">Detection &amp; Restoration</sys:String>
+	<sys:String x:Key="ChkPromptBeforeExport">Always show these options before saving</sys:String>
+	<sys:String x:Key="BtnExportNow">Save Photos</sys:String>
+	<sys:String x:Key="BtnSavePreferences">Save Settings</sys:String>
 </ResourceDictionary>
