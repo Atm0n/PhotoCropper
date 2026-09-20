@@ -152,7 +152,7 @@ internal static class CommandLineParser
         Console.WriteLine("  -i, --input <path>      Input image file or folder of scans (positional arguments also accepted)");
         Console.WriteLine("  -o, --output <dir>      Output directory for extracted photos (default: <scan_dir>/cropped)");
         Console.WriteLine("  -f, --format <fmt>      Output format: JPEG (default) or PNG");
-        Console.WriteLine("  -q, --quality <1-100>   JPEG compression quality (default: 90)");
+        Console.WriteLine("  -q, --quality <1-100>   JPEG compression quality (default: 100)");
         Console.WriteLine("  -p, --pattern <pat>     File naming template (default: '{original}_{index}')");
         Console.WriteLine("                          Tokens: {original}, {index}, {index:02}, {year}, {date}, {total}");
         Console.WriteLine("  --year <YYYY>           Vintage photo year taken to embed in EXIF and use in {year}");
@@ -160,7 +160,7 @@ internal static class CommandLineParser
         Console.WriteLine("  --desc <text>           Photo description/comment embedded into EXIF metadata");
         Console.WriteLine("  -t, --tolerance <num>   Background color detection tolerance (default: 25)");
         Console.WriteLine("  -j, --threads <num>     Number of parallel CPU worker threads (default: CPU core count)");
-        Console.WriteLine("  --min-size <percent>    Minimum photo size as % of scan area (default: 15)");
+        Console.WriteLine("  --min-size <percent>    Minimum photo size as % of scan area (default: 25)");
         Console.WriteLine("  --max-size <percent>    Maximum photo size as % of scan area (default: 90)");
         Console.WriteLine("  --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)");
         Console.WriteLine("  --auto-tune             Automatically search optimal detection parameters on difficult scans");

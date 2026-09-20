@@ -234,7 +234,7 @@
 									<WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
 										<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,2,14,2">
 											<TextBlock Text="{DynamicResource LblMinPhotoSize}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-											<Slider x:Name="sldMinArea" Minimum="5" Maximum="50" Value="15" Width="85" 
+											<Slider x:Name="sldMinArea" Minimum="5" Maximum="50" Value="25" Width="85" 
 													PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
 											<TextBlock Text="{Binding #sldMinArea.Value, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Width="28"/>
 										</StackPanel>
@@ -282,9 +282,11 @@
 
 										<StackPanel x:Name="pnlJpegQuality" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,2,14,2">
 											<TextBlock Text="{DynamicResource LblQuality}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-											<Slider x:Name="sldJpegQuality" Minimum="10" Maximum="100" Value="90" Width="85" 
+											<Slider x:Name="sldJpegQuality" Minimum="50" Maximum="100" Value="100" Width="85" 
+													TickFrequency="5" IsSnapToTickEnabled="True"
+													ValueChanged="SldJpegQuality_ValueChanged"
 													PointerCaptureLost="SldJpegQuality_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
-											<TextBlock Text="{Binding #sldJpegQuality.Value, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Width="30"/>
+											<TextBlock x:Name="txtQualityValue" Text="100% (Max)" FontSize="11" VerticalAlignment="Center" Width="65"/>
 										</StackPanel>
 									</WrapPanel>
 

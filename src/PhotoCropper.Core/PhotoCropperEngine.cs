@@ -442,7 +442,7 @@ public class PhotoCropperEngine : IDisposable
     public void SaveDetectedPhotos(
         string? customOutputFolder = null,
         string format = "JPEG",
-        int jpegQuality = 90,
+        int jpegQuality = 100,
         string fileNamePattern = FileNameTemplateHelper.DefaultPattern,
         PhotoExportMetadata? metadata = null,
         Action<int, int>? progressCallback = null)

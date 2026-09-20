@@ -36,6 +36,7 @@ internal sealed partial class MainWindow
         if (sldJpegQuality != null)
         {
             sldJpegQuality.Value = settings.JpegQuality;
+            UpdateQualityDisplay();
         }
         if (txtOutputDir != null)
         {

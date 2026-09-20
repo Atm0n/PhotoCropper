@@ -199,7 +199,8 @@ internal sealed partial class MainWindow
             else
             {
                 var parameters = new[] {
-                    new KeyValuePair<Emgu.CV.CvEnum.ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegQuality, settings.JpegQuality)
+                    new KeyValuePair<Emgu.CV.CvEnum.ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegQuality, settings.JpegQuality),
+                    new KeyValuePair<Emgu.CV.CvEnum.ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegOptimize, 1)
                 };
                 using var buf = new Emgu.CV.Util.VectorOfByte();
                 Emgu.CV.CvInvoke.Imencode(".jpg", photoMat, buf, parameters);
@@ -228,11 +229,25 @@ internal sealed partial class MainWindow
         UpdateNamingPreview();
     }
 
+    private void SldJpegQuality_ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        UpdateQualityDisplay();
+    }
+
     private void SldJpegQuality_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
         if (sldJpegQuality == null) return;
-        SettingsManager.Instance.Settings.JpegQuality = (int)sldJpegQuality.Value;
+        int val = (int)Math.Round(sldJpegQuality.Value);
+        SettingsManager.Instance.Settings.JpegQuality = val;
         SettingsManager.Instance.Save();
+        UpdateQualityDisplay();
+    }
+
+    private void UpdateQualityDisplay()
+    {
+        if (sldJpegQuality == null || txtQualityValue == null) return;
+        int val = (int)Math.Round(sldJpegQuality.Value);
+        txtQualityValue.Text = val >= 100 ? "100% (Max)" : $"{val}%";
     }
 
     private async void BtnBrowseDir_Click(object? sender, RoutedEventArgs e)
