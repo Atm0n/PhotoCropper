@@ -124,6 +124,7 @@ internal sealed class SettingsManager
         Settings.CannyLowThreshold = defaults.CannyLowThreshold;
         Settings.AutoOrientPhotos = defaults.AutoOrientPhotos;
         Settings.RestoreVintageColors = defaults.RestoreVintageColors;
+        Settings.RemoveDustAndScratches = defaults.RemoveDustAndScratches;
         Save();
     }
 }

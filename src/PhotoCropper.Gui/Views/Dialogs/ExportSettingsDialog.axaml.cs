@@ -1,4 +1,3 @@
-using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -6,6 +5,7 @@ using Avalonia.Platform.Storage;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Gui.Services;
+using System.Globalization;
 
 namespace PhotoCropper.Gui.Dialogs;
 
