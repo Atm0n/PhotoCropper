@@ -523,4 +523,125 @@ internal sealed partial class MainWindow
             lblStatus.Text = string.Format(redoFormat, action.Description);
         }
     }
+
+    private async Task RotateSelectedPhotosCcwAsync()
+    {
+        if (isLoading || ScanSessions.Count == 0) return;
+
+        var selectedIndices = GetSelectedPhotoIndices();
+        if (selectedIndices.Count == 0) return;
+
+        var currentEngine = ScanSessions[currentIndex].Activate();
+        var validIndices = selectedIndices.Distinct()
+            .Where(idx => idx >= 0 && idx < currentEngine.DetectedPhotos.Count)
+            .OrderBy(idx => idx)
+            .ToList();
+
+        if (validIndices.Count == 0) return;
+
+        ScanSessions[currentIndex].IsModified = true;
+
+        var actions = new List<IUndoableAction>();
+        foreach (var idx in validIndices)
+        {
+            actions.Add(new RotatePhotoAction(currentIndex, idx));
+        }
+
+        string desc = validIndices.Count == 1 ? "Rotate 90° CCW" : $"Batch Rotate CCW ({validIndices.Count} photos)";
+        undoHistory.PushBatch(currentIndex, actions, desc);
+
+        string rotatingFormat = Avalonia.Application.Current?.FindResource("MsgBatchRotating")?.ToString() ?? "Rotating {0} photos...";
+        string rotatedFormat = Avalonia.Application.Current?.FindResource("MsgBatchRotated")?.ToString() ?? "{0} photos rotated.";
+
+        await ExecuteWithLoadingAsync(string.Format(rotatingFormat, validIndices.Count), async () =>
+        {
+            await Task.Run(() =>
+            {
+                foreach (var idx in validIndices)
+                {
+                    currentEngine.RotatePhotoCounterClockwise(idx);
+                }
+            });
+
+            LoadCroppedPhotosToSlider();
+
+            if (lstGallery?.SelectedItems != null)
+            {
+                isSyncingSelection = true;
+                try
+                {
+                    lstGallery.SelectedItems.Clear();
+                    foreach (var idx in validIndices)
+                    {
+                        if (idx < lstGallery.Items.Count)
+                        {
+                            lstGallery.SelectedItems.Add(lstGallery.Items[idx]);
+                        }
+                    }
+                }
+                finally
+                {
+                    isSyncingSelection = false;
+                }
+            }
+            UpdateSelectionUi();
+        }, string.Format(rotatedFormat, validIndices.Count));
+    }
+
+    private async void ContextMenu_RotateCw_Click(object? sender, RoutedEventArgs e)
+    {
+        EnsureContextSelection(sender);
+        await RotateSelectedPhotosAsync();
+    }
+
+    private async void ContextMenu_RotateCcw_Click(object? sender, RoutedEventArgs e)
+    {
+        EnsureContextSelection(sender);
+        await RotateSelectedPhotosCcwAsync();
+    }
+
+    private void ContextMenu_Refine_Click(object? sender, RoutedEventArgs e)
+    {
+        EnsureContextSelection(sender);
+        StartRefineMode();
+    }
+
+    private void ContextMenu_Delete_Click(object? sender, RoutedEventArgs e)
+    {
+        EnsureContextSelection(sender);
+        DeleteSelectedPhotos();
+    }
+
+    private async void ContextMenu_ExportSingle_Click(object? sender, RoutedEventArgs e)
+    {
+        EnsureContextSelection(sender);
+        int selectedIndex = slides?.SelectedIndex ?? -1;
+        if (selectedIndex >= 0)
+        {
+            await ExportSinglePhotoAsync(selectedIndex);
+        }
+    }
+
+    private void EnsureContextSelection(object? sender)
+    {
+        if (sender is MenuItem menuItem)
+        {
+            if (menuItem.DataContext is GalleryPhotoItem item)
+            {
+                if (lstGallery != null && item.Index >= 0 && item.Index < lstGallery.Items.Count)
+                {
+                    if (!lstGallery.SelectedItems!.Contains(item))
+                    {
+                        lstGallery.SelectedItems.Clear();
+                        lstGallery.SelectedItems.Add(item);
+                        lstGallery.SelectedIndex = item.Index;
+                    }
+                }
+                if (slides != null && item.Index >= 0 && item.Index < slides.Items.Count)
+                {
+                    slides.SelectedIndex = item.Index;
+                }
+            }
+        }
+    }
 }

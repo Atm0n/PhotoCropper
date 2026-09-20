@@ -163,4 +163,24 @@
 	<sys:String x:Key="MsgBatchRotated">{0} fotos girades.</sys:String>
 	<sys:String x:Key="MsgBatchDeleted">{0} fotos eliminades.</sys:String>
 	<sys:String x:Key="TipRefineMultiDisabled">Seleccioneu una sola foto per ajustar vores</sys:String>
+	<sys:String x:Key="TitleUnsavedChanges">Canvis no desats</sys:String>
+	<sys:String x:Key="MsgUnsavedChanges">Teniu canvis no desats o fotos no exportades. Voleu desar el vostre treball abans de sortir?</sys:String>
+	<sys:String x:Key="BtnSaveAndExit">Desar i Sortir</sys:String>
+	<sys:String x:Key="BtnDiscardAndExit">Descartar i Sortir</sys:String>
+	<sys:String x:Key="MenuTheme">Tema</sys:String>
+	<sys:String x:Key="ThemeDark">Fosc</sys:String>
+	<sys:String x:Key="ThemeLight">Clar</sys:String>
+	<sys:String x:Key="ThemeSystem">Per defecte del Sistema</sys:String>
+	<sys:String x:Key="MenuDetectionColor">Color del Marc de Detecció</sys:String>
+	<sys:String x:Key="ColorRed">Vermell Clàssic</sys:String>
+	<sys:String x:Key="ColorAmber">Àmbre / Taronja (Accessible)</sys:String>
+	<sys:String x:Key="ColorCyan">Cian / Turquesa (Accessible)</sys:String>
+	<sys:String x:Key="ColorMagenta">Magenta</sys:String>
+	<sys:String x:Key="ColorLime">Verd Llima</sys:String>
+	<sys:String x:Key="MenuRotateCw">Girar 90° Horari</sys:String>
+	<sys:String x:Key="MenuRotateCcw">Girar 90° Antihorari</sys:String>
+	<sys:String x:Key="MenuRefineCrop">Ajustar Vores del Retall</sys:String>
+	<sys:String x:Key="MenuExportSingle">Exportar Aquesta Foto...</sys:String>
+	<sys:String x:Key="EmptyStateTitle">Arrossegueu i Deixeu Anar Escanejos Aquí</sys:String>
+	<sys:String x:Key="EmptyStateDesc">Deixeu anar fitxers d'imatge o carpetes d'escaneig completes aquí, o feu clic a Obrir / Escanejar a dalt.</sys:String>
 </ResourceDictionary>

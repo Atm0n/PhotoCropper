@@ -13,4 +13,14 @@ public record DetectionOptions
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; } = true;
     public bool RemoveDustAndScratches { get; set; } = true;
+    public string BoundingBoxColor { get; set; } = "Red";
+
+    public MCvScalar GetBoundingBoxColorBgr() => BoundingBoxColor?.ToUpperInvariant() switch
+    {
+        "AMBER" or "ORANGE" => new MCvScalar(0, 165, 255),
+        "CYAN" or "BLUE" => new MCvScalar(255, 255, 0),
+        "MAGENTA" => new MCvScalar(255, 0, 255),
+        "LIME" => new MCvScalar(0, 255, 0),
+        _ => new MCvScalar(0, 0, 255)
+    };
 }
