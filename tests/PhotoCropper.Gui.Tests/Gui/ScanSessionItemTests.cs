@@ -1,8 +1,6 @@
 using PhotoCropper.Core.Models;
 using PhotoCropper.Gui.Services;
 using PhotoCropper.TestHelpers;
-using Shouldly;
-using Xunit;
 
 namespace PhotoCropper.Gui.Tests.Gui;
 

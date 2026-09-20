@@ -197,6 +197,58 @@ internal sealed class AddPhotoAction : IUndoableAction
     }
 }
 
+internal sealed class BatchAction : IUndoableAction
+{
+    private readonly int _scanIndex;
+    private readonly IReadOnlyList<IUndoableAction> _actions;
+    private bool _isDisposed;
+
+    public string Description { get; }
+    public int ScanIndex => _scanIndex;
+
+    public BatchAction(int scanIndex, IReadOnlyList<IUndoableAction> actions, string description)
+    {
+        ArgumentNullException.ThrowIfNull(actions);
+        _scanIndex = scanIndex;
+        _actions = actions;
+        Description = description;
+    }
+
+    public void Undo(PhotoCropperEngine engine)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        if (_isDisposed) return;
+
+        for (int i = _actions.Count - 1; i >= 0; i--)
+        {
+            _actions[i].Undo(engine);
+        }
+    }
+
+    public void Redo(PhotoCropperEngine engine)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        if (_isDisposed) return;
+
+        for (int i = 0; i < _actions.Count; i++)
+        {
+            _actions[i].Redo(engine);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (!_isDisposed)
+        {
+            foreach (var action in _actions)
+            {
+                action.Dispose();
+            }
+            _isDisposed = true;
+        }
+    }
+}
+
 internal sealed class UndoRedoHistory : IDisposable
 {
     private readonly Stack<IUndoableAction> _undoStack = new();
@@ -230,6 +282,13 @@ internal sealed class UndoRedoHistory : IDisposable
     public void PushAdd(int scanIndex, int index, Mat addedMat)
     {
         _undoStack.Push(new AddPhotoAction(scanIndex, index, addedMat));
+        ClearRedoStack();
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoStack and disposed on Clear/Dispose")]
+    public void PushBatch(int scanIndex, IReadOnlyList<IUndoableAction> actions, string description)
+    {
+        _undoStack.Push(new BatchAction(scanIndex, actions, description));
         ClearRedoStack();
     }
 

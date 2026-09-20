@@ -152,4 +152,15 @@
 	<sys:String x:Key="LblScannerResolution">Resolució (PPP):</sys:String>
 	<sys:String x:Key="LblScannerDevice">Dispositiu d'Escàner:</sys:String>
 	<sys:String x:Key="TxtScanningSearching">Cercant escàners connectats...</sys:String>
+	<sys:String x:Key="BtnSelectAll">Seleccionar Tot</sys:String>
+	<sys:String x:Key="TipSelectAll">Seleccionar totes les fotos detectades en aquest escaneig (Ctrl+A)</sys:String>
+	<sys:String x:Key="BtnClearSelection">Deseleccionar</sys:String>
+	<sys:String x:Key="TipClearSelection">Deseleccionar fotos</sys:String>
+	<sys:String x:Key="TxtSelectedCount">({0} de {1} seleccionades)</sys:String>
+	<sys:String x:Key="BtnDeleteCount">Eliminar ({0})</sys:String>
+	<sys:String x:Key="BtnRotateCount">Girar ({0})</sys:String>
+	<sys:String x:Key="MsgBatchRotating">Girant {0} fotos...</sys:String>
+	<sys:String x:Key="MsgBatchRotated">{0} fotos girades.</sys:String>
+	<sys:String x:Key="MsgBatchDeleted">{0} fotos eliminades.</sys:String>
+	<sys:String x:Key="TipRefineMultiDisabled">Seleccioneu una sola foto per ajustar vores</sys:String>
 </ResourceDictionary>

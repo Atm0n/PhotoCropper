@@ -152,4 +152,15 @@
 	<sys:String x:Key="LblScannerResolution">Resolution (DPI):</sys:String>
 	<sys:String x:Key="LblScannerDevice">Scanner Device:</sys:String>
 	<sys:String x:Key="TxtScanningSearching">Searching for connected scanners...</sys:String>
+	<sys:String x:Key="BtnSelectAll">Select All</sys:String>
+	<sys:String x:Key="TipSelectAll">Select all detected photos in this scan (Ctrl+A)</sys:String>
+	<sys:String x:Key="BtnClearSelection">Clear</sys:String>
+	<sys:String x:Key="TipClearSelection">Clear photo selection</sys:String>
+	<sys:String x:Key="TxtSelectedCount">({0} of {1} selected)</sys:String>
+	<sys:String x:Key="BtnDeleteCount">Delete ({0})</sys:String>
+	<sys:String x:Key="BtnRotateCount">Rotate ({0})</sys:String>
+	<sys:String x:Key="MsgBatchRotating">Rotating {0} photos...</sys:String>
+	<sys:String x:Key="MsgBatchRotated">{0} photos rotated.</sys:String>
+	<sys:String x:Key="MsgBatchDeleted">{0} photos deleted.</sys:String>
+	<sys:String x:Key="TipRefineMultiDisabled">Select a single photo to refine edges</sys:String>
 </ResourceDictionary>

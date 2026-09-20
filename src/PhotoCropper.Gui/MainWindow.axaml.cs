@@ -1,12 +1,7 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using Avalonia.Platform.Storage;
-using Emgu.CV;
-using Emgu.CV.Structure;
-using PhotoCropper.Core;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
@@ -27,10 +22,7 @@ internal sealed partial class MainWindow : Window
     private bool isComparingRaw;
     private bool isSyncingSelection;
     private bool isUpdatingUiFromScan;
-
-    private IScannerService _scannerService;
-    private readonly List<ScannerDeviceInfo> _availableScanners = [];
-    private WorkspaceSessionState? _workspaceSession;
+    private CancellationTokenSource? _activeOperationCts;
 
     public MainWindow() : this(new Naps2ScannerService())
     {
@@ -165,7 +157,7 @@ internal sealed partial class MainWindow : Window
 
         var fileResult = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = Application.Current?.FindResource("BtnOpenScans")?.ToString() ?? "Select Files",
+            Title = Avalonia.Application.Current?.FindResource("BtnOpenScans")?.ToString() ?? "Select Files",
             FileTypeFilter = [FilePickerFileTypes.ImageAll],
             AllowMultiple = true
         });
@@ -301,46 +293,51 @@ internal sealed partial class MainWindow : Window
         var photo = session.Activate();
         photo.ApplyOptions(GetDetectionOptionsFromUi());
 
-        string reprocessingMsg = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
+        string reprocessingMsg = Avalonia.Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
         await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
         {
             await Task.Run(() => photo.DetectPhotos());
             img.Source = MatBitmapConverter.ToAvaloniaBitmap(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();
-            string msgFormat = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
+            string msgFormat = Avalonia.Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
             lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
         });
     }
 
     private void PopulateLanguageMenu()
     {
-        if (menuLanguage == null) return;
-
+        var menus = new[] { menuLanguage, menuAltLanguage };
         var languages = LocalizationManager.GetAvailableLanguages();
-        foreach (var lang in languages)
+
+        foreach (var menu in menus)
         {
-            var item = new MenuItem
+            if (menu == null) continue;
+            menu.Items.Clear();
+
+            foreach (var lang in languages)
             {
-                Header = lang.Name,
-                Tag = lang.Code,
-                Focusable = false,
-                IsTabStop = false
-            };
-            item.Click += (s, _) =>
-            {
-                if (s is MenuItem mi && mi.Tag is string code)
+                var item = new MenuItem
                 {
-                    LocalizationManager.SetLanguage(code);
-                    UpdateWorkspaceUi(SettingsManager.Instance.Settings.WorkDirectory);
-                    FocusManager?.Focus(null);
-                }
-            };
-            menuLanguage.Items.Add(item);
+                    Header = lang.Name,
+                    Tag = lang.Code,
+                    Focusable = false,
+                    IsTabStop = false
+                };
+                item.Click += (s, _) =>
+                {
+                    if (s is MenuItem mi && mi.Tag is string code)
+                    {
+                        LocalizationManager.SetLanguage(code);
+                        UpdateWorkspaceUi(SettingsManager.Instance.Settings.WorkDirectory);
+                        UpdateSelectionUi();
+                        FocusManager?.Focus(null);
+                    }
+                };
+                menu.Items.Add(item);
+            }
         }
     }
-
-    private CancellationTokenSource? _activeOperationCts;
 
     private async Task ExecuteWithLoadingAsync(
         string statusText,
@@ -399,17 +396,16 @@ internal sealed partial class MainWindow : Window
     private void BtnCancelLoading_Click(object? sender, RoutedEventArgs e)
     {
         btnCancelLoading.IsEnabled = false;
-        txtLoadingText.Text = Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Cancelling...";
+        txtLoadingText.Text = Avalonia.Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Cancelling...";
         _activeOperationCts?.Cancel();
     }
-
 
     private async Task LoadPhotosToGuiAsync()
     {
         if (ScanSessions.Count == 0 || isLoading) return;
 
         string fileName = Path.GetFileName(ScanSessions[currentIndex].FilePath);
-        string processingMsg = Application.Current?.FindResource("ProcessingScan")?.ToString() ?? "Processing...";
+        string processingMsg = Avalonia.Application.Current?.FindResource("ProcessingScan")?.ToString() ?? "Processing...";
 
         await ExecuteWithLoadingAsync($"{processingMsg} {fileName}", async () =>
         {
@@ -419,7 +415,7 @@ internal sealed partial class MainWindow : Window
 
             img.Source = MatBitmapConverter.ToAvaloniaBitmap(currentPhoto.OriginalWithDetected);
 
-            string scanCounterFormat = Application.Current?.FindResource("ScanCounter")?.ToString() ?? "Scan {0} of {1}";
+            string scanCounterFormat = Avalonia.Application.Current?.FindResource("ScanCounter")?.ToString() ?? "Scan {0} of {1}";
             txtFileCounter.Text = string.Format(scanCounterFormat, currentIndex + 1, ScanSessions.Count);
             lblStatus.Text = fileName;
 
@@ -431,36 +427,6 @@ internal sealed partial class MainWindow : Window
                 btnResetBackground.IsEnabled = currentPhoto.CustomBackgroundColorHsv != null;
             }
         });
-    }
-
-    private void LoadCroppedPhotosToSlider()
-    {
-        slides.Items.Clear();
-        if (lstGallery != null) lstGallery.Items.Clear();
-
-        var detected = ScanSessions[currentIndex].Activate().DetectedPhotos;
-        for (int i = 0; i < detected.Count; i++)
-        {
-            var mat = detected[i];
-            var bmp = MatBitmapConverter.ToAvaloniaBitmap(mat);
-            slides.Items.Add(bmp);
-
-            if (lstGallery != null)
-            {
-                string label = $"#{i + 1}";
-                string dims = $"{mat.Width} × {mat.Height} px";
-                lstGallery.Items.Add(new GalleryPhotoItem(bmp, label, dims, i));
-            }
-        }
-
-        if (slides.Items.Count > 0)
-        {
-            slides.SelectedIndex = 0;
-            if (lstGallery != null && lstGallery.Items.Count > 0)
-            {
-                lstGallery.SelectedIndex = 0;
-            }
-        }
     }
 
     private async void BtnPrevScan_Click(object? sender, RoutedEventArgs e)
@@ -511,7 +477,7 @@ internal sealed partial class MainWindow : Window
             }
         }
 
-        string msgTemplate = Application.Current?.FindResource("MsgScanDeleted")?.ToString() ?? "Scan '{0}' deleted.";
+        string msgTemplate = Avalonia.Application.Current?.FindResource("MsgScanDeleted")?.ToString() ?? "Scan '{0}' deleted.";
         string statusMsg = string.Format(msgTemplate, fileName);
 
         if (ScanSessions.Count == 0)
@@ -519,7 +485,7 @@ internal sealed partial class MainWindow : Window
             currentIndex = 0;
             img.Source = null;
             slides.Items.Clear();
-            txtFileCounter.Text = Application.Current?.FindResource("TxtNoFiles")?.ToString() ?? "No files loaded";
+            txtFileCounter.Text = Avalonia.Application.Current?.FindResource("TxtNoFiles")?.ToString() ?? "No files loaded";
             lblPhotoInfo.Text = "";
             lblStatus.Text = statusMsg;
         }
@@ -541,7 +507,7 @@ internal sealed partial class MainWindow : Window
         var pendingSessions = ScanSessions.Where(s => !s.IsSaved || s.IsModified).ToList();
         if (pendingSessions.Count == 0)
         {
-            string alreadySavedMsg = Application.Current?.FindResource("MsgAllScansAlreadySaved")?.ToString() 
+            string alreadySavedMsg = Avalonia.Application.Current?.FindResource("MsgAllScansAlreadySaved")?.ToString()
                 ?? "All {0} scans are already saved to 'Cropped'. No changes to export.";
             lblStatus.Text = string.Format(alreadySavedMsg, ScanSessions.Count);
             return;
@@ -552,8 +518,8 @@ internal sealed partial class MainWindow : Window
         int completedScans = 0;
         int totalSavedPhotos = 0;
 
-        string savingMsg = Application.Current?.FindResource("MsgSavingProgress")?.ToString() ?? "Exporting scan {0} of {1} ({2} photos saved)...";
-        string msgFormat = Application.Current?.FindResource("MsgSaved")?.ToString() ?? "Successfully saved {0} photos to 'cropped' folders.";
+        string savingMsg = Avalonia.Application.Current?.FindResource("MsgSavingProgress")?.ToString() ?? "Exporting scan {0} of {1} ({2} photos saved)...";
+        string msgFormat = Avalonia.Application.Current?.FindResource("MsgSaved")?.ToString() ?? "Successfully saved {0} photos to 'cropped' folders.";
 
         string? targetOutputFolder = settings.CustomOutputDirectory;
         if (string.IsNullOrEmpty(targetOutputFolder) && !string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory))
@@ -626,63 +592,32 @@ internal sealed partial class MainWindow : Window
         }, string.Format(msgFormat, totalSavedPhotos));
     }
 
-    private void BtnDelete_Click(object? sender, RoutedEventArgs e)
+    private void ToggleMenuBar()
     {
-        if (isLoading) return;
-        DeleteCurrentPhoto();
-    }
-
-    private void DeleteCurrentPhoto()
-    {
-        if (isLoading || ScanSessions.Count == 0 || slides == null) return;
-        int photoIndex = slides.SelectedIndex;
-        if (photoIndex < 0) return;
-
-        ScanSessions[currentIndex].IsModified = true;
-        var currentEngine = ScanSessions[currentIndex].Activate();
-        var matToDelete = currentEngine.DetectedPhotos[photoIndex];
-        undoHistory.PushDelete(currentIndex, photoIndex, matToDelete);
-
-        currentEngine.DeletePhoto(photoIndex);
-
-        int nextIndex = Math.Min(photoIndex, currentEngine.DetectedPhotos.Count - 1);
-        LoadCroppedPhotosToSlider();
-        if (nextIndex >= 0)
+        if (pnlMenuBar != null)
         {
-            slides.SelectedIndex = nextIndex;
+            pnlMenuBar.IsVisible = !pnlMenuBar.IsVisible;
         }
-        lblStatus.Text = Application.Current?.FindResource("MsgPhotoDeleted")?.ToString() ?? "Photo deleted.";
     }
 
-    private async void BtnRotate_Click(object? sender, RoutedEventArgs e)
+    private void MenuExit_Click(object? sender, RoutedEventArgs e) => Close();
+    private void MenuUndo_Click(object? sender, RoutedEventArgs e) => PerformUndo();
+    private void MenuRedo_Click(object? sender, RoutedEventArgs e) => PerformRedo();
+    private void MenuViewCarousel_Click(object? sender, RoutedEventArgs e) => SetViewMode(false);
+    private void MenuViewGrid_Click(object? sender, RoutedEventArgs e) => SetViewMode(true);
+    private void BtnToggleAdvanced_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading) return;
-        await RotateCurrentPhotoAsync();
-    }
-
-    private async Task RotateCurrentPhotoAsync()
-    {
-        if (isLoading || ScanSessions.Count == 0 || slides.SelectedIndex < 0) return;
-
-        int photoIndex = slides.SelectedIndex;
-        ScanSessions[currentIndex].IsModified = true;
-        undoHistory.PushRotate(currentIndex, photoIndex);
-
-        string rotatingMsg = Application.Current?.FindResource("MsgRotating")?.ToString() ?? "Rotating...";
-        string rotatedMsg = Application.Current?.FindResource("MsgPhotoRotated")?.ToString() ?? "Photo rotated.";
-
-        await ExecuteWithLoadingAsync(rotatingMsg, async () =>
+        if (tglAdvanced != null)
         {
-            await Task.Run(() => ScanSessions[currentIndex].Activate().RotatePhoto(photoIndex));
-            LoadCroppedPhotosToSlider();
-            slides.SelectedIndex = photoIndex;
-        }, rotatedMsg);
+            tglAdvanced.IsChecked = !tglAdvanced.IsChecked;
+        }
     }
+    private void BtnReset_Click(object? sender, RoutedEventArgs e) => BtnResetDefaults_Click(sender, e);
 
     private void BtnHelp_Click(object? sender, RoutedEventArgs e) => pnlHelpOverlay.IsVisible = true;
     private void BtnCloseHelp_Click(object? sender, RoutedEventArgs e) => pnlHelpOverlay.IsVisible = false;
 
-    private async void SldSensitivity_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
+    private async void SldSensitivity_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
         if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
 
@@ -701,7 +636,7 @@ internal sealed partial class MainWindow : Window
         if (isLoading || ScanSessions.Count == 0) return;
 
         var photo = ScanSessions[currentIndex].Activate();
-        string tuningMsg = Application.Current?.FindResource("MsgAutoTuning")?.ToString() ?? "Auto-tuning detection parameters...";
+        string tuningMsg = Avalonia.Application.Current?.FindResource("MsgAutoTuning")?.ToString() ?? "Auto-tuning detection parameters...";
 
         await ExecuteWithLoadingAsync(tuningMsg, async () =>
         {
@@ -714,12 +649,12 @@ internal sealed partial class MainWindow : Window
 
             if (result.Improved || result.PhotoCount > 0)
             {
-                string successFormat = Application.Current?.FindResource("MsgAutoTuneSuccess")?.ToString() ?? "Auto-tuned: found {0} photos (Tolerance: {1:0}, Edge: {2:0}).";
+                string successFormat = Avalonia.Application.Current?.FindResource("MsgAutoTuneSuccess")?.ToString() ?? "Auto-tuned: found {0} photos (Tolerance: {1:0}, Edge: {2:0}).";
                 lblStatus.Text = string.Format(successFormat, result.PhotoCount, result.BestOptions.BackgroundTolerance, result.BestOptions.CannyLowThreshold);
             }
             else
             {
-                lblStatus.Text = Application.Current?.FindResource("MsgAutoTuneFailed")?.ToString() ?? "Auto-tune did not find additional photos.";
+                lblStatus.Text = Avalonia.Application.Current?.FindResource("MsgAutoTuneFailed")?.ToString() ?? "Auto-tune did not find additional photos.";
             }
         });
     }
@@ -736,7 +671,7 @@ internal sealed partial class MainWindow : Window
         SettingsManager.Instance.Save();
     }
 
-    private void SldJpegQuality_PointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
+    private void SldJpegQuality_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
         if (sldJpegQuality == null) return;
         SettingsManager.Instance.Settings.JpegQuality = (int)sldJpegQuality.Value;
@@ -750,7 +685,7 @@ internal sealed partial class MainWindow : Window
 
         var folderResult = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = Application.Current?.FindResource("LblOutputDir")?.ToString() ?? "Select Export Folder",
+            Title = Avalonia.Application.Current?.FindResource("LblOutputDir")?.ToString() ?? "Select Export Folder",
             AllowMultiple = false
         });
 
@@ -771,164 +706,7 @@ internal sealed partial class MainWindow : Window
         SettingsManager.Instance.Save();
     }
 
-    private void Slides_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        UpdatePhotoCounterLabel();
-        if (isSyncingSelection || lstGallery == null || slides == null) return;
-        if (slides.SelectedIndex >= 0 && slides.SelectedIndex < lstGallery.Items.Count && lstGallery.SelectedIndex != slides.SelectedIndex)
-        {
-            isSyncingSelection = true;
-            try
-            {
-                lstGallery.SelectedIndex = slides.SelectedIndex;
-                lstGallery.ScrollIntoView(slides.SelectedIndex);
-            }
-            finally
-            {
-                isSyncingSelection = false;
-            }
-        }
-    }
-
-    private void LstGallery_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (isSyncingSelection || lstGallery == null || slides == null) return;
-        if (lstGallery.SelectedIndex >= 0 && lstGallery.SelectedIndex < slides.Items.Count && slides.SelectedIndex != lstGallery.SelectedIndex)
-        {
-            isSyncingSelection = true;
-            try
-            {
-                slides.SelectedIndex = lstGallery.SelectedIndex;
-            }
-            finally
-            {
-                isSyncingSelection = false;
-            }
-            UpdatePhotoCounterLabel();
-        }
-    }
-
-    private void RbViewMode_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (pnlCarouselView == null || scrollGalleryView == null) return;
-        bool isGrid = rbViewGrid?.IsChecked == true;
-        pnlCarouselView.IsVisible = !isGrid;
-        scrollGalleryView.IsVisible = isGrid;
-
-        if (isGrid && lstGallery != null && slides != null && slides.SelectedIndex >= 0)
-        {
-            lstGallery.SelectedIndex = slides.SelectedIndex;
-            lstGallery.ScrollIntoView(slides.SelectedIndex);
-        }
-    }
-
-    private void SetViewMode(bool gridView)
-    {
-        if (rbViewGrid != null && rbViewCarousel != null)
-        {
-            if (gridView) rbViewGrid.IsChecked = true;
-            else rbViewCarousel.IsChecked = true;
-        }
-    }
-
-    private void UpdatePhotoCounterLabel()
-    {
-        if (lblPhotoInfo == null || slides == null || ScanSessions.Count == 0 || currentIndex >= ScanSessions.Count)
-        {
-            if (lblPhotoInfo != null) lblPhotoInfo.Text = "";
-            return;
-        }
-
-        var session = ScanSessions[currentIndex];
-        int total = session.PhotoCount;
-        if (total == 0)
-        {
-            lblPhotoInfo.Text = "";
-            return;
-        }
-
-        int current = slides.SelectedIndex + 1;
-        string format = Application.Current?.FindResource("PhotoCounter")?.ToString() ?? "PHOTO {0} OF {1}";
-        lblPhotoInfo.Text = string.Format(format, current, total);
-    }
-
-    private void BtnPreviousCroppedImage_Click(object? sender, RoutedEventArgs e)
-    {
-        if (!isLoading) slides.Previous();
-    }
-
-    private void BtnNextCroppedImage_Click(object? sender, RoutedEventArgs e)
-    {
-        if (!isLoading) slides.Next();
-    }
-
-    private async void PerformUndo()
-    {
-        if (ScanSessions.Count == 0 || !undoHistory.CanUndo) return;
-
-        var action = undoHistory.Undo(idx => idx >= 0 && idx < ScanSessions.Count ? ScanSessions[idx].Activate() : null);
-        if (action != null)
-        {
-            if (action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
-            {
-                ScanSessions[action.ScanIndex].IsModified = true;
-            }
-
-            if (action.ScanIndex != currentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
-            {
-                ScanSessions[currentIndex].Deactivate();
-                currentIndex = action.ScanIndex;
-                await LoadPhotosToGuiAsync();
-            }
-            else
-            {
-                var engine = ScanSessions[currentIndex].Activate();
-                int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, engine.DetectedPhotos.Count - 1)) : 0;
-                LoadCroppedPhotosToSlider();
-                if (slides != null && engine.DetectedPhotos.Count > 0)
-                {
-                    slides.SelectedIndex = selected;
-                }
-            }
-            string undoFormat = Application.Current?.FindResource("MsgUndo")?.ToString() ?? "Undid {0}.";
-            lblStatus.Text = string.Format(undoFormat, action.Description);
-        }
-    }
-
-    private async void PerformRedo()
-    {
-        if (ScanSessions.Count == 0 || !undoHistory.CanRedo) return;
-
-        var action = undoHistory.Redo(idx => idx >= 0 && idx < ScanSessions.Count ? ScanSessions[idx].Activate() : null);
-        if (action != null)
-        {
-            if (action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
-            {
-                ScanSessions[action.ScanIndex].IsModified = true;
-            }
-
-            if (action.ScanIndex != currentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
-            {
-                ScanSessions[currentIndex].Deactivate();
-                currentIndex = action.ScanIndex;
-                await LoadPhotosToGuiAsync();
-            }
-            else
-            {
-                var engine = ScanSessions[currentIndex].Activate();
-                int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, engine.DetectedPhotos.Count - 1)) : 0;
-                LoadCroppedPhotosToSlider();
-                if (slides != null && engine.DetectedPhotos.Count > 0)
-                {
-                    slides.SelectedIndex = selected;
-                }
-            }
-            string redoFormat = Application.Current?.FindResource("MsgRedo")?.ToString() ?? "Redid {0}.";
-            lblStatus.Text = string.Format(redoFormat, action.Description);
-        }
-    }
-
-    private async void Window_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    private async void Window_KeyDown(object? sender, KeyEventArgs e)
     {
         if (isLoading)
         {
@@ -936,54 +714,98 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        if (e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Control))
+        // Toggle hidden menu bar with Alt key or F10
+        if (e.Key == Key.LeftAlt || e.Key == Key.RightAlt || e.Key == Key.F10)
         {
-            if (e.Key == Avalonia.Input.Key.S)
+            if (!e.KeyModifiers.HasFlag(KeyModifiers.Control) && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
             {
-                BtnSaveImages_Click(null, new RoutedEventArgs());
-                e.Handled = true;
-                return;
-            }
-            if (e.Key == Avalonia.Input.Key.Z)
-            {
-                PerformUndo();
-                e.Handled = true;
-                return;
-            }
-            if (e.Key == Avalonia.Input.Key.Y)
-            {
-                PerformRedo();
+                ToggleMenuBar();
                 e.Handled = true;
                 return;
             }
         }
 
-        if (pnlScannerOverlay.IsVisible && e.Key == Avalonia.Input.Key.Escape)
+        if (pnlMenuBar != null && pnlMenuBar.IsVisible && e.Key == Key.Escape)
+        {
+            pnlMenuBar.IsVisible = false;
+            e.Handled = true;
+            return;
+        }
+
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            if (e.Key == Key.S)
+            {
+                BtnSaveImages_Click(null, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.O)
+            {
+                BtnOpenFiles_Click(null, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.Z)
+            {
+                PerformUndo();
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.Y)
+            {
+                PerformRedo();
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.A && rbViewGrid?.IsChecked == true)
+            {
+                SelectAllGalleryPhotos();
+                e.Handled = true;
+                return;
+            }
+        }
+
+        if (pnlScannerOverlay.IsVisible && e.Key == Key.Escape)
         {
             pnlScannerOverlay.IsVisible = false;
             e.Handled = true;
             return;
         }
 
-        if (pnlErrorOverlay.IsVisible && e.Key == Avalonia.Input.Key.Escape)
+        if (pnlErrorOverlay.IsVisible && e.Key == Key.Escape)
         {
             pnlErrorOverlay.IsVisible = false;
             e.Handled = true;
             return;
         }
 
-        if (pnlLoadingOverlay.IsVisible && btnCancelLoading.IsVisible && e.Key == Avalonia.Input.Key.Escape)
+        if (pnlLoadingOverlay.IsVisible && btnCancelLoading.IsVisible && e.Key == Key.Escape)
         {
             btnCancelLoading.IsEnabled = false;
-            txtLoadingText.Text = Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Cancelling...";
+            txtLoadingText.Text = Avalonia.Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Cancelling...";
             _activeOperationCts?.Cancel();
             e.Handled = true;
             return;
         }
 
-        if (pnlHelpOverlay.IsVisible && e.Key == Avalonia.Input.Key.Escape)
+        if (pnlHelpOverlay.IsVisible && e.Key == Key.Escape)
         {
             pnlHelpOverlay.IsVisible = false;
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.F1)
+        {
+            pnlHelpOverlay.IsVisible = true;
+            e.Handled = true;
+            return;
+        }
+
+        if (rbViewGrid?.IsChecked == true && lstGallery?.SelectedItems != null && lstGallery.SelectedItems.Count > 1 && e.Key == Key.Escape)
+        {
+            ClearGallerySelection();
             e.Handled = true;
             return;
         }
@@ -992,14 +814,14 @@ internal sealed partial class MainWindow : Window
         {
             switch (e.Key)
             {
-                case Avalonia.Input.Key.Enter:
-                case Avalonia.Input.Key.A:
+                case Key.Enter:
+                case Key.A:
                     AcceptRefine();
                     e.Handled = true;
                     break;
-                case Avalonia.Input.Key.Back:
-                case Avalonia.Input.Key.Escape:
-                case Avalonia.Input.Key.C:
+                case Key.Back:
+                case Key.Escape:
+                case Key.C:
                     RejectRefine();
                     e.Handled = true;
                     break;
@@ -1007,7 +829,7 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        if (e.Key == Avalonia.Input.Key.F5)
+        if (e.Key == Key.F5)
         {
             BtnScan_Click(null, new RoutedEventArgs());
             e.Handled = true;
@@ -1016,7 +838,7 @@ internal sealed partial class MainWindow : Window
 
         if (ScanSessions.Count == 0) return;
 
-        if (e.Key == Avalonia.Input.Key.Delete && e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Shift))
+        if (e.Key == Key.Delete && e.KeyModifiers.HasFlag(KeyModifiers.Shift))
         {
             await DeleteCurrentScanAsync();
             e.Handled = true;
@@ -1024,14 +846,14 @@ internal sealed partial class MainWindow : Window
         }
 
         var key = e.Key;
-        if (key == Avalonia.Input.Key.OemPlus) key = Avalonia.Input.Key.Add;
-        if (key == Avalonia.Input.Key.OemMinus) key = Avalonia.Input.Key.Subtract;
-        if (key == Avalonia.Input.Key.OemTilde || key == Avalonia.Input.Key.Oem3) key = Avalonia.Input.Key.N;
+        if (key == Key.OemPlus) key = Key.Add;
+        if (key == Key.OemMinus) key = Key.Subtract;
+        if (key == Key.OemTilde || key == Key.Oem3) key = Key.N;
 
         switch (key)
         {
-            case Avalonia.Input.Key.Up:
-            case Avalonia.Input.Key.PageUp:
+            case Key.Up:
+            case Key.PageUp:
                 FocusManager?.Focus(null);
                 ScanSessions[currentIndex].Deactivate();
                 currentIndex = (currentIndex - 1 + ScanSessions.Count) % ScanSessions.Count;
@@ -1039,8 +861,8 @@ internal sealed partial class MainWindow : Window
                 e.Handled = true;
                 break;
 
-            case Avalonia.Input.Key.Down:
-            case Avalonia.Input.Key.PageDown:
+            case Key.Down:
+            case Key.PageDown:
                 FocusManager?.Focus(null);
                 ScanSessions[currentIndex].Deactivate();
                 currentIndex = (currentIndex + 1) % ScanSessions.Count;
@@ -1048,33 +870,33 @@ internal sealed partial class MainWindow : Window
                 e.Handled = true;
                 break;
 
-            case Avalonia.Input.Key.Left:
+            case Key.Left:
                 FocusManager?.Focus(null);
-                slides.Previous();
+                if (slides != null) slides.Previous();
                 e.Handled = true;
                 break;
 
-            case Avalonia.Input.Key.Right:
+            case Key.Right:
                 FocusManager?.Focus(null);
-                slides.Next();
+                if (slides != null) slides.Next();
                 e.Handled = true;
                 break;
 
-            case Avalonia.Input.Key.R:
+            case Key.R:
                 FocusManager?.Focus(null);
-                await RotateCurrentPhotoAsync();
+                await RotateSelectedPhotosAsync();
                 e.Handled = true;
                 break;
 
-            case Avalonia.Input.Key.X:
-            case Avalonia.Input.Key.Delete:
+            case Key.X:
+            case Key.Delete:
                 FocusManager?.Focus(null);
-                DeleteCurrentPhoto();
+                DeleteSelectedPhotos();
                 e.Handled = true;
                 break;
 
-            case Avalonia.Input.Key.Space:
-            case Avalonia.Input.Key.B:
+            case Key.Space:
+            case Key.B:
                 if (!isComparingRaw && ScanSessions.Count > 0 && slides != null && slides.SelectedIndex >= 0)
                 {
                     int sel = slides.SelectedIndex;
@@ -1088,38 +910,12 @@ internal sealed partial class MainWindow : Window
                 }
                 e.Handled = true;
                 break;
-
-            case Avalonia.Input.Key.D1:
-            case Avalonia.Input.Key.NumPad1:
-                FocusManager?.Focus(null);
-                SetViewMode(false);
-                e.Handled = true;
-                break;
-
-            case Avalonia.Input.Key.D2:
-            case Avalonia.Input.Key.NumPad2:
-                FocusManager?.Focus(null);
-                SetViewMode(true);
-                e.Handled = true;
-                break;
-
-            case Avalonia.Input.Key.N:
-                FocusManager?.Focus(null);
-                StartRefineMode();
-                e.Handled = true;
-                break;
-
-            case Avalonia.Input.Key.T:
-                FocusManager?.Focus(null);
-                BtnAutoTune_Click(null, new RoutedEventArgs());
-                e.Handled = true;
-                break;
         }
     }
 
-    private void Window_KeyUp(object? sender, Avalonia.Input.KeyEventArgs e)
+    private void Window_KeyUp(object? sender, KeyEventArgs e)
     {
-        if (isComparingRaw && (e.Key == Avalonia.Input.Key.Space || e.Key == Avalonia.Input.Key.B))
+        if (isComparingRaw && (e.Key == Key.Space || e.Key == Key.B))
         {
             isComparingRaw = false;
             if (ScanSessions.Count > 0 && slides != null && slides.SelectedIndex >= 0)
@@ -1134,951 +930,6 @@ internal sealed partial class MainWindow : Window
             }
             e.Handled = true;
         }
-    }
-
-    private void ScrollOriginal_SizeChanged(object? sender, SizeChangedEventArgs e) => UpdateCropCanvasSize();
-
-    private void SldZoom_PropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
-    {
-        if (e.Property.Name == "Value")
-        {
-            UpdateCropCanvasSize();
-            if (sldZoom != null)
-            {
-                SettingsManager.Instance.Settings.ZoomLevel = sldZoom.Value;
-                SettingsManager.Instance.Save();
-            }
-        }
-    }
-
-    private void ScrollOriginal_PointerWheelChanged(object? sender, Avalonia.Input.PointerWheelEventArgs e)
-    {
-        if (e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Control))
-        {
-            double oldZoom = sldZoom.Value;
-            double delta = e.Delta.Y > 0 ? 1.1 : 0.9;
-            double newZoom = Math.Clamp(oldZoom * delta, sldZoom.Minimum, sldZoom.Maximum);
-
-            if (newZoom != oldZoom)
-            {
-                sldZoom.Value = newZoom;
-                double multiplier = newZoom / oldZoom;
-                scrollOriginal.Offset = new Vector(
-                    (scrollOriginal.Offset.X + e.GetPosition(scrollOriginal).X) * multiplier - e.GetPosition(scrollOriginal).X,
-                    (scrollOriginal.Offset.Y + e.GetPosition(scrollOriginal).Y) * multiplier - e.GetPosition(scrollOriginal).Y
-                );
-            }
-            e.Handled = true;
-        }
-    }
-
-    private void UpdateCropCanvasSize()
-    {
-        if (img == null || scrollOriginal == null || cnvCrop == null || pnlOriginal == null) return;
-
-        double availableW = scrollOriginal.Viewport.Width - 20;
-        double availableH = scrollOriginal.Viewport.Height - 20;
-        if (availableW <= 0 || availableH <= 0) return;
-
-        img.Width = availableW;
-        img.Height = availableH;
-
-        double zoom = sldZoom.Value;
-        double zoomedW = img.Bounds.Width * zoom;
-        double zoomedH = img.Bounds.Height * zoom;
-
-        if (zoomedW > 0 && zoomedH > 0)
-        {
-            pnlOriginal.Width = zoomedW;
-            pnlOriginal.Height = zoomedH;
-        }
-
-        cnvCrop.Width = pnlOriginal.Width;
-        cnvCrop.Height = pnlOriginal.Height;
-    }
-
-    private Point startPoint;
-    private bool isDragging;
-
-    private void PnlOriginal_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
-    {
-        if (ScanSessions.Count == 0) return;
-
-        if (tglColorPicker?.IsChecked == true)
-        {
-            e.Handled = true;
-            SampleBackgroundColorAtPointer(e.GetPosition(pnlOriginal));
-            return;
-        }
-
-        UpdateCropCanvasSize();
-        startPoint = e.GetPosition(pnlOriginal);
-        isDragging = true;
-        rectCrop.IsVisible = true;
-        Canvas.SetLeft(rectCrop, startPoint.X);
-        Canvas.SetTop(rectCrop, startPoint.Y);
-        rectCrop.Width = 0;
-        rectCrop.Height = 0;
-    }
-
-    private void PnlOriginal_PointerMoved(object? sender, Avalonia.Input.PointerEventArgs e)
-    {
-        if (!isDragging) return;
-        var normalized = CoordinateMapper.ComputeNormalizedRect(startPoint, e.GetPosition(pnlOriginal));
-        Canvas.SetLeft(rectCrop, normalized.X);
-        Canvas.SetTop(rectCrop, normalized.Y);
-        rectCrop.Width = normalized.Width;
-        rectCrop.Height = normalized.Height;
-    }
-
-    private void PnlOriginal_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
-    {
-        if (!isDragging) return;
-        isDragging = false;
-        rectCrop.IsVisible = false;
-        var rect = CoordinateMapper.ComputeNormalizedRect(startPoint, e.GetPosition(pnlOriginal));
-        if (rect.Width < 5 || rect.Height < 5) return;
-
-        ApplyManualCrop(rect);
-    }
-
-    private async void ApplyManualCrop(Rect uiRect)
-    {
-        var photo = ScanSessions[currentIndex].Activate();
-        var imageRect = GetImageRectInsideControl();
-        var originalSize = new System.Drawing.Size(photo.Original.Width, photo.Original.Height);
-        var cropRect = CoordinateMapper.MapUiRectToImageRect(uiRect, imageRect, originalSize);
-
-        if (cropRect.Width <= 10 || cropRect.Height <= 10) return;
-
-        string extractingMsg = Application.Current?.FindResource("MsgExtractingCrop")?.ToString() ?? "Extracting manual crop...";
-        string addedMsg = Application.Current?.FindResource("MsgManualCropAdded")?.ToString() ?? "Manual crop added.";
-
-        await ExecuteWithLoadingAsync(extractingMsg, async () =>
-        {
-            int prevCount = photo.DetectedPhotos.Count;
-            ScanSessions[currentIndex].IsModified = true;
-            await Task.Run(() => photo.AddManualCrop(cropRect));
-            if (photo.DetectedPhotos.Count > prevCount)
-            {
-                int newIndex = photo.DetectedPhotos.Count - 1;
-                undoHistory.PushAdd(currentIndex, newIndex, photo.DetectedPhotos[newIndex]);
-            }
-            LoadCroppedPhotosToSlider();
-            slides.SelectedIndex = photo.DetectedPhotos.Count - 1;
-        }, addedMsg);
-    }
-
-    private Rect GetImageRectInsideControl()
-    {
-        if (img?.Source == null || pnlOriginal == null) return new Rect();
-
-        double zoom = sldZoom.Value;
-        double w = img.Bounds.Width * zoom;
-        double h = img.Bounds.Height * zoom;
-        double x = (pnlOriginal.Bounds.Width - w) / 2;
-        double y = (pnlOriginal.Bounds.Height - h) / 2;
-
-        return new Rect(x, y, w, h);
-    }
-
-    private bool isRefining;
-    private System.Drawing.Rectangle currentRefineRect;
-    private Point startRefinePoint;
-    private bool isRefineDragging;
-
-    private void BtnRefine_Click(object? sender, RoutedEventArgs e) => StartRefineMode();
-
-    private void StartRefineMode()
-    {
-        if (ScanSessions.Count == 0 || slides == null || slides.SelectedIndex < 0) return;
-        int photoIndex = slides.SelectedIndex;
-
-        var photoCropper = ScanSessions[currentIndex].Activate();
-        currentRefineRect = photoCropper.GetRefinedCropRect(photoIndex);
-
-        if (currentRefineRect.IsEmpty || currentRefineRect.Width <= 10 || currentRefineRect.Height <= 10)
-        {
-            currentRefineRect = new System.Drawing.Rectangle(0, 0, photoCropper.DetectedPhotos[photoIndex].Width, photoCropper.DetectedPhotos[photoIndex].Height);
-        }
-
-        isRefining = true;
-        pnlRefineOverlay.IsVisible = true;
-        lblStatus.Text = Application.Current?.FindResource("MsgRefineModeHelp")?.ToString() ?? "Refinement mode active.";
-
-        UpdateRefinePreview();
-    }
-
-    private void UpdateRefinePreview()
-    {
-        if (ScanSessions.Count == 0 || slides == null || slides.SelectedIndex < 0) return;
-        int photoIndex = slides.SelectedIndex;
-
-        var photoCropper = ScanSessions[currentIndex].Activate();
-        using Mat previewMat = photoCropper.DetectedPhotos[photoIndex].Clone();
-
-        System.Drawing.Rectangle drawRect = currentRefineRect;
-        int thickness = 8;
-        drawRect.Inflate(-thickness / 2, -thickness / 2);
-
-        CvInvoke.Rectangle(previewMat, drawRect, new MCvScalar(0, 0, 255), thickness);
-        imgRefine.Source = MatBitmapConverter.ToAvaloniaBitmap(previewMat);
-    }
-
-    private void PnlRefine_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
-    {
-        if (!isRefining) return;
-        startRefinePoint = e.GetPosition(pnlRefineImage);
-        isRefineDragging = true;
-        rectRefineCrop.IsVisible = true;
-        Canvas.SetLeft(rectRefineCrop, startRefinePoint.X);
-        Canvas.SetTop(rectRefineCrop, startRefinePoint.Y);
-        rectRefineCrop.Width = 0;
-        rectRefineCrop.Height = 0;
-    }
-
-    private void PnlRefine_PointerMoved(object? sender, Avalonia.Input.PointerEventArgs e)
-    {
-        if (!isRefineDragging) return;
-        var normalized = CoordinateMapper.ComputeNormalizedRect(startRefinePoint, e.GetPosition(pnlRefineImage));
-        Canvas.SetLeft(rectRefineCrop, normalized.X);
-        Canvas.SetTop(rectRefineCrop, normalized.Y);
-        rectRefineCrop.Width = normalized.Width;
-        rectRefineCrop.Height = normalized.Height;
-    }
-
-    private void PnlRefine_PointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
-    {
-        if (!isRefineDragging) return;
-        isRefineDragging = false;
-        rectRefineCrop.IsVisible = false;
-
-        var uiRect = CoordinateMapper.ComputeNormalizedRect(startRefinePoint, e.GetPosition(pnlRefineImage));
-        if (uiRect.Width < 5 || uiRect.Height < 5) return;
-
-        var imageRect = GetRefineImageRectInsideControl();
-        int photoIndex = slides.SelectedIndex;
-        var photo = ScanSessions[currentIndex].Activate().DetectedPhotos[photoIndex];
-        var photoSize = new System.Drawing.Size(photo.Width, photo.Height);
-
-        currentRefineRect = CoordinateMapper.MapUiRectToImageRect(uiRect, imageRect, photoSize);
-        UpdateRefinePreview();
-    }
-
-    private Rect GetRefineImageRectInsideControl()
-    {
-        if (imgRefine?.Source == null) return new Rect();
-
-        var controlSize = pnlRefineImage.Bounds.Size;
-        var imageSize = imgRefine.Source.Size;
-
-        double availableWidth = controlSize.Width - 40;
-        double availableHeight = controlSize.Height - 40;
-        double scale = Math.Min(availableWidth / imageSize.Width, availableHeight / imageSize.Height);
-
-        double w = imageSize.Width * scale;
-        double h = imageSize.Height * scale;
-        double x = 20 + (availableWidth - w) / 2;
-        double y = 20 + (availableHeight - h) / 2;
-
-        return new Rect(x, y, w, h);
-    }
-
-    private void BtnAcceptRefine_Click(object? sender, RoutedEventArgs e) => AcceptRefine();
-    private void BtnRejectRefine_Click(object? sender, RoutedEventArgs e) => RejectRefine();
-
-    private async void AcceptRefine()
-    {
-        if (!isRefining) return;
-        int photoIndex = slides.SelectedIndex;
-
-        string applyingMsg = Application.Current?.FindResource("MsgApplyingRefine")?.ToString() ?? "Applying refinement...";
-        string successMsg = Application.Current?.FindResource("MsgRefineSuccess")?.ToString() ?? "Crop refined successfully.";
-
-        var currentEngine = ScanSessions[currentIndex].Activate();
-        var beforeMat = currentEngine.DetectedPhotos[photoIndex].Clone();
-
-        await ExecuteWithLoadingAsync(applyingMsg, async () =>
-        {
-            ScanSessions[currentIndex].IsModified = true;
-            await Task.Run(() => currentEngine.ApplyCropToPhoto(photoIndex, currentRefineRect));
-            undoHistory.PushReplace(currentIndex, photoIndex, beforeMat, currentEngine.DetectedPhotos[photoIndex]);
-            beforeMat.Dispose();
-            CloseRefineMode();
-            LoadCroppedPhotosToSlider();
-            slides.SelectedIndex = photoIndex;
-        }, successMsg);
-    }
-
-    private void RejectRefine()
-    {
-        if (!isRefining) return;
-        CloseRefineMode();
-        lblStatus.Text = Application.Current?.FindResource("MsgRefineCancelled")?.ToString() ?? "Refinement cancelled.";
-    }
-
-    private void CloseRefineMode()
-    {
-        isRefining = false;
-        pnlRefineOverlay.IsVisible = false;
-        imgRefine.Source = null;
-    }
-
-    private async void BtnResetDefaults_Click(object? sender, RoutedEventArgs e)
-    {
-        if (isLoading) return;
-
-        SettingsManager.Instance.ResetDetectionDefaults();
-        var settings = SettingsManager.Instance.Settings;
-        var defaultOptions = new DetectionOptions
-        {
-            BackgroundTolerance = settings.BackgroundTolerance,
-            MinAreaFactor = settings.MinAreaFactor / 100.0,
-            MaxAreaFactor = settings.MaxAreaFactor / 100.0,
-            CannyLowThreshold = settings.CannyLowThreshold,
-            CannyHighThreshold = settings.CannyLowThreshold * 2.5,
-            AutoOrientPhotos = settings.AutoOrientPhotos,
-            RestoreVintageColors = settings.RestoreVintageColors,
-            RemoveDustAndScratches = settings.RemoveDustAndScratches
-        };
-
-        SyncUiWithScanOptions(defaultOptions);
-
-        if (ScanSessions.Count > 0)
-        {
-            var photo = ScanSessions[currentIndex].Activate();
-            photo.ApplyOptions(defaultOptions);
-
-            string reprocessingMsg = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
-            await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
-            {
-                await Task.Run(() => photo.DetectPhotos());
-                img.Source = MatBitmapConverter.ToAvaloniaBitmap(photo.OriginalWithDetected);
-                LoadCroppedPhotosToSlider();
-                UpdatePhotoCounterLabel();
-                string msgFormat = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
-                lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
-            });
-        }
-    }
-
-    private void TglColorPicker_Click(object? sender, RoutedEventArgs e)
-    {
-        if (pnlOriginal == null || tglColorPicker == null) return;
-        pnlOriginal.Cursor = tglColorPicker.IsChecked == true
-            ? new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Cross)
-            : Avalonia.Input.Cursor.Default;
-    }
-
-    private async void SampleBackgroundColorAtPointer(Point uiPoint)
-    {
-        if (ScanSessions.Count == 0 || tglColorPicker == null || btnResetBackground == null) return;
-        var photo = ScanSessions[currentIndex].Activate();
-        var imageRect = GetImageRectInsideControl();
-        var originalSize = new System.Drawing.Size(photo.Original.Width, photo.Original.Height);
-        var pixel = CoordinateMapper.MapUiPointToImagePixel(uiPoint, imageRect, originalSize);
-
-        pnlOriginal.Cursor = Avalonia.Input.Cursor.Default;
-        tglColorPicker.IsChecked = false;
-
-        string samplingMsg = Application.Current?.FindResource("MsgClickToSample")?.ToString() ?? "Sampling background color...";
-        string completeMsg = Application.Current?.FindResource("MsgBackgroundSampled")?.ToString() ?? "Custom background color applied.";
-
-        await ExecuteWithLoadingAsync(samplingMsg, async () =>
-        {
-            ScanSessions[currentIndex].IsModified = true;
-            await Task.Run(() =>
-            {
-                photo.SetCustomBackgroundFromPixel(pixel.X, pixel.Y);
-                photo.DetectPhotos();
-            });
-            btnResetBackground.IsEnabled = true;
-            await LoadPhotosToGuiAsync();
-        }, completeMsg);
-    }
-
-    private async void BtnResetBackground_Click(object? sender, RoutedEventArgs e)
-    {
-        if (ScanSessions.Count == 0 || btnResetBackground == null) return;
-        var photo = ScanSessions[currentIndex].Activate();
-
-        photo.CustomBackgroundColorHsv = null;
-        ScanSessions[currentIndex].IsModified = true;
-        btnResetBackground.IsEnabled = false;
-
-        string reprocessingMsg = Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing with automatic background...";
-        string completeMsg = Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete.";
-
-        await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
-        {
-            await Task.Run(() => photo.DetectPhotos());
-            await LoadPhotosToGuiAsync();
-        }, completeMsg);
-    }
-
-    private async void MainWindow_Loaded(object? sender, RoutedEventArgs e)
-    {
-        var workDir = SettingsManager.Instance.Settings.WorkDirectory;
-        if (!string.IsNullOrEmpty(workDir) && Directory.Exists(workDir) && ProjectWorkspaceService.HasRecoverableSession(workDir) && ScanSessions.Count == 0)
-        {
-            await ResumeWorkspaceSessionAsync(workDir);
-        }
-
-        _ = RefreshScannersAsync();
-    }
-
-    private async Task ResumeWorkspaceSessionAsync(string workDir)
-    {
-        _workspaceSession = ProjectWorkspaceService.LoadSession(workDir);
-        if (_workspaceSession == null || _workspaceSession.Scans.Count == 0)
-        {
-            _workspaceSession = ProjectWorkspaceService.ReconstructSessionFromRawFiles(workDir);
-        }
-
-        if (_workspaceSession?.Scans.Count > 0)
-        {
-            var rawPaths = _workspaceSession.Scans
-                .Select(s => Path.IsPathRooted(s.RelativePath) ? s.RelativePath : Path.Combine(workDir, s.RelativePath))
-                .Where(File.Exists)
-                .ToList();
-
-            if (rawPaths.Count > 0)
-            {
-                await LoadScansFromPathsAsync(rawPaths);
-                string resumedTemplate = Application.Current?.FindResource("MsgScanSuccess")?.ToString() ?? "Workspace: loaded {0} scans.";
-                lblStatus.Text = string.Format(resumedTemplate, rawPaths.Count);
-            }
-        }
-    }
-
-    private void UpdateWorkspaceUi(string? workDir)
-    {
-        if (!string.IsNullOrEmpty(workDir) && Directory.Exists(workDir))
-        {
-            string cleanDir = Path.TrimEndingDirectorySeparator(workDir);
-            string projectName = Path.GetFileName(cleanDir);
-            if (string.IsNullOrEmpty(projectName))
-            {
-                projectName = cleanDir;
-            }
-
-            string tipTemplate = Application.Current?.FindResource("TipActiveProject")?.ToString() ?? "Active Project: {0}\nPath: {1}\n\nClick to switch project or work directory.";
-            string tooltip = string.Format(tipTemplate, projectName, cleanDir);
-
-            if (txtWorkDirBtn != null)
-            {
-                txtWorkDirBtn.Text = projectName;
-            }
-            if (btnWorkDir != null)
-            {
-                btnWorkDir.Background = Brush.Parse("#264653");
-                ToolTip.SetTip(btnWorkDir, tooltip);
-            }
-            if (lblCurrentProject != null)
-            {
-                lblCurrentProject.Text = projectName;
-                ToolTip.SetTip(lblCurrentProject, tooltip);
-            }
-
-            Title = $"PhotoCropper - [{projectName}]";
-        }
-        else
-        {
-            string defaultBtn = Application.Current?.FindResource("BtnWorkDir")?.ToString() ?? "Folder";
-            string noProject = Application.Current?.FindResource("LblNoProject")?.ToString() ?? "No Project";
-            string defaultTip = Application.Current?.FindResource("TipWorkDir")?.ToString() ?? "Select a work directory for automatic raw scan staging and session recovery";
-
-            if (txtWorkDirBtn != null)
-            {
-                txtWorkDirBtn.Text = defaultBtn;
-            }
-            if (btnWorkDir != null)
-            {
-                btnWorkDir.Background = Brush.Parse("#3a3a3a");
-                ToolTip.SetTip(btnWorkDir, defaultTip);
-            }
-            if (lblCurrentProject != null)
-            {
-                lblCurrentProject.Text = noProject;
-                ToolTip.SetTip(lblCurrentProject, defaultTip);
-            }
-
-            Title = "PhotoCropper - Intelligent Photo Extractor";
-        }
-    }
-
-    private void LblCurrentProject_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
-    {
-        BtnWorkDir_Click(sender, e);
-    }
-
-    private void ResetScannerService()
-    {
-        try
-        {
-            _scannerService.Dispose();
-        }
-        catch
-        {
-        }
-        _scannerService = new Naps2ScannerService();
-    }
-
-    private void ClearActiveScansFromGui()
-    {
-        undoHistory.Clear();
-        foreach (var session in ScanSessions)
-        {
-            session.Dispose();
-        }
-        ScanSessions.Clear();
-        currentIndex = 0;
-        if (img != null) img.Source = null;
-        slides?.Items.Clear();
-        lstGallery?.Items.Clear();
-        if (txtFileCounter != null)
-        {
-            txtFileCounter.Text = Application.Current?.FindResource("TxtNoFiles")?.ToString() ?? "No files loaded";
-        }
-        if (lblPhotoInfo != null) lblPhotoInfo.Text = "";
-    }
-
-    private async Task SwitchToProjectAsync(string newWorkDir)
-    {
-        var settings = SettingsManager.Instance.Settings;
-        string? oldWorkDir = settings.WorkDirectory;
-
-        // 1. Save existing session before switching
-        if (!string.IsNullOrEmpty(oldWorkDir) && Directory.Exists(oldWorkDir) && _workspaceSession != null)
-        {
-            ProjectWorkspaceService.SaveSession(oldWorkDir, _workspaceSession);
-        }
-
-        // 2. Clear current scans from GUI so previous photos do not linger
-        ClearActiveScansFromGui();
-
-        // 3. Initialize workspace for new folder
-        ProjectWorkspaceService.InitializeWorkspace(newWorkDir);
-        settings.WorkDirectory = newWorkDir;
-        SettingsManager.Instance.Save();
-        UpdateWorkspaceUi(newWorkDir);
-
-        // 4. If new folder has an existing session, load it; otherwise show clean project ready
-        if (ProjectWorkspaceService.HasRecoverableSession(newWorkDir))
-        {
-            await ResumeWorkspaceSessionAsync(newWorkDir);
-        }
-        else
-        {
-            _workspaceSession = new WorkspaceSessionState();
-            string newProjectReady = Application.Current?.FindResource("MsgNewProjectReady")?.ToString() ?? "Project '{0}' ready. Click Scan or Open Files to begin.";
-            string cleanName = Path.GetFileName(Path.TrimEndingDirectorySeparator(newWorkDir));
-            lblStatus.Text = string.Format(newProjectReady, cleanName);
-        }
-    }
-
-    private async void BtnNewProject_Click(object? sender, RoutedEventArgs e)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider == null) return;
-
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = Application.Current?.FindResource("BtnNewProject")?.ToString() ?? "Select Folder for New Batch",
-            AllowMultiple = false
-        });
-
-        if (folders.Count > 0)
-        {
-            string chosenDir = folders[0].Path.LocalPath;
-            await SwitchToProjectAsync(chosenDir);
-        }
-    }
-
-    private async void BtnWorkDir_Click(object? sender, RoutedEventArgs e)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider == null) return;
-
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = Application.Current?.FindResource("BtnWorkDir")?.ToString() ?? "Select Work Directory",
-            AllowMultiple = false
-        });
-
-        if (folders.Count > 0)
-        {
-            string chosenDir = folders[0].Path.LocalPath;
-            await SwitchToProjectAsync(chosenDir);
-        }
-    }
-
-    private async void BtnScan_Click(object? sender, RoutedEventArgs e)
-    {
-        if (isLoading) return;
-
-        // 1. Ensure Work Directory
-        var settings = SettingsManager.Instance.Settings;
-        string? workDir = settings.WorkDirectory;
-        if (string.IsNullOrEmpty(workDir) || !Directory.Exists(workDir))
-        {
-            var topLevel = TopLevel.GetTopLevel(this);
-            if (topLevel?.StorageProvider != null)
-            {
-                var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-                {
-                    Title = Application.Current?.FindResource("BtnWorkDir")?.ToString() ?? "Select Work Directory for Raw Scans",
-                    AllowMultiple = false
-                });
-
-                if (folders.Count > 0)
-                {
-                    workDir = folders[0].Path.LocalPath;
-                    settings.WorkDirectory = workDir;
-                    SettingsManager.Instance.Save();
-                    UpdateWorkspaceUi(workDir);
-                }
-            }
-
-            if (string.IsNullOrEmpty(workDir))
-            {
-                string picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-                if (string.IsNullOrEmpty(picturesDir)) picturesDir = Path.GetTempPath();
-                workDir = Path.Combine(picturesDir, "PhotoCropper_Workspace");
-                settings.WorkDirectory = workDir;
-                SettingsManager.Instance.Save();
-                UpdateWorkspaceUi(workDir);
-            }
-        }
-
-        ProjectWorkspaceService.InitializeWorkspace(workDir);
-
-        // 2. Discover scanner if needed
-        if (_availableScanners.Count == 0)
-        {
-            await RefreshScannersAsync();
-        }
-
-        // 3. If no scanner has been configured yet or no scanner is detected, show configuration modal
-        var selectedDevice = _availableScanners.FirstOrDefault(s => s.Id == settings.SelectedScannerId);
-        if (selectedDevice == null || string.IsNullOrEmpty(settings.SelectedScannerId) || _availableScanners.Count == 0)
-        {
-            ShowScannerConfig();
-            return;
-        }
-
-        int dpi = settings.ScannerDpi > 0 ? settings.ScannerDpi : 300;
-        await ExecuteScanAsync(workDir, selectedDevice, dpi);
-    }
-
-    private async void BtnScannerConfig_Click(object? sender, RoutedEventArgs e)
-    {
-        if (_availableScanners.Count == 0)
-        {
-            await RefreshScannersAsync();
-        }
-        ShowScannerConfig();
-    }
-
-    private void ShowScannerConfig()
-    {
-        UpdateScannerConfigUi();
-        pnlScannerOverlay.IsVisible = true;
-    }
-
-    private void UpdateScannerConfigUi()
-    {
-        var settings = SettingsManager.Instance.Settings;
-        if (cbScanner != null)
-        {
-            cbScanner.ItemsSource = _availableScanners.Select(d => d.ToString()).ToList();
-
-            int selectedIdx = _availableScanners.FindIndex(d => d.Id == settings.SelectedScannerId);
-            if (selectedIdx >= 0)
-            {
-                cbScanner.SelectedIndex = selectedIdx;
-            }
-            else if (_availableScanners.Count > 0)
-            {
-                cbScanner.SelectedIndex = 0;
-            }
-        }
-
-        if (cbScannerDpi != null)
-        {
-            cbScannerDpi.SelectedIndex = settings.ScannerDpi switch
-            {
-                150 => 0,
-                600 => 2,
-                _ => 1
-            };
-        }
-
-        if (chkNetworkScanners != null)
-        {
-            chkNetworkScanners.IsChecked = settings.IncludeNetworkScanners;
-        }
-
-        if (txtScannerStatus != null)
-        {
-            if (_availableScanners.Count == 0)
-            {
-                txtScannerStatus.Text = Application.Current?.FindResource("MsgNoScannerFound")?.ToString() ?? "No scanner detected. Click 🔄 to refresh.";
-                txtScannerStatus.Foreground = Brush.Parse("#ffaa44");
-            }
-            else
-            {
-                txtScannerStatus.Text = $"{_availableScanners.Count} scanner(s) found.";
-                txtScannerStatus.Foreground = Brush.Parse("#44cc66");
-            }
-        }
-    }
-
-    private void SaveCurrentScannerConfig()
-    {
-        var settings = SettingsManager.Instance.Settings;
-        if (cbScanner != null && cbScanner.SelectedIndex >= 0 && cbScanner.SelectedIndex < _availableScanners.Count)
-        {
-            settings.SelectedScannerId = _availableScanners[cbScanner.SelectedIndex].Id;
-        }
-
-        if (cbScannerDpi?.SelectedItem is ComboBoxItem item)
-        {
-            string? content = item.Content?.ToString();
-            int dpi = 300;
-            if (content != null)
-            {
-                if (content.StartsWith("150", StringComparison.Ordinal)) dpi = 150;
-                else if (content.StartsWith("600", StringComparison.Ordinal)) dpi = 600;
-                else if (int.TryParse(content, out int parsed)) dpi = parsed;
-            }
-            settings.ScannerDpi = dpi;
-        }
-
-        if (chkNetworkScanners != null)
-        {
-            settings.IncludeNetworkScanners = chkNetworkScanners.IsChecked ?? false;
-        }
-
-        SettingsManager.Instance.Save();
-    }
-
-    private void BtnCancelScannerConfig_Click(object? sender, RoutedEventArgs e)
-    {
-        pnlScannerOverlay.IsVisible = false;
-    }
-
-    private void BtnSaveScannerConfig_Click(object? sender, RoutedEventArgs e)
-    {
-        SaveCurrentScannerConfig();
-        pnlScannerOverlay.IsVisible = false;
-    }
-
-    private void BtnSaveAndScan_Click(object? sender, RoutedEventArgs e)
-    {
-        SaveCurrentScannerConfig();
-        pnlScannerOverlay.IsVisible = false;
-
-        // Trigger scan with the saved configuration
-        BtnScan_Click(sender, e);
-    }
-
-    private async Task ExecuteScanAsync(string workDir, ScannerDeviceInfo selectedDevice, int dpi)
-    {
-        var scannerOptions = new ScannerOptions
-        {
-            Device = selectedDevice,
-            Dpi = dpi,
-            ColorMode = ScannerColorMode.Color
-        };
-
-        string scanningMsg = string.Format(
-            Application.Current?.FindResource("MsgScanning")?.ToString() ?? "Scanning image from {0}...",
-            selectedDevice.Name);
-
-        var stagedPaths = new List<string>();
-        try
-        {
-            btnScan.IsEnabled = false;
-            await ExecuteWithLoadingAsync(scanningMsg, async (token) =>
-            {
-                var scannedMats = await _scannerService.ScanAsync(scannerOptions, token).ConfigureAwait(false);
-                if (scannedMats.Count == 0) return;
-
-                foreach (var mat in scannedMats)
-                {
-                    using (mat)
-                    {
-                        string stagedPath = ProjectWorkspaceService.StageRawScanFromMat(workDir, mat);
-                        stagedPaths.Add(stagedPath);
-
-                        string relativePath = Path.GetRelativePath(workDir, stagedPath);
-                        _workspaceSession ??= new WorkspaceSessionState();
-                        _workspaceSession.Scans.Add(new WorkspaceScanEntry
-                        {
-                            RelativePath = relativePath,
-                            OriginalFileName = Path.GetFileName(stagedPath),
-                            StagedAtUtc = DateTime.UtcNow
-                        });
-                    }
-                }
-
-                if (_workspaceSession != null)
-                {
-                    ProjectWorkspaceService.SaveSession(workDir, _workspaceSession);
-                }
-            }, null, canCancel: true, timeout: TimeSpan.FromSeconds(45));
-        }
-        catch (OperationCanceledException)
-        {
-            ResetScannerService();
-            string cancelledMsg = Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Scanning was cancelled or timed out.";
-            lblStatus.Text = cancelledMsg;
-            return;
-        }
-        catch (ScannerNotFoundException ex)
-        {
-            ResetScannerService();
-            string notFoundTitle = Application.Current?.FindResource("TitleScannerNotFound")?.ToString() ?? "Scanner Not Found";
-            string notFoundTemplate = Application.Current?.FindResource("MsgScannerNotFoundDetails")?.ToString() ??
-                "{0}\n\n• Verify your scanner is powered on and connected.\n• Make sure no other application is using the scanner.\n• Reconnect the scanner and click 'Refresh Scanners'.";
-            string notFoundDetails = string.Format(notFoundTemplate, ex.Message);
-
-            lblStatus.Text = ex.Message;
-            ShowScannerError(notFoundTitle, notFoundDetails);
-            return;
-        }
-        catch (Exception ex)
-        {
-            ResetScannerService();
-            string failedTemplate = Application.Current?.FindResource("MsgScanFailed")?.ToString() ?? "Scanning failed: {0}";
-            string errorTitle = Application.Current?.FindResource("TitleScannerError")?.ToString() ?? "Scanner Communication Error";
-            string errorTemplate = Application.Current?.FindResource("MsgScannerErrorDetails")?.ToString() ??
-                "Failed to communicate with scanner '{0}':\n\n{1}\n\nTroubleshooting:\n• Check scanner power and USB/network cables.\n• Verify scanner driver status in your operating system.\n• Restart the scanner and click 'Refresh Scanners'.";
-            string errorDetails = string.Format(errorTemplate, selectedDevice.Name, ex.Message);
-
-            lblStatus.Text = string.Format(failedTemplate, ex.Message);
-            ShowScannerError(errorTitle, errorDetails);
-            return;
-        }
-        finally
-        {
-            btnScan.IsEnabled = true;
-        }
-
-        if (stagedPaths.Count > 0)
-        {
-            var options = GetDetectionOptionsFromUi();
-            foreach (var path in stagedPaths)
-            {
-                ScanSessions.Add(new ScanSessionItem(path, options, isSaved: false, isModified: true));
-            }
-
-            currentIndex = ScanSessions.Count - stagedPaths.Count;
-            await LoadPhotosToGuiAsync();
-        }
-    }
-
-    private async Task RefreshScannersAsync()
-    {
-        try
-        {
-            var settings = SettingsManager.Instance.Settings;
-            bool includeNetwork = settings.IncludeNetworkScanners;
-            var devices = await _scannerService.GetDevicesAsync(includeNetwork).ConfigureAwait(false);
-            _availableScanners.Clear();
-            _availableScanners.AddRange(devices);
-
-            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (cbScanner != null)
-                {
-                    cbScanner.ItemsSource = _availableScanners.Select(d => d.ToString()).ToList();
-
-                    int selectedIdx = _availableScanners.FindIndex(d => d.Id == settings.SelectedScannerId);
-                    if (selectedIdx >= 0)
-                    {
-                        cbScanner.SelectedIndex = selectedIdx;
-                    }
-                    else if (_availableScanners.Count > 0)
-                    {
-                        cbScanner.SelectedIndex = 0;
-                    }
-                }
-            });
-        }
-        catch
-        {
-            // Scanner enumeration failed or unsupported platform
-        }
-    }
-
-    private async void ChkNetworkScanners_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (chkNetworkScanners != null)
-        {
-            SettingsManager.Instance.Settings.IncludeNetworkScanners = chkNetworkScanners.IsChecked ?? false;
-            SettingsManager.Instance.Save();
-            await RefreshScannersAsync();
-            UpdateScannerConfigUi();
-        }
-    }
-
-    private void CbScanner_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (cbScanner.SelectedIndex >= 0 && cbScanner.SelectedIndex < _availableScanners.Count)
-        {
-            var selected = _availableScanners[cbScanner.SelectedIndex];
-            SettingsManager.Instance.Settings.SelectedScannerId = selected.Id;
-            SettingsManager.Instance.Save();
-        }
-    }
-
-    private void CbScannerDpi_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (cbScannerDpi?.SelectedItem is ComboBoxItem item)
-        {
-            string? content = item.Content?.ToString();
-            int dpi = 300;
-            if (content != null)
-            {
-                if (content.StartsWith("150", StringComparison.Ordinal)) dpi = 150;
-                else if (content.StartsWith("600", StringComparison.Ordinal)) dpi = 600;
-                else if (int.TryParse(content, out int parsed)) dpi = parsed;
-            }
-            SettingsManager.Instance.Settings.ScannerDpi = dpi;
-            SettingsManager.Instance.Save();
-        }
-    }
-
-    private void ShowScannerError(string title, string message)
-    {
-        txtErrorTitle.Text = title;
-        txtErrorMessage.Text = message;
-        pnlErrorOverlay.IsVisible = true;
-    }
-
-    private void BtnCloseError_Click(object? sender, RoutedEventArgs e)
-    {
-        pnlErrorOverlay.IsVisible = false;
-    }
-
-    private async void BtnErrorRefresh_Click(object? sender, RoutedEventArgs e)
-    {
-        pnlErrorOverlay.IsVisible = false;
-        await RefreshScannersAsync();
-        UpdateScannerConfigUi();
-    }
-
-    private async void BtnRefreshScanners_Click(object? sender, RoutedEventArgs e)
-    {
-        if (txtScannerStatus != null)
-        {
-            txtScannerStatus.Text = Application.Current?.FindResource("TxtScanningSearching")?.ToString() ?? "Searching for connected scanners...";
-            txtScannerStatus.Foreground = Brush.Parse("#3399ff");
-        }
-        await RefreshScannersAsync();
-        UpdateScannerConfigUi();
     }
 
     protected override void OnClosed(EventArgs e)
