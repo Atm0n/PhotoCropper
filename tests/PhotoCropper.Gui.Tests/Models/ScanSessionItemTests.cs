@@ -2,7 +2,7 @@ using PhotoCropper.Core.Models;
 using PhotoCropper.Gui.Models;
 using PhotoCropper.TestHelpers;
 
-namespace PhotoCropper.Gui.Tests.Gui;
+namespace PhotoCropper.Gui.Tests.Models;
 
 public sealed class ScanSessionItemTests : IDisposable
 {

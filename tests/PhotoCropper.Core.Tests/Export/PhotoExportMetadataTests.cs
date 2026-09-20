@@ -1,6 +1,4 @@
 using PhotoCropper.Core.Models;
-using Shouldly;
-using Xunit;
 
 namespace PhotoCropper.Core.Tests.Export;
 

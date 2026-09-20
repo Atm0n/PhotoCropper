@@ -2,7 +2,6 @@ using PhotoCropper.Core.Models;
 using PhotoCropper.Gui.Models;
 using PhotoCropper.Gui.Services;
 using PhotoCropper.TestHelpers;
-using Shouldly;
 using System.Diagnostics.CodeAnalysis;
 
 namespace PhotoCropper.Gui.Tests.Services;

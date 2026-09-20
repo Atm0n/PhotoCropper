@@ -1,6 +1,6 @@
+using PhotoCropper.Core.Models;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using PhotoCropper.Core.Models;
 
 namespace PhotoCropper.Core.Export;
 

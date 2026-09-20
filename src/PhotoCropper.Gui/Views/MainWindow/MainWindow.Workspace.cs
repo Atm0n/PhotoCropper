@@ -4,7 +4,6 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using PhotoCropper.Core.Workspace;
-using PhotoCropper.Gui.Models;
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;

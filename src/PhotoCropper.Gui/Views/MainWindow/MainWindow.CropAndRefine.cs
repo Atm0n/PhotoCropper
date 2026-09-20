@@ -5,7 +5,6 @@ using Avalonia.Interactivity;
 using Emgu.CV;
 using Emgu.CV.Structure;
 using PhotoCropper.Core.Models;
-using PhotoCropper.Gui.Models;
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;

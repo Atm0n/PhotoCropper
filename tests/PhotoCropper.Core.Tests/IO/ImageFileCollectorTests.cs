@@ -1,5 +1,4 @@
 using PhotoCropper.Core.IO;
-using Shouldly;
 
 namespace PhotoCropper.Core.Tests.IO;
 

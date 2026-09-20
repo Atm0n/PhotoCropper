@@ -1,10 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Presenters;
-using Shouldly;
-using Xunit;
 
-namespace PhotoCropper.Gui.Tests.Gui;
+namespace PhotoCropper.Gui.Tests.Views;
 
 public sealed class MainWindowKeyboardTests
 {

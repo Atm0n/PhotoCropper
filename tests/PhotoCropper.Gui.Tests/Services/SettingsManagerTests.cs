@@ -1,7 +1,7 @@
 using PhotoCropper.Gui.Services;
 using PhotoCropper.TestHelpers;
 
-namespace PhotoCropper.Gui.Tests.Gui;
+namespace PhotoCropper.Gui.Tests.Services;
 
 public sealed class SettingsManagerTests : IDisposable
 {
@@ -93,7 +93,7 @@ public sealed class SettingsManagerTests : IDisposable
     [Fact]
     public void DetectionOptions_GetBoundingBoxColorBgr_ShouldReturnCorrectBgrScalars()
     {
-        var options = new PhotoCropper.Core.Models.DetectionOptions { BoundingBoxColor = "Red" };
+        var options = new Core.Models.DetectionOptions { BoundingBoxColor = "Red" };
         options.GetBoundingBoxColorBgr().V2.ShouldBe(255); // Red channel in BGR
 
         options.BoundingBoxColor = "Amber";

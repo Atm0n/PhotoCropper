@@ -5,7 +5,6 @@ using Avalonia.Platform.Storage;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
-using PhotoCropper.Gui.Models;
 using PhotoCropper.Gui.Services;
 using System.Globalization;
 

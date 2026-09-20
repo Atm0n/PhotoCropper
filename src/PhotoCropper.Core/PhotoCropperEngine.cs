@@ -49,20 +49,18 @@ public class PhotoCropperEngine : IDisposable
         }
 
         OriginalFilePath = originalFilePath;
-        using (var stream = new FileStream(originalFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
-        using (var ms = new MemoryStream((int)stream.Length))
+        using var stream = new FileStream(originalFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var ms = new MemoryStream((int)stream.Length);
+        stream.CopyTo(ms);
+        byte[] fileBytes = ms.ToArray();
+        using Mat rawMat = new();
+        CvInvoke.Imdecode(fileBytes, ImreadModes.AnyColor, rawMat);
+        if (rawMat.IsEmpty || rawMat.Width <= 0 || rawMat.Height <= 0)
         {
-            stream.CopyTo(ms);
-            byte[] fileBytes = ms.ToArray();
-            using Mat rawMat = new();
-            CvInvoke.Imdecode(fileBytes, ImreadModes.AnyColor, rawMat);
-            if (rawMat.IsEmpty || rawMat.Width <= 0 || rawMat.Height <= 0)
-            {
-                throw new InvalidOperationException($"Failed to decode image from file '{originalFilePath}'. The image format may be invalid or corrupt.");
-            }
-            Original = rawMat.Clone();
-            OriginalWithDetected = Original.Clone();
+            throw new InvalidOperationException($"Failed to decode image from file '{originalFilePath}'. The image format may be invalid or corrupt.");
         }
+        Original = rawMat.Clone();
+        OriginalWithDetected = Original.Clone();
     }
 
     public void ApplyOptions(DetectionOptions options)
@@ -253,7 +251,7 @@ public class PhotoCropperEngine : IDisposable
                 foreach (var cand in passCandidates)
                 {
                     PointF fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
-                    SizeF fullSize = new SizeF((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
+                    SizeF fullSize = new((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
                     RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
 
                     PointF[] fullVerts = fullRr.GetVertices();
