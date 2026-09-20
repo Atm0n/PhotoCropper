@@ -9,9 +9,9 @@ namespace PhotoCropper.Core.Detection;
 
 public static class AutoTuneService
 {
-    private static readonly double[] SweepTolerances = [15, 25, 35, 45, 55, 65, 75, 10, 85];
+    private static readonly double[] SweepTolerances = [5, 10, 16, 22, 30, 40, 50];
     private static readonly double[] SweepCannyLows = [10, 20, 30, 40];
-    private static readonly double[] SweepMinAreaFactors = [0.015, 0.03, 0.06, 0.12];
+    private static readonly double[] SweepMinAreaFactors = [0.05, 0.08, 0.14, 0.22];
 
     public static AutoTuneResult Tune(Mat source, DetectionOptions currentOptions, int minExpected = 1, int maxExpected = int.MaxValue)
     {
@@ -70,17 +70,14 @@ public static class AutoTuneService
             }
 
             using Mat foreground = new();
-            bool earlyExit = false;
 
             foreach (double cannyLow in SweepCannyLows)
             {
-                if (earlyExit) break;
                 Mat edgeMap = edgeMapDict[cannyLow];
                 double cannyHigh = cannyLow * 2.5;
 
                 foreach (double tol in SweepTolerances)
                 {
-                    if (earlyExit) break;
                     ForegroundMaskGenerator.PopulateForegroundMask(
                         detMat,
                         foreground,
@@ -118,14 +115,6 @@ public static class AutoTuneService
                                 CannyHighThreshold = cannyHigh,
                                 MinAreaFactor = minArea
                             };
-
-                            // Early Exit: if within expected photo count with clean contours, stop searching immediately
-                            if (accepted.Count >= minExpected && accepted.Count <= maxExpected &&
-                                accepted.All(c => c.Rectangularity >= 0.80 && c.Convexity >= 0.85))
-                            {
-                                earlyExit = true;
-                                break;
-                            }
                         }
                     }
                 }
@@ -175,18 +164,10 @@ public static class AutoTuneService
                                 CannyHighThreshold = cannyHigh,
                                 MinAreaFactor = minArea
                             };
-
-                            if (accepted.Count >= minExpected && accepted.Count <= maxExpected &&
-                                accepted.All(c => c.Rectangularity >= 0.80 && c.Convexity >= 0.85))
-                            {
-                                goto SearchComplete;
-                            }
                         }
                     }
                 }
             }
-
-            SearchComplete:;
         }
         finally
         {
@@ -315,6 +296,14 @@ public static class AutoTuneService
         if (accepted.Count >= 1 && accepted.Count <= 12)
         {
             scoreSum += accepted.Count * 1000.0;
+        }
+
+        // Reward configurations that capture more complete photo area
+        // (strongly avoids partially cut photos in favor of full-sized extractions)
+        double coverageRatio = coveredArea / totalArea;
+        if (coverageRatio <= 0.80)
+        {
+            scoreSum += coverageRatio * 25000.0;
         }
 
         // Bonus if candidate count falls within the expected range
