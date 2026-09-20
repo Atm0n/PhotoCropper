@@ -139,4 +139,17 @@
 	<sys:String x:Key="BtnNewProject">Nou Lot</sys:String>
 	<sys:String x:Key="TipNewProject">Començar un nou projecte / lot de fotos en una carpeta separada</sys:String>
 	<sys:String x:Key="MsgNewProjectReady">Projecte '{0}' a punt. Feu clic a Escanejar o Obrir Fitxers per començar.</sys:String>
+	<sys:String x:Key="HeaderAdvDetection">Paràmetres de Detecció</sys:String>
+	<sys:String x:Key="HeaderAdvExport">Exportació i Format</sys:String>
+	<sys:String x:Key="HeaderAdvScanner">Hardware d'Escàner</sys:String>
+	<sys:String x:Key="LblScanner">Escàner:</sys:String>
+	<sys:String x:Key="LblDpi">PPP:</sys:String>
+	<sys:String x:Key="TipScannerConfig">Configurar escàner, resolució (PPP) i opcions de xarxa</sys:String>
+	<sys:String x:Key="TitleScannerConfig">Configuració de l'Escàner</sys:String>
+	<sys:String x:Key="DescScannerConfig">Seleccioneu el vostre escàner i la resolució de captura. La configuració es desarà automàticament.</sys:String>
+	<sys:String x:Key="BtnSaveAndScan">Desar i Escanejar</sys:String>
+	<sys:String x:Key="BtnSaveSettings">Desar</sys:String>
+	<sys:String x:Key="LblScannerResolution">Resolució (PPP):</sys:String>
+	<sys:String x:Key="LblScannerDevice">Dispositiu d'Escàner:</sys:String>
+	<sys:String x:Key="TxtScanningSearching">Cercant escàners connectats...</sys:String>
 </ResourceDictionary>

@@ -139,4 +139,17 @@
 	<sys:String x:Key="BtnNewProject">Nuevo Lote</sys:String>
 	<sys:String x:Key="TipNewProject">Iniciar un nuevo proyecto / lote de fotos en una carpeta separada</sys:String>
 	<sys:String x:Key="MsgNewProjectReady">Proyecto '{0}' listo. Haga clic en Escanear o Abrir Archivos para comenzar.</sys:String>
+	<sys:String x:Key="HeaderAdvDetection">Parámetros de Detección</sys:String>
+	<sys:String x:Key="HeaderAdvExport">Exportación y Formato</sys:String>
+	<sys:String x:Key="HeaderAdvScanner">Hardware de Escáner</sys:String>
+	<sys:String x:Key="LblScanner">Escáner:</sys:String>
+	<sys:String x:Key="LblDpi">PPP:</sys:String>
+	<sys:String x:Key="TipScannerConfig">Configurar escáner, resolución (PPP) y opciones de red</sys:String>
+	<sys:String x:Key="TitleScannerConfig">Configuración del Escáner</sys:String>
+	<sys:String x:Key="DescScannerConfig">Seleccione su dispositivo de escáner y la resolución de captura. La configuración se guardará automáticamente.</sys:String>
+	<sys:String x:Key="BtnSaveAndScan">Guardar y Escanear</sys:String>
+	<sys:String x:Key="BtnSaveSettings">Guardar</sys:String>
+	<sys:String x:Key="LblScannerResolution">Resolución (PPP):</sys:String>
+	<sys:String x:Key="LblScannerDevice">Dispositivo de Escáner:</sys:String>
+	<sys:String x:Key="TxtScanningSearching">Buscando escáneres conectados...</sys:String>
 </ResourceDictionary>

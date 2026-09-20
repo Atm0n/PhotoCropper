@@ -139,4 +139,17 @@
 	<sys:String x:Key="BtnNewProject">New Batch</sys:String>
 	<sys:String x:Key="TipNewProject">Start a new project / photo batch in a separate folder</sys:String>
 	<sys:String x:Key="MsgNewProjectReady">Project '{0}' ready. Click Scan or Open Files to begin.</sys:String>
+	<sys:String x:Key="HeaderAdvDetection">Detection Parameters</sys:String>
+	<sys:String x:Key="HeaderAdvExport">Export &amp; Output</sys:String>
+	<sys:String x:Key="HeaderAdvScanner">Scanner Hardware</sys:String>
+	<sys:String x:Key="LblScanner">Scanner:</sys:String>
+	<sys:String x:Key="LblDpi">DPI:</sys:String>
+	<sys:String x:Key="TipScannerConfig">Configure scanner device, resolution (DPI), and network settings</sys:String>
+	<sys:String x:Key="TitleScannerConfig">Scanner Configuration</sys:String>
+	<sys:String x:Key="DescScannerConfig">Select your scanner hardware and acquisition resolution. Your settings are remembered automatically.</sys:String>
+	<sys:String x:Key="BtnSaveAndScan">Save &amp; Scan</sys:String>
+	<sys:String x:Key="BtnSaveSettings">Save</sys:String>
+	<sys:String x:Key="LblScannerResolution">Resolution (DPI):</sys:String>
+	<sys:String x:Key="LblScannerDevice">Scanner Device:</sys:String>
+	<sys:String x:Key="TxtScanningSearching">Searching for connected scanners...</sys:String>
 </ResourceDictionary>

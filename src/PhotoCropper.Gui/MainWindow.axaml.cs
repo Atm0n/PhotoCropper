@@ -958,6 +958,13 @@ internal sealed partial class MainWindow : Window
             }
         }
 
+        if (pnlScannerOverlay.IsVisible && e.Key == Avalonia.Input.Key.Escape)
+        {
+            pnlScannerOverlay.IsVisible = false;
+            e.Handled = true;
+            return;
+        }
+
         if (pnlErrorOverlay.IsVisible && e.Key == Avalonia.Input.Key.Escape)
         {
             pnlErrorOverlay.IsVisible = false;
@@ -1752,22 +1759,132 @@ internal sealed partial class MainWindow : Window
             await RefreshScannersAsync();
         }
 
-        if (_availableScanners.Count == 0)
+        // 3. If no scanner has been configured yet or no scanner is detected, show configuration modal
+        var selectedDevice = _availableScanners.FirstOrDefault(s => s.Id == settings.SelectedScannerId);
+        if (selectedDevice == null || string.IsNullOrEmpty(settings.SelectedScannerId) || _availableScanners.Count == 0)
         {
-            string noScannerTitle = Application.Current?.FindResource("TitleNoScanner")?.ToString() ?? "No Scanner Detected";
-            string noScannerMsg = Application.Current?.FindResource("MsgNoScannerDetails")?.ToString() ??
-                "No scanner was detected on your system.\n\n• Check that your scanner is plugged in and powered on.\n• Ensure USB cable or Wi-Fi network connection is stable.\n• Make sure drivers (WIA, TWAIN, or SANE) are installed.\n• Click 'Refresh Scanners' to detect connected hardware.";
-
-            lblStatus.Text = Application.Current?.FindResource("MsgNoScannerFound")?.ToString() ?? "No scanner detected.";
-            ShowScannerError(noScannerTitle, noScannerMsg);
+            ShowScannerConfig();
             return;
         }
 
-        var selectedDevice = _availableScanners.FirstOrDefault(s => s.Id == settings.SelectedScannerId)
-                             ?? _availableScanners[0];
-
         int dpi = settings.ScannerDpi > 0 ? settings.ScannerDpi : 300;
+        await ExecuteScanAsync(workDir, selectedDevice, dpi);
+    }
 
+    private async void BtnScannerConfig_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_availableScanners.Count == 0)
+        {
+            await RefreshScannersAsync();
+        }
+        ShowScannerConfig();
+    }
+
+    private void ShowScannerConfig()
+    {
+        UpdateScannerConfigUi();
+        pnlScannerOverlay.IsVisible = true;
+    }
+
+    private void UpdateScannerConfigUi()
+    {
+        var settings = SettingsManager.Instance.Settings;
+        if (cbScanner != null)
+        {
+            cbScanner.ItemsSource = _availableScanners.Select(d => d.ToString()).ToList();
+
+            int selectedIdx = _availableScanners.FindIndex(d => d.Id == settings.SelectedScannerId);
+            if (selectedIdx >= 0)
+            {
+                cbScanner.SelectedIndex = selectedIdx;
+            }
+            else if (_availableScanners.Count > 0)
+            {
+                cbScanner.SelectedIndex = 0;
+            }
+        }
+
+        if (cbScannerDpi != null)
+        {
+            cbScannerDpi.SelectedIndex = settings.ScannerDpi switch
+            {
+                150 => 0,
+                600 => 2,
+                _ => 1
+            };
+        }
+
+        if (chkNetworkScanners != null)
+        {
+            chkNetworkScanners.IsChecked = settings.IncludeNetworkScanners;
+        }
+
+        if (txtScannerStatus != null)
+        {
+            if (_availableScanners.Count == 0)
+            {
+                txtScannerStatus.Text = Application.Current?.FindResource("MsgNoScannerFound")?.ToString() ?? "No scanner detected. Click 🔄 to refresh.";
+                txtScannerStatus.Foreground = Brush.Parse("#ffaa44");
+            }
+            else
+            {
+                txtScannerStatus.Text = $"{_availableScanners.Count} scanner(s) found.";
+                txtScannerStatus.Foreground = Brush.Parse("#44cc66");
+            }
+        }
+    }
+
+    private void SaveCurrentScannerConfig()
+    {
+        var settings = SettingsManager.Instance.Settings;
+        if (cbScanner != null && cbScanner.SelectedIndex >= 0 && cbScanner.SelectedIndex < _availableScanners.Count)
+        {
+            settings.SelectedScannerId = _availableScanners[cbScanner.SelectedIndex].Id;
+        }
+
+        if (cbScannerDpi?.SelectedItem is ComboBoxItem item)
+        {
+            string? content = item.Content?.ToString();
+            int dpi = 300;
+            if (content != null)
+            {
+                if (content.StartsWith("150", StringComparison.Ordinal)) dpi = 150;
+                else if (content.StartsWith("600", StringComparison.Ordinal)) dpi = 600;
+                else if (int.TryParse(content, out int parsed)) dpi = parsed;
+            }
+            settings.ScannerDpi = dpi;
+        }
+
+        if (chkNetworkScanners != null)
+        {
+            settings.IncludeNetworkScanners = chkNetworkScanners.IsChecked ?? false;
+        }
+
+        SettingsManager.Instance.Save();
+    }
+
+    private void BtnCancelScannerConfig_Click(object? sender, RoutedEventArgs e)
+    {
+        pnlScannerOverlay.IsVisible = false;
+    }
+
+    private void BtnSaveScannerConfig_Click(object? sender, RoutedEventArgs e)
+    {
+        SaveCurrentScannerConfig();
+        pnlScannerOverlay.IsVisible = false;
+    }
+
+    private void BtnSaveAndScan_Click(object? sender, RoutedEventArgs e)
+    {
+        SaveCurrentScannerConfig();
+        pnlScannerOverlay.IsVisible = false;
+
+        // Trigger scan with the saved configuration
+        BtnScan_Click(sender, e);
+    }
+
+    private async Task ExecuteScanAsync(string workDir, ScannerDeviceInfo selectedDevice, int dpi)
+    {
         var scannerOptions = new ScannerOptions
         {
             Device = selectedDevice,
@@ -1903,6 +2020,7 @@ internal sealed partial class MainWindow : Window
             SettingsManager.Instance.Settings.IncludeNetworkScanners = chkNetworkScanners.IsChecked ?? false;
             SettingsManager.Instance.Save();
             await RefreshScannersAsync();
+            UpdateScannerConfigUi();
         }
     }
 
@@ -1918,8 +2036,16 @@ internal sealed partial class MainWindow : Window
 
     private void CbScannerDpi_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (cbScannerDpi?.SelectedItem is ComboBoxItem item && int.TryParse(item.Content?.ToString(), out int dpi))
+        if (cbScannerDpi?.SelectedItem is ComboBoxItem item)
         {
+            string? content = item.Content?.ToString();
+            int dpi = 300;
+            if (content != null)
+            {
+                if (content.StartsWith("150", StringComparison.Ordinal)) dpi = 150;
+                else if (content.StartsWith("600", StringComparison.Ordinal)) dpi = 600;
+                else if (int.TryParse(content, out int parsed)) dpi = parsed;
+            }
             SettingsManager.Instance.Settings.ScannerDpi = dpi;
             SettingsManager.Instance.Save();
         }
@@ -1941,11 +2067,18 @@ internal sealed partial class MainWindow : Window
     {
         pnlErrorOverlay.IsVisible = false;
         await RefreshScannersAsync();
+        UpdateScannerConfigUi();
     }
 
     private async void BtnRefreshScanners_Click(object? sender, RoutedEventArgs e)
     {
+        if (txtScannerStatus != null)
+        {
+            txtScannerStatus.Text = Application.Current?.FindResource("TxtScanningSearching")?.ToString() ?? "Searching for connected scanners...";
+            txtScannerStatus.Foreground = Brush.Parse("#3399ff");
+        }
         await RefreshScannersAsync();
+        UpdateScannerConfigUi();
     }
 
     protected override void OnClosed(EventArgs e)
