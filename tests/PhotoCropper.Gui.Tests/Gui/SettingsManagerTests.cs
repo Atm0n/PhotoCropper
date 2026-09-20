@@ -30,6 +30,8 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.AutoOrientPhotos.ShouldBeTrue();
         manager.Settings.RestoreVintageColors.ShouldBeTrue();
         manager.Settings.RemoveDustAndScratches.ShouldBeTrue();
+        manager.Settings.Theme.ShouldBe("Dark");
+        manager.Settings.DetectionBoxColor.ShouldBe("Red");
     }
 
     [Fact]
@@ -50,6 +52,8 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.WorkDirectory = "C:\\ScannerWorkspace";
         manager.Settings.SelectedScannerId = "canon-lide-400";
         manager.Settings.ScannerDpi = 600;
+        manager.Settings.Theme = "Light";
+        manager.Settings.DetectionBoxColor = "Amber";
 
         manager.Save();
 
@@ -68,6 +72,40 @@ public sealed class SettingsManagerTests : IDisposable
         secondManager.Settings.WorkDirectory.ShouldBe("C:\\ScannerWorkspace");
         secondManager.Settings.SelectedScannerId.ShouldBe("canon-lide-400");
         secondManager.Settings.ScannerDpi.ShouldBe(600);
+        secondManager.Settings.Theme.ShouldBe("Light");
+        secondManager.Settings.DetectionBoxColor.ShouldBe("Amber");
+    }
+
+    [Fact]
+    public void DetectionOptions_GetBoundingBoxColorBgr_ShouldReturnCorrectBgrScalars()
+    {
+        var options = new PhotoCropper.Core.Models.DetectionOptions { BoundingBoxColor = "Red" };
+        options.GetBoundingBoxColorBgr().V2.ShouldBe(255); // Red channel in BGR
+
+        options.BoundingBoxColor = "Amber";
+        var amber = options.GetBoundingBoxColorBgr();
+        amber.V1.ShouldBe(165); // Green channel in BGR
+        amber.V2.ShouldBe(255); // Red channel
+
+        options.BoundingBoxColor = "Cyan";
+        var cyan = options.GetBoundingBoxColorBgr();
+        cyan.V0.ShouldBe(255); // Blue channel in BGR
+        cyan.V1.ShouldBe(255); // Green channel
+
+        options.BoundingBoxColor = "Lime";
+        var lime = options.GetBoundingBoxColorBgr();
+        lime.V1.ShouldBe(255); // Green channel
+
+        options.BoundingBoxColor = "Magenta";
+        var magenta = options.GetBoundingBoxColorBgr();
+        magenta.V0.ShouldBe(255); // Blue
+        magenta.V2.ShouldBe(255); // Red
+
+        options.BoundingBoxColor = "#112233";
+        var custom = options.GetBoundingBoxColorBgr();
+        custom.V2.ShouldBe(0x11); // Red
+        custom.V1.ShouldBe(0x22); // Green
+        custom.V0.ShouldBe(0x33); // Blue
     }
 
     [Fact]

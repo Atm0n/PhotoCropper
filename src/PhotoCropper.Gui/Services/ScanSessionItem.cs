@@ -50,6 +50,14 @@ internal sealed class ScanSessionItem : IDisposable
         }
     }
 
+    public void DeactivateIfUnmodified()
+    {
+        if (!IsModified)
+        {
+            Deactivate();
+        }
+    }
+
     public void Dispose()
     {
         Deactivate();

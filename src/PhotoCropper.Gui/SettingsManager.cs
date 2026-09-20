@@ -24,6 +24,8 @@ internal sealed class UserSettings
     public string? SelectedScannerId { get; set; }
     public int ScannerDpi { get; set; } = 300;
     public bool IncludeNetworkScanners { get; set; }
+    public string Theme { get; set; } = "Dark"; // "Dark", "Light", "System"
+    public string DetectionBoxColor { get; set; } = "Red"; // "Red", "Amber", "Cyan", "Lime", "Magenta"
 }
 
 internal sealed class SettingsManager

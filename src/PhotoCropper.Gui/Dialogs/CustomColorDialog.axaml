@@ -1,0 +1,92 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PhotoCropper.Gui.Dialogs.CustomColorDialog"
+        Title="{DynamicResource TitleCustomColor}"
+        Icon="avares://PhotoCropper.Gui/Assets/app_icon.png"
+        Width="440"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppModalBackgroundBrush}"
+        Foreground="{DynamicResource AppTextPrimaryBrush}">
+
+	<Border Padding="22">
+		<StackPanel Spacing="14">
+			<!-- Header -->
+			<StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+				<Border Background="{DynamicResource AppAccentBrush}" CornerRadius="20" Width="38" Height="38">
+					<TextBlock Text="🎨" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+				</Border>
+				<StackPanel VerticalAlignment="Center">
+					<TextBlock Text="{DynamicResource TitleCustomColor}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
+					<TextBlock Text="{DynamicResource DescCustomColor}" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}" TextWrapping="Wrap" MaxWidth="330"/>
+				</StackPanel>
+			</StackPanel>
+
+			<Rectangle Height="1" Fill="{DynamicResource AppSeparatorBrush}" Margin="0,2"/>
+
+			<!-- Preview & Hex Input -->
+			<Grid ColumnDefinitions="Auto, *, Auto" Margin="0,4">
+				<!-- Color Swatch Preview -->
+				<Border Grid.Column="0" x:Name="borderPreview" Width="48" Height="48" CornerRadius="8" BorderThickness="2" BorderBrush="{DynamicResource AppBorderBrush}" Margin="0,0,14,0"/>
+
+				<!-- Bounding Box Miniature Simulation -->
+				<Border Grid.Column="1" Height="48" CornerRadius="6" Background="#1a1a1a" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Padding="8,6" Margin="0,0,14,0">
+					<Border x:Name="borderBoxSim" BorderThickness="2" CornerRadius="3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+						<TextBlock Text="Sample Photo" FontSize="10" Foreground="#888888" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+					</Border>
+				</Border>
+
+				<!-- Hex Code Input -->
+				<StackPanel Grid.Column="2" Width="100" VerticalAlignment="Center" Spacing="3">
+					<TextBlock Text="Hex Code" FontSize="10" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+					<TextBox x:Name="txtHex" Text="#00D4FF" FontSize="12" FontFamily="Consolas, monospace" HorizontalContentAlignment="Center" TextChanged="TxtHex_TextChanged"/>
+				</StackPanel>
+			</Grid>
+
+			<!-- Quick Preset Swatches -->
+			<StackPanel Spacing="6" Margin="0,4">
+				<TextBlock Text="High-Contrast Presets" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+				<WrapPanel x:Name="pnlSwatches" Margin="0,2"/>
+			</StackPanel>
+
+			<Rectangle Height="1" Fill="{DynamicResource AppSeparatorBrush}" Margin="0,2"/>
+
+			<!-- RGB Sliders -->
+			<StackPanel Spacing="8">
+				<!-- Red -->
+				<Grid ColumnDefinitions="45, *, 35">
+					<TextBlock Grid.Column="0" Text="Red" FontSize="11" VerticalAlignment="Center" Foreground="#ff5555"/>
+					<Slider Grid.Column="1" x:Name="sliderR" Minimum="0" Maximum="255" SmallChange="1" LargeChange="10" ValueChanged="Slider_ValueChanged" VerticalAlignment="Center"/>
+					<TextBlock Grid.Column="2" x:Name="txtValR" Text="0" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+				</Grid>
+
+				<!-- Green -->
+				<Grid ColumnDefinitions="45, *, 35">
+					<TextBlock Grid.Column="0" Text="Green" FontSize="11" VerticalAlignment="Center" Foreground="#00e676"/>
+					<Slider Grid.Column="1" x:Name="sliderG" Minimum="0" Maximum="255" SmallChange="1" LargeChange="10" ValueChanged="Slider_ValueChanged" VerticalAlignment="Center"/>
+					<TextBlock Grid.Column="2" x:Name="txtValG" Text="212" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+				</Grid>
+
+				<!-- Blue -->
+				<Grid ColumnDefinitions="45, *, 35">
+					<TextBlock Grid.Column="0" Text="Blue" FontSize="11" VerticalAlignment="Center" Foreground="#3399ff"/>
+					<Slider Grid.Column="1" x:Name="sliderB" Minimum="0" Maximum="255" SmallChange="1" LargeChange="10" ValueChanged="Slider_ValueChanged" VerticalAlignment="Center"/>
+					<TextBlock Grid.Column="2" x:Name="txtValB" Text="255" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+				</Grid>
+			</StackPanel>
+
+			<Rectangle Height="1" Fill="{DynamicResource AppSeparatorBrush}" Margin="0,2"/>
+
+			<!-- Action Buttons -->
+			<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,4,0,0">
+				<Button x:Name="btnCancel" Click="BtnCancel_Click" Padding="16,8" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" CornerRadius="6" Focusable="False">
+					<TextBlock Text="{DynamicResource BtnCancel}"/>
+				</Button>
+				<Button x:Name="btnApply" Click="BtnApply_Click" Padding="18,8" Background="{DynamicResource AppButtonActionBrush}" Foreground="{DynamicResource AppButtonActionTextBrush}" CornerRadius="6" Focusable="False">
+					<TextBlock Text="{DynamicResource BtnApply}"/>
+				</Button>
+			</StackPanel>
+		</StackPanel>
+	</Border>
+</Window>

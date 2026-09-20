@@ -27,6 +27,7 @@ public class PhotoCropperEngine : IDisposable
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; } = true;
     public bool RemoveDustAndScratches { get; set; } = true;
+    public string BoundingBoxColor { get; set; } = "Red";
 
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
@@ -60,6 +61,7 @@ public class PhotoCropperEngine : IDisposable
         AutoOrientPhotos = options.AutoOrientPhotos;
         RestoreVintageColors = options.RestoreVintageColors;
         RemoveDustAndScratches = options.RemoveDustAndScratches;
+        BoundingBoxColor = options.BoundingBoxColor;
     }
 
     public DetectionOptions CurrentOptions => new()
@@ -72,7 +74,8 @@ public class PhotoCropperEngine : IDisposable
         CustomBackgroundColorHsv = CustomBackgroundColorHsv,
         AutoOrientPhotos = AutoOrientPhotos,
         RestoreVintageColors = RestoreVintageColors,
-        RemoveDustAndScratches = RemoveDustAndScratches
+        RemoveDustAndScratches = RemoveDustAndScratches,
+        BoundingBoxColor = BoundingBoxColor
     };
 
     public AutoTuneResult AutoTune()
@@ -266,12 +269,13 @@ public class PhotoCropperEngine : IDisposable
         var acceptedCandidates = CandidateResolutionFilter.FilterCandidates(candidateDetections);
 
         // Draw bounding boxes on OriginalWithDetected
+        MCvScalar boxColor = CurrentOptions.GetBoundingBoxColorBgr();
         foreach (var cand in acceptedCandidates)
         {
             PointF[] vertices = cand.Rotated.GetVertices();
             for (int j = 0; j < 4; j++)
             {
-                CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), new MCvScalar(0, 0, 255), 12);
+                CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), boxColor, 12);
             }
         }
 
@@ -343,6 +347,24 @@ public class PhotoCropperEngine : IDisposable
         {
             Mat rawRotated = new();
             CvInvoke.Rotate(RawDetectedPhotos[index], rawRotated, RotateFlags.Rotate90Clockwise);
+            RawDetectedPhotos[index].Dispose();
+            RawDetectedPhotos[index] = rawRotated;
+        }
+    }
+
+    public void RotatePhotoCounterClockwise(int index)
+    {
+        if (index < 0 || index >= DetectedPhotos.Count) return;
+
+        Mat rotated = new();
+        CvInvoke.Rotate(DetectedPhotos[index], rotated, RotateFlags.Rotate90CounterClockwise);
+        DetectedPhotos[index].Dispose();
+        DetectedPhotos[index] = rotated;
+
+        if (index < RawDetectedPhotos.Count)
+        {
+            Mat rawRotated = new();
+            CvInvoke.Rotate(RawDetectedPhotos[index], rawRotated, RotateFlags.Rotate90CounterClockwise);
             RawDetectedPhotos[index].Dispose();
             RawDetectedPhotos[index] = rawRotated;
         }

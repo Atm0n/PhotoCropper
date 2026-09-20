@@ -19,11 +19,25 @@ internal sealed partial class App : Application
         // Initialize localization with preferred language
         LocalizationManager.Initialize(SettingsManager.Instance.Settings.Language);
 
+        // Apply saved theme preference
+        ApplyTheme(SettingsManager.Instance.Settings.Theme);
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow();
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    public static void ApplyTheme(string? theme)
+    {
+        if (Current == null) return;
+        Current.RequestedThemeVariant = theme?.ToUpperInvariant() switch
+        {
+            "LIGHT" => Avalonia.Styling.ThemeVariant.Light,
+            "SYSTEM" or "DEFAULT" => Avalonia.Styling.ThemeVariant.Default,
+            _ => Avalonia.Styling.ThemeVariant.Dark
+        };
     }
 }

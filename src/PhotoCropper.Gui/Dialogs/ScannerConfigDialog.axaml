@@ -1,0 +1,72 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PhotoCropper.Gui.Dialogs.ScannerConfigDialog"
+        Title="{DynamicResource TitleScannerConfig}"
+        Icon="avares://PhotoCropper.Gui/Assets/app_icon.png"
+        Width="480"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppModalBackgroundBrush}"
+        Foreground="{DynamicResource AppTextPrimaryBrush}">
+
+	<Border Padding="25">
+		<StackPanel Spacing="16">
+			<!-- Modal Header -->
+			<StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+				<Border Background="{DynamicResource AppSuccessBackgroundBrush}" CornerRadius="20" Width="40" Height="40">
+					<TextBlock Text="🖨️" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+				</Border>
+				<StackPanel VerticalAlignment="Center">
+					<TextBlock Text="{DynamicResource TitleScannerConfig}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppSuccessTextBrush}"/>
+					<TextBlock Text="{DynamicResource DescScannerConfig}" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}" TextWrapping="Wrap" MaxWidth="360"/>
+				</StackPanel>
+			</StackPanel>
+
+			<Rectangle Height="1" Fill="{DynamicResource AppSeparatorBrush}" Margin="0,2"/>
+
+			<!-- Scanner Device Selection -->
+			<StackPanel Spacing="6">
+				<TextBlock Text="{DynamicResource LblScannerDevice}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+				<Grid ColumnDefinitions="*, Auto">
+					<ComboBox Grid.Column="0" x:Name="cbScanner" HorizontalAlignment="Stretch" SelectionChanged="CbScanner_SelectionChanged" Focusable="False" FontSize="12"/>
+					<Button Grid.Column="1" x:Name="btnRefreshScanners" Click="BtnRefreshScanners_Click" Margin="8,0,0,0" Padding="8,6" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" VerticalAlignment="Center" Focusable="False" ToolTip.Tip="{DynamicResource BtnRefreshScanners}" CornerRadius="4">
+						<TextBlock Text="🔄"/>
+					</Button>
+				</Grid>
+				<TextBlock x:Name="txtScannerStatus" Text="" FontSize="10" Foreground="{DynamicResource AppTextMutedBrush}" Margin="2,0"/>
+			</StackPanel>
+
+			<!-- Resolution (DPI) -->
+			<StackPanel Spacing="6">
+				<TextBlock Text="{DynamicResource LblScannerResolution}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+				<ComboBox x:Name="cbScannerDpi" SelectedIndex="1" HorizontalAlignment="Stretch" SelectionChanged="CbScannerDpi_SelectionChanged" Focusable="False" FontSize="12">
+					<ComboBoxItem Content="150 (Draft / Fast)"/>
+					<ComboBoxItem Content="300 (Standard Photos - Recommended)"/>
+					<ComboBoxItem Content="600 (High Detail / Archival)"/>
+				</ComboBox>
+			</StackPanel>
+
+			<!-- Network Scanners Checkbox -->
+			<CheckBox x:Name="chkNetworkScanners" Content="{DynamicResource LblNetworkScanners}" ToolTip.Tip="{DynamicResource TipNetworkScanners}" IsCheckedChanged="ChkNetworkScanners_IsCheckedChanged" FontSize="11" Focusable="False"/>
+
+			<Rectangle Height="1" Fill="{DynamicResource AppSeparatorBrush}" Margin="0,2"/>
+
+			<!-- Action Buttons -->
+			<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+				<Button x:Name="btnCancel" Click="BtnCancel_Click" Padding="16,8" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" CornerRadius="6" Focusable="False">
+					<TextBlock Text="{DynamicResource BtnCancel}"/>
+				</Button>
+				<Button x:Name="btnSave" Click="BtnSave_Click" Padding="16,8" Background="{DynamicResource AppButtonActionBrush}" Foreground="{DynamicResource AppButtonActionTextBrush}" CornerRadius="6" Focusable="False">
+					<TextBlock Text="{DynamicResource BtnSaveSettings}"/>
+				</Button>
+				<Button x:Name="btnSaveAndScan" Click="BtnSaveAndScan_Click" Padding="20,8" Background="#28a745" Foreground="White" CornerRadius="6" FontWeight="SemiBold" Focusable="False">
+					<StackPanel Orientation="Horizontal" Spacing="6">
+						<TextBlock Text="🖨️"/>
+						<TextBlock Text="{DynamicResource BtnSaveAndScan}"/>
+					</StackPanel>
+				</Button>
+			</StackPanel>
+		</StackPanel>
+	</Border>
+</Window>

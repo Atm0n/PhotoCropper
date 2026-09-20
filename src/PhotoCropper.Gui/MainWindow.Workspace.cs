@@ -66,7 +66,10 @@ internal sealed partial class MainWindow
             }
             if (btnWorkDir != null)
             {
-                btnWorkDir.Background = Brush.Parse("#264653");
+                if (Avalonia.Application.Current?.FindResource("AppButtonActionBrush") is IBrush brush)
+                {
+                    btnWorkDir.Background = brush;
+                }
                 ToolTip.SetTip(btnWorkDir, tooltip);
             }
             if (lblCurrentProject != null)
@@ -89,7 +92,10 @@ internal sealed partial class MainWindow
             }
             if (btnWorkDir != null)
             {
-                btnWorkDir.Background = Brush.Parse("#3a3a3a");
+                if (Avalonia.Application.Current?.FindResource("AppSubtleCardBrush") is IBrush brush)
+                {
+                    btnWorkDir.Background = brush;
+                }
                 ToolTip.SetTip(btnWorkDir, defaultTip);
             }
             if (lblCurrentProject != null)
