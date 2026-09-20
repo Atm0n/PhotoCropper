@@ -10,14 +10,19 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **`Detection/`**: Dedicated pipeline stages (`BackgroundAnalyzer`, `ForegroundMaskGenerator`, `CandidateExtractor`, `CandidateResolutionFilter`).
   - **`Extraction/`**: Photo extraction, local ROI perspective warps, border refinement, orientation, and color restoration (`PhotoExtractionEngine`, `EdgeRefinementService`, `FaceOrientationService`, `AutoOrientationService`, `PhotoRestorationService`).
   - **`Export/`**: Output serialization supporting lossless PNG, customizable JPEG quality, and DPI preservation (`PhotoExporter`).
+  - **`IO/`**: File discovery and recursive directory scanning for supported image formats (`ImageFileCollector`).
   - **`Scanning/`**: Cross-platform hardware scanner integration (`IScannerService`, `Naps2ScannerService`, `ScannerOptions`, `ScannerDeviceInfo`) supporting TWAIN, WIA, SANE, and eSCL.
   - **`Workspace/`**: Project folder management, raw scan disk-staging, and crash recovery session manager (`ProjectWorkspaceService`, `WorkspaceSessionState`, `WorkspaceScanEntry`).
   - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
-- **`src/PhotoCropper.Gui` (Avalonia Desktop App):** A high-performance GUI using a modern dark theme, custom-drawn interactive canvas widgets, multi-language localization (EN, ES, CA), undo/redo history, and persistent configuration.
+- **`src/PhotoCropper.Gui` (Avalonia Desktop App):** A high-performance GUI featuring:
+  - **`Dialogs/`**: Dedicated, modular windows for documentation (`HelpWindow`), scanner hardware configuration (`ScannerConfigDialog`), custom bounding box color picker (`CustomColorDialog`), and unsaved changes confirmation (`SafeExitPromptDialog`).
+  - **`Services/`**: Bounded undo/redo history, dynamic theme manager, hardware scanner coordination, and memory-safe scan session management.
+  - Multi-language localization (EN, ES, CA), full Light/Dark/System runtime theming, and persistent configuration.
+- **`src/PhotoCropper.Cli` (Command-Line Batch Extractor):** High-throughput CLI batch processor with Spectre.Console UI, multi-threaded parallel extraction, and unattended automation.
 - **`tests/` (Modular xUnit & Shouldly Test Suites):**
-  - **`PhotoCropper.Core.Tests`**: Unit tests verifying detection pipeline stages, image extraction, orientation heuristics, restoration filters, export formats, and engine lifecycle.
+  - **`PhotoCropper.Core.Tests`**: Unit tests verifying detection pipeline stages, image extraction, orientation heuristics, restoration filters, export formats, file collector, and engine lifecycle.
   - **`PhotoCropper.Cli.Tests`**: Integration tests verifying CLI command-line argument parsing and unattended batch processing.
-  - **`PhotoCropper.Gui.Tests`**: GUI domain tests verifying user settings persistence and multi-scan undo/redo state history.
+  - **`PhotoCropper.Gui.Tests`**: GUI domain tests verifying user settings persistence, bounded undo/redo history, and session management.
   - **`PhotoCropper.TestHelpers`**: Shared test fixture generating synthetic test scans (tilted, flush-edge, low contrast, corner, blemished).
 
 ---
@@ -60,13 +65,23 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 - **Subtle Deskew Regularization:** Snaps near-straight photos (within ±1.5° of right angles) to exact axis-aligned rectangles, avoiding resampling blur while maintaining exact dimensions.
 - **Intelligent Manual Crop Snapping:** Manually drawn selection boxes automatically snap to the nearest high-contrast photo boundary.
 
-### 4. Interactive UX, Drag & Drop, and Multi-Scan Undo/Redo
+### 4. Interactive UX, Theming & Accessibility
+- **Dynamic Theming (Dark / Light / System Default):** Full runtime theme switching via **View → Theme** with dynamic XAML resource binding. All backgrounds, borders, cards, buttons, and text adapt instantly without restarting.
+- **Colorblind-Friendly Bounding Boxes & Custom Color Picker:**
+  - High-contrast detection box presets (**Classic Red, Amber / Orange, Cyan / Turquoise, Magenta, Lime Green**) designed for protanopia, deuteranopia, and tritanopia accessibility.
+  - Visual color indicator squares next to every option in the menu.
+  - Dedicated **Custom Color...** modal dialog featuring a real-time photo simulation preview, 16 accessible quick swatches, RGB sliders, and direct hex input (`#RRGGBB`).
 - **Dual-View Inspection & Gallery Grid (`1` / `2`):** Instantly toggle between a focused single-photo carousel and an interactive thumbnail gallery overview displaying indices and pixel dimensions.
-- **Drag & Drop Queuing:** Drag image files or whole folders anywhere onto the application window to automatically queue and batch-process scans.
-- **Multi-Scan Aware Undo/Redo (`Ctrl+Z` / `Ctrl+Y`):** Full undo/redo stack managing deletions, rotations, manual crops, and edge refinements across multiple loaded scans, automatically switching scans when undoing.
+- **Drag & Drop Queuing:** Drag image files or whole folders anywhere onto the application window to automatically queue and batch-process scans via the centralized `ImageFileCollector`.
+- **Safe Exit & Data Loss Prevention:** PhotoCropper detects unsaved photo edits or unexported scans on close, presenting a confirmation dialog with **Save & Exit**, **Discard & Exit**, or **Cancel** choices (closes silently when all work is saved).
+- **Dedicated Multi-Window Dialog Architecture:** Replaced embedded overlay clutter with dedicated, modular Avalonia windows:
+  - `HelpWindow`: Non-modal documentation and shortcut reference (<kbd>F1</kbd>) that can be placed side-by-side or on secondary monitors.
+  - `ScannerConfigDialog`: Hardware device selection, DPI configuration, and network scanner discovery.
+  - `CustomColorDialog`: Interactive bounding box color adjustment.
+  - `SafeExitPromptDialog`: Unsaved changes confirmation dialog.
+- **Bounded Undo/Redo Memory Management (`Ctrl+Z` / `Ctrl+Y`):** Bounded 30-action double-ended queue that automatically evicts and disposes the oldest cloned OpenCV `Mat`s, preventing memory growth during intensive editing sessions.
+- **Native Avalonia `Bitmap` Disposal:** Proactively disposes underlying unmanaged SKBitmap buffers on image replacement, re-detection, and scan navigation, keeping memory footprint low.
 - **Original Scanner DPI Preservation:** Preserves original scanner resolution metadata (JFIF APP0 markers for JPEG, `pHYs` chunks for PNG) for 1:1 physical printing scale (e.g., 300, 600, 1200 DPI).
-- **Real-Time Batch Progress Reporting:** Live progress bars and counters during multi-scan processing and parallel multi-core batch exporting.
-- **Focus-Defeat & Keyboard Event Tunneling:** Non-focusable sidebar controls and tunneling key events ensure instant keyboard navigation without text box focus stealing.
 - **Multi-Language Localization:** Runtime localization in English (`en-US`), Spanish (`es-ES`), and Catalan (`ca-ES`) with persistent user settings.
 
 ### 5. Hardware Scanner Integration (TWAIN, WIA, SANE & eSCL)
@@ -74,7 +89,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 - **Cross-Platform Driver Engine via NAPS2.Sdk:** Powered by the open-source NAPS2 SDK:
   - **Windows**: Supports 32-bit and 64-bit TWAIN drivers (with transparent 32-bit IPC worker thunking via `NAPS2.Sdk.Worker.Win32`) and native 64-bit WIA (Windows Image Acquisition). Battle-tested with hardware like the Canon CanoScan LiDE 400.
   - **Linux / macOS**: Direct integration with SANE (`libsane` / `scanimage`) and modern network eSCL / AirScan scanners.
-- **Configurable Scanner Profiles:** Set scan resolution (150, 300, 600 DPI) and color modes with one-click hardware enumeration and hot-reloading.
+- **Dedicated Scanner Configuration Dialog:** Set scan resolution (150, 300, 600 DPI) and color modes with one-click hardware enumeration and hot-reloading.
 
 ### 6. Project Work Directory & Automatic Crash Recovery
 - **Safe Raw Scan Auto-Staging (`RawScans/`):** When scanning or importing, images are immediately written to disk inside the project's `RawScans/` directory (`scan_0001.png`, `scan_0002.png`, etc.). Raw scans are never left stranded in volatile memory.
@@ -88,8 +103,9 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 The codebase strictly enforces the highest standard of static analysis and memory hygiene:
 - **Warnings-as-Errors Policy:** Enforced solution-wide via `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<AnalysisLevel>latest-All</AnalysisLevel>` inside `Directory.Build.props`.
 - **Zero-Warning Success:** Compiles with `0 Warnings` and `0 Errors` across both Debug and Release configurations.
-- **OpenCV Memory Safety (CA2000):** Implements explicit `using` statements, unmanaged resource trackers, and try-finally ownership transfer patterns to prevent native memory leaks during parallel contour processing.
-- **Encapsulation & Security:** Core internal helper elements expose APIs through read-only interfaces (`IReadOnlyList`, `Collection<T>`) to guarantee architectural robustness.
+- **OpenCV & Avalonia Memory Safety (CA2000):** Implements explicit `using` statements, unmanaged resource trackers, proactive native `Bitmap` disposal, and bounded undo action queues to guarantee zero memory leaks.
+- **Encapsulation & Security:** Core internal helper elements expose APIs through read-only interfaces (`IReadOnlyList`, `IReadOnlySet`, `Collection<T>`) to guarantee architectural robustness.
+- **Clean Structure:** No `#region` / `#endregion` directives; decomposed monolithic components into clean, single-responsibility services.
 
 ---
 
@@ -97,6 +113,7 @@ The codebase strictly enforces the highest standard of static analysis and memor
 
 | Shortcut | Action |
 |----------|--------|
+| `F1` | 📖 Open Help & Keyboard Shortcuts window |
 | `F5` | 🖨️ Acquire scan from flatbed scanner |
 | `T` | ⚡ Auto-Tune detection parameters on active scan |
 | `Left / Right` | Navigate between cropped photos |
@@ -105,13 +122,14 @@ The codebase strictly enforces the highest standard of static analysis and memor
 | `Space` / `B` | Hold to compare with the unedited raw scan crop |
 | `X` / `Delete` | Permanently delete the currently selected photo |
 | `Shift + Delete` | 🗑️ Delete active scan from workspace and disk |
+| `Ctrl + A` | Select all photos (Gallery Grid View) |
 | `Ctrl + Z` | Undo last photo operation (delete, rotate, manual crop, refinement) |
 | `Ctrl + Y` | Redo last undone operation |
 | `N` / `Ñ` | Enter Interactive Refinement Mode |
 | `1 / 2` | Switch between Single Photo Inspection and Gallery Grid View |
 | `Enter` / `A` | Accept Refinement (while in Refinement Mode) |
 | `Backspace` / `Esc` / `C` | Reject Refinement (while in Refinement Mode) |
-| `Esc` | Close Help or Refinement overlays |
+| `Esc` | Close active dialog window or Refinement mode |
 | `Ctrl + Mouse Wheel` | Zoom in/out on the original scan |
 | `Ctrl + S` | Save all results |
 
