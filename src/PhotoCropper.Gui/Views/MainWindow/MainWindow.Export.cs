@@ -24,7 +24,7 @@ internal sealed partial class MainWindow
         var settings = SettingsManager.Instance.Settings;
         if (settings.PromptBeforeExport)
         {
-            await ShowExportSettingsAsync(initialTab: 0, triggerExportOnConfirm: true);
+            await ShowExportSettingsAsync(triggerExportOnConfirm: true);
         }
         else
         {
@@ -234,20 +234,10 @@ internal sealed partial class MainWindow
 
     private async void BtnSaveSettings_Click(object? sender, RoutedEventArgs e)
     {
-        await ShowExportSettingsAsync(initialTab: 0, triggerExportOnConfirm: false);
+        await ShowExportSettingsAsync(triggerExportOnConfirm: false);
     }
 
-    private async void BtnDetectionSettings_Click(object? sender, RoutedEventArgs e)
-    {
-        await ShowExportSettingsAsync(initialTab: 1, triggerExportOnConfirm: false);
-    }
-
-    private async void BtnSettings_Click(object? sender, RoutedEventArgs e)
-    {
-        await ShowExportSettingsAsync(initialTab: 0, triggerExportOnConfirm: false);
-    }
-
-    private async Task ShowExportSettingsAsync(int initialTab, bool triggerExportOnConfirm)
+    private async Task ShowExportSettingsAsync(bool triggerExportOnConfirm)
     {
         if (isLoading) return;
 
@@ -255,24 +245,8 @@ internal sealed partial class MainWindow
             ? Path.GetFileNameWithoutExtension(ScanSessions[currentIndex].FilePath)
             : "Scan001";
 
-        var dialog = new Dialogs.ExportSettingsDialog(initialTab, hasScans: _sessionManager.HasScans, sampleOriginal: sampleName);
+        var dialog = new Dialogs.ExportSettingsDialog(hasScans: _sessionManager.HasScans, sampleOriginal: sampleName);
         var result = await dialog.ShowDialog<Dialogs.ExportSettingsResult>(this);
-
-        var settings = SettingsManager.Instance.Settings;
-        sldSensitivity.Value = settings.BackgroundTolerance;
-
-        if (ScanSessions.Count > 0 && currentIndex >= 0 && currentIndex < ScanSessions.Count)
-        {
-            var session = ScanSessions[currentIndex];
-            session.Options.BackgroundTolerance = settings.BackgroundTolerance;
-            session.Options.MinAreaFactor = settings.MinAreaFactor / 100.0;
-            session.Options.MaxAreaFactor = settings.MaxAreaFactor / 100.0;
-            session.Options.CannyLowThreshold = settings.CannyLowThreshold;
-            session.Options.CannyHighThreshold = settings.CannyLowThreshold * 2.5;
-            session.Options.AutoOrientPhotos = settings.AutoOrientPhotos;
-            session.Options.RestoreVintageColors = settings.RestoreVintageColors;
-            session.Options.RemoveDustAndScratches = settings.RemoveDustAndScratches;
-        }
 
         if (result == Dialogs.ExportSettingsResult.SaveAndExport || (triggerExportOnConfirm && result == Dialogs.ExportSettingsResult.SaveSettings))
         {

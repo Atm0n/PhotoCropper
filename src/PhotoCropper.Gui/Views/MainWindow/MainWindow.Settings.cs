@@ -13,6 +13,22 @@ internal sealed partial class MainWindow
         var settings = SettingsManager.Instance.Settings;
         sldSensitivity.Value = settings.BackgroundTolerance;
         sldZoom.Value = settings.ZoomLevel;
+        sldMinArea.Value = settings.MinAreaFactor;
+        sldMaxArea.Value = settings.MaxAreaFactor;
+        sldEdge.Value = settings.CannyLowThreshold;
+        tglAdvanced.IsChecked = settings.AdvancedVisible;
+        if (chkAutoOrient != null)
+        {
+            chkAutoOrient.IsChecked = settings.AutoOrientPhotos;
+        }
+        if (chkRestoreColors != null)
+        {
+            chkRestoreColors.IsChecked = settings.RestoreVintageColors;
+        }
+        if (chkRemoveDust != null)
+        {
+            chkRemoveDust.IsChecked = settings.RemoveDustAndScratches;
+        }
 
         UpdateWorkspaceUi(settings.WorkDirectory);
         UpdateCropStrokeColor(settings.DetectionBoxColor);

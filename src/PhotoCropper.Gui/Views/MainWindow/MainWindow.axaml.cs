@@ -181,25 +181,15 @@ internal sealed partial class MainWindow : Window
     private void MenuRedo_Click(object? sender, RoutedEventArgs e) => PerformRedo();
     private void MenuViewCarousel_Click(object? sender, RoutedEventArgs e) => SetViewMode(false);
     private void MenuViewGrid_Click(object? sender, RoutedEventArgs e) => SetViewMode(true);
-    private async void BtnToggleAdvanced_Click(object? sender, RoutedEventArgs e)
+    private void BtnToggleAdvanced_Click(object? sender, RoutedEventArgs e)
     {
-        await ShowExportSettingsAsync(initialTab: 0, triggerExportOnConfirm: false);
+        if (tglAdvanced != null)
+        {
+            tglAdvanced.IsChecked = !tglAdvanced.IsChecked;
+        }
     }
 
-    private async void BtnReset_Click(object? sender, RoutedEventArgs e)
-    {
-        var settings = SettingsManager.Instance.Settings;
-        settings.BackgroundTolerance = 25;
-        settings.MinAreaFactor = 25;
-        settings.MaxAreaFactor = 90;
-        settings.CannyLowThreshold = 20;
-        settings.AutoOrientPhotos = true;
-        settings.RestoreVintageColors = true;
-        settings.RemoveDustAndScratches = true;
-        SettingsManager.Instance.Save();
-        sldSensitivity.Value = 25;
-        await ReprocessCurrentScanAsync();
-    }
+    private void BtnReset_Click(object? sender, RoutedEventArgs e) => BtnResetDefaults_Click(sender, e);
 
     private Dialogs.HelpWindow? _helpWindow;
 
@@ -507,6 +497,10 @@ internal sealed partial class MainWindow : Window
         var settings = SettingsManager.Instance.Settings;
         settings.BackgroundTolerance = sldSensitivity.Value;
         settings.ZoomLevel = sldZoom.Value;
+        settings.MinAreaFactor = sldMinArea.Value;
+        settings.MaxAreaFactor = sldMaxArea.Value;
+        settings.CannyLowThreshold = sldEdge.Value;
+        settings.AdvancedVisible = tglAdvanced.IsChecked ?? false;
 
         if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory) && _workspaceSession != null)
         {

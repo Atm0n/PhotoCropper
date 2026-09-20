@@ -191,10 +191,17 @@ internal sealed partial class MainWindow
 
         var settings = SettingsManager.Instance.Settings;
         settings.BackgroundTolerance = sldSensitivity.Value;
+        settings.MinAreaFactor = sldMinArea.Value;
+        settings.MaxAreaFactor = sldMaxArea.Value;
+        settings.CannyLowThreshold = sldEdge.Value;
         SettingsManager.Instance.Save();
 
         var session = ScanSessions[currentIndex];
         session.Options.BackgroundTolerance = sldSensitivity.Value;
+        session.Options.MinAreaFactor = sldMinArea.Value / 100.0;
+        session.Options.MaxAreaFactor = sldMaxArea.Value / 100.0;
+        session.Options.CannyLowThreshold = sldEdge.Value;
+        session.Options.CannyHighThreshold = sldEdge.Value * 2.5;
 
         await ReprocessCurrentScanAsync();
     }
@@ -227,6 +234,36 @@ internal sealed partial class MainWindow
         });
     }
 
+    private async void ChkAutoOrient_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
+        SettingsManager.Instance.Settings.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
+        SettingsManager.Instance.Save();
+        var session = ScanSessions[currentIndex];
+        session.Options.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
+        await ReprocessCurrentScanAsync();
+    }
+
+    private async void ChkRestoreColors_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
+        SettingsManager.Instance.Settings.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
+        SettingsManager.Instance.Save();
+        var session = ScanSessions[currentIndex];
+        session.Options.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
+        await ReprocessCurrentScanAsync();
+    }
+
+    private async void ChkRemoveDust_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
+        SettingsManager.Instance.Settings.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
+        SettingsManager.Instance.Save();
+        var session = ScanSessions[currentIndex];
+        session.Options.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
+        await ReprocessCurrentScanAsync();
+    }
+
     private async Task ReprocessCurrentScanAsync()
     {
         if (isLoading || ScanSessions.Count == 0) return;
@@ -255,6 +292,12 @@ internal sealed partial class MainWindow
         try
         {
             sldSensitivity.Value = options.BackgroundTolerance;
+            sldMinArea.Value = options.MinAreaFactor * 100.0;
+            sldMaxArea.Value = options.MaxAreaFactor * 100.0;
+            sldEdge.Value = options.CannyLowThreshold;
+            if (chkAutoOrient != null) chkAutoOrient.IsChecked = options.AutoOrientPhotos;
+            if (chkRestoreColors != null) chkRestoreColors.IsChecked = options.RestoreVintageColors;
+            if (chkRemoveDust != null) chkRemoveDust.IsChecked = options.RemoveDustAndScratches;
         }
         finally
         {
@@ -264,22 +307,17 @@ internal sealed partial class MainWindow
 
     private DetectionOptions GetDetectionOptionsFromUi()
     {
-        var settings = SettingsManager.Instance.Settings;
-        var options = ScanSessions.Count > 0 && currentIndex >= 0 && currentIndex < ScanSessions.Count
-            ? ScanSessions[currentIndex].Options
-            : new DetectionOptions();
-
         return new DetectionOptions
         {
             BackgroundTolerance = sldSensitivity.Value,
-            MinAreaFactor = options.MinAreaFactor > 0 ? options.MinAreaFactor : settings.MinAreaFactor / 100.0,
-            MaxAreaFactor = options.MaxAreaFactor > 0 ? options.MaxAreaFactor : settings.MaxAreaFactor / 100.0,
-            CannyLowThreshold = options.CannyLowThreshold > 0 ? options.CannyLowThreshold : settings.CannyLowThreshold,
-            CannyHighThreshold = (options.CannyLowThreshold > 0 ? options.CannyLowThreshold : settings.CannyLowThreshold) * 2.5,
-            AutoOrientPhotos = options.AutoOrientPhotos,
-            RestoreVintageColors = options.RestoreVintageColors,
-            RemoveDustAndScratches = options.RemoveDustAndScratches,
-            BoundingBoxColor = settings.DetectionBoxColor
+            MinAreaFactor = sldMinArea.Value / 100.0,
+            MaxAreaFactor = sldMaxArea.Value / 100.0,
+            CannyLowThreshold = sldEdge.Value,
+            CannyHighThreshold = sldEdge.Value * 2.5,
+            AutoOrientPhotos = chkAutoOrient?.IsChecked == true,
+            RestoreVintageColors = chkRestoreColors?.IsChecked == true,
+            RemoveDustAndScratches = chkRemoveDust?.IsChecked == true,
+            BoundingBoxColor = SettingsManager.Instance.Settings.DetectionBoxColor
         };
     }
 }

@@ -22,11 +22,11 @@ internal sealed partial class ExportSettingsDialog : Window
     private readonly bool _hasScans;
     private bool _isInitializing;
 
-    public ExportSettingsDialog() : this(0, false, "Scan001")
+    public ExportSettingsDialog() : this(false, "Scan001")
     {
     }
 
-    public ExportSettingsDialog(int initialTab, bool hasScans, string sampleOriginal)
+    public ExportSettingsDialog(bool hasScans, string sampleOriginal)
     {
         _hasScans = hasScans;
         _sampleOriginal = string.IsNullOrWhiteSpace(sampleOriginal) ? "Scan001" : sampleOriginal;
@@ -35,11 +35,6 @@ internal sealed partial class ExportSettingsDialog : Window
 
         KeyDown += ExportSettingsDialog_KeyDown;
         Loaded += ExportSettingsDialog_Loaded;
-
-        if (tabSettings != null && initialTab >= 0 && initialTab < tabSettings.Items.Count)
-        {
-            tabSettings.SelectedIndex = initialTab;
-        }
 
         if (btnExportNow != null)
         {
@@ -129,32 +124,6 @@ internal sealed partial class ExportSettingsDialog : Window
         {
             chkPromptBeforeExport.IsChecked = settings.PromptBeforeExport;
         }
-
-        // Detection
-        if (sldMinArea != null)
-        {
-            sldMinArea.Value = settings.MinAreaFactor;
-        }
-        if (sldMaxArea != null)
-        {
-            sldMaxArea.Value = settings.MaxAreaFactor;
-        }
-        if (sldEdge != null)
-        {
-            sldEdge.Value = settings.CannyLowThreshold;
-        }
-        if (chkAutoOrient != null)
-        {
-            chkAutoOrient.IsChecked = settings.AutoOrientPhotos;
-        }
-        if (chkRestoreColors != null)
-        {
-            chkRestoreColors.IsChecked = settings.RestoreVintageColors;
-        }
-        if (chkRemoveDust != null)
-        {
-            chkRemoveDust.IsChecked = settings.RemoveDustAndScratches;
-        }
     }
 
     private void SaveAllSettings()
@@ -191,32 +160,6 @@ internal sealed partial class ExportSettingsDialog : Window
         settings.ShowNotifications = chkShowNotifications?.IsChecked ?? true;
         settings.FlashTaskbarOnCompletion = chkFlashTaskbar?.IsChecked ?? true;
         settings.PromptBeforeExport = chkPromptBeforeExport?.IsChecked ?? false;
-
-        // Detection
-        if (sldMinArea != null)
-        {
-            settings.MinAreaFactor = sldMinArea.Value;
-        }
-        if (sldMaxArea != null)
-        {
-            settings.MaxAreaFactor = sldMaxArea.Value;
-        }
-        if (sldEdge != null)
-        {
-            settings.CannyLowThreshold = sldEdge.Value;
-        }
-        if (chkAutoOrient != null)
-        {
-            settings.AutoOrientPhotos = chkAutoOrient.IsChecked ?? true;
-        }
-        if (chkRestoreColors != null)
-        {
-            settings.RestoreVintageColors = chkRestoreColors.IsChecked ?? true;
-        }
-        if (chkRemoveDust != null)
-        {
-            settings.RemoveDustAndScratches = chkRemoveDust.IsChecked ?? true;
-        }
 
         SettingsManager.Instance.Save();
     }
@@ -346,16 +289,6 @@ internal sealed partial class ExportSettingsDialog : Window
         string previewFile = FileNameTemplateHelper.FormatPreview(pattern, _sampleOriginal, 1, 4, meta, ext);
         string previewFmt = Avalonia.Application.Current?.FindResource("LblNamingPreview")?.ToString() ?? "Preview: {0}";
         txtNamingPreview.Text = string.Format(CultureInfo.InvariantCulture, previewFmt, previewFile);
-    }
-
-    private void BtnResetDefaults_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sldMinArea != null) sldMinArea.Value = 25;
-        if (sldMaxArea != null) sldMaxArea.Value = 90;
-        if (sldEdge != null) sldEdge.Value = 20;
-        if (chkAutoOrient != null) chkAutoOrient.IsChecked = true;
-        if (chkRestoreColors != null) chkRestoreColors.IsChecked = true;
-        if (chkRemoveDust != null) chkRemoveDust.IsChecked = true;
     }
 
     private void BtnCancel_Click(object? sender, RoutedEventArgs e)
