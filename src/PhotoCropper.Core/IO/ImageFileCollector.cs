@@ -46,7 +46,14 @@ public static class ImageFileCollector
             {
                 if (IsSupportedImageFile(input))
                 {
-                    result.Add(Path.GetFullPath(input));
+                    try
+                    {
+                        if (new FileInfo(input).Length > 0)
+                        {
+                            result.Add(Path.GetFullPath(input));
+                        }
+                    }
+                    catch (IOException) { }
                 }
             }
             else if (Directory.Exists(input))
@@ -55,7 +62,18 @@ public static class ImageFileCollector
                 {
                     try
                     {
-                        result.AddRange(Directory.GetFiles(input, $"*{ext}", searchOption).Select(Path.GetFullPath));
+                        var matching = Directory.GetFiles(input, $"*{ext}", searchOption);
+                        foreach (var file in matching)
+                        {
+                            try
+                            {
+                                if (new FileInfo(file).Length > 0)
+                                {
+                                    result.Add(Path.GetFullPath(file));
+                                }
+                            }
+                            catch (IOException) { }
+                        }
                     }
                     catch (UnauthorizedAccessException)
                     {

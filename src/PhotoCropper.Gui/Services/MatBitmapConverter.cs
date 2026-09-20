@@ -11,6 +11,11 @@ internal static class MatBitmapConverter
     {
         ArgumentNullException.ThrowIfNull(mat);
 
+        if (mat.IsEmpty || mat.Width <= 0 || mat.Height <= 0)
+        {
+            throw new ArgumentException("Cannot convert an empty or zero-sized Mat to Bitmap.", nameof(mat));
+        }
+
         if (mat.NumberOfChannels == 4)
         {
             return new Bitmap(

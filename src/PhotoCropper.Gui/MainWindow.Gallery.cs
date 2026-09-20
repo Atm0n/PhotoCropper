@@ -43,6 +43,7 @@ internal sealed partial class MainWindow
         for (int i = 0; i < detected.Count; i++)
         {
             var mat = detected[i];
+            if (mat == null || mat.IsEmpty || mat.Width <= 0 || mat.Height <= 0) continue;
             var bmp = MatBitmapConverter.ToAvaloniaBitmap(mat);
             slides.Items.Add(bmp);
 

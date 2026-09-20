@@ -80,6 +80,8 @@ internal static class BatchProcessor
             };
         }
 
+        PhotoCropper.Core.Export.PhotoExporter.ClearClaimedExportPaths();
+
         int totalExtracted = 0;
         int errorCount = 0;
         int completedScans = 0;

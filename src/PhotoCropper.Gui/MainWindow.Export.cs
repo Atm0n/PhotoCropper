@@ -59,53 +59,61 @@ internal sealed partial class MainWindow
         {
             await Task.Run(() =>
             {
+                PhotoExporter.ClearClaimedExportPaths();
                 Parallel.ForEach(pendingSessions, new ParallelOptions { MaxDegreeOfParallelism = maxConcurrency }, (session) =>
                 {
-                    bool wasActive = session.IsActive;
-                    var engine = session.Activate();
                     try
                     {
-                        string scanTargetFolder = ExportPathResolver.ResolveOutputDirectory(
-                            session.FilePath,
-                            settings.CustomOutputDirectory,
-                            settings.WorkDirectory);
-
-                        var scanMetadata = settings.ApplyYearToAllScans
-                            ? new PhotoExportMetadata { Year = settings.DefaultYear, Description = settings.DefaultDescription }
-                            : session.Metadata;
-
-                        engine.SaveDetectedPhotos(
-                            scanTargetFolder,
-                            settings.PreferredFormat,
-                            settings.JpegQuality,
-                            settings.FileNamePattern,
-                            scanMetadata);
-
-                        int savedCount = engine.DetectedPhotos.Count;
-                        Interlocked.Add(ref totalSavedPhotos, savedCount);
-
-                        session.IsSaved = true;
-                        session.IsModified = false;
-
-                        if (_workspaceSession != null)
+                        bool wasActive = session.IsActive;
+                        var engine = session.Activate();
+                        try
                         {
-                            var entry = _workspaceSession.Scans.FirstOrDefault(s =>
-                                string.Equals(s.RelativePath, session.FilePath, StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(Path.GetFileName(s.RelativePath), Path.GetFileName(session.FilePath), StringComparison.OrdinalIgnoreCase));
-                            if (entry != null)
+                            string scanTargetFolder = ExportPathResolver.ResolveOutputDirectory(
+                                session.FilePath,
+                                settings.CustomOutputDirectory,
+                                settings.WorkDirectory);
+
+                            var scanMetadata = settings.ApplyYearToAllScans
+                                ? new PhotoExportMetadata { Year = settings.DefaultYear, Description = settings.DefaultDescription }
+                                : session.Metadata;
+
+                            engine.SaveDetectedPhotos(
+                                scanTargetFolder,
+                                settings.PreferredFormat,
+                                settings.JpegQuality,
+                                settings.FileNamePattern,
+                                scanMetadata);
+
+                            int savedCount = engine.DetectedPhotos.Count;
+                            Interlocked.Add(ref totalSavedPhotos, savedCount);
+
+                            session.IsSaved = true;
+                            session.IsModified = false;
+
+                            if (_workspaceSession != null)
                             {
-                                entry.IsProcessed = true;
-                                entry.ExtractedPhotoCount = savedCount;
-                                entry.Metadata = scanMetadata;
+                                var entry = _workspaceSession.Scans.FirstOrDefault(s =>
+                                    string.Equals(s.RelativePath, session.FilePath, StringComparison.OrdinalIgnoreCase) ||
+                                    string.Equals(Path.GetFileName(s.RelativePath), Path.GetFileName(session.FilePath), StringComparison.OrdinalIgnoreCase));
+                                if (entry != null)
+                                {
+                                    entry.IsProcessed = true;
+                                    entry.ExtractedPhotoCount = savedCount;
+                                    entry.Metadata = scanMetadata;
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            if (!wasActive)
+                            {
+                                session.Deactivate();
                             }
                         }
                     }
-                    finally
+                    catch (Exception ex)
                     {
-                        if (!wasActive)
-                        {
-                            session.Deactivate();
-                        }
+                        System.Diagnostics.Debug.WriteLine($"Failed to export scan '{session.FilePath}': {ex.Message}");
                     }
 
                     int done = Interlocked.Increment(ref completedScans);

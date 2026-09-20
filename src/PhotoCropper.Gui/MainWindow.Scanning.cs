@@ -211,12 +211,7 @@ internal sealed partial class MainWindow
         }
     }
 
-    private void ShowScannerError(string title, string message)
-    {
-        txtErrorTitle.Text = title;
-        txtErrorMessage.Text = message;
-        pnlErrorOverlay.IsVisible = true;
-    }
+    private void ShowScannerError(string title, string message) => ShowAppError(title, message);
 
     private void BtnCloseError_Click(object? sender, RoutedEventArgs e)
     {

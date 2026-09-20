@@ -36,6 +36,18 @@ public class PhotoCropperEngine : IDisposable
 
     public PhotoCropperEngine(string originalFilePath)
     {
+        ArgumentNullException.ThrowIfNull(originalFilePath);
+        if (!File.Exists(originalFilePath))
+        {
+            throw new FileNotFoundException("Scan file not found.", originalFilePath);
+        }
+
+        var fileInfo = new FileInfo(originalFilePath);
+        if (fileInfo.Length == 0)
+        {
+            throw new InvalidOperationException($"The file '{originalFilePath}' is empty (0 bytes).");
+        }
+
         OriginalFilePath = originalFilePath;
         using (var stream = new FileStream(originalFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
         using (var ms = new MemoryStream((int)stream.Length))
@@ -44,6 +56,10 @@ public class PhotoCropperEngine : IDisposable
             byte[] fileBytes = ms.ToArray();
             using Mat rawMat = new();
             CvInvoke.Imdecode(fileBytes, ImreadModes.AnyColor, rawMat);
+            if (rawMat.IsEmpty || rawMat.Width <= 0 || rawMat.Height <= 0)
+            {
+                throw new InvalidOperationException($"Failed to decode image from file '{originalFilePath}'. The image format may be invalid or corrupt.");
+            }
             Original = rawMat.Clone();
             OriginalWithDetected = Original.Clone();
         }
@@ -124,6 +140,11 @@ public class PhotoCropperEngine : IDisposable
     public void DetectPhotos()
     {
         ResetState();
+
+        if (Original == null || Original.IsEmpty || Original.Width <= 0 || Original.Height <= 0)
+        {
+            return;
+        }
 
         // Sample background color before padding
         using Mat hsv = new();

@@ -124,6 +124,14 @@ internal sealed partial class MainWindow : Window
                 lblStatus.Text = completionText;
             }
         }
+        catch (OperationCanceledException)
+        {
+            lblStatus.Text = Avalonia.Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Operation cancelled.";
+        }
+        catch (Exception ex)
+        {
+            ShowAppError("Operation Failed", ex.Message);
+        }
         finally
         {
             _activeOperationCts = null;
@@ -131,6 +139,13 @@ internal sealed partial class MainWindow : Window
             pnlLoadingOverlay.IsVisible = false;
             isLoading = false;
         }
+    }
+
+    internal void ShowAppError(string title, string message)
+    {
+        if (txtErrorTitle != null) txtErrorTitle.Text = title;
+        if (txtErrorMessage != null) txtErrorMessage.Text = message;
+        if (pnlErrorOverlay != null) pnlErrorOverlay.IsVisible = true;
     }
 
     private Task ExecuteWithLoadingAsync(string statusText, Func<Task> action, string? completionText = null)

@@ -181,6 +181,53 @@ public sealed class PhotoExporterTests : IDisposable
         text.ShouldContain("Grandparents anniversary");
     }
 
+    [Fact]
+    public void ResolveUniqueExportPath_WhenTargetClaimedOrExists_ShouldDisambiguate()
+    {
+        PhotoExporter.ClearClaimedExportPaths();
+        string testFile = Path.Combine(_tempDir, "collision_test.jpg");
+
+        string path1 = PhotoExporter.ResolveUniqueExportPath(testFile);
+        string path2 = PhotoExporter.ResolveUniqueExportPath(testFile);
+        string path3 = PhotoExporter.ResolveUniqueExportPath(testFile);
+
+        Path.GetFileName(path1).ShouldBe("collision_test.jpg");
+        Path.GetFileName(path2).ShouldBe("collision_test (1).jpg");
+        Path.GetFileName(path3).ShouldBe("collision_test (2).jpg");
+    }
+
+    [Fact]
+    public void SavePhotos_ConcurrentScansWithSameNamingPattern_ShouldExportAllPhotosWithoutCollision()
+    {
+        PhotoExporter.ClearClaimedExportPaths();
+        string exportDir = Path.Combine(_tempDir, "concurrent_export");
+
+        string scan1 = Path.Combine(_tempDir, "scan_alpha.jpg");
+        string scan2 = Path.Combine(_tempDir, "scan_beta.jpg");
+        File.WriteAllBytes(scan1, [0xFF, 0xD8, 0xFF, 0xD9]);
+        File.WriteAllBytes(scan2, [0xFF, 0xD8, 0xFF, 0xD9]);
+
+        using Mat photo1 = new(40, 40, DepthType.Cv8U, 3);
+        using Mat photo2 = new(40, 40, DepthType.Cv8U, 3);
+        photo1.SetTo(new MCvScalar(10, 10, 10));
+        photo2.SetTo(new MCvScalar(20, 20, 20));
+
+        var meta = new PhotoCropper.Core.Models.PhotoExportMetadata { Year = 2002 };
+
+        // Run both scans concurrently using a pattern that lacks {original}
+        Parallel.Invoke(
+            () => PhotoExporter.SavePhotos([photo1], scan1, exportDir, "JPEG", 90, "{year}_{index:02}", meta),
+            () => PhotoExporter.SavePhotos([photo2], scan2, exportDir, "JPEG", 90, "{year}_{index:02}", meta)
+        );
+
+        string[] exported = Directory.GetFiles(exportDir, "*.jpg");
+        exported.Length.ShouldBe(2);
+
+        var names = exported.Select(Path.GetFileName).ToList();
+        names.ShouldContain("2002_01.jpg");
+        names.ShouldContain("2002_01 (1).jpg");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 
@@ -140,7 +141,8 @@ public static class PhotoExporter
                 totalValidPhotos,
                 metadata,
                 extension);
-            string fileName = Path.Combine(outputFolder, relativeFileName);
+            string baseTargetFileName = Path.Combine(outputFolder, relativeFileName);
+            string fileName = ResolveUniqueExportPath(baseTargetFileName);
 
             if (string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase))
             {
@@ -151,8 +153,8 @@ public static class PhotoExporter
                 {
                     fileBytes = ExifMetadataWriter.InjectPngMetadata(fileBytes, metadata);
                 }
-                File.WriteAllBytes(fileName, fileBytes);
-                EmbedPngDpi(fileName, xDpi, yDpi);
+                fileBytes = ApplyPngDpi(fileBytes, xDpi, yDpi);
+                WriteBytesToFile(fileName, fileBytes);
             }
             else
             {
@@ -166,11 +168,55 @@ public static class PhotoExporter
                 {
                     fileBytes = ExifMetadataWriter.InjectJpegMetadata(fileBytes, metadata);
                 }
-                File.WriteAllBytes(fileName, fileBytes);
-                EmbedJpegDpi(fileName, xDpi, yDpi);
+                fileBytes = ApplyJpegDpi(fileBytes, xDpi, yDpi);
+                WriteBytesToFile(fileName, fileBytes);
             }
 
             progressCallback?.Invoke(i + 1, photos.Count);
+        }
+    }
+
+    private static readonly ConcurrentDictionary<string, byte> ClaimedExportPaths = new(StringComparer.OrdinalIgnoreCase);
+
+    public static void ClearClaimedExportPaths() => ClaimedExportPaths.Clear();
+
+    public static string ResolveUniqueExportPath(string targetPath)
+    {
+        ArgumentNullException.ThrowIfNull(targetPath);
+
+        string dir = Path.GetDirectoryName(targetPath) ?? string.Empty;
+        string nameWithoutExt = Path.GetFileNameWithoutExtension(targetPath);
+        string ext = Path.GetExtension(targetPath);
+
+        string candidate = targetPath;
+        int counter = 1;
+
+        while (true)
+        {
+            if (!File.Exists(candidate) && ClaimedExportPaths.TryAdd(candidate, 0))
+            {
+                return candidate;
+            }
+
+            candidate = Path.Combine(dir, $"{nameWithoutExt} ({counter++}){ext}");
+        }
+    }
+
+    private static void WriteBytesToFile(string filePath, byte[] bytes)
+    {
+        const int maxRetries = 5;
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                using var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                fs.Write(bytes, 0, bytes.Length);
+                return;
+            }
+            catch (IOException) when (attempt < maxRetries - 1)
+            {
+                Thread.Sleep(30);
+            }
         }
     }
 
@@ -184,7 +230,7 @@ public static class PhotoExporter
         byte[] updated = ExifMetadataWriter.InjectJpegMetadata(bytes, metadata);
         if (updated != bytes)
         {
-            File.WriteAllBytes(filePath, updated);
+            WriteBytesToFile(filePath, updated);
         }
     }
 
@@ -198,29 +244,26 @@ public static class PhotoExporter
         byte[] updated = ExifMetadataWriter.InjectPngMetadata(bytes, metadata);
         if (updated != bytes)
         {
-            File.WriteAllBytes(filePath, updated);
+            WriteBytesToFile(filePath, updated);
         }
     }
 
-    public static void EmbedJpegDpi(string filePath, int xDpi, int yDpi)
+    public static byte[] ApplyJpegDpi(byte[] bytes, int xDpi, int yDpi)
     {
-        ArgumentNullException.ThrowIfNull(filePath);
-        if (!File.Exists(filePath)) return;
-
-        byte[] bytes = File.ReadAllBytes(filePath);
-        if (bytes.Length < 4 || bytes[0] != 0xFF || bytes[1] != 0xD8) return;
+        ArgumentNullException.ThrowIfNull(bytes);
+        if (bytes.Length < 4 || bytes[0] != 0xFF || bytes[1] != 0xD8) return bytes;
 
         // If JFIF marker already exists at byte index 2
         if (bytes.Length >= 18 && bytes[2] == 0xFF && bytes[3] == 0xE0 &&
             bytes[6] == 'J' && bytes[7] == 'F' && bytes[8] == 'I' && bytes[9] == 'F')
         {
-            bytes[13] = 1; // dots per inch
-            bytes[14] = (byte)((xDpi >> 8) & 0xFF);
-            bytes[15] = (byte)(xDpi & 0xFF);
-            bytes[16] = (byte)((yDpi >> 8) & 0xFF);
-            bytes[17] = (byte)(yDpi & 0xFF);
-            File.WriteAllBytes(filePath, bytes);
-            return;
+            byte[] updated = (byte[])bytes.Clone();
+            updated[13] = 1; // dots per inch
+            updated[14] = (byte)((xDpi >> 8) & 0xFF);
+            updated[15] = (byte)(xDpi & 0xFF);
+            updated[16] = (byte)((yDpi >> 8) & 0xFF);
+            updated[17] = (byte)(yDpi & 0xFF);
+            return updated;
         }
 
         // Insert new JFIF APP0 segment right after SOI (FF D8)
@@ -241,16 +284,26 @@ public static class PhotoExporter
         Buffer.BlockCopy(jfifHeader, 0, newBytes, 2, jfifHeader.Length);
         Buffer.BlockCopy(bytes, 2, newBytes, 2 + jfifHeader.Length, bytes.Length - 2);
 
-        File.WriteAllBytes(filePath, newBytes);
+        return newBytes;
     }
 
-    public static void EmbedPngDpi(string filePath, int xDpi, int yDpi)
+    public static void EmbedJpegDpi(string filePath, int xDpi, int yDpi)
     {
         ArgumentNullException.ThrowIfNull(filePath);
         if (!File.Exists(filePath)) return;
 
         byte[] bytes = File.ReadAllBytes(filePath);
-        if (bytes.Length < 33 || bytes[0] != 0x89 || bytes[1] != 0x50 || bytes[2] != 0x4E || bytes[3] != 0x47) return;
+        byte[] updated = ApplyJpegDpi(bytes, xDpi, yDpi);
+        if (updated != bytes)
+        {
+            WriteBytesToFile(filePath, updated);
+        }
+    }
+
+    public static byte[] ApplyPngDpi(byte[] bytes, int xDpi, int yDpi)
+    {
+        ArgumentNullException.ThrowIfNull(bytes);
+        if (bytes.Length < 33 || bytes[0] != 0x89 || bytes[1] != 0x50 || bytes[2] != 0x4E || bytes[3] != 0x47) return bytes;
 
         // Convert DPI to pixels per meter
         int ppux = (int)Math.Round(xDpi / 0.0254);
@@ -284,7 +337,20 @@ public static class PhotoExporter
         Buffer.BlockCopy(physChunk, 0, newBytes, insertPos, physChunk.Length);
         Buffer.BlockCopy(bytes, insertPos, newBytes, insertPos + physChunk.Length, bytes.Length - insertPos);
 
-        File.WriteAllBytes(filePath, newBytes);
+        return newBytes;
+    }
+
+    public static void EmbedPngDpi(string filePath, int xDpi, int yDpi)
+    {
+        ArgumentNullException.ThrowIfNull(filePath);
+        if (!File.Exists(filePath)) return;
+
+        byte[] bytes = File.ReadAllBytes(filePath);
+        byte[] updated = ApplyPngDpi(bytes, xDpi, yDpi);
+        if (updated != bytes)
+        {
+            WriteBytesToFile(filePath, updated);
+        }
     }
 
     private static uint CalculatePngCrc(byte[] data)
