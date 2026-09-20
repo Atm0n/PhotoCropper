@@ -165,8 +165,22 @@ internal sealed partial class MainWindow : Window
     }
     private void BtnReset_Click(object? sender, RoutedEventArgs e) => BtnResetDefaults_Click(sender, e);
 
-    private void BtnHelp_Click(object? sender, RoutedEventArgs e) => pnlHelpOverlay.IsVisible = true;
-    private void BtnCloseHelp_Click(object? sender, RoutedEventArgs e) => pnlHelpOverlay.IsVisible = false;
+    private Dialogs.HelpWindow? _helpWindow;
+
+    private void ShowHelpWindow()
+    {
+        if (_helpWindow != null && _helpWindow.IsVisible)
+        {
+            _helpWindow.Activate();
+            return;
+        }
+
+        _helpWindow = new Dialogs.HelpWindow();
+        _helpWindow.Closed += (_, _) => _helpWindow = null;
+        _helpWindow.Show(this);
+    }
+
+    private void BtnHelp_Click(object? sender, RoutedEventArgs e) => ShowHelpWindow();
 
     private async void Window_KeyDown(object? sender, KeyEventArgs e)
     {
@@ -235,13 +249,6 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        if (pnlScannerOverlay.IsVisible && e.Key == Key.Escape)
-        {
-            pnlScannerOverlay.IsVisible = false;
-            e.Handled = true;
-            return;
-        }
-
         if (pnlErrorOverlay.IsVisible && e.Key == Key.Escape)
         {
             pnlErrorOverlay.IsVisible = false;
@@ -258,16 +265,9 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        if (pnlHelpOverlay.IsVisible && e.Key == Key.Escape)
-        {
-            pnlHelpOverlay.IsVisible = false;
-            e.Handled = true;
-            return;
-        }
-
         if (e.Key == Key.F1)
         {
-            pnlHelpOverlay.IsVisible = true;
+            ShowHelpWindow();
             e.Handled = true;
             return;
         }

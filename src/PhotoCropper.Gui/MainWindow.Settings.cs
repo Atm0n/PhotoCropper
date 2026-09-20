@@ -47,21 +47,6 @@ internal sealed partial class MainWindow
 
         UpdateWorkspaceUi(settings.WorkDirectory);
 
-        if (cbScannerDpi != null)
-        {
-            cbScannerDpi.SelectedIndex = settings.ScannerDpi switch
-            {
-                150 => 0,
-                600 => 2,
-                _ => 1
-            };
-        }
-
-        if (chkNetworkScanners != null)
-        {
-            chkNetworkScanners.IsChecked = settings.IncludeNetworkScanners;
-        }
-
         UpdateCropStrokeColor(settings.DetectionBoxColor);
         PopulateThemeMenu();
         PopulateDetectionColorMenu();

@@ -75,7 +75,7 @@ internal sealed partial class MainWindow
         var selectedDevice = _availableScanners.FirstOrDefault(s => s.Id == settings.SelectedScannerId);
         if (selectedDevice == null || string.IsNullOrEmpty(settings.SelectedScannerId) || _availableScanners.Count == 0)
         {
-            ShowScannerConfig();
+            await ShowScannerConfigAsync();
             return;
         }
 
@@ -85,114 +85,18 @@ internal sealed partial class MainWindow
 
     private async void BtnScannerConfig_Click(object? sender, RoutedEventArgs e)
     {
-        if (_availableScanners.Count == 0)
-        {
-            await RefreshScannersAsync();
-        }
-        ShowScannerConfig();
+        await ShowScannerConfigAsync();
     }
 
-    private void ShowScannerConfig()
+    private async Task ShowScannerConfigAsync()
     {
-        UpdateScannerConfigUi();
-        pnlScannerOverlay.IsVisible = true;
-    }
-
-    private void UpdateScannerConfigUi()
-    {
-        var settings = SettingsManager.Instance.Settings;
-        if (cbScanner != null)
+        using var dialog = new Dialogs.ScannerConfigDialog(_scannerService);
+        var result = await dialog.ShowDialog<Dialogs.ScannerConfigResult>(this);
+        await RefreshScannersAsync();
+        if (result == Dialogs.ScannerConfigResult.SaveAndScan)
         {
-            cbScanner.ItemsSource = _availableScanners.Select(d => d.ToString()).ToList();
-
-            int selectedIdx = _availableScanners.FindIndex(d => d.Id == settings.SelectedScannerId);
-            if (selectedIdx >= 0)
-            {
-                cbScanner.SelectedIndex = selectedIdx;
-            }
-            else if (_availableScanners.Count > 0)
-            {
-                cbScanner.SelectedIndex = 0;
-            }
+            BtnScan_Click(this, new RoutedEventArgs());
         }
-
-        if (cbScannerDpi != null)
-        {
-            cbScannerDpi.SelectedIndex = settings.ScannerDpi switch
-            {
-                150 => 0,
-                600 => 2,
-                _ => 1
-            };
-        }
-
-        if (chkNetworkScanners != null)
-        {
-            chkNetworkScanners.IsChecked = settings.IncludeNetworkScanners;
-        }
-
-        if (txtScannerStatus != null)
-        {
-            if (_availableScanners.Count == 0)
-            {
-                txtScannerStatus.Text = Avalonia.Application.Current?.FindResource("MsgNoScannerFound")?.ToString() ?? "No scanner detected. Click 🔄 to refresh.";
-                txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppDangerTextBrush") as IBrush) ?? Brush.Parse("#ffaa44");
-            }
-            else
-            {
-                txtScannerStatus.Text = $"{_availableScanners.Count} scanner(s) found.";
-                txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppSuccessTextBrush") as IBrush) ?? Brush.Parse("#44cc66");
-            }
-        }
-    }
-
-    private void SaveCurrentScannerConfig()
-    {
-        var settings = SettingsManager.Instance.Settings;
-        if (cbScanner != null && cbScanner.SelectedIndex >= 0 && cbScanner.SelectedIndex < _availableScanners.Count)
-        {
-            settings.SelectedScannerId = _availableScanners[cbScanner.SelectedIndex].Id;
-        }
-
-        if (cbScannerDpi?.SelectedItem is ComboBoxItem item)
-        {
-            string? content = item.Content?.ToString();
-            int dpi = 300;
-            if (content != null)
-            {
-                if (content.StartsWith("150", StringComparison.Ordinal)) dpi = 150;
-                else if (content.StartsWith("600", StringComparison.Ordinal)) dpi = 600;
-                else if (int.TryParse(content, out int parsed)) dpi = parsed;
-            }
-            settings.ScannerDpi = dpi;
-        }
-
-        if (chkNetworkScanners != null)
-        {
-            settings.IncludeNetworkScanners = chkNetworkScanners.IsChecked ?? false;
-        }
-
-        SettingsManager.Instance.Save();
-    }
-
-    private void BtnCancelScannerConfig_Click(object? sender, RoutedEventArgs e)
-    {
-        pnlScannerOverlay.IsVisible = false;
-    }
-
-    private void BtnSaveScannerConfig_Click(object? sender, RoutedEventArgs e)
-    {
-        SaveCurrentScannerConfig();
-        pnlScannerOverlay.IsVisible = false;
-    }
-
-    private void BtnSaveAndScan_Click(object? sender, RoutedEventArgs e)
-    {
-        SaveCurrentScannerConfig();
-        pnlScannerOverlay.IsVisible = false;
-
-        // Trigger scan with the saved configuration
-        BtnScan_Click(sender, e);
     }
 
     private async Task ExecuteScanAsync(string workDir, ScannerDeviceInfo selectedDevice, int dpi)
@@ -300,66 +204,10 @@ internal sealed partial class MainWindow
             var devices = await _scannerService.GetDevicesAsync(includeNetwork).ConfigureAwait(false);
             _availableScanners.Clear();
             _availableScanners.AddRange(devices);
-
-            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (cbScanner != null)
-                {
-                    cbScanner.ItemsSource = _availableScanners.Select(d => d.ToString()).ToList();
-
-                    int selectedIdx = _availableScanners.FindIndex(d => d.Id == settings.SelectedScannerId);
-                    if (selectedIdx >= 0)
-                    {
-                        cbScanner.SelectedIndex = selectedIdx;
-                    }
-                    else if (_availableScanners.Count > 0)
-                    {
-                        cbScanner.SelectedIndex = 0;
-                    }
-                }
-            });
         }
         catch
         {
             // Scanner enumeration failed or unsupported platform
-        }
-    }
-
-    private async void ChkNetworkScanners_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (chkNetworkScanners != null)
-        {
-            SettingsManager.Instance.Settings.IncludeNetworkScanners = chkNetworkScanners.IsChecked ?? false;
-            SettingsManager.Instance.Save();
-            await RefreshScannersAsync();
-            UpdateScannerConfigUi();
-        }
-    }
-
-    private void CbScanner_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (cbScanner.SelectedIndex >= 0 && cbScanner.SelectedIndex < _availableScanners.Count)
-        {
-            var selected = _availableScanners[cbScanner.SelectedIndex];
-            SettingsManager.Instance.Settings.SelectedScannerId = selected.Id;
-            SettingsManager.Instance.Save();
-        }
-    }
-
-    private void CbScannerDpi_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (cbScannerDpi?.SelectedItem is ComboBoxItem item)
-        {
-            string? content = item.Content?.ToString();
-            int dpi = 300;
-            if (content != null)
-            {
-                if (content.StartsWith("150", StringComparison.Ordinal)) dpi = 150;
-                else if (content.StartsWith("600", StringComparison.Ordinal)) dpi = 600;
-                else if (int.TryParse(content, out int parsed)) dpi = parsed;
-            }
-            SettingsManager.Instance.Settings.ScannerDpi = dpi;
-            SettingsManager.Instance.Save();
         }
     }
 
@@ -379,17 +227,5 @@ internal sealed partial class MainWindow
     {
         pnlErrorOverlay.IsVisible = false;
         await RefreshScannersAsync();
-        UpdateScannerConfigUi();
-    }
-
-    private async void BtnRefreshScanners_Click(object? sender, RoutedEventArgs e)
-    {
-        if (txtScannerStatus != null)
-        {
-            txtScannerStatus.Text = Avalonia.Application.Current?.FindResource("TxtScanningSearching")?.ToString() ?? "Searching for connected scanners...";
-            txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppAccentBrush") as IBrush) ?? Brush.Parse("#3399ff");
-        }
-        await RefreshScannersAsync();
-        UpdateScannerConfigUi();
     }
 }
