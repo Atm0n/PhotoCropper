@@ -196,7 +196,7 @@ internal sealed partial class MainWindow
         drawRect.Inflate(-thickness / 2, -thickness / 2);
 
         CvInvoke.Rectangle(previewMat, drawRect, new MCvScalar(0, 0, 255), thickness);
-        imgRefine.Source = MatBitmapConverter.ToAvaloniaBitmap(previewMat);
+        SetRefineImage(previewMat);
     }
 
     private void PnlRefine_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -295,7 +295,7 @@ internal sealed partial class MainWindow
     {
         isRefining = false;
         pnlRefineOverlay.IsVisible = false;
-        imgRefine.Source = null;
+        SetRefineImage(null);
     }
 
     private async void BtnResetDefaults_Click(object? sender, RoutedEventArgs e)
@@ -327,7 +327,7 @@ internal sealed partial class MainWindow
             await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
             {
                 await Task.Run(() => photo.DetectPhotos());
-                img.Source = MatBitmapConverter.ToAvaloniaBitmap(photo.OriginalWithDetected);
+                SetMainImage(photo.OriginalWithDetected);
                 LoadCroppedPhotosToSlider();
                 UpdatePhotoCounterLabel();
                 string msgFormat = Avalonia.Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";

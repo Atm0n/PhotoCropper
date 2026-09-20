@@ -373,7 +373,9 @@ internal sealed partial class MainWindow : Window
                     if (sel < engine.RawDetectedPhotos.Count)
                     {
                         isComparingRaw = true;
+                        var oldBmp = slides.Items[sel] as IDisposable;
                         slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.RawDetectedPhotos[sel]);
+                        oldBmp?.Dispose();
                         slides.SelectedIndex = sel;
                     }
                 }
@@ -393,12 +395,32 @@ internal sealed partial class MainWindow : Window
                 var engine = ScanSessions[currentIndex].Activate();
                 if (sel < engine.DetectedPhotos.Count)
                 {
+                    var oldBmp = slides.Items[sel] as IDisposable;
                     slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.DetectedPhotos[sel]);
+                    oldBmp?.Dispose();
                     slides.SelectedIndex = sel;
                 }
             }
             e.Handled = true;
         }
+    }
+
+    internal void SetMainImage(Emgu.CV.Mat? mat)
+    {
+        if (img == null) return;
+
+        var oldSource = img.Source as IDisposable;
+        img.Source = mat != null ? MatBitmapConverter.ToAvaloniaBitmap(mat) : null;
+        oldSource?.Dispose();
+    }
+
+    internal void SetRefineImage(Emgu.CV.Mat? mat)
+    {
+        if (imgRefine == null) return;
+
+        var oldSource = imgRefine.Source as IDisposable;
+        imgRefine.Source = mat != null ? MatBitmapConverter.ToAvaloniaBitmap(mat) : null;
+        oldSource?.Dispose();
     }
 
     protected override void OnClosed(EventArgs e)
@@ -432,6 +454,9 @@ internal sealed partial class MainWindow : Window
         SettingsManager.Instance.Save();
 
         base.OnClosed(e);
+        SetMainImage(null);
+        SetRefineImage(null);
+        ClearGalleryBitmaps();
         _scannerService.Dispose();
         undoHistory.Dispose();
         foreach (var session in ScanSessions)
