@@ -13,73 +13,8 @@ internal sealed partial class MainWindow
         var settings = SettingsManager.Instance.Settings;
         sldSensitivity.Value = settings.BackgroundTolerance;
         sldZoom.Value = settings.ZoomLevel;
-        sldMinArea.Value = settings.MinAreaFactor;
-        sldMaxArea.Value = settings.MaxAreaFactor;
-        sldEdge.Value = settings.CannyLowThreshold;
-        tglAdvanced.IsChecked = settings.AdvancedVisible;
-        if (chkAutoOrient != null)
-        {
-            chkAutoOrient.IsChecked = settings.AutoOrientPhotos;
-        }
-        if (chkRestoreColors != null)
-        {
-            chkRestoreColors.IsChecked = settings.RestoreVintageColors;
-        }
-        if (chkRemoveDust != null)
-        {
-            chkRemoveDust.IsChecked = settings.RemoveDustAndScratches;
-        }
-        if (chkShowNotifications != null)
-        {
-            chkShowNotifications.IsChecked = settings.ShowNotifications;
-        }
-        if (chkFlashTaskbar != null)
-        {
-            chkFlashTaskbar.IsChecked = settings.FlashTaskbarOnCompletion;
-        }
-
-        if (cbFormat != null)
-        {
-            cbFormat.SelectedIndex = string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        }
-        if (sldJpegQuality != null)
-        {
-            sldJpegQuality.Value = settings.JpegQuality;
-            UpdateQualityDisplay();
-        }
-        if (txtOutputDir != null)
-        {
-            txtOutputDir.Text = settings.CustomOutputDirectory ?? "";
-        }
-        if (pnlJpegQuality != null)
-        {
-            pnlJpegQuality.IsVisible = !string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase);
-        }
-
-        if (txtFileNamePattern != null)
-        {
-            txtFileNamePattern.Text = settings.FileNamePattern;
-        }
-        if (cbNamingPreset != null)
-        {
-            SyncNamingPresetDropdown(settings.FileNamePattern);
-        }
-        if (txtMetadataYear != null)
-        {
-            txtMetadataYear.Text = settings.DefaultYear?.ToString() ?? "";
-        }
-        if (txtMetadataDesc != null)
-        {
-            txtMetadataDesc.Text = settings.DefaultDescription ?? "";
-        }
-        if (chkApplyYearToAll != null)
-        {
-            chkApplyYearToAll.IsChecked = settings.ApplyYearToAllScans;
-        }
-        UpdateNamingPreview();
 
         UpdateWorkspaceUi(settings.WorkDirectory);
-
         UpdateCropStrokeColor(settings.DetectionBoxColor);
         PopulateThemeMenu();
         PopulateDetectionColorMenu();
@@ -336,19 +271,5 @@ internal sealed partial class MainWindow
             rectRefineCrop.Stroke = new SolidColorBrush(stroke);
             rectRefineCrop.Fill = new SolidColorBrush(fill);
         }
-    }
-
-    private void ChkShowNotifications_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (chkShowNotifications == null) return;
-        SettingsManager.Instance.Settings.ShowNotifications = chkShowNotifications.IsChecked == true;
-        SettingsManager.Instance.Save();
-    }
-
-    private void ChkFlashTaskbar_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (chkFlashTaskbar == null) return;
-        SettingsManager.Instance.Settings.FlashTaskbarOnCompletion = chkFlashTaskbar.IsChecked == true;
-        SettingsManager.Instance.Save();
     }
 }

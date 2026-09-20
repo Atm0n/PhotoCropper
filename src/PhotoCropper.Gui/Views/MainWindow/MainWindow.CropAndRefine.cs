@@ -62,21 +62,36 @@ internal sealed partial class MainWindow
         double availableH = scrollOriginal.Viewport.Height - 20;
         if (availableW <= 0 || availableH <= 0) return;
 
-        img.Width = availableW;
-        img.Height = availableH;
-
-        double zoom = sldZoom.Value;
-        double zoomedW = img.Bounds.Width * zoom;
-        double zoomedH = img.Bounds.Height * zoom;
-
-        if (zoomedW > 0 && zoomedH > 0)
+        if (img.Source is Avalonia.Media.Imaging.Bitmap bmp && bmp.PixelSize.Width > 0 && bmp.PixelSize.Height > 0)
         {
+            double srcW = bmp.PixelSize.Width;
+            double srcH = bmp.PixelSize.Height;
+
+            double scale = Math.Min(availableW / srcW, availableH / srcH);
+            double fitW = Math.Max(10, srcW * scale);
+            double fitH = Math.Max(10, srcH * scale);
+
+            img.Width = fitW;
+            img.Height = fitH;
+
+            double zoom = sldZoom?.Value ?? 1.0;
+            double zoomedW = fitW * zoom;
+            double zoomedH = fitH * zoom;
+
             pnlOriginal.Width = zoomedW;
             pnlOriginal.Height = zoomedH;
+            cnvCrop.Width = zoomedW;
+            cnvCrop.Height = zoomedH;
         }
-
-        cnvCrop.Width = pnlOriginal.Width;
-        cnvCrop.Height = pnlOriginal.Height;
+        else
+        {
+            img.Width = availableW;
+            img.Height = availableH;
+            pnlOriginal.Width = availableW;
+            pnlOriginal.Height = availableH;
+            cnvCrop.Width = availableW;
+            cnvCrop.Height = availableH;
+        }
     }
 
     private void PnlOriginal_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -152,13 +167,13 @@ internal sealed partial class MainWindow
     {
         if (img?.Source == null || pnlOriginal == null) return new Rect();
 
-        double zoom = sldZoom.Value;
-        double w = img.Bounds.Width * zoom;
-        double h = img.Bounds.Height * zoom;
+        double zoom = sldZoom?.Value ?? 1.0;
+        double w = (double.IsNaN(img.Width) ? img.Bounds.Width : img.Width) * zoom;
+        double h = (double.IsNaN(img.Height) ? img.Bounds.Height : img.Height) * zoom;
         double x = (pnlOriginal.Bounds.Width - w) / 2;
         double y = (pnlOriginal.Bounds.Height - h) / 2;
 
-        return new Rect(x, y, w, h);
+        return new Rect(Math.Max(0, x), Math.Max(0, y), Math.Max(1, w), Math.Max(1, h));
     }
 
     private void BtnRefine_Click(object? sender, RoutedEventArgs e) => StartRefineMode();

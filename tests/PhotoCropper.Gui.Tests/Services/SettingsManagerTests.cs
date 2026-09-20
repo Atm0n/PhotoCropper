@@ -41,6 +41,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.ShowNotifications.ShouldBeTrue();
         manager.Settings.FlashTaskbarOnCompletion.ShouldBeTrue();
         manager.Settings.PlaySoundOnCompletion.ShouldBeFalse();
+        manager.Settings.PromptBeforeExport.ShouldBeFalse();
     }
 
     [Fact]
@@ -70,6 +71,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.ShowNotifications = false;
         manager.Settings.FlashTaskbarOnCompletion = false;
         manager.Settings.PlaySoundOnCompletion = true;
+        manager.Settings.PromptBeforeExport = true;
 
         manager.Save();
 
@@ -97,6 +99,7 @@ public sealed class SettingsManagerTests : IDisposable
         secondManager.Settings.ShowNotifications.ShouldBeFalse();
         secondManager.Settings.FlashTaskbarOnCompletion.ShouldBeFalse();
         secondManager.Settings.PlaySoundOnCompletion.ShouldBeTrue();
+        secondManager.Settings.PromptBeforeExport.ShouldBeTrue();
     }
 
     [Fact]
