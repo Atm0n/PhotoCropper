@@ -20,6 +20,11 @@ public static partial class FileNameTemplateHelper
         PhotoPrefixPattern
     ];
 
+    private static readonly char[] CrossPlatformInvalidFileNameChars =
+    [
+        '\\', '/', ':', '*', '?', '"', '<', '>', '|'
+    ];
+
     [GeneratedRegex(@"^[\W_]+|[\W_]+$")]
     private static partial Regex SeparatorTrimRegex();
 
@@ -74,7 +79,8 @@ public static partial class FileNameTemplateHelper
         char[] resultChars = result.ToCharArray();
         for (int i = 0; i < resultChars.Length; i++)
         {
-            if (Array.IndexOf(invalidChars, resultChars[i]) >= 0)
+            if (Array.IndexOf(invalidChars, resultChars[i]) >= 0 ||
+                Array.IndexOf(CrossPlatformInvalidFileNameChars, resultChars[i]) >= 0)
             {
                 resultChars[i] = '_';
             }
