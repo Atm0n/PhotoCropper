@@ -1,6 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
@@ -182,11 +184,50 @@ internal sealed partial class MainWindow : Window
 
     private void BtnHelp_Click(object? sender, RoutedEventArgs e) => ShowHelpWindow();
 
+    internal static bool IsTextInputActive(IInputElement? focusedElement, object? sourceElement)
+    {
+        if (focusedElement is TextBox) return true;
+        if (sourceElement is TextBox) return true;
+        if (sourceElement is Visual v && v.FindAncestorOfType<TextBox>() != null) return true;
+        return false;
+    }
+
     private async void Window_KeyDown(object? sender, KeyEventArgs e)
     {
         if (isLoading)
         {
             e.Handled = true;
+            return;
+        }
+
+        // Prevent keyboard shortcuts from stealing input when typing in a TextBox (e.g. naming pattern, year, description)
+        if (IsTextInputActive(FocusManager?.GetFocusedElement(), e.Source))
+        {
+            if (e.Key == Key.Escape || e.Key == Key.Enter)
+            {
+                FocusManager?.Focus(null);
+                e.Handled = true;
+                return;
+            }
+
+            // Still allow global file operations with Ctrl modifier
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
+            {
+                if (e.Key == Key.S)
+                {
+                    BtnSaveImages_Click(null, new RoutedEventArgs());
+                    e.Handled = true;
+                    return;
+                }
+                if (e.Key == Key.O)
+                {
+                    BtnOpenFiles_Click(null, new RoutedEventArgs());
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // Do not handle; let the focused TextBox receive spaces, letters, arrows, backspace, delete, Ctrl+Z/Y/A/C/V/X
             return;
         }
 
@@ -386,6 +427,11 @@ internal sealed partial class MainWindow : Window
 
     private void Window_KeyUp(object? sender, KeyEventArgs e)
     {
+        if (IsTextInputActive(FocusManager?.GetFocusedElement(), e.Source))
+        {
+            return;
+        }
+
         if (isComparingRaw && (e.Key == Key.Space || e.Key == Key.B))
         {
             isComparingRaw = false;
