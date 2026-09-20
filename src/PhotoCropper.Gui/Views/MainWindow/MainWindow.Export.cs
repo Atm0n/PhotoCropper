@@ -135,7 +135,10 @@ internal sealed partial class MainWindow
                 }
             });
 
-            PhotoCropper.Core.Utils.NotificationSound.PlayCompletionSound();
+            if (totalSavedPhotos > 0)
+            {
+                _notificationService.NotifyExportCompleted(totalSavedPhotos, targetOutputFolder);
+            }
         }, string.Format(msgFormat, totalSavedPhotos));
 
         if (closeAfterSave)
@@ -213,7 +216,9 @@ internal sealed partial class MainWindow
                 }
             }
 
-            lblStatus.Text = $"Exported photo to {Path.GetFileName(targetPath)}";
+            string exportMsg = $"Exported photo to {Path.GetFileName(targetPath)}";
+            lblStatus.Text = exportMsg;
+            _notificationService.ShowSuccess("PhotoCropper", exportMsg);
         }
     }
 

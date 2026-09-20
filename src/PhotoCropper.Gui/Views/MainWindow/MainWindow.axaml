@@ -368,6 +368,16 @@
 													  Click="ChkApplyYearToAll_Click" FontSize="11" VerticalAlignment="Center" Focusable="False"/>
 										</WrapPanel>
 									</StackPanel>
+
+									<Rectangle Height="1" Fill="{DynamicResource AppSeparatorBrush}" Margin="0,4"/>
+
+									<!-- Completion Alerts & Feedback -->
+									<WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+										<CheckBox x:Name="chkShowNotifications" Content="{DynamicResource LblShowNotifications}" ToolTip.Tip="{DynamicResource TipShowNotifications}" 
+												  IsCheckedChanged="ChkShowNotifications_IsCheckedChanged" IsChecked="True" FontSize="11" VerticalAlignment="Center" Focusable="False" Margin="0,2,14,2"/>
+										<CheckBox x:Name="chkFlashTaskbar" Content="{DynamicResource LblFlashTaskbar}" ToolTip.Tip="{DynamicResource TipFlashTaskbar}" 
+												  IsCheckedChanged="ChkFlashTaskbar_IsCheckedChanged" IsChecked="True" FontSize="11" VerticalAlignment="Center" Focusable="False" Margin="0,2,14,2"/>
+									</WrapPanel>
 								</StackPanel>
 							</Border>
 						</WrapPanel>
