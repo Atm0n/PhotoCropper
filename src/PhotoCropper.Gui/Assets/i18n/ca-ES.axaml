@@ -177,6 +177,10 @@
 	<sys:String x:Key="ColorCyan">Cian / Turquesa (Accessible)</sys:String>
 	<sys:String x:Key="ColorMagenta">Magenta</sys:String>
 	<sys:String x:Key="ColorLime">Verd Llima</sys:String>
+	<sys:String x:Key="ColorCustom">Color Personalitzat...</sys:String>
+	<sys:String x:Key="TitleCustomColor">Color de Marc Personalitzat</sys:String>
+	<sys:String x:Key="DescCustomColor">Selecciona o ajusta un color d'alt contrast per als marcs de detecció de fotos.</sys:String>
+	<sys:String x:Key="BtnApply">Aplicar</sys:String>
 	<sys:String x:Key="MenuRotateCw">Girar 90° Horari</sys:String>
 	<sys:String x:Key="MenuRotateCcw">Girar 90° Antihorari</sys:String>
 	<sys:String x:Key="MenuRefineCrop">Ajustar Vores del Retall</sys:String>

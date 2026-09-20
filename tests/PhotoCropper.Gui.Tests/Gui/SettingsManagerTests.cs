@@ -100,6 +100,12 @@ public sealed class SettingsManagerTests : IDisposable
         var magenta = options.GetBoundingBoxColorBgr();
         magenta.V0.ShouldBe(255); // Blue
         magenta.V2.ShouldBe(255); // Red
+
+        options.BoundingBoxColor = "#112233";
+        var custom = options.GetBoundingBoxColorBgr();
+        custom.V2.ShouldBe(0x11); // Red
+        custom.V1.ShouldBe(0x22); // Green
+        custom.V0.ShouldBe(0x33); // Blue
     }
 
     [Fact]

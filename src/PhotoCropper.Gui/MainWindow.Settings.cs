@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using PhotoCropper.Core.Models;
@@ -166,7 +167,7 @@ internal sealed partial class MainWindow
                 bool isSelected = string.Equals(currentColor, value, StringComparison.OrdinalIgnoreCase);
                 var item = new MenuItem
                 {
-                    Header = isSelected ? $"✓ {headerText}" : $"   {headerText}",
+                    Header = CreateColorMenuItemHeader(isSelected, Color.Parse(hex), headerText),
                     Tag = value,
                     Focusable = false,
                     IsTabStop = false
@@ -180,7 +181,77 @@ internal sealed partial class MainWindow
                 };
                 menu.Items.Add(item);
             }
+
+            menu.Items.Add(new Separator());
+
+            bool isCustomSelected = !string.IsNullOrWhiteSpace(currentColor) && currentColor.StartsWith('#');
+            Color customColor = isCustomSelected && Color.TryParse(currentColor, out var parsedCustom)
+                ? parsedCustom
+                : Color.Parse("#00D4FF");
+
+            string customBaseText = Avalonia.Application.Current?.FindResource("ColorCustom")?.ToString() ?? "Custom Color...";
+            string customText = isCustomSelected ? $"{customBaseText} ({currentColor})" : customBaseText;
+
+            var customItem = new MenuItem
+            {
+                Header = CreateColorMenuItemHeader(isCustomSelected, customColor, customText),
+                Focusable = false,
+                IsTabStop = false
+            };
+
+            customItem.Click += async (_, _) =>
+            {
+                var dialog = new Dialogs.CustomColorDialog(SettingsManager.Instance.Settings.DetectionBoxColor);
+                string? chosenHex = await dialog.ShowDialog<string?>(this);
+                if (!string.IsNullOrEmpty(chosenHex))
+                {
+                    await SetDetectionBoxColorAsync(chosenHex);
+                }
+            };
+
+            menu.Items.Add(customItem);
         }
+    }
+
+    private static StackPanel CreateColorMenuItemHeader(bool isSelected, Color swatchColor, string text)
+    {
+        var panel = new StackPanel
+        {
+            Orientation = Avalonia.Layout.Orientation.Horizontal,
+            Spacing = 8,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+        };
+
+        var check = new TextBlock
+        {
+            Text = isSelected ? "✓" : " ",
+            Width = 14,
+            FontWeight = isSelected ? Avalonia.Media.FontWeight.Bold : Avalonia.Media.FontWeight.Normal,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+        };
+
+        var swatch = new Border
+        {
+            Width = 13,
+            Height = 13,
+            CornerRadius = new CornerRadius(3),
+            Background = new SolidColorBrush(swatchColor),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(120, 128, 128, 128)),
+            BorderThickness = new Thickness(1),
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+        };
+
+        var label = new TextBlock
+        {
+            Text = text,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+        };
+
+        panel.Children.Add(check);
+        panel.Children.Add(swatch);
+        panel.Children.Add(label);
+
+        return panel;
     }
 
     private async Task SetDetectionBoxColorAsync(string colorName)
@@ -207,15 +278,24 @@ internal sealed partial class MainWindow
     {
         if (rectCrop == null) return;
 
-        var (stroke, fill) = colorName?.ToUpperInvariant() switch
+        Color stroke;
+        if (!string.IsNullOrWhiteSpace(colorName) && colorName.StartsWith('#') && Color.TryParse(colorName, out var parsed))
         {
-            "AMBER" or "ORANGE" => (Color.Parse("#ffaa00"), Color.Parse("#33ffaa00")),
-            "CYAN" or "BLUE" => (Color.Parse("#00d4ff"), Color.Parse("#3300d4ff")),
-            "MAGENTA" => (Color.Parse("#ff00cc"), Color.Parse("#33ff00cc")),
-            "LIME" => (Color.Parse("#00e676"), Color.Parse("#3300e676")),
-            _ => (Color.Parse("#ff3333"), Color.Parse("#33ff3333"))
-        };
+            stroke = parsed;
+        }
+        else
+        {
+            stroke = colorName?.ToUpperInvariant() switch
+            {
+                "AMBER" or "ORANGE" => Color.Parse("#ffaa00"),
+                "CYAN" or "BLUE" => Color.Parse("#00d4ff"),
+                "MAGENTA" => Color.Parse("#ff00cc"),
+                "LIME" => Color.Parse("#00e676"),
+                _ => Color.Parse("#ff3333")
+            };
+        }
 
+        var fill = Color.FromArgb(0x33, stroke.R, stroke.G, stroke.B);
         rectCrop.Stroke = new SolidColorBrush(stroke);
         rectCrop.Fill = new SolidColorBrush(fill);
 

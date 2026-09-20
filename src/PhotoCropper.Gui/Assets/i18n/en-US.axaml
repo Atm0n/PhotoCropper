@@ -177,6 +177,10 @@
 	<sys:String x:Key="ColorCyan">Cyan / Turquoise (Colorblind)</sys:String>
 	<sys:String x:Key="ColorMagenta">Magenta</sys:String>
 	<sys:String x:Key="ColorLime">Lime Green</sys:String>
+	<sys:String x:Key="ColorCustom">Custom Color...</sys:String>
+	<sys:String x:Key="TitleCustomColor">Custom Bounding Box Color</sys:String>
+	<sys:String x:Key="DescCustomColor">Select or fine-tune a high-contrast color for photo detection bounding boxes.</sys:String>
+	<sys:String x:Key="BtnApply">Apply</sys:String>
 	<sys:String x:Key="MenuRotateCw">Rotate 90° CW</sys:String>
 	<sys:String x:Key="MenuRotateCcw">Rotate 90° CCW</sys:String>
 	<sys:String x:Key="MenuRefineCrop">Refine Crop Edges</sys:String>

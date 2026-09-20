@@ -177,6 +177,10 @@
 	<sys:String x:Key="ColorCyan">Cian / Turquesa (Accesible)</sys:String>
 	<sys:String x:Key="ColorMagenta">Magenta</sys:String>
 	<sys:String x:Key="ColorLime">Verde Lima</sys:String>
+	<sys:String x:Key="ColorCustom">Color Personalizado...</sys:String>
+	<sys:String x:Key="TitleCustomColor">Color de Caja Personalizado</sys:String>
+	<sys:String x:Key="DescCustomColor">Selecciona o ajusta un color de alto contraste para las cajas de detección de fotos.</sys:String>
+	<sys:String x:Key="BtnApply">Aplicar</sys:String>
 	<sys:String x:Key="MenuRotateCw">Rotar 90° Horario</sys:String>
 	<sys:String x:Key="MenuRotateCcw">Rotar 90° Antihorario</sys:String>
 	<sys:String x:Key="MenuRefineCrop">Ajustar Bordes del Recorte</sys:String>
