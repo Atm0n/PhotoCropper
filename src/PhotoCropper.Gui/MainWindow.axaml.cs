@@ -333,6 +333,7 @@ internal sealed partial class MainWindow : Window
                 {
                     LocalizationManager.SetLanguage(code);
                     UpdateWorkspaceUi(SettingsManager.Instance.Settings.WorkDirectory);
+                    UpdateSelectionUi();
                     FocusManager?.Focus(null);
                 }
             };
@@ -461,6 +462,8 @@ internal sealed partial class MainWindow : Window
                 lstGallery.SelectedIndex = 0;
             }
         }
+
+        UpdateSelectionUi();
     }
 
     private async void BtnPrevScan_Click(object? sender, RoutedEventArgs e)
@@ -629,17 +632,35 @@ internal sealed partial class MainWindow : Window
     private void BtnDelete_Click(object? sender, RoutedEventArgs e)
     {
         if (isLoading) return;
-        DeleteCurrentPhoto();
+        DeleteSelectedPhotos();
     }
 
-    private void DeleteCurrentPhoto()
+    private void DeleteCurrentPhoto() => DeleteSelectedPhotos();
+
+    private void DeleteSelectedPhotos()
     {
-        if (isLoading || ScanSessions.Count == 0 || slides == null) return;
-        int photoIndex = slides.SelectedIndex;
-        if (photoIndex < 0) return;
+        if (isLoading || ScanSessions.Count == 0) return;
+
+        var selectedIndices = GetSelectedPhotoIndices();
+        if (selectedIndices.Count == 0) return;
+
+        if (selectedIndices.Count == 1)
+        {
+            DeleteSinglePhoto(selectedIndices[0]);
+            return;
+        }
+
+        BatchDeletePhotos(selectedIndices);
+    }
+
+    private void DeleteSinglePhoto(int photoIndex)
+    {
+        if (isLoading || ScanSessions.Count == 0 || photoIndex < 0) return;
 
         ScanSessions[currentIndex].IsModified = true;
         var currentEngine = ScanSessions[currentIndex].Activate();
+        if (photoIndex >= currentEngine.DetectedPhotos.Count) return;
+
         var matToDelete = currentEngine.DetectedPhotos[photoIndex];
         undoHistory.PushDelete(currentIndex, photoIndex, matToDelete);
 
@@ -647,24 +668,90 @@ internal sealed partial class MainWindow : Window
 
         int nextIndex = Math.Min(photoIndex, currentEngine.DetectedPhotos.Count - 1);
         LoadCroppedPhotosToSlider();
-        if (nextIndex >= 0)
+        if (nextIndex >= 0 && slides != null)
         {
             slides.SelectedIndex = nextIndex;
+            if (lstGallery != null && nextIndex < lstGallery.Items.Count)
+            {
+                lstGallery.SelectedIndex = nextIndex;
+            }
         }
+        UpdateSelectionUi();
         lblStatus.Text = Application.Current?.FindResource("MsgPhotoDeleted")?.ToString() ?? "Photo deleted.";
+    }
+
+    private void BatchDeletePhotos(List<int> selectedIndices)
+    {
+        if (isLoading || ScanSessions.Count == 0 || selectedIndices.Count == 0) return;
+
+        var currentEngine = ScanSessions[currentIndex].Activate();
+        var sortedIndices = selectedIndices.Distinct()
+            .Where(idx => idx >= 0 && idx < currentEngine.DetectedPhotos.Count)
+            .OrderByDescending(idx => idx)
+            .ToList();
+
+        if (sortedIndices.Count == 0) return;
+
+        ScanSessions[currentIndex].IsModified = true;
+
+        var actions = new List<IUndoableAction>();
+        int minIndex = sortedIndices.Min();
+
+        foreach (var idx in sortedIndices)
+        {
+            var mat = currentEngine.DetectedPhotos[idx];
+            actions.Add(new DeletePhotoAction(currentIndex, idx, mat));
+            currentEngine.DeletePhoto(idx);
+        }
+
+        string desc = $"Batch Delete ({sortedIndices.Count} photos)";
+        undoHistory.PushBatch(currentIndex, actions, desc);
+
+        LoadCroppedPhotosToSlider();
+
+        int nextIndex = Math.Clamp(minIndex, 0, currentEngine.DetectedPhotos.Count - 1);
+        if (nextIndex >= 0 && nextIndex < currentEngine.DetectedPhotos.Count && slides != null)
+        {
+            slides.SelectedIndex = nextIndex;
+            if (lstGallery != null && nextIndex < lstGallery.Items.Count)
+            {
+                lstGallery.SelectedIndex = nextIndex;
+            }
+        }
+
+        UpdateSelectionUi();
+        string format = Application.Current?.FindResource("MsgBatchDeleted")?.ToString() ?? "{0} photos deleted.";
+        lblStatus.Text = string.Format(format, sortedIndices.Count);
     }
 
     private async void BtnRotate_Click(object? sender, RoutedEventArgs e)
     {
         if (isLoading) return;
-        await RotateCurrentPhotoAsync();
+        await RotateSelectedPhotosAsync();
     }
 
-    private async Task RotateCurrentPhotoAsync()
-    {
-        if (isLoading || ScanSessions.Count == 0 || slides.SelectedIndex < 0) return;
+    private Task RotateCurrentPhotoAsync() => RotateSelectedPhotosAsync();
 
-        int photoIndex = slides.SelectedIndex;
+    private async Task RotateSelectedPhotosAsync()
+    {
+        if (isLoading || ScanSessions.Count == 0) return;
+
+        var selectedIndices = GetSelectedPhotoIndices();
+        if (selectedIndices.Count == 0) return;
+
+        if (selectedIndices.Count == 1)
+        {
+            await RotateSinglePhotoAsync(selectedIndices[0]);
+            return;
+        }
+
+        await BatchRotatePhotosAsync(selectedIndices);
+    }
+
+    private async Task RotateSinglePhotoAsync(int photoIndex)
+    {
+        if (isLoading || ScanSessions.Count == 0 || photoIndex < 0) return;
+
         ScanSessions[currentIndex].IsModified = true;
         undoHistory.PushRotate(currentIndex, photoIndex);
 
@@ -675,8 +762,74 @@ internal sealed partial class MainWindow : Window
         {
             await Task.Run(() => ScanSessions[currentIndex].Activate().RotatePhoto(photoIndex));
             LoadCroppedPhotosToSlider();
-            slides.SelectedIndex = photoIndex;
+            if (slides != null) slides.SelectedIndex = photoIndex;
+            if (lstGallery != null && photoIndex < lstGallery.Items.Count)
+            {
+                lstGallery.SelectedIndex = photoIndex;
+            }
+            UpdateSelectionUi();
         }, rotatedMsg);
+    }
+
+    private async Task BatchRotatePhotosAsync(List<int> selectedIndices)
+    {
+        if (isLoading || ScanSessions.Count == 0 || selectedIndices.Count == 0) return;
+
+        var currentEngine = ScanSessions[currentIndex].Activate();
+        var validIndices = selectedIndices.Distinct()
+            .Where(idx => idx >= 0 && idx < currentEngine.DetectedPhotos.Count)
+            .OrderBy(idx => idx)
+            .ToList();
+
+        if (validIndices.Count == 0) return;
+
+        ScanSessions[currentIndex].IsModified = true;
+
+        var actions = new List<IUndoableAction>();
+        foreach (var idx in validIndices)
+        {
+            actions.Add(new RotatePhotoAction(currentIndex, idx));
+        }
+
+        string desc = $"Batch Rotate ({validIndices.Count} photos)";
+        undoHistory.PushBatch(currentIndex, actions, desc);
+
+        string rotatingFormat = Application.Current?.FindResource("MsgBatchRotating")?.ToString() ?? "Rotating {0} photos...";
+        string rotatedFormat = Application.Current?.FindResource("MsgBatchRotated")?.ToString() ?? "{0} photos rotated.";
+
+        await ExecuteWithLoadingAsync(string.Format(rotatingFormat, validIndices.Count), async () =>
+        {
+            await Task.Run(() =>
+            {
+                foreach (var idx in validIndices)
+                {
+                    currentEngine.RotatePhoto(idx);
+                }
+            });
+
+            LoadCroppedPhotosToSlider();
+
+            if (lstGallery?.SelectedItems != null)
+            {
+                isSyncingSelection = true;
+                try
+                {
+                    lstGallery.SelectedItems.Clear();
+                    foreach (var idx in validIndices)
+                    {
+                        if (idx < lstGallery.Items.Count)
+                        {
+                            lstGallery.SelectedItems.Add(lstGallery.Items[idx]);
+                        }
+                    }
+                }
+                finally
+                {
+                    isSyncingSelection = false;
+                }
+            }
+            UpdateSelectionUi();
+        }, string.Format(rotatedFormat, validIndices.Count));
     }
 
     private void BtnHelp_Click(object? sender, RoutedEventArgs e) => pnlHelpOverlay.IsVisible = true;
@@ -788,12 +941,16 @@ internal sealed partial class MainWindow : Window
                 isSyncingSelection = false;
             }
         }
+        UpdateSelectionUi();
     }
 
     private void LstGallery_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (isSyncingSelection || lstGallery == null || slides == null) return;
-        if (lstGallery.SelectedIndex >= 0 && lstGallery.SelectedIndex < slides.Items.Count && slides.SelectedIndex != lstGallery.SelectedIndex)
+
+        UpdateSelectionUi();
+
+        if (lstGallery.SelectedItems?.Count == 1 && lstGallery.SelectedIndex >= 0 && lstGallery.SelectedIndex < slides.Items.Count && slides.SelectedIndex != lstGallery.SelectedIndex)
         {
             isSyncingSelection = true;
             try
@@ -819,6 +976,128 @@ internal sealed partial class MainWindow : Window
         {
             lstGallery.SelectedIndex = slides.SelectedIndex;
             lstGallery.ScrollIntoView(slides.SelectedIndex);
+        }
+        else if (!isGrid && lstGallery != null && slides != null)
+        {
+            if (lstGallery.SelectedIndex >= 0 && lstGallery.SelectedIndex < slides.Items.Count)
+            {
+                slides.SelectedIndex = lstGallery.SelectedIndex;
+            }
+        }
+        UpdateSelectionUi();
+    }
+
+    private void BtnSelectAll_Click(object? sender, RoutedEventArgs e)
+    {
+        SelectAllGalleryPhotos();
+    }
+
+    private void BtnClearSelection_Click(object? sender, RoutedEventArgs e)
+    {
+        ClearGallerySelection();
+    }
+
+    private void SelectAllGalleryPhotos()
+    {
+        if (lstGallery?.SelectedItems == null || lstGallery.Items.Count == 0) return;
+
+        isSyncingSelection = true;
+        try
+        {
+            lstGallery.SelectedItems.Clear();
+            foreach (var item in lstGallery.Items)
+            {
+                lstGallery.SelectedItems.Add(item);
+            }
+        }
+        finally
+        {
+            isSyncingSelection = false;
+        }
+        UpdateSelectionUi();
+    }
+
+    private void ClearGallerySelection()
+    {
+        if (lstGallery?.SelectedItems == null) return;
+
+        isSyncingSelection = true;
+        try
+        {
+            lstGallery.SelectedItems.Clear();
+        }
+        finally
+        {
+            isSyncingSelection = false;
+        }
+        UpdateSelectionUi();
+    }
+
+    private List<int> GetSelectedPhotoIndices()
+    {
+        if (rbViewGrid?.IsChecked == true)
+        {
+            if (lstGallery?.SelectedItems == null || lstGallery.SelectedItems.Count == 0)
+            {
+                return [];
+            }
+
+            var indices = new List<int>();
+            foreach (var item in lstGallery.SelectedItems)
+            {
+                if (item is GalleryPhotoItem galleryItem)
+                {
+                    indices.Add(galleryItem.Index);
+                }
+            }
+            return indices;
+        }
+
+        if (slides != null && slides.SelectedIndex >= 0)
+        {
+            return [slides.SelectedIndex];
+        }
+
+        return [];
+    }
+
+    private void UpdateSelectionUi()
+    {
+        if (txtGallerySelection == null || txtBtnDelete == null || txtBtnRotate == null || btnRefine == null) return;
+
+        bool isGrid = rbViewGrid?.IsChecked == true;
+        int selectedCount = isGrid && lstGallery?.SelectedItems != null ? lstGallery.SelectedItems.Count : (slides?.SelectedIndex >= 0 ? 1 : 0);
+        int totalCount = lstGallery?.Items.Count ?? slides?.Items.Count ?? 0;
+
+        if (isGrid && selectedCount > 1)
+        {
+            string selectedFormat = Application.Current?.FindResource("TxtSelectedCount")?.ToString() ?? "({0} of {1} selected)";
+            txtGallerySelection.Text = string.Format(selectedFormat, selectedCount, totalCount);
+            txtGallerySelection.IsVisible = true;
+
+            string deleteCountFormat = Application.Current?.FindResource("BtnDeleteCount")?.ToString() ?? "Delete ({0})";
+            txtBtnDelete.Text = string.Format(deleteCountFormat, selectedCount);
+
+            string rotateCountFormat = Application.Current?.FindResource("BtnRotateCount")?.ToString() ?? "Rotate ({0})";
+            txtBtnRotate.Text = string.Format(rotateCountFormat, selectedCount);
+
+            btnRefine.IsEnabled = false;
+            ToolTip.SetTip(btnRefine, Application.Current?.FindResource("TipRefineMultiDisabled"));
+        }
+        else
+        {
+            txtGallerySelection.IsVisible = false;
+            txtBtnDelete.Text = Application.Current?.FindResource("BtnDelete")?.ToString() ?? "Delete";
+            txtBtnRotate.Text = Application.Current?.FindResource("BtnRotate")?.ToString() ?? "Rotate";
+
+            bool hasValidSelection = totalCount > 0 && selectedCount > 0;
+            btnRefine.IsEnabled = hasValidSelection;
+            ToolTip.SetTip(btnRefine, Application.Current?.FindResource("TipRefine"));
+        }
+
+        if (pnlBatchSelectionActions != null)
+        {
+            pnlBatchSelectionActions.IsVisible = isGrid;
         }
     }
 
@@ -956,6 +1235,12 @@ internal sealed partial class MainWindow : Window
                 e.Handled = true;
                 return;
             }
+            if (e.Key == Avalonia.Input.Key.A && rbViewGrid?.IsChecked == true)
+            {
+                SelectAllGalleryPhotos();
+                e.Handled = true;
+                return;
+            }
         }
 
         if (pnlScannerOverlay.IsVisible && e.Key == Avalonia.Input.Key.Escape)
@@ -984,6 +1269,13 @@ internal sealed partial class MainWindow : Window
         if (pnlHelpOverlay.IsVisible && e.Key == Avalonia.Input.Key.Escape)
         {
             pnlHelpOverlay.IsVisible = false;
+            e.Handled = true;
+            return;
+        }
+
+        if (rbViewGrid?.IsChecked == true && lstGallery?.SelectedItems != null && lstGallery.SelectedItems.Count > 1 && e.Key == Avalonia.Input.Key.Escape)
+        {
+            ClearGallerySelection();
             e.Handled = true;
             return;
         }
@@ -1641,6 +1933,7 @@ internal sealed partial class MainWindow : Window
             txtFileCounter.Text = Application.Current?.FindResource("TxtNoFiles")?.ToString() ?? "No files loaded";
         }
         if (lblPhotoInfo != null) lblPhotoInfo.Text = "";
+        UpdateSelectionUi();
     }
 
     private async Task SwitchToProjectAsync(string newWorkDir)

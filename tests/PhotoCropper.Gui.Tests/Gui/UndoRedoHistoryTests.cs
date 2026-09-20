@@ -164,6 +164,89 @@ public sealed class UndoRedoHistoryTests : IDisposable
         history.CanRedo.ShouldBeFalse();
     }
 
+    [Fact]
+    public void UndoRedoHistory_PushBatch_ShouldUndoAndRedoBatchActions()
+    {
+        using var history = new UndoRedoHistory();
+        using var engine = new PhotoCropperEngine(_scanPath);
+        engine.DetectPhotos();
+        engine.DetectedPhotos.Count.ShouldBeGreaterThanOrEqualTo(2);
+
+        int origWidth0 = engine.DetectedPhotos[0].Width;
+        int origHeight0 = engine.DetectedPhotos[0].Height;
+        int origWidth1 = engine.DetectedPhotos[1].Width;
+        int origHeight1 = engine.DetectedPhotos[1].Height;
+
+        // Rotate both photo 0 and photo 1
+        engine.RotatePhoto(0);
+        engine.RotatePhoto(1);
+
+        var actions = new List<IUndoableAction>
+        {
+            new RotatePhotoAction(0, 0),
+            new RotatePhotoAction(0, 1)
+        };
+        history.PushBatch(0, actions, "Rotate 2 Photos");
+
+        engine.DetectedPhotos[0].Width.ShouldBe(origHeight0);
+        engine.DetectedPhotos[1].Width.ShouldBe(origHeight1);
+
+        // Undo batch rotation
+        var undoAction = history.Undo([engine]);
+        undoAction.ShouldNotBeNull();
+        undoAction.Description.ShouldBe("Rotate 2 Photos");
+        engine.DetectedPhotos[0].Width.ShouldBe(origWidth0);
+        engine.DetectedPhotos[1].Width.ShouldBe(origWidth1);
+
+        // Redo batch rotation
+        var redoAction = history.Redo([engine]);
+        redoAction.ShouldNotBeNull();
+        engine.DetectedPhotos[0].Width.ShouldBe(origHeight0);
+        engine.DetectedPhotos[1].Width.ShouldBe(origHeight1);
+    }
+
+    [Fact]
+    public void UndoRedoHistory_PushBatch_BatchDelete_ShouldUndoAndRedoInDescendingOrder()
+    {
+        using var history = new UndoRedoHistory();
+        using var engine = new PhotoCropperEngine(_scanPath);
+        engine.DetectPhotos();
+        engine.DetectedPhotos.Count.ShouldBeGreaterThanOrEqualTo(2);
+        int initialCount = engine.DetectedPhotos.Count;
+
+        int origWidth0 = engine.DetectedPhotos[0].Width;
+        int origWidth1 = engine.DetectedPhotos[1].Width;
+
+        var mat1 = engine.DetectedPhotos[1];
+        var mat0 = engine.DetectedPhotos[0];
+
+        var actions = new List<IUndoableAction>
+        {
+            new DeletePhotoAction(0, 1, mat1),
+            new DeletePhotoAction(0, 0, mat0)
+        };
+
+        // Execute deletes in descending order
+        engine.DeletePhoto(1);
+        engine.DeletePhoto(0);
+        engine.DetectedPhotos.Count.ShouldBe(initialCount - 2);
+
+        history.PushBatch(0, actions, "Delete 2 Photos");
+
+        // Undo batch delete (should restore in reverse order: 0 then 1)
+        var undoAction = history.Undo([engine]);
+        undoAction.ShouldNotBeNull();
+        undoAction.Description.ShouldBe("Delete 2 Photos");
+        engine.DetectedPhotos.Count.ShouldBe(initialCount);
+        engine.DetectedPhotos[0].Width.ShouldBe(origWidth0);
+        engine.DetectedPhotos[1].Width.ShouldBe(origWidth1);
+
+        // Redo batch delete (should delete 1 then 0)
+        var redoAction = history.Redo([engine]);
+        redoAction.ShouldNotBeNull();
+        engine.DetectedPhotos.Count.ShouldBe(initialCount - 2);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
