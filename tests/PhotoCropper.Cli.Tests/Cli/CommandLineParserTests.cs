@@ -138,4 +138,32 @@ public sealed class CommandLineParserTests
         options.Date.ShouldBe("1985-06-15");
         options.Description.ShouldBe("Family vacation");
     }
+
+    [Theory]
+    [InlineData("-w")]
+    [InlineData("--wizard")]
+    [InlineData("--interactive")]
+    public void CommandLineParser_WizardFlags_ShouldSetInteractiveTrue(string flag)
+    {
+        var options = CommandLineParser.Parse([flag]);
+        options.Interactive.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("--min-photos", "3", 3)]
+    [InlineData("--expected-photos", "4", 4)]
+    public void CommandLineParser_MinPhotosFlag_ShouldSetMinExpectedPhotos(string flag, string value, int expected)
+    {
+        var options = CommandLineParser.Parse([flag, value]);
+        options.MinExpectedPhotos.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData("--max-photos", "5", 5)]
+    [InlineData("--max-expected-photos", "8", 8)]
+    public void CommandLineParser_MaxPhotosFlag_ShouldSetMaxExpectedPhotos(string flag, string value, int expected)
+    {
+        var options = CommandLineParser.Parse([flag, value]);
+        options.MaxExpectedPhotos.ShouldBe(expected);
+    }
 }

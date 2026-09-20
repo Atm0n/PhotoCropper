@@ -92,9 +92,9 @@ public class PhotoCropperEngine : IDisposable
         BoundingBoxColor = BoundingBoxColor
     };
 
-    public AutoTuneResult AutoTune()
+    public AutoTuneResult AutoTune(int minExpected = 1, int maxExpected = int.MaxValue)
     {
-        var tuneResult = AutoTuneService.Tune(Original, CurrentOptions);
+        var tuneResult = AutoTuneService.Tune(Original, CurrentOptions, minExpected, maxExpected);
         ApplyOptions(tuneResult.BestOptions);
         DetectPhotos();
         return tuneResult;

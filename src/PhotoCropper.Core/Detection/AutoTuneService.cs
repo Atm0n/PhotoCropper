@@ -11,9 +11,9 @@ public static class AutoTuneService
 {
     private static readonly double[] SweepTolerances = [15, 25, 35, 45, 55, 65, 75, 10, 85];
     private static readonly double[] SweepCannyLows = [10, 20, 30, 40];
-    private static readonly double[] SweepMinAreaFactors = [0.005, 0.01, 0.05, 0.10];
+    private static readonly double[] SweepMinAreaFactors = [0.015, 0.03, 0.06, 0.12];
 
-    public static AutoTuneResult Tune(Mat source, DetectionOptions currentOptions)
+    public static AutoTuneResult Tune(Mat source, DetectionOptions currentOptions, int minExpected = 1, int maxExpected = int.MaxValue)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(currentOptions);
@@ -52,7 +52,7 @@ public static class AutoTuneService
         int pad = (int)Math.Round(Math.Max(originalW, originalH) * 0.05);
         int scaledPad = (int)Math.Round(pad * scale);
 
-        double baselineScore = EvaluateConfiguration(detMat, detHsv, avgBgColorHsv, currentOptions.BackgroundTolerance, currentOptions.CannyLowThreshold, currentOptions.CannyHighThreshold, currentOptions.MinAreaFactor, currentOptions.MaxAreaFactor, scaledPad, scaledW, scaledH, originalW, originalH, scale, out int baselineCount);
+        double baselineScore = EvaluateConfiguration(detMat, detHsv, avgBgColorHsv, currentOptions.BackgroundTolerance, currentOptions.CannyLowThreshold, currentOptions.CannyHighThreshold, currentOptions.MinAreaFactor, currentOptions.MaxAreaFactor, scaledPad, scaledW, scaledH, originalW, originalH, scale, minExpected, maxExpected, out int baselineCount);
 
         double bestScore = baselineScore;
         int bestCount = baselineCount;
@@ -101,7 +101,7 @@ public static class AutoTuneService
                         var fullCandidates = MapCandidatesToFullRes(passCandidates, scale, originalW, originalH);
                         var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);
 
-                        double score = CalculateScore(accepted, originalW, originalH);
+                        double score = CalculateScore(accepted, originalW, originalH, minExpected, maxExpected);
                         if (score > bestScore)
                         {
                             bestScore = score;
@@ -145,6 +145,8 @@ public static class AutoTuneService
         int originalW,
         int originalH,
         double scale,
+        int minExpected,
+        int maxExpected,
         out int count)
     {
         using Mat edgeMap = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(detMat, cannyLow, cannyHigh);
@@ -170,14 +172,14 @@ public static class AutoTuneService
         var fullCandidates = MapCandidatesToFullRes(passCandidates, scale, originalW, originalH);
         var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);
         count = accepted.Count;
-        return CalculateScore(accepted, originalW, originalH);
+        return CalculateScore(accepted, originalW, originalH, minExpected, maxExpected);
     }
 
     private static List<CropCandidate> MapCandidatesToFullRes(IReadOnlyList<CropCandidate> candidates, double scale, int originalW, int originalH)
     {
         if (scale >= 0.999)
         {
-            return new List<CropCandidate>(candidates);
+            return [.. candidates];
         }
 
         double invScale = 1.0 / scale;
@@ -186,7 +188,7 @@ public static class AutoTuneService
         foreach (var cand in candidates)
         {
             PointF fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
-            SizeF fullSize = new SizeF((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
+            SizeF fullSize = new((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
             RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
 
             PointF[] fullVerts = fullRr.GetVertices();
@@ -216,7 +218,7 @@ public static class AutoTuneService
         return fullCandidates;
     }
 
-    private static double CalculateScore(IReadOnlyList<CropCandidate> accepted, int originalW, int originalH)
+    private static double CalculateScore(IReadOnlyList<CropCandidate> accepted, int originalW, int originalH, int minExpected = 1, int maxExpected = int.MaxValue)
     {
         if (accepted.Count == 0) return 0.0;
 
@@ -240,6 +242,21 @@ public static class AutoTuneService
         if (accepted.Count >= 1 && accepted.Count <= 12)
         {
             scoreSum += accepted.Count * 1000.0;
+        }
+
+        // Bonus if candidate count falls within the expected range
+        if (accepted.Count >= minExpected && accepted.Count <= maxExpected)
+        {
+            scoreSum += 50000.0;
+        }
+        else if (accepted.Count < minExpected)
+        {
+            scoreSum *= 0.5;
+        }
+        else if (accepted.Count > maxExpected)
+        {
+            double overage = accepted.Count - maxExpected;
+            scoreSum /= (1.0 + overage * 2.0);
         }
 
         return scoreSum;

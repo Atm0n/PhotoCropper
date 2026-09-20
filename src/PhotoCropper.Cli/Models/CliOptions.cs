@@ -19,6 +19,9 @@ internal sealed class CliOptions
     public bool AutoTune { get; set; }
     public string? CopyUndetectedDirectory { get; set; }
     public bool NonInteractive { get; set; }
+    public bool Interactive { get; set; }
+    public int MinExpectedPhotos { get; set; } = 1;
+    public int MaxExpectedPhotos { get; set; } = int.MaxValue;
     public string FileNamePattern { get; set; } = "{original}_{index}";
     public int? Year { get; set; }
     public string? Date { get; set; }

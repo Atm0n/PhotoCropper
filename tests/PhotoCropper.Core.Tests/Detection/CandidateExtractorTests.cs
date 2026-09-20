@@ -35,4 +35,20 @@ public sealed class CandidateExtractorTests
 
         candidates.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void ExtractCandidates_ShouldRejectIncompleteNonRectangularShapes()
+    {
+        using Mat mask = new(500, 500, DepthType.Cv8U, 1);
+        mask.SetTo(new MCvScalar(0));
+
+        // Draw an L-shaped fragment (incomplete photo/shadow): 200x200 bounding box, but only 30px thick
+        CvInvoke.Rectangle(mask, new Rectangle(50, 50, 30, 200), new MCvScalar(255), -1);
+        CvInvoke.Rectangle(mask, new Rectangle(50, 220, 200, 30), new MCvScalar(255), -1);
+
+        var candidates = CandidateExtractor.ExtractCandidates(mask, 0, 500, 500, 0.01, 0.90);
+
+        // L-shape has very low rectangularity (~0.25) and low convexity, should be rejected
+        candidates.ShouldBeEmpty();
+    }
 }

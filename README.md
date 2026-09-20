@@ -162,6 +162,9 @@ dotnet run --project src/PhotoCropper.Gui/PhotoCropper.Gui.csproj
 ### Run CLI (Unattended Batch Extractor)
 To run the unattended command-line utility:
 ```bash
+# Run the interactive step-by-step wizard (or run with no arguments in a terminal)
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --wizard
+
 # Process a single scan
 dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- scan001.jpg
 
@@ -194,9 +197,12 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `-j, --threads <num>` | Number of concurrent CPU worker threads for batch processing | *CPU Cores* |
 | `--min-size <percent>` | Minimum photo size as % of total scan area | `25` |
 | `--max-size <percent>` | Maximum photo size as % of total scan area | `90` |
+| `--min-photos <num>` | Minimum expected photos per scan to flag for review | `1` |
+| `--max-photos <num>` | Maximum expected photos per scan to flag for review | *Unlimited* |
 | `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
 | `--auto-tune` | Automatically search optimal detection parameters on difficult scans | `false` |
 | `--copy-undetected <dir>` | Copy scans with 0 detected photos to a designated review directory | `null` |
+| `-w, --wizard` | Launch step-by-step interactive CLI setup wizard | `false` |
 | `-y, --non-interactive` | Disable interactive prompts (e.g. post-batch auto-tune review prompt) | `false` |
 | `--auto-orient` / `--no-auto-orient` | Enable or disable AI face & landscape orientation detection | `true` |
 | `--restore-colors` / `--no-restore-colors` | Enable or disable vintage photo color & contrast restoration | `true` |

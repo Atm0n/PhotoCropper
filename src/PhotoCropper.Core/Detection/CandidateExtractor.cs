@@ -62,7 +62,7 @@ public static class CandidateExtractor
             if (w < 20 || h < 20) continue;
 
             float aspectRatio = Math.Max(w, h) / Math.Max(1.0f, Math.Min(w, h));
-            if (aspectRatio > 20.0f) continue; // Extreme thin strip rejection
+            if (aspectRatio > 6.0f) continue; // Reject extreme thin strips and edge artifacts
 
             // Rectangularity score: Ratio of contour area to its minimum bounding rotated rectangle area
             double rrArea = Math.Max(1.0, (double)w * h);
@@ -70,6 +70,9 @@ public static class CandidateExtractor
 
             // Convexity / solidity score: Clean single photos have high convexity (~1.0), merged photos have waist indents (<0.92)
             double convexity = Math.Clamp(contourArea / Math.Max(1.0, hullArea), 0.0, 1.0);
+
+            // Completeness filter: discard non-complete, fragmented, or irregular partial shapes
+            if (rectangularity < 0.60 || convexity < 0.68) continue;
 
             // Quality score heavily favors clean, rectangular, convex single photos over merged composites
             double quality = Math.Pow(rectangularity, 3) * Math.Pow(convexity, 2);
