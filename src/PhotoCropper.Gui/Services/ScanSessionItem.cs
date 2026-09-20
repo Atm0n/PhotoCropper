@@ -15,6 +15,7 @@ internal sealed class ScanSessionItem : IDisposable
     public int CachedPhotoCount { get; private set; }
     public bool IsSaved { get; set; }
     public bool IsModified { get; set; }
+    public PhotoExportMetadata Metadata { get; set; } = new();
 
     public ScanSessionItem(string filePath, DetectionOptions defaultOptions, bool isSaved = false, bool isModified = true)
     {

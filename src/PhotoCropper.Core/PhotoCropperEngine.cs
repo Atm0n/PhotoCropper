@@ -418,8 +418,14 @@ public class PhotoCropperEngine : IDisposable
         }
     }
 
-    public void SaveDetectedPhotos(string? customOutputFolder = null, string format = "JPEG", int jpegQuality = 90, Action<int, int>? progressCallback = null)
+    public void SaveDetectedPhotos(
+        string? customOutputFolder = null,
+        string format = "JPEG",
+        int jpegQuality = 90,
+        string fileNamePattern = FileNameTemplateHelper.DefaultPattern,
+        PhotoExportMetadata? metadata = null,
+        Action<int, int>? progressCallback = null)
     {
-        PhotoExporter.SavePhotos(DetectedPhotos, OriginalFilePath, customOutputFolder, format, jpegQuality, progressCallback);
+        PhotoExporter.SavePhotos(DetectedPhotos, OriginalFilePath, customOutputFolder, format, jpegQuality, fileNamePattern, metadata, progressCallback);
     }
 }

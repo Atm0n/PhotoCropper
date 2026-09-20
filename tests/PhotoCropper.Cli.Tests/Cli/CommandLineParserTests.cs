@@ -119,4 +119,23 @@ public sealed class CommandLineParserTests
         options.RestoreColors.ShouldBeTrue();
         options.RemoveDust.ShouldBeTrue();
     }
+
+    [Fact]
+    public void CommandLineParser_NamingPatternAndMetadataFlags_ShouldBeParsed()
+    {
+        string[] args = [
+            "-i", "input.jpg",
+            "-p", "{year}_{original}_{index:02}",
+            "--year", "1985",
+            "--date", "1985-06-15",
+            "--desc", "Family vacation"
+        ];
+
+        var options = CommandLineParser.Parse(args);
+
+        options.FileNamePattern.ShouldBe("{year}_{original}_{index:02}");
+        options.Year.ShouldBe(1985);
+        options.Date.ShouldBe("1985-06-15");
+        options.Description.ShouldBe("Family vacation");
+    }
 }

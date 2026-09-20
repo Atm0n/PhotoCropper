@@ -107,6 +107,19 @@ internal sealed partial class MainWindow
             {
                 btnResetBackground.IsEnabled = currentPhoto.CustomBackgroundColorHsv != null;
             }
+
+            if (chkApplyYearToAll?.IsChecked != true)
+            {
+                if (txtMetadataYear != null)
+                {
+                    txtMetadataYear.Text = session.Metadata.Year?.ToString() ?? "";
+                }
+                if (txtMetadataDesc != null)
+                {
+                    txtMetadataDesc.Text = session.Metadata.Description ?? "";
+                }
+            }
+            UpdateNamingPreview();
         });
     }
 

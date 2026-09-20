@@ -32,6 +32,10 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.RemoveDustAndScratches.ShouldBeTrue();
         manager.Settings.Theme.ShouldBe("Dark");
         manager.Settings.DetectionBoxColor.ShouldBe("Red");
+        manager.Settings.FileNamePattern.ShouldBe("{original}_{index}");
+        manager.Settings.DefaultYear.ShouldBeNull();
+        manager.Settings.DefaultDescription.ShouldBeNull();
+        manager.Settings.ApplyYearToAllScans.ShouldBeTrue();
     }
 
     [Fact]
@@ -54,6 +58,10 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.ScannerDpi = 600;
         manager.Settings.Theme = "Light";
         manager.Settings.DetectionBoxColor = "Amber";
+        manager.Settings.FileNamePattern = "{year}_{original}_{index:02}";
+        manager.Settings.DefaultYear = 1985;
+        manager.Settings.DefaultDescription = "Family Album";
+        manager.Settings.ApplyYearToAllScans = false;
 
         manager.Save();
 
@@ -74,6 +82,10 @@ public sealed class SettingsManagerTests : IDisposable
         secondManager.Settings.ScannerDpi.ShouldBe(600);
         secondManager.Settings.Theme.ShouldBe("Light");
         secondManager.Settings.DetectionBoxColor.ShouldBe("Amber");
+        secondManager.Settings.FileNamePattern.ShouldBe("{year}_{original}_{index:02}");
+        secondManager.Settings.DefaultYear.ShouldBe(1985);
+        secondManager.Settings.DefaultDescription.ShouldBe("Family Album");
+        secondManager.Settings.ApplyYearToAllScans.ShouldBeFalse();
     }
 
     [Fact]

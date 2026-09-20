@@ -110,6 +110,23 @@ public sealed class ScanSessionItemTests : IDisposable
         unmodifiedItem.IsActive.ShouldBeFalse(); // Disposed because IsModified == false
     }
 
+    [Fact]
+    public void ScanSessionItem_Metadata_ShouldStoreAndPersistMetadata()
+    {
+        var options = new DetectionOptions();
+        using var item = new ScanSessionItem(_scanPath, options);
+
+        item.Metadata.ShouldNotBeNull();
+        item.Metadata.Year.ShouldBeNull();
+
+        item.Metadata.Year = 1965;
+        item.Metadata.Description = "Trip to Paris";
+
+        item.Metadata.Year.ShouldBe(1965);
+        item.Metadata.Description.ShouldBe("Trip to Paris");
+        item.Metadata.HasMetadata.ShouldBeTrue();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

@@ -109,6 +109,25 @@ internal static class CommandLineParser
             {
                 options.NonInteractive = true;
             }
+            else if (arg is "-p" or "--pattern" or "--naming-pattern" && i + 1 < args.Length)
+            {
+                options.FileNamePattern = args[++i];
+            }
+            else if (arg == "--year" && i + 1 < args.Length)
+            {
+                if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int year))
+                {
+                    options.Year = year;
+                }
+            }
+            else if (arg == "--date" && i + 1 < args.Length)
+            {
+                options.Date = args[++i];
+            }
+            else if (arg is "--desc" or "--description" or "--comment" && i + 1 < args.Length)
+            {
+                options.Description = args[++i];
+            }
             else if (arg is "-i" or "--input" && i + 1 < args.Length)
             {
                 options.Inputs.Add(args[++i]);
@@ -134,6 +153,11 @@ internal static class CommandLineParser
         Console.WriteLine("  -o, --output <dir>      Output directory for extracted photos (default: <scan_dir>/cropped)");
         Console.WriteLine("  -f, --format <fmt>      Output format: JPEG (default) or PNG");
         Console.WriteLine("  -q, --quality <1-100>   JPEG compression quality (default: 90)");
+        Console.WriteLine("  -p, --pattern <pat>     File naming template (default: '{original}_{index}')");
+        Console.WriteLine("                          Tokens: {original}, {index}, {index:02}, {year}, {date}, {total}");
+        Console.WriteLine("  --year <YYYY>           Vintage photo year taken to embed in EXIF and use in {year}");
+        Console.WriteLine("  --date <YYYY-MM-DD>     Approximate or exact photo date to embed in EXIF and {date}");
+        Console.WriteLine("  --desc <text>           Photo description/comment embedded into EXIF metadata");
         Console.WriteLine("  -t, --tolerance <num>   Background color detection tolerance (default: 25)");
         Console.WriteLine("  -j, --threads <num>     Number of parallel CPU worker threads (default: CPU core count)");
         Console.WriteLine("  --min-size <percent>    Minimum photo size as % of scan area (default: 15)");

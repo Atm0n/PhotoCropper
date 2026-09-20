@@ -52,4 +52,35 @@ public sealed class LocalizationManagerTests
             System.Globalization.CultureInfo.CurrentCulture = originalCulture;
         }
     }
+
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("es-ES")]
+    [InlineData("ca-ES")]
+    public void NamingAndMetadataKeys_ShouldExistInAllLanguages(string langCode)
+    {
+        string[] requiredKeys = [
+            "LblFileNamePattern",
+            "LblNamingPreview",
+            "LblMetadata",
+            "LblYear",
+            "LblNotes",
+            "WatermarkYear",
+            "WatermarkDescription",
+            "ChkApplyYearToAll"
+        ];
+
+        string axamlPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "src", "PhotoCropper.Gui", "Assets", "i18n", $"{langCode}.axaml");
+
+        File.Exists(axamlPath).ShouldBeTrue($"Dictionary file {langCode}.axaml should exist");
+        string content = File.ReadAllText(axamlPath);
+
+        foreach (string key in requiredKeys)
+        {
+            content.ShouldContain($"x:Key=\"{key}\"");
+        }
+    }
 }

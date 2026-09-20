@@ -193,4 +193,21 @@
 	<sys:String x:Key="MenuExportSingle">Export This Photo...</sys:String>
 	<sys:String x:Key="EmptyStateTitle">Drag &amp; Drop Scans Here</sys:String>
 	<sys:String x:Key="EmptyStateDesc">Drop image files or entire scan folders here to extract photos, or click Open / Scan above.</sys:String>
+	<sys:String x:Key="LblFileNamePattern">File Naming:</sys:String>
+	<sys:String x:Key="LblNamingPreview">Preview: {0}</sys:String>
+	<sys:String x:Key="LblMetadata">Vintage Photo Metadata (EXIF):</sys:String>
+	<sys:String x:Key="LblYear">Year:</sys:String>
+	<sys:String x:Key="LblNotes">Notes:</sys:String>
+	<sys:String x:Key="WatermarkYear">e.g. 1985</sys:String>
+	<sys:String x:Key="WatermarkDescription">Description / tags...</sys:String>
+	<sys:String x:Key="ChkApplyYearToAll">Apply year to all scans</sys:String>
+	<sys:String x:Key="TipTokenOriginal">Insert {original} scan name</sys:String>
+	<sys:String x:Key="TipTokenIndex">Insert zero-padded photo index {index:02}</sys:String>
+	<sys:String x:Key="TipTokenYear">Insert photo year {year}</sys:String>
+	<sys:String x:Key="TipTokenDate">Insert formatted date {date}</sys:String>
+	<sys:String x:Key="TipTokenTotal">Insert total photo count {total}</sys:String>
+	<sys:String x:Key="HelpNamingTitle">File Naming Helper</sys:String>
+	<sys:String x:Key="HelpNamingDesc">Customize output names using tokens like {original}, {index:02}, {year}, and {total} with live dynamic previews.</sys:String>
+	<sys:String x:Key="HelpMetadataTitle">Vintage Photo Metadata (EXIF)</sys:String>
+	<sys:String x:Key="HelpMetadataDesc">Tag scans with approximate capture year and notes; embeds standard EXIF tags so photo managers index them chronologically.</sys:String>
 </ResourceDictionary>

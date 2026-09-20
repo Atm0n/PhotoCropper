@@ -92,9 +92,22 @@ public static class PhotoExporter
     public static void SavePhotos(
         IReadOnlyList<Mat> photos,
         string originalFilePath,
+        string? customOutputFolder,
+        string format,
+        int jpegQuality,
+        Action<int, int>? progressCallback)
+    {
+        SavePhotos(photos, originalFilePath, customOutputFolder, format, jpegQuality, FileNameTemplateHelper.DefaultPattern, null, progressCallback);
+    }
+
+    public static void SavePhotos(
+        IReadOnlyList<Mat> photos,
+        string originalFilePath,
         string? customOutputFolder = null,
         string format = "JPEG",
         int jpegQuality = 90,
+        string fileNamePattern = FileNameTemplateHelper.DefaultPattern,
+        PhotoCropper.Core.Models.PhotoExportMetadata? metadata = null,
         Action<int, int>? progressCallback = null)
     {
         ArgumentNullException.ThrowIfNull(photos);
@@ -110,17 +123,35 @@ public static class PhotoExporter
         string extension = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
         var (xDpi, yDpi) = GetDpiFromSource(originalFilePath);
 
+        int totalValidPhotos = 0;
+        for (int p = 0; p < photos.Count; p++)
+        {
+            if (!photos[p].IsEmpty) totalValidPhotos++;
+        }
+
         int saveCounter = 1;
         for (int i = 0; i < photos.Count; i++)
         {
             if (photos[i].IsEmpty) continue;
-            string fileName = Path.Combine(outputFolder, $"{baseFileName}_{saveCounter++}{extension}");
+            string relativeFileName = FileNameTemplateHelper.FormatFileName(
+                fileNamePattern,
+                baseFileName,
+                saveCounter++,
+                totalValidPhotos,
+                metadata,
+                extension);
+            string fileName = Path.Combine(outputFolder, relativeFileName);
 
             if (string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase))
             {
                 using Emgu.CV.Util.VectorOfByte buf = new();
                 CvInvoke.Imencode(".png", photos[i], buf);
-                File.WriteAllBytes(fileName, buf.ToArray());
+                byte[] fileBytes = buf.ToArray();
+                if (metadata?.HasMetadata == true)
+                {
+                    fileBytes = ExifMetadataWriter.InjectPngMetadata(fileBytes, metadata);
+                }
+                File.WriteAllBytes(fileName, fileBytes);
                 EmbedPngDpi(fileName, xDpi, yDpi);
             }
             else
@@ -130,11 +161,44 @@ public static class PhotoExporter
                 ];
                 using Emgu.CV.Util.VectorOfByte buf = new();
                 CvInvoke.Imencode(".jpg", photos[i], buf, parameters);
-                File.WriteAllBytes(fileName, buf.ToArray());
+                byte[] fileBytes = buf.ToArray();
+                if (metadata?.HasMetadata == true)
+                {
+                    fileBytes = ExifMetadataWriter.InjectJpegMetadata(fileBytes, metadata);
+                }
+                File.WriteAllBytes(fileName, fileBytes);
                 EmbedJpegDpi(fileName, xDpi, yDpi);
             }
 
             progressCallback?.Invoke(i + 1, photos.Count);
+        }
+    }
+
+    public static void EmbedJpegMetadata(string filePath, PhotoCropper.Core.Models.PhotoExportMetadata metadata)
+    {
+        ArgumentNullException.ThrowIfNull(filePath);
+        ArgumentNullException.ThrowIfNull(metadata);
+        if (!File.Exists(filePath)) return;
+
+        byte[] bytes = File.ReadAllBytes(filePath);
+        byte[] updated = ExifMetadataWriter.InjectJpegMetadata(bytes, metadata);
+        if (updated != bytes)
+        {
+            File.WriteAllBytes(filePath, updated);
+        }
+    }
+
+    public static void EmbedPngMetadata(string filePath, PhotoCropper.Core.Models.PhotoExportMetadata metadata)
+    {
+        ArgumentNullException.ThrowIfNull(filePath);
+        ArgumentNullException.ThrowIfNull(metadata);
+        if (!File.Exists(filePath)) return;
+
+        byte[] bytes = File.ReadAllBytes(filePath);
+        byte[] updated = ExifMetadataWriter.InjectPngMetadata(bytes, metadata);
+        if (updated != bytes)
+        {
+            File.WriteAllBytes(filePath, updated);
         }
     }
 

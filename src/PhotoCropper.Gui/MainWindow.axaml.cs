@@ -445,6 +445,26 @@ internal sealed partial class MainWindow : Window
         {
             settings.CustomOutputDirectory = string.IsNullOrEmpty(txtOutputDir.Text) ? null : txtOutputDir.Text;
         }
+        if (txtFileNamePattern != null && !string.IsNullOrWhiteSpace(txtFileNamePattern.Text))
+        {
+            settings.FileNamePattern = txtFileNamePattern.Text;
+        }
+        if (txtMetadataYear != null && int.TryParse(txtMetadataYear.Text, System.Globalization.CultureInfo.InvariantCulture, out int parsedYear))
+        {
+            settings.DefaultYear = parsedYear;
+        }
+        else if (txtMetadataYear != null && string.IsNullOrWhiteSpace(txtMetadataYear.Text))
+        {
+            settings.DefaultYear = null;
+        }
+        if (txtMetadataDesc != null)
+        {
+            settings.DefaultDescription = string.IsNullOrWhiteSpace(txtMetadataDesc.Text) ? null : txtMetadataDesc.Text;
+        }
+        if (chkApplyYearToAll != null)
+        {
+            settings.ApplyYearToAllScans = chkApplyYearToAll.IsChecked ?? true;
+        }
 
         if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory) && _workspaceSession != null)
         {

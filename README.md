@@ -96,6 +96,15 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 - **Crash-Proof Session Persistence (`session.json`):** Tracks all scan files, individual detection settings, 90° rotations, and manual crops in real time. If the app is closed or interrupted by a system crash or power outage, launching the workspace prompts to resume the session instantly.
 - **Automatic Session Reconstruction:** Even if `session.json` is missing or accidentally removed, the workspace engine inspects the `RawScans/` directory on startup and reconstructs the session automatically.
 
+### 7. File Naming Helper & Vintage EXIF Metadata
+- **Token-Based File Naming Patterns:** Fully configurable output naming template supporting tokens:
+  - `{original}` / `{filename}`: Source scan filename.
+  - `{index}` / `{index:02}` / `{index:000}`: 1-based photo index with configurable zero-padding.
+  - `{year}` / `{date}`: Vintage year or date from metadata.
+  - `{total}`: Total photo count detected in the scan.
+- **Dynamic Live Preview:** Real-time preview of the resulting filename as you type or pick presets.
+- **EXIF Vintage Metadata Tagging:** Embeds standard EXIF `DateTimeOriginal`, `DateTimeDigitized`, and `UserComment` into exported JPEGs (APP1) and PNGs (`tEXt` chunks). Scanned vintage prints are automatically indexed chronologically by their capture decade in photo managers (Google Photos, Apple Photos, Immich, Lightroom) rather than the scanner ingestion date.
+
 ---
 
 ## Clean Code & Analysis Standards
@@ -176,6 +185,10 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `-o, --output <dir>` | Output destination directory for extracted photos | `<scan_dir>/cropped` |
 | `-f, --format <fmt>` | Output file format: `JPEG` or `PNG` | `JPEG` |
 | `-q, --quality <1-100>` | JPEG compression quality | `90` |
+| `-p, --pattern <pat>` | Output naming template (`{original}`, `{index:02}`, `{year}`, `{date}`, `{total}`) | `{original}_{index}` |
+| `--year <YYYY>` | Vintage photo year taken to embed in EXIF and use in `{year}` | `null` |
+| `--date <YYYY-MM-DD>` | Approximate or exact photo date to embed in EXIF and use in `{date}` | `null` |
+| `--desc <text>` | Photo description/comment embedded into EXIF metadata | `null` |
 | `-t, --tolerance <num>` | Background color detection tolerance | `25` |
 | `-j, --threads <num>` | Number of concurrent CPU worker threads for batch processing | *CPU Cores* |
 | `--min-size <percent>` | Minimum photo size as % of total scan area | `15` |
