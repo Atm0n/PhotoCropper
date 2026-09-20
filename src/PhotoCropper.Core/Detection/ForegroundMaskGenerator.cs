@@ -69,4 +69,41 @@ public static class ForegroundMaskGenerator
         using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(closeSize, closeSize), new Point(-1, -1));
         CvInvoke.MorphologyEx(outputForeground, outputForeground, MorphOp.Close, closeKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
     }
+
+    public static void PopulateOtsuForegroundMask(
+        Mat source,
+        Mat outputForeground,
+        double lowThreshold,
+        double highThreshold,
+        bool isLightBackground = true,
+        Mat? precomputedEdgeMap = null)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(outputForeground);
+
+        using Mat gray = new();
+        CvInvoke.CvtColor(source, gray, ColorConversion.Bgr2Gray);
+
+        using Mat otsuMask = new();
+        var threshType = isLightBackground
+            ? (ThresholdType.BinaryInv | ThresholdType.Otsu)
+            : (ThresholdType.Binary | ThresholdType.Otsu);
+
+        CvInvoke.Threshold(gray, otsuMask, 0, 255, threshType);
+
+        using Mat ownedEdges = precomputedEdgeMap == null ? GeneratePrecomputedEdgeMap(source, lowThreshold, highThreshold) : new Mat();
+        Mat edgesToUse = precomputedEdgeMap ?? ownedEdges;
+
+        CvInvoke.BitwiseOr(otsuMask, edgesToUse, outputForeground);
+
+        int minDim = Math.Min(source.Width, source.Height);
+        int openSize = Math.Max(3, (minDim / 400) | 1);
+        int closeSize = Math.Max(3, (minDim / 500) | 1);
+
+        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(openSize, openSize), new Point(-1, -1));
+        CvInvoke.MorphologyEx(outputForeground, outputForeground, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+
+        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(closeSize, closeSize), new Point(-1, -1));
+        CvInvoke.MorphologyEx(outputForeground, outputForeground, MorphOp.Close, closeKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+    }
 }

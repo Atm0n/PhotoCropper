@@ -51,4 +51,28 @@ public sealed class ForegroundMaskGeneratorTests
         foreground.Width.ShouldBe(300);
         foreground.Height.ShouldBe(300);
     }
+
+    [Fact]
+    public void PopulateOtsuForegroundMask_ShouldGenerateOtsuMask()
+    {
+        using Mat source = new(300, 300, DepthType.Cv8U, 3);
+        source.SetTo(new MCvScalar(255, 255, 255));
+        CvInvoke.Rectangle(source, new Rectangle(50, 50, 100, 100), new MCvScalar(20, 20, 20), -1);
+
+        using Mat edges = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(source, 20, 50);
+        using Mat foreground = new();
+
+        ForegroundMaskGenerator.PopulateOtsuForegroundMask(
+            source,
+            foreground,
+            20,
+            50,
+            isLightBackground: true,
+            edges);
+
+        foreground.IsEmpty.ShouldBeFalse();
+        foreground.Width.ShouldBe(300);
+        foreground.Height.ShouldBe(300);
+        CvInvoke.CountNonZero(foreground).ShouldBeGreaterThan(5000);
+    }
 }

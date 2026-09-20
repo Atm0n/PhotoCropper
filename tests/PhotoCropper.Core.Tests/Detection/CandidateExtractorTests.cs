@@ -51,4 +51,30 @@ public sealed class CandidateExtractorTests
         // L-shape has very low rectangularity (~0.25) and low convexity, should be rejected
         candidates.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void ExtractCandidates_ShouldRejectUniformLidShadowArtifacts()
+    {
+        using Mat mask = new(500, 500, DepthType.Cv8U, 1);
+        mask.SetTo(new MCvScalar(0));
+        CvInvoke.Rectangle(mask, new Rectangle(50, 50, 200, 200), new MCvScalar(255), -1);
+
+        // Color image: background is white (250, 250, 250), candidate region is a faint uniform shadow (242, 242, 242)
+        using Mat colorImg = new(500, 500, DepthType.Cv8U, 3);
+        colorImg.SetTo(new MCvScalar(250, 250, 250));
+        CvInvoke.Rectangle(colorImg, new Rectangle(50, 50, 200, 200), new MCvScalar(242, 242, 242), -1);
+
+        var candidates = CandidateExtractor.ExtractCandidates(
+            mask,
+            0,
+            500,
+            500,
+            0.01,
+            0.90,
+            colorImg,
+            new MCvScalar(250, 250, 250));
+
+        // Uniform shadow without texture that is close to background color should be rejected
+        candidates.ShouldBeEmpty();
+    }
 }

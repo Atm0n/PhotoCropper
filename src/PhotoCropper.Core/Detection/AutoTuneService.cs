@@ -70,14 +70,17 @@ public static class AutoTuneService
             }
 
             using Mat foreground = new();
+            bool earlyExit = false;
 
             foreach (double cannyLow in SweepCannyLows)
             {
+                if (earlyExit) break;
                 Mat edgeMap = edgeMapDict[cannyLow];
                 double cannyHigh = cannyLow * 2.5;
 
                 foreach (double tol in SweepTolerances)
                 {
+                    if (earlyExit) break;
                     ForegroundMaskGenerator.PopulateForegroundMask(
                         detMat,
                         foreground,
@@ -96,7 +99,9 @@ public static class AutoTuneService
                             scaledW,
                             scaledH,
                             minArea,
-                            currentOptions.MaxAreaFactor);
+                            currentOptions.MaxAreaFactor,
+                            detMat,
+                            bgBgr);
 
                         var fullCandidates = MapCandidatesToFullRes(passCandidates, scale, originalW, originalH);
                         var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);
@@ -113,10 +118,75 @@ public static class AutoTuneService
                                 CannyHighThreshold = cannyHigh,
                                 MinAreaFactor = minArea
                             };
+
+                            // Early Exit: if within expected photo count with clean contours, stop searching immediately
+                            if (accepted.Count >= minExpected && accepted.Count <= maxExpected &&
+                                accepted.All(c => c.Rectangularity >= 0.80 && c.Convexity >= 0.85))
+                            {
+                                earlyExit = true;
+                                break;
+                            }
                         }
                     }
                 }
             }
+
+            // Otsu Dual-Segmentation Fallback: if standard HSV background subtraction under-detected
+            // (e.g. faded vintage photos or light skies blending into white lid), try Otsu luminance thresholding
+            if (bestCount < minExpected)
+            {
+                bool isLightBg = avgBgColorHsv.V2 > 120;
+                foreach (double cannyLow in SweepCannyLows)
+                {
+                    Mat edgeMap = edgeMapDict[cannyLow];
+                    double cannyHigh = cannyLow * 2.5;
+
+                    ForegroundMaskGenerator.PopulateOtsuForegroundMask(
+                        detMat,
+                        foreground,
+                        cannyLow,
+                        cannyHigh,
+                        isLightBg,
+                        edgeMap);
+
+                    foreach (double minArea in SweepMinAreaFactors)
+                    {
+                        var passCandidates = CandidateExtractor.ExtractCandidates(
+                            foreground,
+                            scaledPad,
+                            scaledW,
+                            scaledH,
+                            minArea,
+                            currentOptions.MaxAreaFactor,
+                            detMat,
+                            bgBgr);
+
+                        var fullCandidates = MapCandidatesToFullRes(passCandidates, scale, originalW, originalH);
+                        var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);
+
+                        double score = CalculateScore(accepted, originalW, originalH, minExpected, maxExpected);
+                        if (score > bestScore)
+                        {
+                            bestScore = score;
+                            bestCount = accepted.Count;
+                            bestOptions = currentOptions with
+                            {
+                                CannyLowThreshold = cannyLow,
+                                CannyHighThreshold = cannyHigh,
+                                MinAreaFactor = minArea
+                            };
+
+                            if (accepted.Count >= minExpected && accepted.Count <= maxExpected &&
+                                accepted.All(c => c.Rectangularity >= 0.80 && c.Convexity >= 0.85))
+                            {
+                                goto SearchComplete;
+                            }
+                        }
+                    }
+                }
+            }
+
+            SearchComplete:;
         }
         finally
         {
@@ -161,13 +231,16 @@ public static class AutoTuneService
             edgeMap,
             detHsv);
 
+        MCvScalar bgBgr = BackgroundAnalyzer.HsvToBgr(avgBgColorHsv);
         var passCandidates = CandidateExtractor.ExtractCandidates(
             foreground,
             scaledPad,
             scaledW,
             scaledH,
             minAreaFactor,
-            maxAreaFactor);
+            maxAreaFactor,
+            detMat,
+            bgBgr);
 
         var fullCandidates = MapCandidatesToFullRes(passCandidates, scale, originalW, originalH);
         var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);

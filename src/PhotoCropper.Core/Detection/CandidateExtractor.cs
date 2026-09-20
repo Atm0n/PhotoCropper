@@ -16,7 +16,9 @@ public static class CandidateExtractor
         int originalWidth,
         int originalHeight,
         double minAreaFactor,
-        double maxAreaFactor)
+        double maxAreaFactor,
+        Mat? sourceColorMat = null,
+        MCvScalar? backgroundColorBgr = null)
     {
         ArgumentNullException.ThrowIfNull(foregroundMap);
 
@@ -73,6 +75,38 @@ public static class CandidateExtractor
 
             // Completeness filter: discard non-complete, fragmented, or irregular partial shapes
             if (rectangularity < 0.60 || convexity < 0.68) continue;
+
+            // Content & Texture Verification: Discard scanner lid shadows and blank glass artifacts
+            if (sourceColorMat != null && !sourceColorMat.IsEmpty && backgroundColorBgr.HasValue)
+            {
+                Rectangle cBounds = CvInvoke.BoundingRectangle(contours[i]);
+                int clampX = Math.Clamp(cBounds.X, 0, sourceColorMat.Width - 1);
+                int clampY = Math.Clamp(cBounds.Y, 0, sourceColorMat.Height - 1);
+                int clampW = Math.Clamp(cBounds.Width, 1, sourceColorMat.Width - clampX);
+                int clampH = Math.Clamp(cBounds.Height, 1, sourceColorMat.Height - clampY);
+
+                if (clampW >= 20 && clampH >= 20)
+                {
+                    using Mat roi = new(sourceColorMat, new Rectangle(clampX, clampY, clampW, clampH));
+                    MCvScalar mean = new();
+                    MCvScalar stdDev = new();
+                    CvInvoke.MeanStdDev(roi, ref mean, ref stdDev);
+
+                    double avgStdDev = (stdDev.V0 + stdDev.V1 + stdDev.V2) / 3.0;
+                    double colorDist = Math.Sqrt(
+                        Math.Pow(mean.V0 - backgroundColorBgr.Value.V0, 2) +
+                        Math.Pow(mean.V1 - backgroundColorBgr.Value.V1, 2) +
+                        Math.Pow(mean.V2 - backgroundColorBgr.Value.V2, 2));
+
+                    // If a candidate has virtually no internal texture/variance (< 6.0)
+                    // and its color is very close to the scanner bed (< 22.0),
+                    // it is a lid shadow or blank glass artifact, not a photo.
+                    if (avgStdDev < 6.0 && colorDist < 22.0)
+                    {
+                        continue;
+                    }
+                }
+            }
 
             // Quality score heavily favors clean, rectangular, convex single photos over merged composites
             double quality = Math.Pow(rectangularity, 3) * Math.Pow(convexity, 2);

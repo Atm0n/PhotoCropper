@@ -242,7 +242,9 @@ public class PhotoCropperEngine : IDisposable
                 (int)Math.Round(originalW * scale),
                 (int)Math.Round(originalH * scale),
                 MinAreaFactor,
-                MaxAreaFactor);
+                MaxAreaFactor,
+                detectionMat,
+                bgBgr);
 
             // If downscaled, map candidate coordinates back to original full resolution space
             if (scale < 0.999)
