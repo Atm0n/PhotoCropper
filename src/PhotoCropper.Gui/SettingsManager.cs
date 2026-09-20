@@ -9,14 +9,14 @@ internal sealed class UserSettings
 {
     public string Language { get; set; } = "en-US";
     public double BackgroundTolerance { get; set; } = 25;
-    public double MinAreaFactor { get; set; } = 15; // 15%
+    public double MinAreaFactor { get; set; } = 25; // 25%
     public double MaxAreaFactor { get; set; } = 90; // 90%
     public double CannyLowThreshold { get; set; } = 20;
     public double ZoomLevel { get; set; } = 1;
     public bool AdvancedVisible { get; set; }
     public string? CustomOutputDirectory { get; set; }
     public string PreferredFormat { get; set; } = "JPEG"; // JPEG or PNG
-    public int JpegQuality { get; set; } = 90; // 1-100
+    public int JpegQuality { get; set; } = 100; // 1-100 (default: 100 maximum quality)
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; } = true;
     public bool RemoveDustAndScratches { get; set; } = true;

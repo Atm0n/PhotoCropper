@@ -22,7 +22,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.ShouldNotBeNull();
         manager.Settings.Language.ShouldBe("en-US");
         manager.Settings.BackgroundTolerance.ShouldBe(25);
-        manager.Settings.MinAreaFactor.ShouldBe(15);
+        manager.Settings.MinAreaFactor.ShouldBe(25);
         manager.Settings.MaxAreaFactor.ShouldBe(90);
         manager.Settings.CannyLowThreshold.ShouldBe(20);
         manager.Settings.ZoomLevel.ShouldBe(1);
@@ -33,6 +33,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.Theme.ShouldBe("Dark");
         manager.Settings.DetectionBoxColor.ShouldBe("Red");
         manager.Settings.FileNamePattern.ShouldBe("{original}_{index}");
+        manager.Settings.JpegQuality.ShouldBe(100);
         manager.Settings.DefaultYear.ShouldBeNull();
         manager.Settings.DefaultDescription.ShouldBeNull();
         manager.Settings.ApplyYearToAllScans.ShouldBeTrue();
@@ -139,7 +140,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.ResetDetectionDefaults();
 
         manager.Settings.BackgroundTolerance.ShouldBe(25);
-        manager.Settings.MinAreaFactor.ShouldBe(15);
+        manager.Settings.MinAreaFactor.ShouldBe(25);
         manager.Settings.MaxAreaFactor.ShouldBe(90);
         manager.Settings.CannyLowThreshold.ShouldBe(20);
 

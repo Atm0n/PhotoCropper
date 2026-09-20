@@ -184,14 +184,14 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `-i, --input <path>` | Input image file or directory of scans (positional arguments accepted) | *Required* |
 | `-o, --output <dir>` | Output destination directory for extracted photos | `<scan_dir>/cropped` |
 | `-f, --format <fmt>` | Output file format: `JPEG` or `PNG` | `JPEG` |
-| `-q, --quality <1-100>` | JPEG compression quality | `90` |
+| `-q, --quality <1-100>` | JPEG compression quality | `100` |
 | `-p, --pattern <pat>` | Output naming template (`{original}`, `{index:02}`, `{year}`, `{date}`, `{total}`) | `{original}_{index}` |
 | `--year <YYYY>` | Vintage photo year taken to embed in EXIF and use in `{year}` | `null` |
 | `--date <YYYY-MM-DD>` | Approximate or exact photo date to embed in EXIF and use in `{date}` | `null` |
 | `--desc <text>` | Photo description/comment embedded into EXIF metadata | `null` |
 | `-t, --tolerance <num>` | Background color detection tolerance | `25` |
 | `-j, --threads <num>` | Number of concurrent CPU worker threads for batch processing | *CPU Cores* |
-| `--min-size <percent>` | Minimum photo size as % of total scan area | `15` |
+| `--min-size <percent>` | Minimum photo size as % of total scan area | `25` |
 | `--max-size <percent>` | Maximum photo size as % of total scan area | `90` |
 | `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
 | `--auto-tune` | Automatically search optimal detection parameters on difficult scans | `false` |

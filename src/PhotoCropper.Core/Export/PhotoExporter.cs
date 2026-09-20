@@ -106,7 +106,7 @@ public static class PhotoExporter
         string originalFilePath,
         string? customOutputFolder = null,
         string format = "JPEG",
-        int jpegQuality = 90,
+        int jpegQuality = 100,
         string fileNamePattern = FileNameTemplateHelper.DefaultPattern,
         PhotoCropper.Core.Models.PhotoExportMetadata? metadata = null,
         Action<int, int>? progressCallback = null)
@@ -159,7 +159,8 @@ public static class PhotoExporter
             else
             {
                 KeyValuePair<ImwriteFlags, int>[] parameters = [
-                    new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegQuality, jpegQuality)
+                    new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegQuality, jpegQuality),
+                    new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegOptimize, 1)
                 ];
                 using Emgu.CV.Util.VectorOfByte buf = new();
                 CvInvoke.Imencode(".jpg", photos[i], buf, parameters);

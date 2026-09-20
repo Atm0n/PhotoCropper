@@ -500,7 +500,7 @@ internal sealed partial class MainWindow : Window
         }
         if (sldJpegQuality != null)
         {
-            settings.JpegQuality = (int)sldJpegQuality.Value;
+            settings.JpegQuality = (int)Math.Round(sldJpegQuality.Value);
         }
         if (txtOutputDir != null)
         {
