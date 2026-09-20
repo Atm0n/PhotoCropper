@@ -324,7 +324,7 @@ internal sealed partial class MainWindow : Window
             case Key.Up:
             case Key.PageUp:
                 FocusManager?.Focus(null);
-                ScanSessions[currentIndex].Deactivate();
+                ScanSessions[currentIndex].DeactivateIfUnmodified();
                 currentIndex = (currentIndex - 1 + ScanSessions.Count) % ScanSessions.Count;
                 await LoadPhotosToGuiAsync();
                 e.Handled = true;
@@ -333,7 +333,7 @@ internal sealed partial class MainWindow : Window
             case Key.Down:
             case Key.PageDown:
                 FocusManager?.Focus(null);
-                ScanSessions[currentIndex].Deactivate();
+                ScanSessions[currentIndex].DeactivateIfUnmodified();
                 currentIndex = (currentIndex + 1) % ScanSessions.Count;
                 await LoadPhotosToGuiAsync();
                 e.Handled = true;

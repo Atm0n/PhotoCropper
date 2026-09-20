@@ -146,7 +146,7 @@ internal sealed partial class MainWindow
     private async void BtnPrevScan_Click(object? sender, RoutedEventArgs e)
     {
         if (isLoading || ScanSessions.Count == 0) return;
-        ScanSessions[currentIndex].Deactivate();
+        ScanSessions[currentIndex].DeactivateIfUnmodified();
         currentIndex = (currentIndex - 1 + ScanSessions.Count) % ScanSessions.Count;
         await LoadPhotosToGuiAsync();
     }
@@ -154,7 +154,7 @@ internal sealed partial class MainWindow
     private async void BtnNextScan_Click(object? sender, RoutedEventArgs e)
     {
         if (isLoading || ScanSessions.Count == 0) return;
-        ScanSessions[currentIndex].Deactivate();
+        ScanSessions[currentIndex].DeactivateIfUnmodified();
         currentIndex = (currentIndex + 1) % ScanSessions.Count;
         await LoadPhotosToGuiAsync();
     }

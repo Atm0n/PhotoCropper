@@ -136,12 +136,12 @@ internal sealed partial class MainWindow
             if (_availableScanners.Count == 0)
             {
                 txtScannerStatus.Text = Avalonia.Application.Current?.FindResource("MsgNoScannerFound")?.ToString() ?? "No scanner detected. Click 🔄 to refresh.";
-                txtScannerStatus.Foreground = Brush.Parse("#ffaa44");
+                txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppDangerTextBrush") as IBrush) ?? Brush.Parse("#ffaa44");
             }
             else
             {
                 txtScannerStatus.Text = $"{_availableScanners.Count} scanner(s) found.";
-                txtScannerStatus.Foreground = Brush.Parse("#44cc66");
+                txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppSuccessTextBrush") as IBrush) ?? Brush.Parse("#44cc66");
             }
         }
     }
@@ -387,7 +387,7 @@ internal sealed partial class MainWindow
         if (txtScannerStatus != null)
         {
             txtScannerStatus.Text = Avalonia.Application.Current?.FindResource("TxtScanningSearching")?.ToString() ?? "Searching for connected scanners...";
-            txtScannerStatus.Foreground = Brush.Parse("#3399ff");
+            txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppAccentBrush") as IBrush) ?? Brush.Parse("#3399ff");
         }
         await RefreshScannersAsync();
         UpdateScannerConfigUi();

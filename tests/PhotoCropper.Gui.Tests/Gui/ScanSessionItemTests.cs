@@ -93,6 +93,23 @@ public sealed class ScanSessionItemTests : IDisposable
         savedItem.IsModified.ShouldBeTrue();
     }
 
+    [Fact]
+    public void ScanSessionItem_DeactivateIfUnmodified_ShouldOnlyDeactivateWhenNotModified()
+    {
+        var options = new DetectionOptions { BackgroundTolerance = 30.0 };
+        using var modifiedItem = new ScanSessionItem(_scanPath, options, isSaved: false, isModified: true);
+        modifiedItem.Activate();
+        modifiedItem.IsActive.ShouldBeTrue();
+        modifiedItem.DeactivateIfUnmodified();
+        modifiedItem.IsActive.ShouldBeTrue(); // Preserved because IsModified == true
+
+        using var unmodifiedItem = new ScanSessionItem(_scanPath, options, isSaved: true, isModified: false);
+        unmodifiedItem.Activate();
+        unmodifiedItem.IsActive.ShouldBeTrue();
+        unmodifiedItem.DeactivateIfUnmodified();
+        unmodifiedItem.IsActive.ShouldBeFalse(); // Disposed because IsModified == false
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
