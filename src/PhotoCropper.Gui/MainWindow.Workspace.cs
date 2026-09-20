@@ -122,9 +122,8 @@ internal sealed partial class MainWindow
         }
         ScanSessions.Clear();
         currentIndex = 0;
-        if (img != null) img.Source = null;
-        slides?.Items.Clear();
-        lstGallery?.Items.Clear();
+        SetMainImage(null);
+        ClearGalleryBitmaps();
         if (txtFileCounter != null)
         {
             txtFileCounter.Text = Avalonia.Application.Current?.FindResource("TxtNoFiles")?.ToString() ?? "No files loaded";

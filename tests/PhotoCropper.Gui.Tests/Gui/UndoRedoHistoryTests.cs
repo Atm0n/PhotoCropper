@@ -247,6 +247,36 @@ public sealed class UndoRedoHistoryTests : IDisposable
         engine.DetectedPhotos.Count.ShouldBe(initialCount - 2);
     }
 
+    [Fact]
+    public void UndoRedoHistory_BoundedCapacity_ShouldEvictAndDisposeOldestActions()
+    {
+        const int capacity = 3;
+        using var history = new UndoRedoHistory(capacity);
+        using var engine = new PhotoCropperEngine(_scanPath);
+
+        // Push 5 actions (exceeding capacity of 3)
+        history.PushRotate(0, 0);
+        history.PushRotate(0, 1);
+        history.PushRotate(0, 2);
+        history.PushRotate(0, 3);
+        history.PushRotate(0, 4);
+
+        history.UndoCount.ShouldBe(capacity);
+
+        // The top of undo stack should be action 4, then 3, then 2 (0 and 1 evicted)
+        var a1 = history.Undo([engine]);
+        a1.ShouldNotBeNull();
+
+        var a2 = history.Undo([engine]);
+        a2.ShouldNotBeNull();
+
+        var a3 = history.Undo([engine]);
+        a3.ShouldNotBeNull();
+
+        // No more undo actions available
+        history.CanUndo.ShouldBeFalse();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

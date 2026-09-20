@@ -16,7 +16,7 @@
 			<StackPanel Margin="35,25" MaxWidth="780" Spacing="25">
 				<TextBlock Text="{DynamicResource HeaderHelp}" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" HorizontalAlignment="Center"/>
 				
-				<Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto" Margin="0,10">
+				<Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto" Margin="0,10">
 					<StackPanel Grid.Row="0" Grid.Column="0" Margin="10" Spacing="5">
 						<TextBlock Text="{DynamicResource BtnOpenScans}" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
 						<TextBlock Text="{DynamicResource HelpOpenScans}" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
@@ -65,6 +65,14 @@
 						<TextBlock Text="{DynamicResource HelpAutoTuneTitle}" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
 						<TextBlock Text="{DynamicResource HelpAutoTuneDesc}" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 					</StackPanel>
+					<StackPanel Grid.Row="6" Grid.Column="0" Margin="10" Spacing="5">
+						<TextBlock Text="{DynamicResource HelpThemeTitle}" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
+						<TextBlock Text="{DynamicResource HelpThemeDesc}" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+					</StackPanel>
+					<StackPanel Grid.Row="6" Grid.Column="1" Margin="10" Spacing="5">
+						<TextBlock Text="{DynamicResource HelpSafeExitTitle}" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
+						<TextBlock Text="{DynamicResource HelpSafeExitDesc}" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+					</StackPanel>
 				</Grid>
 
 				<Border Background="{DynamicResource AppCardBackgroundBrush}" Padding="20" CornerRadius="8" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
@@ -81,10 +89,12 @@
 							<TextBlock Text="{DynamicResource HelpShortcutCompare}" Margin="5" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutRefine}" Margin="5" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutToggleView}" Margin="5" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+							<TextBlock Text="{DynamicResource HelpShortcutSelectAll}" Margin="5" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutUndo}" Margin="5" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutRedo}" Margin="5" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutSave}" Margin="5" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutClose}" Margin="5" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+							<TextBlock Text="{DynamicResource HelpShortcutF1}" Margin="5" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 						</UniformGrid>
 					</StackPanel>
 				</Border>

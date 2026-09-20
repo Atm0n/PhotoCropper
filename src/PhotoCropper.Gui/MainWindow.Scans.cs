@@ -3,6 +3,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using PhotoCropper.Core.Export;
+using PhotoCropper.Core.IO;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
@@ -21,36 +22,15 @@ internal sealed partial class MainWindow
     {
         if (e.DataTransfer == null) return;
 
-        var imagePaths = new List<string>();
-        var validExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"
-        };
-
         var asyncTransfer = e.DataTransfer as IAsyncDataTransfer;
         var files = asyncTransfer != null ? await asyncTransfer.TryGetFilesAsync() : null;
-        if (files != null)
-        {
-            foreach (var file in files)
-            {
-                string localPath = file.Path.LocalPath;
-                if (File.Exists(localPath) && validExts.Contains(Path.GetExtension(localPath)))
-                {
-                    imagePaths.Add(localPath);
-                }
-                else if (Directory.Exists(localPath))
-                {
-                    foreach (var ext in validExts)
-                    {
-                        imagePaths.AddRange(Directory.GetFiles(localPath, $"*{ext}", SearchOption.AllDirectories));
-                    }
-                }
-            }
-        }
+        if (files == null) return;
 
-        if (imagePaths.Count > 0)
+        var rawPaths = files.Select(f => f.Path.LocalPath);
+        var collected = ImageFileCollector.CollectFiles(rawPaths, recursive: true);
+        if (collected.Count > 0)
         {
-            await LoadScansFromPathsAsync(imagePaths.Distinct());
+            await LoadScansFromPathsAsync(collected);
         }
     }
 
@@ -114,7 +94,7 @@ internal sealed partial class MainWindow
             var currentPhoto = await Task.Run(() => session.Activate());
             SyncUiWithScanOptions(currentPhoto.CurrentOptions);
 
-            img.Source = MatBitmapConverter.ToAvaloniaBitmap(currentPhoto.OriginalWithDetected);
+            SetMainImage(currentPhoto.OriginalWithDetected);
 
             string scanCounterFormat = Avalonia.Application.Current?.FindResource("ScanCounter")?.ToString() ?? "Scan {0} of {1}";
             txtFileCounter.Text = string.Format(scanCounterFormat, currentIndex + 1, ScanSessions.Count);
@@ -197,9 +177,8 @@ internal sealed partial class MainWindow
         if (ScanSessions.Count == 0)
         {
             currentIndex = 0;
-            img.Source = null;
-            slides.Items.Clear();
-            if (lstGallery != null) lstGallery.Items.Clear();
+            SetMainImage(null);
+            ClearGalleryBitmaps();
             txtFileCounter.Text = Avalonia.Application.Current?.FindResource("TxtNoFiles")?.ToString() ?? "No files loaded";
             lblPhotoInfo.Text = "";
             lblStatus.Text = statusMsg;
@@ -242,7 +221,7 @@ internal sealed partial class MainWindow
             var result = await Task.Run(() => photo.AutoTune());
             ScanSessions[currentIndex].IsModified = true;
             SyncUiWithScanOptions(photo.CurrentOptions);
-            img.Source = MatBitmapConverter.ToAvaloniaBitmap(photo.OriginalWithDetected);
+            SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();
 
@@ -295,7 +274,7 @@ internal sealed partial class MainWindow
         await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
         {
             await Task.Run(() => photo.DetectPhotos());
-            img.Source = MatBitmapConverter.ToAvaloniaBitmap(photo.OriginalWithDetected);
+            SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();
             string msgFormat = Avalonia.Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";

@@ -6,10 +6,38 @@ namespace PhotoCropper.Gui;
 
 internal sealed partial class MainWindow
 {
+    internal void ClearGalleryBitmaps()
+    {
+        var disposedBitmaps = new HashSet<IDisposable>();
+
+        if (slides != null)
+        {
+            foreach (var item in slides.Items)
+            {
+                if (item is IDisposable disposable && disposedBitmaps.Add(disposable))
+                {
+                    disposable.Dispose();
+                }
+            }
+            slides.Items.Clear();
+        }
+
+        if (lstGallery != null)
+        {
+            foreach (var item in lstGallery.Items)
+            {
+                if (item is GalleryPhotoItem galleryItem && galleryItem.Image is IDisposable disposable && disposedBitmaps.Add(disposable))
+                {
+                    disposable.Dispose();
+                }
+            }
+            lstGallery.Items.Clear();
+        }
+    }
+
     private void LoadCroppedPhotosToSlider()
     {
-        slides.Items.Clear();
-        if (lstGallery != null) lstGallery.Items.Clear();
+        ClearGalleryBitmaps();
 
         var detected = ScanSessions[currentIndex].Activate().DetectedPhotos;
         for (int i = 0; i < detected.Count; i++)
