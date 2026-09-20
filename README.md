@@ -15,7 +15,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **`Workspace/`**: Project folder management, raw scan disk-staging, and crash recovery session manager (`ProjectWorkspaceService`, `WorkspaceSessionState`, `WorkspaceScanEntry`).
   - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
 - **`src/PhotoCropper.Gui` (Avalonia Desktop App):** A high-performance GUI featuring:
-  - **`Views/`**: Modular UI architecture including `MainWindow/` (split into clean partials by responsibility) and `Dialogs/` (`HelpWindow`, `ScannerConfigDialog`, `CustomColorDialog`, `SafeExitPromptDialog`).
+  - **`Views/`**: Modular UI architecture including `MainWindow/` (split into clean partials by responsibility) and `Dialogs/` (`HelpWindow`, `ScannerConfigDialog`, `CustomColorDialog`, `SafeExitPromptDialog`, `ExportSettingsDialog`).
   - **`Services/`**: Bounded undo/redo history, dynamic theme manager, hardware scanner coordination, localization manager, settings persistence, and decoupled scan session navigation (`ScanSessionManager`).
   - **`Models/`**: Clean GUI domain models such as `ScanSessionItem`.
   - Multi-language localization (EN, ES, CA), full Light/Dark/System runtime theming, and persistent configuration.
@@ -79,6 +79,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - `HelpWindow`: Non-modal documentation and shortcut reference (<kbd>F1</kbd>) that can be placed side-by-side or on secondary monitors.
   - `ScannerConfigDialog`: Hardware device selection, DPI configuration, and network scanner discovery.
   - `CustomColorDialog`: Interactive bounding box color adjustment.
+  - `ExportSettingsDialog`: Dedicated Save & Export preferences (output directory, format, quality, naming tokens, live preview, EXIF metadata).
   - `SafeExitPromptDialog`: Unsaved changes confirmation dialog.
 - **Bounded Undo/Redo Memory Management (`Ctrl+Z` / `Ctrl+Y`):** Bounded 30-action double-ended queue that automatically evicts and disposes the oldest cloned OpenCV `Mat`s, preventing memory growth during intensive editing sessions.
 - **Native Avalonia `Bitmap` Disposal:** Proactively disposes underlying unmanaged SKBitmap buffers on image replacement, re-detection, and scan navigation, keeping memory footprint low.
