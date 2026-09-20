@@ -3,7 +3,7 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using PhotoCropper.Gui.Services;
 
-namespace PhotoCropper.Gui.Tests.Gui;
+namespace PhotoCropper.Gui.Tests.Services;
 
 public sealed class MatBitmapConverterTests
 {

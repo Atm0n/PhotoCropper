@@ -1,6 +1,6 @@
+using PhotoCropper.Core.Models;
 using System.Buffers.Binary;
 using System.Text;
-using PhotoCropper.Core.Models;
 
 namespace PhotoCropper.Core.Export;
 

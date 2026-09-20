@@ -1,6 +1,6 @@
-using System.Collections.Concurrent;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
+using System.Collections.Concurrent;
 
 namespace PhotoCropper.Core.Export;
 

@@ -1,7 +1,6 @@
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.TestHelpers;
-using Shouldly;
 
 namespace PhotoCropper.Core.Tests.Export;
 

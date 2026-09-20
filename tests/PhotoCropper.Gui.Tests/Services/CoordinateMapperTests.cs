@@ -1,6 +1,6 @@
 using PhotoCropper.Gui.Services;
 
-namespace PhotoCropper.Gui.Tests.Gui;
+namespace PhotoCropper.Gui.Tests.Services;
 
 public sealed class CoordinateMapperTests
 {

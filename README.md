@@ -15,8 +15,9 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **`Workspace/`**: Project folder management, raw scan disk-staging, and crash recovery session manager (`ProjectWorkspaceService`, `WorkspaceSessionState`, `WorkspaceScanEntry`).
   - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
 - **`src/PhotoCropper.Gui` (Avalonia Desktop App):** A high-performance GUI featuring:
-  - **`Dialogs/`**: Dedicated, modular windows for documentation (`HelpWindow`), scanner hardware configuration (`ScannerConfigDialog`), custom bounding box color picker (`CustomColorDialog`), and unsaved changes confirmation (`SafeExitPromptDialog`).
-  - **`Services/`**: Bounded undo/redo history, dynamic theme manager, hardware scanner coordination, and memory-safe scan session management.
+  - **`Views/`**: Modular UI architecture including `MainWindow/` (split into clean partials by responsibility) and `Dialogs/` (`HelpWindow`, `ScannerConfigDialog`, `CustomColorDialog`, `SafeExitPromptDialog`).
+  - **`Services/`**: Bounded undo/redo history, dynamic theme manager, hardware scanner coordination, localization manager, settings persistence, and decoupled scan session navigation (`ScanSessionManager`).
+  - **`Models/`**: Clean GUI domain models such as `ScanSessionItem`.
   - Multi-language localization (EN, ES, CA), full Light/Dark/System runtime theming, and persistent configuration.
 - **`src/PhotoCropper.Cli` (Command-Line Batch Extractor):** High-throughput CLI batch processor with Spectre.Console UI, multi-threaded parallel extraction, and unattended automation.
 - **`tests/` (Modular xUnit & Shouldly Test Suites):**

@@ -1,6 +1,6 @@
+using PhotoCropper.Core.Models;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using PhotoCropper.Core.Models;
 
 namespace PhotoCropper.Core.Export;
 
@@ -18,6 +18,11 @@ public static partial class FileNameTemplateHelper
         YearOriginalPattern,
         YearIndexPattern,
         PhotoPrefixPattern
+    ];
+
+    private static readonly char[] CrossPlatformInvalidFileNameChars =
+    [
+        '\\', '/', ':', '*', '?', '"', '<', '>', '|'
     ];
 
     [GeneratedRegex(@"^[\W_]+|[\W_]+$")]
@@ -74,7 +79,8 @@ public static partial class FileNameTemplateHelper
         char[] resultChars = result.ToCharArray();
         for (int i = 0; i < resultChars.Length; i++)
         {
-            if (Array.IndexOf(invalidChars, resultChars[i]) >= 0)
+            if (Array.IndexOf(invalidChars, resultChars[i]) >= 0 ||
+                Array.IndexOf(CrossPlatformInvalidFileNameChars, resultChars[i]) >= 0)
             {
                 resultChars[i] = '_';
             }

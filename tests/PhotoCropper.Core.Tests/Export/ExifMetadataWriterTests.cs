@@ -1,8 +1,6 @@
-using System.Text;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
-using Shouldly;
-using Xunit;
+using System.Text;
 
 namespace PhotoCropper.Core.Tests.Export;
 

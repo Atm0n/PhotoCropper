@@ -166,6 +166,7 @@ public sealed class PhotoExporterTests : IDisposable
             metadata: metadata);
 
         string[] exported = Directory.GetFiles(exportDir, "*.jpg");
+        Array.Sort(exported);
         exported.Length.ShouldBe(2);
 
         string file1 = Path.GetFileName(exported[0]);

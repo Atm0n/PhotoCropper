@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
+using PhotoCropper.Gui.Models;
 using PhotoCropper.Gui.Services;
 using System.Diagnostics.CodeAnalysis;
 
@@ -15,8 +16,13 @@ internal sealed record GalleryPhotoItem(Avalonia.Media.Imaging.Bitmap Image, str
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Avalonia Window lifecycle is managed by OnClosed override")]
 internal sealed partial class MainWindow : Window
 {
-    private int currentIndex;
-    private readonly List<ScanSessionItem> ScanSessions = [];
+    private readonly ScanSessionManager _sessionManager = new();
+    private int currentIndex
+    {
+        get => _sessionManager.CurrentIndex;
+        set => _sessionManager.MoveTo(value);
+    }
+    private IReadOnlyList<ScanSessionItem> ScanSessions => _sessionManager.Sessions;
     private readonly UndoRedoHistory undoHistory = new();
     private bool isLoading;
     private bool isComparingRaw;
@@ -380,8 +386,7 @@ internal sealed partial class MainWindow : Window
             case Key.Up:
             case Key.PageUp:
                 FocusManager?.Focus(null);
-                ScanSessions[currentIndex].DeactivateIfUnmodified();
-                currentIndex = (currentIndex - 1 + ScanSessions.Count) % ScanSessions.Count;
+                _sessionManager.MovePrevious();
                 await LoadPhotosToGuiAsync();
                 e.Handled = true;
                 break;
@@ -389,8 +394,7 @@ internal sealed partial class MainWindow : Window
             case Key.Down:
             case Key.PageDown:
                 FocusManager?.Focus(null);
-                ScanSessions[currentIndex].DeactivateIfUnmodified();
-                currentIndex = (currentIndex + 1) % ScanSessions.Count;
+                _sessionManager.MoveNext();
                 await LoadPhotosToGuiAsync();
                 e.Handled = true;
                 break;
@@ -540,10 +544,6 @@ internal sealed partial class MainWindow : Window
         ClearGalleryBitmaps();
         _scannerService.Dispose();
         undoHistory.Dispose();
-        foreach (var session in ScanSessions)
-        {
-            session.Dispose();
-        }
-        ScanSessions.Clear();
+        _sessionManager.Dispose();
     }
 }
