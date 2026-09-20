@@ -1,6 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
@@ -122,6 +124,14 @@ internal sealed partial class MainWindow : Window
                 lblStatus.Text = completionText;
             }
         }
+        catch (OperationCanceledException)
+        {
+            lblStatus.Text = Avalonia.Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Operation cancelled.";
+        }
+        catch (Exception ex)
+        {
+            ShowAppError("Operation Failed", ex.Message);
+        }
         finally
         {
             _activeOperationCts = null;
@@ -129,6 +139,13 @@ internal sealed partial class MainWindow : Window
             pnlLoadingOverlay.IsVisible = false;
             isLoading = false;
         }
+    }
+
+    internal void ShowAppError(string title, string message)
+    {
+        if (txtErrorTitle != null) txtErrorTitle.Text = title;
+        if (txtErrorMessage != null) txtErrorMessage.Text = message;
+        if (pnlErrorOverlay != null) pnlErrorOverlay.IsVisible = true;
     }
 
     private Task ExecuteWithLoadingAsync(string statusText, Func<Task> action, string? completionText = null)
@@ -182,11 +199,50 @@ internal sealed partial class MainWindow : Window
 
     private void BtnHelp_Click(object? sender, RoutedEventArgs e) => ShowHelpWindow();
 
+    internal static bool IsTextInputActive(IInputElement? focusedElement, object? sourceElement)
+    {
+        if (focusedElement is TextBox) return true;
+        if (sourceElement is TextBox) return true;
+        if (sourceElement is Visual v && v.FindAncestorOfType<TextBox>() != null) return true;
+        return false;
+    }
+
     private async void Window_KeyDown(object? sender, KeyEventArgs e)
     {
         if (isLoading)
         {
             e.Handled = true;
+            return;
+        }
+
+        // Prevent keyboard shortcuts from stealing input when typing in a TextBox (e.g. naming pattern, year, description)
+        if (IsTextInputActive(FocusManager?.GetFocusedElement(), e.Source))
+        {
+            if (e.Key == Key.Escape || e.Key == Key.Enter)
+            {
+                FocusManager?.Focus(null);
+                e.Handled = true;
+                return;
+            }
+
+            // Still allow global file operations with Ctrl modifier
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
+            {
+                if (e.Key == Key.S)
+                {
+                    BtnSaveImages_Click(null, new RoutedEventArgs());
+                    e.Handled = true;
+                    return;
+                }
+                if (e.Key == Key.O)
+                {
+                    BtnOpenFiles_Click(null, new RoutedEventArgs());
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // Do not handle; let the focused TextBox receive spaces, letters, arrows, backspace, delete, Ctrl+Z/Y/A/C/V/X
             return;
         }
 
@@ -386,6 +442,11 @@ internal sealed partial class MainWindow : Window
 
     private void Window_KeyUp(object? sender, KeyEventArgs e)
     {
+        if (IsTextInputActive(FocusManager?.GetFocusedElement(), e.Source))
+        {
+            return;
+        }
+
         if (isComparingRaw && (e.Key == Key.Space || e.Key == Key.B))
         {
             isComparingRaw = false;
@@ -444,6 +505,26 @@ internal sealed partial class MainWindow : Window
         if (txtOutputDir != null)
         {
             settings.CustomOutputDirectory = string.IsNullOrEmpty(txtOutputDir.Text) ? null : txtOutputDir.Text;
+        }
+        if (txtFileNamePattern != null && !string.IsNullOrWhiteSpace(txtFileNamePattern.Text))
+        {
+            settings.FileNamePattern = txtFileNamePattern.Text;
+        }
+        if (txtMetadataYear != null && int.TryParse(txtMetadataYear.Text, System.Globalization.CultureInfo.InvariantCulture, out int parsedYear))
+        {
+            settings.DefaultYear = parsedYear;
+        }
+        else if (txtMetadataYear != null && string.IsNullOrWhiteSpace(txtMetadataYear.Text))
+        {
+            settings.DefaultYear = null;
+        }
+        if (txtMetadataDesc != null)
+        {
+            settings.DefaultDescription = string.IsNullOrWhiteSpace(txtMetadataDesc.Text) ? null : txtMetadataDesc.Text;
+        }
+        if (chkApplyYearToAll != null)
+        {
+            settings.ApplyYearToAllScans = chkApplyYearToAll.IsChecked ?? true;
         }
 
         if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory) && _workspaceSession != null)

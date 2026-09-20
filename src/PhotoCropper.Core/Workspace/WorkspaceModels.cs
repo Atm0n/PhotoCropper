@@ -20,6 +20,7 @@ public sealed class WorkspaceScanEntry
 
     public bool IsProcessed { get; set; }
     public int ExtractedPhotoCount { get; set; }
+    public PhotoExportMetadata? Metadata { get; set; }
 }
 
 public sealed class WorkspaceSessionState

@@ -26,6 +26,10 @@ internal sealed class UserSettings
     public bool IncludeNetworkScanners { get; set; }
     public string Theme { get; set; } = "Dark"; // "Dark", "Light", "System"
     public string DetectionBoxColor { get; set; } = "Red"; // "Red", "Amber", "Cyan", "Lime", "Magenta"
+    public string FileNamePattern { get; set; } = "{original}_{index}";
+    public int? DefaultYear { get; set; }
+    public string? DefaultDescription { get; set; }
+    public bool ApplyYearToAllScans { get; set; } = true;
 }
 
 internal sealed class SettingsManager

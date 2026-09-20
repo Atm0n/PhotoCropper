@@ -4,6 +4,7 @@ namespace PhotoCropper.Gui.Tests;
 
 internal static class TestAppBuilder
 {
+    private static readonly object _syncLock = new();
     private static bool _isInitialized;
 
     public static void EnsureInitialized()
@@ -13,10 +14,25 @@ internal static class TestAppBuilder
             return;
         }
 
-        AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .SetupWithoutStarting();
+        lock (_syncLock)
+        {
+            if (_isInitialized)
+            {
+                return;
+            }
 
-        _isInitialized = true;
+            try
+            {
+                AppBuilder.Configure<App>()
+                    .UsePlatformDetect()
+                    .SetupWithoutStarting();
+            }
+            catch (InvalidOperationException)
+            {
+                // AppBuilder has already been setup by another runner/test instance
+            }
+
+            _isInitialized = true;
+        }
     }
 }

@@ -67,6 +67,33 @@ public sealed class BatchProcessorTests : IDisposable
         exitCode.ShouldBe(0);
     }
 
+    [Fact]
+    public void Execute_WithCustomPatternAndYear_ShouldNameFilesAccordingToPattern()
+    {
+        string outputDir = Path.Combine(_tempDir, "output_pattern");
+        var options = new CliOptions
+        {
+            OutputDirectory = outputDir,
+            Format = "JPEG",
+            Tolerance = 30,
+            MinAreaFactor = 0.01,
+            NonInteractive = true,
+            Threads = 1,
+            FileNamePattern = "{year}_{original}_{index:02}",
+            Year = 1975,
+            Description = "Holiday"
+        };
+        options.Inputs.Add(_scanFile);
+
+        int exitCode = BatchProcessor.Execute(options, [_scanFile]);
+
+        exitCode.ShouldBe(0);
+        Directory.Exists(outputDir).ShouldBeTrue();
+        var files = Directory.GetFiles(outputDir, "*.jpg");
+        files.Length.ShouldBeGreaterThanOrEqualTo(2);
+        Path.GetFileName(files[0]).ShouldStartWith("1975_scan01_");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

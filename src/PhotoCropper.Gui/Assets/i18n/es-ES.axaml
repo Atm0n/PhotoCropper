@@ -193,4 +193,21 @@
 	<sys:String x:Key="MenuExportSingle">Exportar Esta Foto...</sys:String>
 	<sys:String x:Key="EmptyStateTitle">Arrastre y Suelte Escaneos Aquí</sys:String>
 	<sys:String x:Key="EmptyStateDesc">Suelte archivos de imagen o carpetas de escaneo completas aquí, o haga clic en Abrir / Escanear arriba.</sys:String>
+	<sys:String x:Key="LblFileNamePattern">Patrón de Nombres:</sys:String>
+	<sys:String x:Key="LblNamingPreview">Vista Previa: {0}</sys:String>
+	<sys:String x:Key="LblMetadata">Metadatos de Foto Antigua (EXIF):</sys:String>
+	<sys:String x:Key="LblYear">Año:</sys:String>
+	<sys:String x:Key="LblNotes">Notas:</sys:String>
+	<sys:String x:Key="WatermarkYear">ej. 1985</sys:String>
+	<sys:String x:Key="WatermarkDescription">Descripción o notas...</sys:String>
+	<sys:String x:Key="ChkApplyYearToAll">Aplicar año a todos los escaneos</sys:String>
+	<sys:String x:Key="TipTokenOriginal">Insertar nombre de escaneo {original}</sys:String>
+	<sys:String x:Key="TipTokenIndex">Insertar número con ceros {index:02}</sys:String>
+	<sys:String x:Key="TipTokenYear">Insertar año {year}</sys:String>
+	<sys:String x:Key="TipTokenDate">Insertar fecha {date}</sys:String>
+	<sys:String x:Key="TipTokenTotal">Insertar recuento total {total}</sys:String>
+	<sys:String x:Key="HelpNamingTitle">Asistente de Nombres de Archivo</sys:String>
+	<sys:String x:Key="HelpNamingDesc">Personalice nombres usando {original}, {index:02}, {year} y {total} con vista previa dinámica en tiempo real.</sys:String>
+	<sys:String x:Key="HelpMetadataTitle">Metadatos de Foto Antigua (EXIF)</sys:String>
+	<sys:String x:Key="HelpMetadataDesc">Etiquete escaneos con año y notas; inserta etiquetas estándar EXIF para organizarlas cronológicamente en gestores de fotos.</sys:String>
 </ResourceDictionary>

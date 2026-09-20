@@ -109,6 +109,7 @@ public static class PhotoExtractionEngine
     public static Mat ExtractPhotoFromRotatedRect(RotatedRect rect, Mat original, Mat? paddedSource = null, int padOffset = 0)
     {
         ArgumentNullException.ThrowIfNull(original);
+        if (original.IsEmpty || original.Width <= 0 || original.Height <= 0) return new Mat();
 
         PointF[] srcPoints = OrderBoxPoints(rect.GetVertices());
 
@@ -188,6 +189,7 @@ public static class PhotoExtractionEngine
         double cannyHigh)
     {
         ArgumentNullException.ThrowIfNull(original);
+        if (original.IsEmpty || original.Width <= 0 || original.Height <= 0) return new Mat();
 
         rect.Intersect(new Rectangle(Point.Empty, original.Size));
         if (rect.Width <= 10 || rect.Height <= 10) return new Mat();

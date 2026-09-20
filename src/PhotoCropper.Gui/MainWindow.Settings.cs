@@ -46,6 +46,28 @@ internal sealed partial class MainWindow
             pnlJpegQuality.IsVisible = !string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase);
         }
 
+        if (txtFileNamePattern != null)
+        {
+            txtFileNamePattern.Text = settings.FileNamePattern;
+        }
+        if (cbNamingPreset != null)
+        {
+            SyncNamingPresetDropdown(settings.FileNamePattern);
+        }
+        if (txtMetadataYear != null)
+        {
+            txtMetadataYear.Text = settings.DefaultYear?.ToString() ?? "";
+        }
+        if (txtMetadataDesc != null)
+        {
+            txtMetadataDesc.Text = settings.DefaultDescription ?? "";
+        }
+        if (chkApplyYearToAll != null)
+        {
+            chkApplyYearToAll.IsChecked = settings.ApplyYearToAllScans;
+        }
+        UpdateNamingPreview();
+
         UpdateWorkspaceUi(settings.WorkDirectory);
 
         UpdateCropStrokeColor(settings.DetectionBoxColor);

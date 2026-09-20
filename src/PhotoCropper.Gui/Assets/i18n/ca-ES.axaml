@@ -193,4 +193,21 @@
 	<sys:String x:Key="MenuExportSingle">Exportar Aquesta Foto...</sys:String>
 	<sys:String x:Key="EmptyStateTitle">Arrossegueu i Deixeu Anar Escanejos Aquí</sys:String>
 	<sys:String x:Key="EmptyStateDesc">Deixeu anar fitxers d'imatge o carpetes d'escaneig completes aquí, o feu clic a Obrir / Escanejar a dalt.</sys:String>
+	<sys:String x:Key="LblFileNamePattern">Patró de Noms:</sys:String>
+	<sys:String x:Key="LblNamingPreview">Vista Prèvia: {0}</sys:String>
+	<sys:String x:Key="LblMetadata">Metadades de Foto Antiga (EXIF):</sys:String>
+	<sys:String x:Key="LblYear">Any:</sys:String>
+	<sys:String x:Key="LblNotes">Notes:</sys:String>
+	<sys:String x:Key="WatermarkYear">ex. 1985</sys:String>
+	<sys:String x:Key="WatermarkDescription">Descripció o notes...</sys:String>
+	<sys:String x:Key="ChkApplyYearToAll">Aplicar l'any a tots els escanejos</sys:String>
+	<sys:String x:Key="TipTokenOriginal">Inserir nom d'escaneig {original}</sys:String>
+	<sys:String x:Key="TipTokenIndex">Inserir número amb zeros {index:02}</sys:String>
+	<sys:String x:Key="TipTokenYear">Inserir any {year}</sys:String>
+	<sys:String x:Key="TipTokenDate">Inserir data {date}</sys:String>
+	<sys:String x:Key="TipTokenTotal">Inserir recompte total {total}</sys:String>
+	<sys:String x:Key="HelpNamingTitle">Assistent de Noms de Fitxer</sys:String>
+	<sys:String x:Key="HelpNamingDesc">Personalitzeu noms usant {original}, {index:02}, {year} i {total} amb vista prèvia dinàmica en temps real.</sys:String>
+	<sys:String x:Key="HelpMetadataTitle">Metadades de Foto Antiga (EXIF)</sys:String>
+	<sys:String x:Key="HelpMetadataDesc">Etiqueteu escanejos amb l'any i notes; insereix etiquetes estàndard EXIF per organitzar-les cronològicament en gestors de fotos.</sys:String>
 </ResourceDictionary>

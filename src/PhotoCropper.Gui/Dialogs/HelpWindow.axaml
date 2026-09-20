@@ -16,7 +16,7 @@
 			<StackPanel Margin="35,25" MaxWidth="780" Spacing="25">
 				<TextBlock Text="{DynamicResource HeaderHelp}" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" HorizontalAlignment="Center"/>
 				
-				<Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto" Margin="0,10">
+				<Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto, Auto" Margin="0,10">
 					<StackPanel Grid.Row="0" Grid.Column="0" Margin="10" Spacing="5">
 						<TextBlock Text="{DynamicResource BtnOpenScans}" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
 						<TextBlock Text="{DynamicResource HelpOpenScans}" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
@@ -72,6 +72,14 @@
 					<StackPanel Grid.Row="6" Grid.Column="1" Margin="10" Spacing="5">
 						<TextBlock Text="{DynamicResource HelpSafeExitTitle}" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
 						<TextBlock Text="{DynamicResource HelpSafeExitDesc}" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+					</StackPanel>
+					<StackPanel Grid.Row="7" Grid.Column="0" Margin="10" Spacing="5">
+						<TextBlock Text="{DynamicResource HelpNamingTitle}" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
+						<TextBlock Text="{DynamicResource HelpNamingDesc}" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+					</StackPanel>
+					<StackPanel Grid.Row="7" Grid.Column="1" Margin="10" Spacing="5">
+						<TextBlock Text="{DynamicResource HelpMetadataTitle}" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
+						<TextBlock Text="{DynamicResource HelpMetadataDesc}" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 					</StackPanel>
 				</Grid>
 

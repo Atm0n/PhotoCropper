@@ -28,6 +28,18 @@ internal static class BatchProcessor
         grid.AddRow("[bold cyan]Auto-Orient:[/]", options.AutoOrient ? "[bold green]Enabled (AI Face + Sky)[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Restoration:[/]", options.RestoreColors ? "[bold green]Enabled (Auto-WB + CLAHE)[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Dust Inpainting:[/]", options.RemoveDust ? "[bold green]Enabled (Morphological)[/]" : "[grey]Disabled[/]");
+        if (!string.Equals(options.FileNamePattern, FileNameTemplateHelper.DefaultPattern, StringComparison.Ordinal))
+        {
+            grid.AddRow("[bold cyan]Naming Pattern:[/]", $"[bold yellow]{options.FileNamePattern}[/]");
+        }
+        if (options.Year.HasValue || !string.IsNullOrWhiteSpace(options.Date) || !string.IsNullOrWhiteSpace(options.Description))
+        {
+            string metaSummary = "";
+            if (options.Year.HasValue) metaSummary += $"Year: {options.Year.Value} ";
+            if (!string.IsNullOrWhiteSpace(options.Date)) metaSummary += $"Date: {options.Date} ";
+            if (!string.IsNullOrWhiteSpace(options.Description)) metaSummary += $"Desc: '{options.Description}'";
+            grid.AddRow("[bold cyan]EXIF Metadata:[/]", $"[bold green]{metaSummary.Trim()}[/]");
+        }
         if (options.CopyUndetectedDirectory != null)
         {
             grid.AddRow("[bold cyan]Isolation Dir:[/]", $"[yellow]{options.CopyUndetectedDirectory}[/]");
@@ -50,6 +62,25 @@ internal static class BatchProcessor
             RestoreVintageColors = options.RestoreColors,
             RemoveDustAndScratches = options.RemoveDust
         };
+
+        PhotoExportMetadata? metadata = null;
+        DateTime? parsedDate = null;
+        if (!string.IsNullOrWhiteSpace(options.Date) && DateTime.TryParse(options.Date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+        {
+            parsedDate = d;
+        }
+
+        if (options.Year.HasValue || parsedDate.HasValue || !string.IsNullOrWhiteSpace(options.Description))
+        {
+            metadata = new PhotoExportMetadata
+            {
+                Year = options.Year,
+                DateTaken = parsedDate,
+                Description = options.Description
+            };
+        }
+
+        PhotoCropper.Core.Export.PhotoExporter.ClearClaimedExportPaths();
 
         int totalExtracted = 0;
         int errorCount = 0;
@@ -106,7 +137,9 @@ internal static class BatchProcessor
                                     scanPath,
                                     options.OutputDirectory,
                                     options.Format,
-                                    options.JpegQuality);
+                                    options.JpegQuality,
+                                    options.FileNamePattern,
+                                    metadata);
 
                                 Interlocked.Add(ref totalExtracted, photoCount);
 
@@ -215,7 +248,9 @@ internal static class BatchProcessor
                                         scanPath,
                                         options.OutputDirectory,
                                         options.Format,
-                                        options.JpegQuality);
+                                        options.JpegQuality,
+                                        options.FileNamePattern,
+                                        metadata);
 
                                     Interlocked.Add(ref totalExtracted, photoCount);
                                     Interlocked.Increment(ref autoTunedRecovered);

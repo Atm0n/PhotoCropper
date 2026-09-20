@@ -19,4 +19,8 @@ internal sealed class CliOptions
     public bool AutoTune { get; set; }
     public string? CopyUndetectedDirectory { get; set; }
     public bool NonInteractive { get; set; }
+    public string FileNamePattern { get; set; } = "{original}_{index}";
+    public int? Year { get; set; }
+    public string? Date { get; set; }
+    public string? Description { get; set; }
 }

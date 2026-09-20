@@ -47,6 +47,7 @@ public static class ExportPathResolver
         }
 
         string baseName = Path.GetFileNameWithoutExtension(scanFilePath);
-        return Directory.EnumerateFiles(outputDir, $"{baseName}_*.*").Any();
+        return Directory.EnumerateFiles(outputDir, $"{baseName}_*.*").Any() ||
+               Directory.EnumerateFiles(outputDir, $"*_{baseName}_*.*").Any();
     }
 }
