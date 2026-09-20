@@ -3,7 +3,7 @@ using System.Text.Json;
 
 [assembly: InternalsVisibleTo("PhotoCropper.Tests")]
 
-namespace PhotoCropper.Gui;
+namespace PhotoCropper.Gui.Services;
 
 internal sealed class UserSettings
 {

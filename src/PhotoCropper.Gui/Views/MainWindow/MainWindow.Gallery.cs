@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using PhotoCropper.Gui.Models;
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;

@@ -2,8 +2,10 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
+using PhotoCropper.Gui.Models;
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;
@@ -185,12 +187,10 @@ internal sealed partial class MainWindow
         if (stagedPaths.Count > 0)
         {
             var options = GetDetectionOptionsFromUi();
-            foreach (var path in stagedPaths)
-            {
-                ScanSessions.Add(new ScanSessionItem(path, options, isSaved: false, isModified: true));
-            }
+            var newItems = stagedPaths.Select(path => new ScanSessionItem(path, options, isSaved: false, isModified: true)).ToList();
+            _sessionManager.AddRange(newItems);
 
-            currentIndex = ScanSessions.Count - stagedPaths.Count;
+            currentIndex = _sessionManager.Count - stagedPaths.Count;
             await LoadPhotosToGuiAsync();
         }
     }

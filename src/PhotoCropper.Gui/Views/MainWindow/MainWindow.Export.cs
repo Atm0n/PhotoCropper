@@ -5,6 +5,8 @@ using Avalonia.Platform.Storage;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
+using PhotoCropper.Gui.Models;
+using PhotoCropper.Gui.Services;
 using System.Globalization;
 
 namespace PhotoCropper.Gui;
@@ -13,7 +15,7 @@ internal sealed partial class MainWindow
 {
     private bool HasUnsavedChanges()
     {
-        return ScanSessions.Any(s => !s.IsSaved || s.IsModified);
+        return _sessionManager.HasUnsavedChanges();
     }
 
     private async void BtnSaveImages_Click(object? sender, RoutedEventArgs e)
@@ -23,9 +25,9 @@ internal sealed partial class MainWindow
 
     private async Task<bool> SavePendingScansAsync(bool closeAfterSave)
     {
-        if (isLoading || ScanSessions.Count == 0) return false;
+        if (isLoading || !_sessionManager.HasScans) return false;
 
-        var pendingSessions = ScanSessions.Where(s => !s.IsSaved || s.IsModified).ToList();
+        var pendingSessions = _sessionManager.GetPendingExportSessions();
         if (pendingSessions.Count == 0)
         {
             string alreadySavedMsg = Avalonia.Application.Current?.FindResource("MsgAllScansAlreadySaved")?.ToString()

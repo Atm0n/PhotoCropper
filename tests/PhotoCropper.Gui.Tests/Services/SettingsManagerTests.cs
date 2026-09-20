@@ -1,3 +1,4 @@
+using PhotoCropper.Gui.Services;
 using PhotoCropper.TestHelpers;
 
 namespace PhotoCropper.Gui.Tests.Gui;

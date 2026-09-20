@@ -1,3 +1,5 @@
+using PhotoCropper.Gui.Services;
+
 namespace PhotoCropper.Gui.Tests.Gui;
 
 public sealed class LocalizationManagerTests

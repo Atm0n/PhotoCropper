@@ -6,6 +6,7 @@ using PhotoCropper.Core.Export;
 using PhotoCropper.Core.IO;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
+using PhotoCropper.Gui.Models;
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;
@@ -37,15 +38,9 @@ internal sealed partial class MainWindow
     private async Task LoadScansFromPathsAsync(IEnumerable<string> paths)
     {
         undoHistory.Clear();
-        foreach (var session in ScanSessions)
-        {
-            session.Dispose();
-        }
-        ScanSessions.Clear();
-        currentIndex = 0;
-
         var options = GetDetectionOptionsFromUi();
         var settings = SettingsManager.Instance.Settings;
+        var newSessions = new List<ScanSessionItem>();
 
         foreach (var path in paths)
         {
@@ -55,9 +50,10 @@ internal sealed partial class MainWindow
                 settings.CustomOutputDirectory,
                 settings.WorkDirectory);
 
-            ScanSessions.Add(new ScanSessionItem(path, options, isSaved: isAlreadyExported, isModified: !isAlreadyExported));
+            newSessions.Add(new ScanSessionItem(path, options, isSaved: isAlreadyExported, isModified: !isAlreadyExported));
         }
 
+        _sessionManager.ReplaceAll(newSessions);
         UpdateEmptyStateVisibility();
         await LoadPhotosToGuiAsync();
     }
@@ -138,17 +134,15 @@ internal sealed partial class MainWindow
 
     private async void BtnPrevScan_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || ScanSessions.Count == 0) return;
-        ScanSessions[currentIndex].DeactivateIfUnmodified();
-        currentIndex = (currentIndex - 1 + ScanSessions.Count) % ScanSessions.Count;
+        if (isLoading || !_sessionManager.HasScans) return;
+        _sessionManager.MovePrevious();
         await LoadPhotosToGuiAsync();
     }
 
     private async void BtnNextScan_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || ScanSessions.Count == 0) return;
-        ScanSessions[currentIndex].DeactivateIfUnmodified();
-        currentIndex = (currentIndex + 1) % ScanSessions.Count;
+        if (isLoading || !_sessionManager.HasScans) return;
+        _sessionManager.MoveNext();
         await LoadPhotosToGuiAsync();
     }
 
@@ -159,14 +153,15 @@ internal sealed partial class MainWindow
 
     private async Task DeleteCurrentScanAsync()
     {
-        if (isLoading || ScanSessions.Count == 0) return;
+        if (isLoading || !_sessionManager.HasScans) return;
 
-        var sessionItem = ScanSessions[currentIndex];
+        var sessionItem = _sessionManager.CurrentSession;
+        if (sessionItem == null) return;
+
         string filePath = sessionItem.FilePath;
         string fileName = Path.GetFileName(filePath);
 
-        sessionItem.Dispose();
-        ScanSessions.RemoveAt(currentIndex);
+        _sessionManager.RemoveCurrent();
 
         var settings = SettingsManager.Instance.Settings;
         if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory))
@@ -187,9 +182,8 @@ internal sealed partial class MainWindow
         string msgTemplate = Avalonia.Application.Current?.FindResource("MsgScanDeleted")?.ToString() ?? "Scan '{0}' deleted.";
         string statusMsg = string.Format(msgTemplate, fileName);
 
-        if (ScanSessions.Count == 0)
+        if (!_sessionManager.HasScans)
         {
-            currentIndex = 0;
             SetMainImage(null);
             ClearGalleryBitmaps();
             txtFileCounter.Text = Avalonia.Application.Current?.FindResource("TxtNoFiles")?.ToString() ?? "No files loaded";
@@ -199,10 +193,6 @@ internal sealed partial class MainWindow
         }
         else
         {
-            if (currentIndex >= ScanSessions.Count)
-            {
-                currentIndex = ScanSessions.Count - 1;
-            }
             await LoadPhotosToGuiAsync();
             lblStatus.Text = statusMsg;
         }

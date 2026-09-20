@@ -4,6 +4,8 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using PhotoCropper.Core.Workspace;
+using PhotoCropper.Gui.Models;
+using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;
 
@@ -116,12 +118,7 @@ internal sealed partial class MainWindow
     private void ClearActiveScansFromGui()
     {
         undoHistory.Clear();
-        foreach (var session in ScanSessions)
-        {
-            session.Dispose();
-        }
-        ScanSessions.Clear();
-        currentIndex = 0;
+        _sessionManager.Clear();
         SetMainImage(null);
         ClearGalleryBitmaps();
         if (txtFileCounter != null)

@@ -1,5 +1,5 @@
 using PhotoCropper.Core.Models;
-using PhotoCropper.Gui.Services;
+using PhotoCropper.Gui.Models;
 using PhotoCropper.TestHelpers;
 
 namespace PhotoCropper.Gui.Tests.Gui;

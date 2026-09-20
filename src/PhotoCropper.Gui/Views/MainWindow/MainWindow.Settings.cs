@@ -2,6 +2,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using PhotoCropper.Core.Models;
+using PhotoCropper.Gui.Models;
+using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;
 
