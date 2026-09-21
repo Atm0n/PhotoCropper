@@ -284,44 +284,7 @@ public class PhotoCropperEngine : IDisposable
                 detectionMat,
                 bgBgr);
 
-            // If downscaled, map candidate coordinates back to original full resolution space
-            if (scale < 0.999)
-            {
-                double invScale = 1.0 / scale;
-                foreach (var cand in passCandidates)
-                {
-                    PointF fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
-                    SizeF fullSize = new((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
-                    RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
-
-                    PointF[] fullVerts = fullRr.GetVertices();
-                    Point[] fullPoints = new Point[4];
-                    for (int p = 0; p < 4; p++)
-                    {
-                        fullPoints[p] = new Point(
-                            Math.Clamp((int)Math.Round(fullVerts[p].X), 0, originalW - 1),
-                            Math.Clamp((int)Math.Round(fullVerts[p].Y), 0, originalH - 1)
-                        );
-                    }
-
-                    using VectorOfPoint fullShape = new(fullPoints);
-                    double fullArea = (double)fullSize.Width * fullSize.Height;
-                    double score = fullArea * Math.Pow(cand.Rectangularity, 3) * Math.Pow(cand.Convexity, 2);
-
-                    candidateDetections.Add(new CropCandidate(
-                        fullPoints,
-                        CvInvoke.BoundingRectangle(fullShape),
-                        score,
-                        fullRr,
-                        fullArea,
-                        cand.Rectangularity,
-                        cand.Convexity));
-                }
-            }
-            else
-            {
-                candidateDetections.AddRange(passCandidates);
-            }
+            MapCandidatesToOriginalSpace(candidateDetections, passCandidates, scale, originalW, originalH);
         }
 
         // Automatic Otsu Fallback: If HSV background subtraction failed to find any photos
@@ -349,43 +312,7 @@ public class PhotoCropperEngine : IDisposable
                 detectionMat,
                 bgBgr);
 
-            if (scale < 0.999)
-            {
-                double invScale = 1.0 / scale;
-                foreach (var cand in otsuCandidates)
-                {
-                    PointF fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
-                    SizeF fullSize = new((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
-                    RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
-
-                    PointF[] fullVerts = fullRr.GetVertices();
-                    Point[] fullPoints = new Point[4];
-                    for (int p = 0; p < 4; p++)
-                    {
-                        fullPoints[p] = new Point(
-                            Math.Clamp((int)Math.Round(fullVerts[p].X), 0, originalW - 1),
-                            Math.Clamp((int)Math.Round(fullVerts[p].Y), 0, originalH - 1)
-                        );
-                    }
-
-                    using VectorOfPoint fullShape = new(fullPoints);
-                    double fullArea = (double)fullSize.Width * fullSize.Height;
-                    double score = fullArea * Math.Pow(cand.Rectangularity, 3) * Math.Pow(cand.Convexity, 2);
-
-                    candidateDetections.Add(new CropCandidate(
-                        fullPoints,
-                        CvInvoke.BoundingRectangle(fullShape),
-                        score,
-                        fullRr,
-                        fullArea,
-                        cand.Rectangularity,
-                        cand.Convexity));
-                }
-            }
-            else
-            {
-                candidateDetections.AddRange(otsuCandidates);
-            }
+            MapCandidatesToOriginalSpace(candidateDetections, otsuCandidates, scale, originalW, originalH);
         }
 
         // Composite resolution and overlap filtering
@@ -458,41 +385,27 @@ public class PhotoCropperEngine : IDisposable
         CustomBackgroundColorHsv = BackgroundAnalyzer.SamplePixelBackgroundColor(Original, x, y);
     }
 
-    public void RotatePhoto(int index)
+    private void RotatePhotoInternal(int index, RotateFlags flags)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return;
 
         Mat rotated = new();
-        CvInvoke.Rotate(DetectedPhotos[index], rotated, RotateFlags.Rotate90Clockwise);
+        CvInvoke.Rotate(DetectedPhotos[index], rotated, flags);
         DetectedPhotos[index].Dispose();
         DetectedPhotos[index] = rotated;
 
         if (index < RawDetectedPhotos.Count)
         {
             Mat rawRotated = new();
-            CvInvoke.Rotate(RawDetectedPhotos[index], rawRotated, RotateFlags.Rotate90Clockwise);
+            CvInvoke.Rotate(RawDetectedPhotos[index], rawRotated, flags);
             RawDetectedPhotos[index].Dispose();
             RawDetectedPhotos[index] = rawRotated;
         }
     }
 
-    public void RotatePhotoCounterClockwise(int index)
-    {
-        if (index < 0 || index >= DetectedPhotos.Count) return;
+    public void RotatePhoto(int index) => RotatePhotoInternal(index, RotateFlags.Rotate90Clockwise);
 
-        Mat rotated = new();
-        CvInvoke.Rotate(DetectedPhotos[index], rotated, RotateFlags.Rotate90CounterClockwise);
-        DetectedPhotos[index].Dispose();
-        DetectedPhotos[index] = rotated;
-
-        if (index < RawDetectedPhotos.Count)
-        {
-            Mat rawRotated = new();
-            CvInvoke.Rotate(RawDetectedPhotos[index], rawRotated, RotateFlags.Rotate90CounterClockwise);
-            RawDetectedPhotos[index].Dispose();
-            RawDetectedPhotos[index] = rawRotated;
-        }
-    }
+    public void RotatePhotoCounterClockwise(int index) => RotatePhotoInternal(index, RotateFlags.Rotate90CounterClockwise);
 
     public void DeletePhoto(int index)
     {
@@ -551,5 +464,51 @@ public class PhotoCropperEngine : IDisposable
         Action<int, int>? progressCallback = null)
     {
         PhotoExporter.SavePhotos(DetectedPhotos, OriginalFilePath, customOutputFolder, format, jpegQuality, fileNamePattern, metadata, progressCallback);
+    }
+
+    private static void MapCandidatesToOriginalSpace(
+        List<CropCandidate> destination,
+        IReadOnlyList<CropCandidate> candidates,
+        double scale,
+        int originalW,
+        int originalH)
+    {
+        if (scale < 0.999)
+        {
+            double invScale = 1.0 / scale;
+            foreach (var cand in candidates)
+            {
+                PointF fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
+                SizeF fullSize = new((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
+                RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
+
+                PointF[] fullVerts = fullRr.GetVertices();
+                Point[] fullPoints = new Point[4];
+                for (int p = 0; p < 4; p++)
+                {
+                    fullPoints[p] = new Point(
+                        Math.Clamp((int)Math.Round(fullVerts[p].X), 0, originalW - 1),
+                        Math.Clamp((int)Math.Round(fullVerts[p].Y), 0, originalH - 1)
+                    );
+                }
+
+                using VectorOfPoint fullShape = new(fullPoints);
+                double fullArea = (double)fullSize.Width * fullSize.Height;
+                double score = fullArea * Math.Pow(cand.Rectangularity, 3) * Math.Pow(cand.Convexity, 2);
+
+                destination.Add(new CropCandidate(
+                    fullPoints,
+                    CvInvoke.BoundingRectangle(fullShape),
+                    score,
+                    fullRr,
+                    fullArea,
+                    cand.Rectangularity,
+                    cand.Convexity));
+            }
+        }
+        else
+        {
+            destination.AddRange(candidates);
+        }
     }
 }

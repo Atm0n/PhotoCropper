@@ -108,10 +108,10 @@ jobs:
           # Remove any loose PDB symbols, Linux dbg symbols, or XML files from publish directories
           Get-ChildItem -Path ./publish -Include *.pdb,*.dbg,*.xml -Recurse -File | Remove-Item -Force
 
-          # Extract version from tag (e.g. v2.5.1 -> 2.5.1)
+          # Extract version from tag (e.g. v2.5.2 -> 2.5.2)
           $rawTag = $env:REF_NAME
           $appVersion = if ($rawTag -and $rawTag.StartsWith('v')) { $rawTag.Substring(1) } else { $rawTag }
-          if (-not $appVersion) { $appVersion = "2.5.1" }
+          if (-not $appVersion) { $appVersion = "2.5.2" }
 
           # Package separate zip archives
           Compress-Archive -Path ./publish/gui/$env:TARGET_RUNTIME/* -DestinationPath ./PhotoCropper-${appVersion}-GUI-${env:TARGET_PLATFORM}.zip
