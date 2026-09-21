@@ -34,6 +34,8 @@ internal sealed class UserSettings
     public bool FlashTaskbarOnCompletion { get; set; } = true;
     public bool PlaySoundOnCompletion { get; set; }
     public bool PromptBeforeExport { get; set; }
+    public DateTime? LastUpdateCheckUtc { get; set; }
+    public bool CheckForUpdatesAutomatically { get; set; } = true;
 }
 
 internal sealed class SettingsManager

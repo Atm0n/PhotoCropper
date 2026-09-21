@@ -20,24 +20,24 @@ internal sealed class AppNotificationService
         };
     }
 
-    public void ShowSuccess(string title, string message, TimeSpan? expiration = null)
+    public void ShowSuccess(string title, string message, TimeSpan? expiration = null, Action? onClick = null)
     {
-        ShowNotification(title, message, NotificationType.Success, expiration ?? TimeSpan.FromSeconds(4));
+        ShowNotification(title, message, NotificationType.Success, expiration ?? TimeSpan.FromSeconds(4), onClick);
     }
 
-    public void ShowInformation(string title, string message, TimeSpan? expiration = null)
+    public void ShowInformation(string title, string message, TimeSpan? expiration = null, Action? onClick = null)
     {
-        ShowNotification(title, message, NotificationType.Information, expiration ?? TimeSpan.FromSeconds(4));
+        ShowNotification(title, message, NotificationType.Information, expiration ?? TimeSpan.FromSeconds(4), onClick);
     }
 
-    public void ShowWarning(string title, string message, TimeSpan? expiration = null)
+    public void ShowWarning(string title, string message, TimeSpan? expiration = null, Action? onClick = null)
     {
-        ShowNotification(title, message, NotificationType.Warning, expiration ?? TimeSpan.FromSeconds(5));
+        ShowNotification(title, message, NotificationType.Warning, expiration ?? TimeSpan.FromSeconds(5), onClick);
     }
 
-    public void ShowError(string title, string message, TimeSpan? expiration = null)
+    public void ShowError(string title, string message, TimeSpan? expiration = null, Action? onClick = null)
     {
-        ShowNotification(title, message, NotificationType.Error, expiration ?? TimeSpan.FromSeconds(6));
+        ShowNotification(title, message, NotificationType.Error, expiration ?? TimeSpan.FromSeconds(6), onClick);
     }
 
     public void NotifyExportCompleted(int photoCount, string destinationFolder)
@@ -63,7 +63,7 @@ internal sealed class AppNotificationService
         }
     }
 
-    private void ShowNotification(string title, string message, NotificationType type, TimeSpan expiration)
+    private void ShowNotification(string title, string message, NotificationType type, TimeSpan expiration, Action? onClick = null)
     {
         var settings = SettingsManager.Instance.Settings;
         if (!settings.ShowNotifications && type != NotificationType.Error)
@@ -73,7 +73,7 @@ internal sealed class AppNotificationService
 
         void Display()
         {
-            _notificationManager?.Show(new Notification(title, message, type, expiration));
+            _notificationManager?.Show(new Notification(title, message, type, expiration, onClick));
         }
 
         if (Dispatcher.UIThread.CheckAccess())

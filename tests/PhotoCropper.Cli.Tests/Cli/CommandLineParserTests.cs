@@ -166,4 +166,40 @@ public sealed class CommandLineParserTests
         var options = CommandLineParser.Parse([flag, value]);
         options.MaxExpectedPhotos.ShouldBe(expected);
     }
+
+    [Fact]
+    public void CommandLineParser_PrintHelp_ShouldContainCheckUpdateOption()
+    {
+        using var sw = new StringWriter();
+        var originalOut = Console.Out;
+        try
+        {
+            Console.SetOut(sw);
+            CommandLineParser.PrintHelp();
+            string output = sw.ToString();
+            output.ShouldContain("--check-update");
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    [Fact]
+    public void CommandLineParser_PrintVersion_ShouldContainCurrentVersion()
+    {
+        using var sw = new StringWriter();
+        var originalOut = Console.Out;
+        try
+        {
+            Console.SetOut(sw);
+            CommandLineParser.PrintVersion();
+            string output = sw.ToString();
+            output.ShouldContain("PhotoCropper CLI v");
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
 }

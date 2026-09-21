@@ -67,4 +67,15 @@ internal static class LocalizationManager
     {
         return AvailableLanguages.Select(kv => (kv.Key, kv.Value)).ToList();
     }
+
+    public static string? GetString(string key)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        if (Application.Current != null && Application.Current.TryGetResource(key, null, out object? resource) && resource is string text)
+        {
+            return text;
+        }
+
+        return null;
+    }
 }

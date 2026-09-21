@@ -223,4 +223,11 @@
 	<sys:String x:Key="ChkPromptBeforeExport">Mostra sempre aquestes opcions abans de desar</sys:String>
 	<sys:String x:Key="BtnExportNow">Desa les fotos</sys:String>
 	<sys:String x:Key="BtnSavePreferences">Desa la configuració</sys:String>
+	<sys:String x:Key="MenuCheckUpdates">Comprovar actualitzacions...</sys:String>
+	<sys:String x:Key="BtnCheckUpdates">Comprovar actualitzacions</sys:String>
+	<sys:String x:Key="TxtCheckingUpdates">Comprovant actualitzacions...</sys:String>
+	<sys:String x:Key="TxtUpdateAvailable">PhotoCropper {0} està disponible!</sys:String>
+	<sys:String x:Key="TxtUpToDate">Estàs utilitzant l'última versió ({0}).</sys:String>
+	<sys:String x:Key="TxtUpdateError">No s'han pogut comprovar les actualitzacions: {0}</sys:String>
+	<sys:String x:Key="BtnOpenReleasePage">Veure versió</sys:String>
 </ResourceDictionary>

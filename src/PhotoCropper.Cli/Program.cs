@@ -29,6 +29,11 @@ internal static class Program
             return 0;
         }
 
+        if (args.Contains("--check-update"))
+        {
+            return PerformUpdateCheck();
+        }
+
         CliOptions options = CommandLineParser.Parse(args);
 
         if (options.Interactive || (args.Length == 0 && !Console.IsInputRedirected))
@@ -61,5 +66,36 @@ internal static class Program
         }
 
         return BatchProcessor.Execute(options, scanFiles);
+    }
+
+    private static int PerformUpdateCheck()
+    {
+        Spectre.Console.AnsiConsole.MarkupLine("[grey]Checking for updates...[/]");
+        var result = PhotoCropper.Core.Updates.UpdateCheckService.CheckForUpdateAsync().GetAwaiter().GetResult();
+
+        if (result.IsUpdateAvailable && result.LatestVersion != null && result.Tag != null && result.ReleaseUri != null)
+        {
+            var panel = new Spectre.Console.Panel(new Spectre.Console.Markup(
+                $"[bold yellow]⚡ A new version is available![/]\n\n" +
+                $"Current Version: [white]v{result.CurrentVersion?.Major}.{result.CurrentVersion?.Minor}.{Math.Max(0, result.CurrentVersion?.Build ?? 0)}[/]\n" +
+                $"Latest Version:  [bold green]{result.Tag}[/]\n\n" +
+                $"Release page & downloads:\n[link]{result.ReleaseUri}[/]"))
+            {
+                Header = new Spectre.Console.PanelHeader(" PhotoCropper CLI - Update Check ", Spectre.Console.Justify.Left),
+                Border = Spectre.Console.BoxBorder.Rounded
+            };
+            Spectre.Console.AnsiConsole.Write(panel);
+        }
+        else if (result.ErrorMessage != null)
+        {
+            Spectre.Console.AnsiConsole.MarkupLine($"[bold yellow]⚠ Could not check for updates:[/] {result.ErrorMessage}");
+        }
+        else
+        {
+            var cur = result.CurrentVersion ?? PhotoCropper.Core.Updates.UpdateCheckService.GetCurrentVersion();
+            Spectre.Console.AnsiConsole.MarkupLine($"[bold green]✓[/] PhotoCropper CLI is up to date (v{cur.Major}.{cur.Minor}.{Math.Max(0, cur.Build)}).");
+        }
+
+        return 0;
     }
 }

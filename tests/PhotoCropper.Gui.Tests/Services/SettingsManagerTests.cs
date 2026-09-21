@@ -42,6 +42,8 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.FlashTaskbarOnCompletion.ShouldBeTrue();
         manager.Settings.PlaySoundOnCompletion.ShouldBeFalse();
         manager.Settings.PromptBeforeExport.ShouldBeFalse();
+        manager.Settings.CheckForUpdatesAutomatically.ShouldBeTrue();
+        manager.Settings.LastUpdateCheckUtc.ShouldBeNull();
     }
 
     [Fact]
@@ -72,6 +74,8 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.FlashTaskbarOnCompletion = false;
         manager.Settings.PlaySoundOnCompletion = true;
         manager.Settings.PromptBeforeExport = true;
+        manager.Settings.CheckForUpdatesAutomatically = false;
+        manager.Settings.LastUpdateCheckUtc = new DateTime(2026, 9, 21, 12, 0, 0, DateTimeKind.Utc);
 
         manager.Save();
 
@@ -100,6 +104,8 @@ public sealed class SettingsManagerTests : IDisposable
         secondManager.Settings.FlashTaskbarOnCompletion.ShouldBeFalse();
         secondManager.Settings.PlaySoundOnCompletion.ShouldBeTrue();
         secondManager.Settings.PromptBeforeExport.ShouldBeTrue();
+        secondManager.Settings.CheckForUpdatesAutomatically.ShouldBeFalse();
+        secondManager.Settings.LastUpdateCheckUtc.ShouldBe(new DateTime(2026, 9, 21, 12, 0, 0, DateTimeKind.Utc));
     }
 
     [Fact]

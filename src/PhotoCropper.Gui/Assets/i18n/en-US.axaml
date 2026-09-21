@@ -223,4 +223,11 @@
 	<sys:String x:Key="ChkPromptBeforeExport">Always show these options before saving</sys:String>
 	<sys:String x:Key="BtnExportNow">Save Photos</sys:String>
 	<sys:String x:Key="BtnSavePreferences">Save Settings</sys:String>
+	<sys:String x:Key="MenuCheckUpdates">Check for Updates...</sys:String>
+	<sys:String x:Key="BtnCheckUpdates">Check for Updates</sys:String>
+	<sys:String x:Key="TxtCheckingUpdates">Checking for updates...</sys:String>
+	<sys:String x:Key="TxtUpdateAvailable">PhotoCropper {0} is available!</sys:String>
+	<sys:String x:Key="TxtUpToDate">You are using the latest version ({0}).</sys:String>
+	<sys:String x:Key="TxtUpdateError">Unable to check for updates: {0}</sys:String>
+	<sys:String x:Key="BtnOpenReleasePage">View Release</sys:String>
 </ResourceDictionary>

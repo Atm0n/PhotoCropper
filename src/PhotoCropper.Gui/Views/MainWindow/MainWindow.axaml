@@ -78,6 +78,8 @@
 					<!-- Help Menu -->
 					<MenuItem Header="_Help">
 						<MenuItem Header="{DynamicResource BtnHelp}" InputGesture="F1" Click="BtnHelp_Click"/>
+						<Separator/>
+						<MenuItem Header="{DynamicResource MenuCheckUpdates}" Click="MenuCheckUpdates_Click"/>
 					</MenuItem>
 				</Menu>
 			</Border>

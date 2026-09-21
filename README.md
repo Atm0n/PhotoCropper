@@ -212,6 +212,7 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `-v, --verbose` | Display individual photo dimensions and debug details | `false` |
 | `-h, --help` | Display usage instructions and examples | — |
 | `--version` | Display application version | — |
+| `--check-update` | Check GitHub for newer versions of PhotoCropper | — |
 
 ### Run Tests
 To execute the unit and integration test suites:

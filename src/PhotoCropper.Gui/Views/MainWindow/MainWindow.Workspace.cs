@@ -21,6 +21,7 @@ internal sealed partial class MainWindow
         }
 
         _ = RefreshScannersAsync();
+        CheckForUpdatesOnStartupIfDue();
     }
 
     private async Task ResumeWorkspaceSessionAsync(string workDir)

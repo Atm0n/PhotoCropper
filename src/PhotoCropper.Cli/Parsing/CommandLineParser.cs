@@ -195,6 +195,7 @@ internal static class CommandLineParser
         Console.WriteLine("  --no-remove-dust        Disable automated scratch and dust inpainting");
         Console.WriteLine("  -r, --recursive         Recursively process subdirectories when input is a folder");
         Console.WriteLine("  -v, --verbose           Display individual photo dimensions and debug details");
+        Console.WriteLine("  --check-update          Check GitHub for newer versions of PhotoCropper");
         Console.WriteLine("  -h, --help              Show this help message and exit");
         Console.WriteLine("  --version               Show version information");
         Console.WriteLine();
@@ -211,6 +212,7 @@ internal static class CommandLineParser
 
     public static void PrintVersion()
     {
-        Console.WriteLine("PhotoCropper CLI v2.2.0 (.NET 10 / OpenCV)");
+        var ver = PhotoCropper.Core.Updates.UpdateCheckService.GetCurrentVersion();
+        Console.WriteLine($"PhotoCropper CLI v{ver.Major}.{ver.Minor}.{Math.Max(0, ver.Build)} (.NET 10 / OpenCV)");
     }
 }

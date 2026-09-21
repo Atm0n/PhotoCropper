@@ -111,9 +111,23 @@
 					<TextBlock Text="{DynamicResource HelpAboutTitle}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Foreground="{DynamicResource AppAccentBrush}"/>
 					<TextBlock Text="{DynamicResource HelpAboutDescription}" HorizontalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}" TextAlignment="Center"/>
 					<StackPanel Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center" Margin="0,10,0,0">
-						<TextBlock Text="{DynamicResource HelpVersion}" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="12"/>
+						<TextBlock x:Name="txtAppVersion" Text="{DynamicResource HelpVersion}" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="12"/>
 						<TextBlock Text="{DynamicResource HelpAuthor}" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="12" FontWeight="Bold"/>
 					</StackPanel>
+
+					<StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,6,0,0">
+						<Button x:Name="btnCheckUpdates" Click="BtnCheckUpdates_Click" Padding="12,4" CornerRadius="4" Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Focusable="False">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="🔄" FontSize="11" VerticalAlignment="Center"/>
+								<TextBlock Text="{DynamicResource BtnCheckUpdates}" FontSize="11" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
+						<Button x:Name="btnOpenRelease" Click="BtnOpenRelease_Click" IsVisible="False" Padding="12,4" CornerRadius="4" Background="{DynamicResource AppAccentBrush}" Foreground="White" Focusable="False">
+							<TextBlock Text="{DynamicResource BtnOpenReleasePage}" FontSize="11" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+						</Button>
+					</StackPanel>
+					<TextBlock x:Name="txtUpdateStatus" Text="" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="11" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+
 					<TextBlock Text="{DynamicResource HelpPoweredBy}" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="11" HorizontalAlignment="Center" Margin="0,5,0,0"/>
 					<TextBlock Text="{DynamicResource HelpModelLicense}" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="10" HorizontalAlignment="Center" Margin="0,3,0,0"/>
 					<TextBlock Text="{DynamicResource HelpCopyright}" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,0"/>
