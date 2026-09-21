@@ -4,20 +4,6 @@ public static class NotificationSound
 {
     public static void PlayCompletionSound()
     {
-        try
-        {
-            if (OperatingSystem.IsWindows())
-            {
-                Console.Beep(880, 200);
-            }
-            else
-            {
-                Console.Write("\a");
-            }
-        }
-        catch
-        {
-            // Non-critical: Ignore audio driver, headless, or container environment failures
-        }
+        // Sound notification disabled in favor of visual in-app toast and taskbar alerts
     }
 }

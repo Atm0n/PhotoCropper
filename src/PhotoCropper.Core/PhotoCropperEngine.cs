@@ -18,34 +18,80 @@ public class PhotoCropperEngine : IDisposable
     public string OriginalFilePath { get; }
 
     // Configurable Detection Parameters
-    public double BackgroundTolerance { get; set; } = 30;
-    public double MinAreaFactor { get; set; } = 0.01; // 1% of scan
-    public double MaxAreaFactor { get; set; } = 0.90; // 90% of scan
-    public double CannyLowThreshold { get; set; } = 20;
-    public double CannyHighThreshold { get; set; } = 50;
+    public double BackgroundTolerance { get; set; } = Common.AppConstants.DefaultBackgroundTolerance;
+    public double MinAreaFactor { get; set; } = Common.AppConstants.DefaultMinAreaFactor;
+    public double MaxAreaFactor { get; set; } = Common.AppConstants.DefaultMaxAreaFactor;
+    public double CannyLowThreshold { get; set; } = Common.AppConstants.DefaultCannyLow;
+    public double CannyHighThreshold { get; set; } = Common.AppConstants.DefaultCannyHigh;
     public MCvScalar? CustomBackgroundColorHsv { get; set; }
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; } = true;
     public bool RemoveDustAndScratches { get; set; } = true;
+    public string BoundingBoxColor { get; set; } = Common.AppConstants.DefaultBoundingBoxColor;
 
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
     public Collection<Mat> DetectedPhotos { get; } = [];
     public Collection<Mat> RawDetectedPhotos { get; } = [];
+    public IReadOnlyList<CropCandidate> AcceptedCandidates { get; private set; } = [];
 
     public PhotoCropperEngine(string originalFilePath)
     {
-        OriginalFilePath = originalFilePath;
-        using (var stream = new FileStream(originalFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
-        using (var ms = new MemoryStream((int)stream.Length))
+        ArgumentNullException.ThrowIfNull(originalFilePath);
+        if (!File.Exists(originalFilePath))
         {
-            stream.CopyTo(ms);
-            byte[] fileBytes = ms.ToArray();
-            using Mat rawMat = new();
-            CvInvoke.Imdecode(fileBytes, ImreadModes.AnyColor, rawMat);
-            Original = rawMat.Clone();
-            OriginalWithDetected = Original.Clone();
+            throw new FileNotFoundException("Scan file not found.", originalFilePath);
         }
+
+        var fileInfo = new FileInfo(originalFilePath);
+        if (fileInfo.Length == 0)
+        {
+            throw new InvalidOperationException($"The file '{originalFilePath}' is empty (0 bytes).");
+        }
+
+        OriginalFilePath = originalFilePath;
+        using var stream = new FileStream(originalFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var ms = new MemoryStream((int)stream.Length);
+        stream.CopyTo(ms);
+        byte[] fileBytes = ms.ToArray();
+        using Mat rawMat = new();
+        CvInvoke.Imdecode(fileBytes, ImreadModes.AnyColor, rawMat);
+        if (rawMat.IsEmpty || rawMat.Width <= 0 || rawMat.Height <= 0)
+        {
+            throw new InvalidOperationException($"Failed to decode image from file '{originalFilePath}'. The image format may be invalid or corrupt.");
+        }
+        Original = NormalizeToBgr(rawMat);
+        OriginalWithDetected = Original.Clone();
+    }
+
+    public static Mat NormalizeToBgr(Mat source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (source.IsEmpty || source.Width <= 0 || source.Height <= 0)
+        {
+            return new Mat();
+        }
+
+        if (source.NumberOfChannels == 3)
+        {
+            return source.Clone();
+        }
+
+        Mat bgr = new();
+        if (source.NumberOfChannels == 1)
+        {
+            CvInvoke.CvtColor(source, bgr, ColorConversion.Gray2Bgr);
+        }
+        else if (source.NumberOfChannels == 4)
+        {
+            CvInvoke.CvtColor(source, bgr, ColorConversion.Bgra2Bgr);
+        }
+        else
+        {
+            source.CopyTo(bgr);
+        }
+
+        return bgr;
     }
 
     public void ApplyOptions(DetectionOptions options)
@@ -60,6 +106,7 @@ public class PhotoCropperEngine : IDisposable
         AutoOrientPhotos = options.AutoOrientPhotos;
         RestoreVintageColors = options.RestoreVintageColors;
         RemoveDustAndScratches = options.RemoveDustAndScratches;
+        BoundingBoxColor = options.BoundingBoxColor;
     }
 
     public DetectionOptions CurrentOptions => new()
@@ -72,12 +119,13 @@ public class PhotoCropperEngine : IDisposable
         CustomBackgroundColorHsv = CustomBackgroundColorHsv,
         AutoOrientPhotos = AutoOrientPhotos,
         RestoreVintageColors = RestoreVintageColors,
-        RemoveDustAndScratches = RemoveDustAndScratches
+        RemoveDustAndScratches = RemoveDustAndScratches,
+        BoundingBoxColor = BoundingBoxColor
     };
 
-    public AutoTuneResult AutoTune()
+    public AutoTuneResult AutoTune(int minExpected = 1, int maxExpected = int.MaxValue)
     {
-        var tuneResult = AutoTuneService.Tune(Original, CurrentOptions);
+        var tuneResult = AutoTuneService.Tune(Original, CurrentOptions, minExpected, maxExpected);
         ApplyOptions(tuneResult.BestOptions);
         DetectPhotos();
         return tuneResult;
@@ -121,6 +169,18 @@ public class PhotoCropperEngine : IDisposable
     public void DetectPhotos()
     {
         ResetState();
+
+        if (Original == null || Original.IsEmpty || Original.Width <= 0 || Original.Height <= 0)
+        {
+            return;
+        }
+
+        if (Original.NumberOfChannels != 3)
+        {
+            var oldOriginal = Original;
+            Original = NormalizeToBgr(oldOriginal);
+            oldOriginal.Dispose();
+        }
 
         // Sample background color before padding
         using Mat hsv = new();
@@ -189,7 +249,7 @@ public class PhotoCropperEngine : IDisposable
             CannyHighThreshold);
 
         // Multi-pass sensitivity detection:
-        // Evaluates fine-grained search tolerances around base tolerance
+        // Evaluates balanced search tolerances around base tolerance (both tighter and wider)
         var candidateDetections = new List<CropCandidate>();
         double baseTol = BackgroundTolerance;
         double[] searchTolerances = [
@@ -197,8 +257,8 @@ public class PhotoCropperEngine : IDisposable
             baseTol + 4,
             baseTol + 8,
             baseTol + 15,
-            baseTol + 25,
-            Math.Max(5, baseTol - 6)
+            Math.Max(5, baseTol - 6),
+            Math.Max(2, baseTol - 12)
         ];
 
         using Mat foreground = new();
@@ -220,7 +280,9 @@ public class PhotoCropperEngine : IDisposable
                 (int)Math.Round(originalW * scale),
                 (int)Math.Round(originalH * scale),
                 MinAreaFactor,
-                MaxAreaFactor);
+                MaxAreaFactor,
+                detectionMat,
+                bgBgr);
 
             // If downscaled, map candidate coordinates back to original full resolution space
             if (scale < 0.999)
@@ -229,7 +291,7 @@ public class PhotoCropperEngine : IDisposable
                 foreach (var cand in passCandidates)
                 {
                     PointF fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
-                    SizeF fullSize = new SizeF((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
+                    SizeF fullSize = new((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
                     RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
 
                     PointF[] fullVerts = fullRr.GetVertices();
@@ -262,16 +324,82 @@ public class PhotoCropperEngine : IDisposable
             }
         }
 
+        // Automatic Otsu Fallback: If HSV background subtraction failed to find any photos
+        // (common with faint vintage prints, light skies, or low-contrast scan lids),
+        // run an automatic global luminance Otsu segmentation pass
+        if (candidateDetections.Count == 0)
+        {
+            bool isLightBg = avgBackgroundColorHsv.V2 > 120;
+            using Mat otsuForeground = new();
+            ForegroundMaskGenerator.PopulateOtsuForegroundMask(
+                detectionMat,
+                otsuForeground,
+                CannyLowThreshold,
+                CannyHighThreshold,
+                isLightBg,
+                precomputedEdges);
+
+            var otsuCandidates = CandidateExtractor.ExtractCandidates(
+                otsuForeground,
+                scaledPad,
+                (int)Math.Round(originalW * scale),
+                (int)Math.Round(originalH * scale),
+                MinAreaFactor,
+                MaxAreaFactor,
+                detectionMat,
+                bgBgr);
+
+            if (scale < 0.999)
+            {
+                double invScale = 1.0 / scale;
+                foreach (var cand in otsuCandidates)
+                {
+                    PointF fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
+                    SizeF fullSize = new((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
+                    RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
+
+                    PointF[] fullVerts = fullRr.GetVertices();
+                    Point[] fullPoints = new Point[4];
+                    for (int p = 0; p < 4; p++)
+                    {
+                        fullPoints[p] = new Point(
+                            Math.Clamp((int)Math.Round(fullVerts[p].X), 0, originalW - 1),
+                            Math.Clamp((int)Math.Round(fullVerts[p].Y), 0, originalH - 1)
+                        );
+                    }
+
+                    using VectorOfPoint fullShape = new(fullPoints);
+                    double fullArea = (double)fullSize.Width * fullSize.Height;
+                    double score = fullArea * Math.Pow(cand.Rectangularity, 3) * Math.Pow(cand.Convexity, 2);
+
+                    candidateDetections.Add(new CropCandidate(
+                        fullPoints,
+                        CvInvoke.BoundingRectangle(fullShape),
+                        score,
+                        fullRr,
+                        fullArea,
+                        cand.Rectangularity,
+                        cand.Convexity));
+                }
+            }
+            else
+            {
+                candidateDetections.AddRange(otsuCandidates);
+            }
+        }
+
         // Composite resolution and overlap filtering
         var acceptedCandidates = CandidateResolutionFilter.FilterCandidates(candidateDetections);
+        AcceptedCandidates = acceptedCandidates;
 
         // Draw bounding boxes on OriginalWithDetected
+        MCvScalar boxColor = CurrentOptions.GetBoundingBoxColorBgr();
         foreach (var cand in acceptedCandidates)
         {
             PointF[] vertices = cand.Rotated.GetVertices();
             for (int j = 0; j < 4; j++)
             {
-                CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), new MCvScalar(0, 0, 255), 12);
+                CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), boxColor, 12);
             }
         }
 
@@ -348,6 +476,24 @@ public class PhotoCropperEngine : IDisposable
         }
     }
 
+    public void RotatePhotoCounterClockwise(int index)
+    {
+        if (index < 0 || index >= DetectedPhotos.Count) return;
+
+        Mat rotated = new();
+        CvInvoke.Rotate(DetectedPhotos[index], rotated, RotateFlags.Rotate90CounterClockwise);
+        DetectedPhotos[index].Dispose();
+        DetectedPhotos[index] = rotated;
+
+        if (index < RawDetectedPhotos.Count)
+        {
+            Mat rawRotated = new();
+            CvInvoke.Rotate(RawDetectedPhotos[index], rawRotated, RotateFlags.Rotate90CounterClockwise);
+            RawDetectedPhotos[index].Dispose();
+            RawDetectedPhotos[index] = rawRotated;
+        }
+    }
+
     public void DeletePhoto(int index)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return;
@@ -396,8 +542,14 @@ public class PhotoCropperEngine : IDisposable
         }
     }
 
-    public void SaveDetectedPhotos(string? customOutputFolder = null, string format = "JPEG", int jpegQuality = 90, Action<int, int>? progressCallback = null)
+    public void SaveDetectedPhotos(
+        string? customOutputFolder = null,
+        string format = Common.AppConstants.DefaultImageFormat,
+        int jpegQuality = 100,
+        string fileNamePattern = FileNameTemplateHelper.DefaultPattern,
+        PhotoExportMetadata? metadata = null,
+        Action<int, int>? progressCallback = null)
     {
-        PhotoExporter.SavePhotos(DetectedPhotos, OriginalFilePath, customOutputFolder, format, jpegQuality, progressCallback);
+        PhotoExporter.SavePhotos(DetectedPhotos, OriginalFilePath, customOutputFolder, format, jpegQuality, fileNamePattern, metadata, progressCallback);
     }
 }

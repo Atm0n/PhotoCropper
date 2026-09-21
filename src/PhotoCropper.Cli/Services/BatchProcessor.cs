@@ -28,6 +28,25 @@ internal static class BatchProcessor
         grid.AddRow("[bold cyan]Auto-Orient:[/]", options.AutoOrient ? "[bold green]Enabled (AI Face + Sky)[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Restoration:[/]", options.RestoreColors ? "[bold green]Enabled (Auto-WB + CLAHE)[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Dust Inpainting:[/]", options.RemoveDust ? "[bold green]Enabled (Morphological)[/]" : "[grey]Disabled[/]");
+        if (options.MinExpectedPhotos > 1 || options.MaxExpectedPhotos < int.MaxValue)
+        {
+            string rangeText = options.MaxExpectedPhotos < int.MaxValue
+                ? $"{options.MinExpectedPhotos} - {options.MaxExpectedPhotos}"
+                : $"{options.MinExpectedPhotos}+";
+            grid.AddRow("[bold cyan]Expected Photos:[/]", $"[bold white]{rangeText}[/]");
+        }
+        if (!string.Equals(options.FileNamePattern, FileNameTemplateHelper.DefaultPattern, StringComparison.Ordinal))
+        {
+            grid.AddRow("[bold cyan]Naming Pattern:[/]", $"[bold yellow]{options.FileNamePattern}[/]");
+        }
+        if (options.Year.HasValue || !string.IsNullOrWhiteSpace(options.Date) || !string.IsNullOrWhiteSpace(options.Description))
+        {
+            string metaSummary = "";
+            if (options.Year.HasValue) metaSummary += $"Year: {options.Year.Value} ";
+            if (!string.IsNullOrWhiteSpace(options.Date)) metaSummary += $"Date: {options.Date} ";
+            if (!string.IsNullOrWhiteSpace(options.Description)) metaSummary += $"Desc: '{options.Description}'";
+            grid.AddRow("[bold cyan]EXIF Metadata:[/]", $"[bold green]{metaSummary.Trim()}[/]");
+        }
         if (options.CopyUndetectedDirectory != null)
         {
             grid.AddRow("[bold cyan]Isolation Dir:[/]", $"[yellow]{options.CopyUndetectedDirectory}[/]");
@@ -50,6 +69,25 @@ internal static class BatchProcessor
             RestoreVintageColors = options.RestoreColors,
             RemoveDustAndScratches = options.RemoveDust
         };
+
+        PhotoExportMetadata? metadata = null;
+        DateTime? parsedDate = null;
+        if (!string.IsNullOrWhiteSpace(options.Date) && DateTime.TryParse(options.Date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+        {
+            parsedDate = d;
+        }
+
+        if (options.Year.HasValue || parsedDate.HasValue || !string.IsNullOrWhiteSpace(options.Description))
+        {
+            metadata = new PhotoExportMetadata
+            {
+                Year = options.Year,
+                DateTaken = parsedDate,
+                Description = options.Description
+            };
+        }
+
+        PhotoCropper.Core.Export.PhotoExporter.ClearClaimedExportPaths();
 
         int totalExtracted = 0;
         int errorCount = 0;
@@ -88,14 +126,18 @@ internal static class BatchProcessor
 
                             int photoCount = engine.DetectedPhotos.Count;
                             bool wasAutoTuned = false;
+                            bool isUnderDetected = photoCount < options.MinExpectedPhotos;
+                            bool isOverDetected = photoCount > options.MaxExpectedPhotos;
 
-                            if (photoCount == 0 && options.AutoTune)
+                            if ((isUnderDetected || isOverDetected) && options.AutoTune)
                             {
-                                var tuneResult = engine.AutoTune();
-                                if (tuneResult.PhotoCount > 0)
+                                var tuneResult = engine.AutoTune(options.MinExpectedPhotos, options.MaxExpectedPhotos);
+                                if (tuneResult.PhotoCount != photoCount)
                                 {
                                     photoCount = tuneResult.PhotoCount;
                                     wasAutoTuned = true;
+                                    isUnderDetected = photoCount < options.MinExpectedPhotos;
+                                    isOverDetected = photoCount > options.MaxExpectedPhotos;
                                 }
                             }
 
@@ -106,12 +148,27 @@ internal static class BatchProcessor
                                     scanPath,
                                     options.OutputDirectory,
                                     options.Format,
-                                    options.JpegQuality);
+                                    options.JpegQuality,
+                                    options.FileNamePattern,
+                                    metadata);
 
                                 Interlocked.Add(ref totalExtracted, photoCount);
 
-                                string tag = wasAutoTuned ? "[yellow]⚡ auto-tuned[/]" : "[green]✓ extracted[/]";
-                                AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] {tag} [bold white]{fileName}[/] -> [green]{photoCount}[/] photo(s)");
+                                if (isUnderDetected)
+                                {
+                                    undetectedScans.Add(scanPath);
+                                    AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ under-detected[/] [bold white]{fileName}[/] -> [yellow]{photoCount}[/] photo(s) (expected >= {options.MinExpectedPhotos})");
+                                }
+                                else if (isOverDetected)
+                                {
+                                    undetectedScans.Add(scanPath);
+                                    AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ over-detected[/] [bold white]{fileName}[/] -> [yellow]{photoCount}[/] photo(s) (expected <= {options.MaxExpectedPhotos})");
+                                }
+                                else
+                                {
+                                    string tag = wasAutoTuned ? "[yellow]⚡ auto-tuned[/]" : "[green]✓ extracted[/]";
+                                    AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] {tag} [bold white]{fileName}[/] -> [green]{photoCount}[/] photo(s)");
+                                }
 
                                 if (options.Verbose)
                                 {
@@ -174,9 +231,14 @@ internal static class BatchProcessor
         // Interactive Post-Batch Auto-Tune Review Prompt
         if (!options.AutoTune && !options.NonInteractive && !undetectedScans.IsEmpty && !Console.IsInputRedirected)
         {
-            AnsiConsole.WriteLine();
+            string underDetectedText = options.MaxExpectedPhotos < int.MaxValue
+                ? $"{undetectedScans.Count} scan(s) had photo count outside expected range ({options.MinExpectedPhotos}-{options.MaxExpectedPhotos})"
+                : options.MinExpectedPhotos > 1
+                    ? $"{undetectedScans.Count} scan(s) had fewer than {options.MinExpectedPhotos} photo(s) detected"
+                    : $"{undetectedScans.Count} scan(s) had 0 photos detected";
+
             bool runAutoTune = AnsiConsole.Confirm(
-                $"[yellow]⚠ {undetectedScans.Count} scan(s) had 0 photos detected. Would you like to run Auto-Tune on them now?[/]",
+                $"[yellow]⚠ {underDetectedText}. Would you like to run Auto-Tune on them now?[/]",
                 defaultValue: false);
 
             if (runAutoTune)
@@ -205,22 +267,41 @@ internal static class BatchProcessor
                             {
                                 using var engine = new PhotoCropperEngine(scanPath);
                                 engine.ApplyOptions(detectionOptions);
-                                var tuneResult = engine.AutoTune();
+                                var tuneResult = engine.AutoTune(options.MinExpectedPhotos, options.MaxExpectedPhotos);
 
                                 int photoCount = engine.DetectedPhotos.Count;
-                                if (photoCount > 0)
+                                bool withinRange = photoCount >= options.MinExpectedPhotos && photoCount <= options.MaxExpectedPhotos;
+
+                                if (photoCount > 0 && withinRange)
                                 {
                                     PhotoExporter.SavePhotos(
                                         engine.DetectedPhotos,
                                         scanPath,
                                         options.OutputDirectory,
                                         options.Format,
-                                        options.JpegQuality);
+                                        options.JpegQuality,
+                                        options.FileNamePattern,
+                                        metadata);
 
                                     Interlocked.Add(ref totalExtracted, photoCount);
                                     Interlocked.Increment(ref autoTunedRecovered);
 
                                     AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [bold green]⚡ Recovered[/] [bold white]{fileName}[/] -> [green]{photoCount}[/] photo(s) (Tolerance: {tuneResult.BestOptions.BackgroundTolerance:0})");
+                                }
+                                else if (photoCount > 0)
+                                {
+                                    PhotoExporter.SavePhotos(
+                                        engine.DetectedPhotos,
+                                        scanPath,
+                                        options.OutputDirectory,
+                                        options.Format,
+                                        options.JpegQuality,
+                                        options.FileNamePattern,
+                                        metadata);
+
+                                    Interlocked.Add(ref totalExtracted, photoCount);
+                                    remainingUndetected.Add(scanPath);
+                                    AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ Still out of bounds[/] [bold white]{fileName}[/] -> {photoCount} photo(s)");
                                 }
                                 else
                                 {

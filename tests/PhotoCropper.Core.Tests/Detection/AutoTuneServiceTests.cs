@@ -43,4 +43,25 @@ public sealed class AutoTuneServiceTests
         result.BestOptions.ShouldNotBeNull();
         result.PhotoCount.ShouldBeGreaterThanOrEqualTo(0);
     }
+
+    [Fact]
+    public void Tune_WithExpectedBounds_ShouldTargetSpecifiedRange()
+    {
+        using var scan = new Mat(400, 400, DepthType.Cv8U, 3);
+        scan.SetTo(new MCvScalar(250, 250, 250));
+        CvInvoke.Rectangle(scan, new Rectangle(50, 50, 120, 120), new MCvScalar(20, 20, 20), -1);
+        CvInvoke.Rectangle(scan, new Rectangle(220, 220, 120, 120), new MCvScalar(30, 30, 30), -1);
+
+        var options = new DetectionOptions
+        {
+            BackgroundTolerance = 30,
+            MinAreaFactor = 0.01,
+            MaxAreaFactor = 0.90
+        };
+
+        var result = AutoTuneService.Tune(scan, options, minExpected: 2, maxExpected: 2);
+
+        result.ShouldNotBeNull();
+        result.PhotoCount.ShouldBe(2);
+    }
 }

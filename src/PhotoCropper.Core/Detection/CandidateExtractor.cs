@@ -16,14 +16,16 @@ public static class CandidateExtractor
         int originalWidth,
         int originalHeight,
         double minAreaFactor,
-        double maxAreaFactor)
+        double maxAreaFactor,
+        Mat? sourceColorMat = null,
+        MCvScalar? backgroundColorBgr = null)
     {
         ArgumentNullException.ThrowIfNull(foregroundMap);
 
         var result = new List<CropCandidate>();
 
         using VectorOfVectorOfPoint contours = new();
-        CvInvoke.FindContours(foregroundMap, contours, null, RetrType.Ccomp, ChainApproxMethod.ChainApproxSimple);
+        CvInvoke.FindContours(foregroundMap, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
 
         double totalArea = (double)originalWidth * originalHeight;
         double minArea = totalArea * minAreaFactor;
@@ -62,7 +64,7 @@ public static class CandidateExtractor
             if (w < 20 || h < 20) continue;
 
             float aspectRatio = Math.Max(w, h) / Math.Max(1.0f, Math.Min(w, h));
-            if (aspectRatio > 20.0f) continue; // Extreme thin strip rejection
+            if (aspectRatio > 6.0f) continue; // Reject extreme thin strips and edge artifacts
 
             // Rectangularity score: Ratio of contour area to its minimum bounding rotated rectangle area
             double rrArea = Math.Max(1.0, (double)w * h);
@@ -70,6 +72,41 @@ public static class CandidateExtractor
 
             // Convexity / solidity score: Clean single photos have high convexity (~1.0), merged photos have waist indents (<0.92)
             double convexity = Math.Clamp(contourArea / Math.Max(1.0, hullArea), 0.0, 1.0);
+
+            // Completeness filter: discard non-complete, fragmented, or irregular partial shapes
+            if (rectangularity < 0.60 || convexity < 0.68) continue;
+
+            // Content & Texture Verification: Discard scanner lid shadows and blank glass artifacts
+            if (sourceColorMat != null && !sourceColorMat.IsEmpty && backgroundColorBgr.HasValue)
+            {
+                Rectangle cBounds = CvInvoke.BoundingRectangle(contours[i]);
+                int clampX = Math.Clamp(cBounds.X, 0, sourceColorMat.Width - 1);
+                int clampY = Math.Clamp(cBounds.Y, 0, sourceColorMat.Height - 1);
+                int clampW = Math.Clamp(cBounds.Width, 1, sourceColorMat.Width - clampX);
+                int clampH = Math.Clamp(cBounds.Height, 1, sourceColorMat.Height - clampY);
+
+                if (clampW >= 20 && clampH >= 20)
+                {
+                    using Mat roi = new(sourceColorMat, new Rectangle(clampX, clampY, clampW, clampH));
+                    MCvScalar mean = new();
+                    MCvScalar stdDev = new();
+                    CvInvoke.MeanStdDev(roi, ref mean, ref stdDev);
+
+                    double avgStdDev = (stdDev.V0 + stdDev.V1 + stdDev.V2) / 3.0;
+                    double colorDist = Math.Sqrt(
+                        Math.Pow(mean.V0 - backgroundColorBgr.Value.V0, 2) +
+                        Math.Pow(mean.V1 - backgroundColorBgr.Value.V1, 2) +
+                        Math.Pow(mean.V2 - backgroundColorBgr.Value.V2, 2));
+
+                    // If a candidate has virtually no internal texture/variance (< 6.0)
+                    // and its color is very close to the scanner bed (< 22.0),
+                    // it is a lid shadow or blank glass artifact, not a photo.
+                    if (avgStdDev < 6.0 && colorDist < 22.0)
+                    {
+                        continue;
+                    }
+                }
+            }
 
             // Quality score heavily favors clean, rectangular, convex single photos over merged composites
             double quality = Math.Pow(rectangularity, 3) * Math.Pow(convexity, 2);

@@ -11,9 +11,9 @@ public sealed class CommandLineParserTests
         options.Inputs.ShouldBeEmpty();
         options.OutputDirectory.ShouldBeNull();
         options.Format.ShouldBe("JPEG");
-        options.JpegQuality.ShouldBe(90);
+        options.JpegQuality.ShouldBe(100);
         options.Tolerance.ShouldBe(25);
-        options.MinAreaFactor.ShouldBe(0.15);
+        options.MinAreaFactor.ShouldBe(0.25);
         options.MaxAreaFactor.ShouldBe(0.90);
         options.CannyLow.ShouldBe(20);
         options.Recursive.ShouldBeFalse();
@@ -118,5 +118,100 @@ public sealed class CommandLineParserTests
         options.AutoOrient.ShouldBeTrue();
         options.RestoreColors.ShouldBeTrue();
         options.RemoveDust.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void CommandLineParser_NamingPatternAndMetadataFlags_ShouldBeParsed()
+    {
+        string[] args = [
+            "-i", "input.jpg",
+            "-p", "{year}_{original}_{index:02}",
+            "--year", "1985",
+            "--date", "1985-06-15",
+            "--desc", "Family vacation"
+        ];
+
+        var options = CommandLineParser.Parse(args);
+
+        options.FileNamePattern.ShouldBe("{year}_{original}_{index:02}");
+        options.Year.ShouldBe(1985);
+        options.Date.ShouldBe("1985-06-15");
+        options.Description.ShouldBe("Family vacation");
+    }
+
+    [Theory]
+    [InlineData("-w")]
+    [InlineData("--wizard")]
+    [InlineData("--interactive")]
+    public void CommandLineParser_WizardFlags_ShouldSetInteractiveTrue(string flag)
+    {
+        var options = CommandLineParser.Parse([flag]);
+        options.Interactive.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("--min-photos", "3", 3)]
+    [InlineData("--expected-photos", "4", 4)]
+    public void CommandLineParser_MinPhotosFlag_ShouldSetMinExpectedPhotos(string flag, string value, int expected)
+    {
+        var options = CommandLineParser.Parse([flag, value]);
+        options.MinExpectedPhotos.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData("--max-photos", "5", 5)]
+    [InlineData("--max-expected-photos", "8", 8)]
+    public void CommandLineParser_MaxPhotosFlag_ShouldSetMaxExpectedPhotos(string flag, string value, int expected)
+    {
+        var options = CommandLineParser.Parse([flag, value]);
+        options.MaxExpectedPhotos.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void CommandLineParser_PrintHelp_ShouldContainCheckUpdateOption()
+    {
+        using var sw = new StringWriter();
+        var originalOut = Console.Out;
+        try
+        {
+            Console.SetOut(sw);
+            CommandLineParser.PrintHelp();
+            string output = sw.ToString();
+            output.ShouldContain("--check-update");
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    [Fact]
+    public void CommandLineParser_PrintVersion_ShouldContainCurrentVersion()
+    {
+        using var sw = new StringWriter();
+        var originalOut = Console.Out;
+        try
+        {
+            Console.SetOut(sw);
+            CommandLineParser.PrintVersion();
+            string output = sw.ToString();
+            output.ShouldContain("PhotoCropper CLI v");
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    [Fact]
+    public void CommandLineParser_SensitivityFlag_ShouldMapToTolerance()
+    {
+        string[] args = ["--sensitivity", "75"];
+        var options = CommandLineParser.Parse(args);
+        options.Tolerance.ShouldBeInRange(9.0, 11.0);
+
+        string[] shortArgs = ["-s", "100"];
+        var shortOptions = CommandLineParser.Parse(shortArgs);
+        shortOptions.Tolerance.ShouldBe(4.0);
     }
 }

@@ -366,6 +366,44 @@ public sealed class PhotoCropperEngineTests : IDisposable
         maxDim.ShouldBeInRange(480, 520);
     }
 
+    [Fact]
+    public void NormalizeToBgr_DifferentChannels_ShouldAlwaysReturn3Channels()
+    {
+        using var grayMat = new Mat(50, 50, DepthType.Cv8U, 1);
+        grayMat.SetTo(new MCvScalar(100));
+        using var bgrFromGray = PhotoCropperEngine.NormalizeToBgr(grayMat);
+        bgrFromGray.NumberOfChannels.ShouldBe(3);
+        bgrFromGray.Width.ShouldBe(50);
+        bgrFromGray.Height.ShouldBe(50);
+
+        using var bgrMat = new Mat(50, 50, DepthType.Cv8U, 3);
+        bgrMat.SetTo(new MCvScalar(10, 20, 30));
+        using var bgrFromBgr = PhotoCropperEngine.NormalizeToBgr(bgrMat);
+        bgrFromBgr.NumberOfChannels.ShouldBe(3);
+
+        using var bgraMat = new Mat(50, 50, DepthType.Cv8U, 4);
+        bgraMat.SetTo(new MCvScalar(10, 20, 30, 255));
+        using var bgrFromBgra = PhotoCropperEngine.NormalizeToBgr(bgraMat);
+        bgrFromBgra.NumberOfChannels.ShouldBe(3);
+    }
+
+    [Fact]
+    public void DetectPhotos_GrayscaleScan_ShouldDetectPhotosWithoutThrowing()
+    {
+        string grayScanPath = Path.Combine(_tempDir, "gray_scan.png");
+        using (Mat scan = new(1000, 1000, DepthType.Cv8U, 1))
+        {
+            scan.SetTo(new MCvScalar(255));
+            CvInvoke.Rectangle(scan, new Rectangle(100, 100, 300, 300), new MCvScalar(0), -1);
+            scan.Save(grayScanPath);
+        }
+
+        using var cropper = new PhotoCropperEngine(grayScanPath);
+        cropper.Original.NumberOfChannels.ShouldBe(3);
+        cropper.DetectPhotos();
+        cropper.DetectedPhotos.Count.ShouldBe(1);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

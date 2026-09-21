@@ -3,7 +3,7 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using PhotoCropper.Gui.Services;
 
-namespace PhotoCropper.Gui.Tests.Gui;
+namespace PhotoCropper.Gui.Tests.Services;
 
 public sealed class MatBitmapConverterTests
 {
@@ -36,6 +36,19 @@ public sealed class MatBitmapConverterTests
     {
         using var mat = new Mat(50, 80, DepthType.Cv8U, 4);
         mat.SetTo(new MCvScalar(128, 64, 32, 255));
+
+        var bitmap = MatBitmapConverter.ToAvaloniaBitmap(mat);
+
+        bitmap.ShouldNotBeNull();
+        bitmap.PixelSize.Width.ShouldBe(80);
+        bitmap.PixelSize.Height.ShouldBe(50);
+    }
+
+    [Fact]
+    public void ToAvaloniaBitmap_1ChannelGrayMat_ShouldConvertToBitmap()
+    {
+        using var mat = new Mat(50, 80, DepthType.Cv8U, 1);
+        mat.SetTo(new MCvScalar(128));
 
         var bitmap = MatBitmapConverter.ToAvaloniaBitmap(mat);
 

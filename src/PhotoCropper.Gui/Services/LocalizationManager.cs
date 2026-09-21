@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Markup.Xaml.Styling;
 using System.Globalization;
 
-namespace PhotoCropper.Gui;
+namespace PhotoCropper.Gui.Services;
 
 internal static class LocalizationManager
 {
@@ -66,5 +66,16 @@ internal static class LocalizationManager
     public static IReadOnlyList<(string Code, string Name)> GetAvailableLanguages()
     {
         return AvailableLanguages.Select(kv => (kv.Key, kv.Value)).ToList();
+    }
+
+    public static string? GetString(string key)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        if (Application.Current != null && Application.Current.TryGetResource(key, null, out object? resource) && resource is string text)
+        {
+            return text;
+        }
+
+        return null;
     }
 }

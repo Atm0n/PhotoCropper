@@ -1,0 +1,171 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PhotoCropper.Gui.Dialogs.ExportSettingsDialog"
+        Title="{DynamicResource TitleExportSettings}"
+        Icon="avares://PhotoCropper.Gui/Assets/app_icon.png"
+        Width="580"
+        Height="570"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppModalBackgroundBrush}"
+        Foreground="{DynamicResource AppTextPrimaryBrush}">
+
+	<Grid RowDefinitions="Auto, *, Auto" Margin="20,16">
+		<!-- Header -->
+		<Grid Grid.Row="0" ColumnDefinitions="Auto, *" Margin="0,0,0,12">
+			<Border Grid.Column="0" Background="{DynamicResource AppButtonDefaultBrush}" CornerRadius="20" Width="38" Height="38" Margin="0,0,12,0">
+				<TextBlock Text="💾" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+			</Border>
+			<StackPanel Grid.Column="1" VerticalAlignment="Center">
+				<TextBlock Text="{DynamicResource TitleExportSettings}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+				<TextBlock Text="{DynamicResource DescExportSettings}" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}" TextWrapping="Wrap"/>
+			</StackPanel>
+		</Grid>
+
+		<!-- Export Settings Content -->
+		<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Margin="0,0,0,8">
+			<StackPanel Spacing="12">
+				<!-- Card 1: Output Folder -->
+				<Border Background="{DynamicResource AppSubtleCardBrush}" CornerRadius="6" Padding="12,10" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+					<StackPanel Spacing="6">
+						<TextBlock Text="{DynamicResource LblOutputDir}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
+						<Grid ColumnDefinitions="*, Auto, Auto">
+							<TextBox Grid.Column="0" x:Name="txtOutputDir" IsReadOnly="True" PlaceholderText="{DynamicResource WatermarkSameDir}" FontSize="11" VerticalAlignment="Center" Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Focusable="False"/>
+							<Button Grid.Column="1" x:Name="btnBrowseDir" Click="BtnBrowseDir_Click" Margin="6,0,0,0" Padding="10,5" FontSize="11" Background="{DynamicResource AppCardBackgroundBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" VerticalAlignment="Center" Focusable="False" CornerRadius="4">
+								<TextBlock Text="..."/>
+							</Button>
+							<Button Grid.Column="2" x:Name="btnClearOutputDir" Click="BtnClearOutputDir_Click" Margin="4,0,0,0" Padding="8,5" FontSize="11" Background="{DynamicResource AppButtonDangerBrush}" VerticalAlignment="Center" ToolTip.Tip="{DynamicResource TipClearDir}" Focusable="False" CornerRadius="4">
+								<TextBlock Text="✖" Foreground="{DynamicResource AppButtonDangerTextBrush}"/>
+							</Button>
+						</Grid>
+					</StackPanel>
+				</Border>
+
+				<!-- Card 2: Format & Quality -->
+				<Border Background="{DynamicResource AppSubtleCardBrush}" CornerRadius="6" Padding="12,10" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+					<StackPanel Spacing="8">
+						<TextBlock Text="{DynamicResource HeaderAdvExport}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
+						<WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+							<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,2,16,2">
+								<TextBlock Text="{DynamicResource LblFormat}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+								<ComboBox x:Name="cbFormat" SelectedIndex="0" Width="90" SelectionChanged="CbFormat_SelectionChanged" Focusable="False" FontSize="11">
+									<ComboBoxItem Content="JPEG"/>
+									<ComboBoxItem Content="PNG"/>
+								</ComboBox>
+							</StackPanel>
+
+							<StackPanel x:Name="pnlJpegQuality" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,2,0,2">
+								<TextBlock Text="{DynamicResource LblQuality}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+								<Slider x:Name="sldJpegQuality" Minimum="50" Maximum="100" Value="100" Width="100" 
+										TickFrequency="5" IsSnapToTickEnabled="True"
+										ValueChanged="SldJpegQuality_ValueChanged" VerticalAlignment="Center" Focusable="False"/>
+								<TextBlock x:Name="txtQualityValue" Text="100% (Max)" FontSize="11" VerticalAlignment="Center" Width="75"/>
+							</StackPanel>
+						</WrapPanel>
+					</StackPanel>
+				</Border>
+
+				<!-- Card 3: File Naming Pattern -->
+				<Border Background="{DynamicResource AppSubtleCardBrush}" CornerRadius="6" Padding="12,10" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+					<StackPanel Spacing="8">
+						<TextBlock Text="{DynamicResource LblFileNamePattern}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
+						<Grid ColumnDefinitions="Auto, *">
+							<ComboBox Grid.Column="0" x:Name="cbNamingPreset" Width="150" Margin="0,0,8,0" SelectionChanged="CbNamingPreset_SelectionChanged" Focusable="False" FontSize="11">
+								<ComboBoxItem Content="{}{original}_{index}"/>
+								<ComboBoxItem Content="{}{original}_{index:02}"/>
+								<ComboBoxItem Content="{}{year}_{original}_{index:02}"/>
+								<ComboBoxItem Content="{}{year}_{index:02}"/>
+								<ComboBoxItem Content="{}{original}_photo_{index}"/>
+							</ComboBox>
+							<TextBox Grid.Column="1" x:Name="txtFileNamePattern" Text="{}{original}_{index}" 
+									 TextChanged="TxtFileNamePattern_TextChanged" FontSize="11" 
+									 Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" 
+									 Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+						</Grid>
+
+						<WrapPanel Orientation="Horizontal" Margin="0,2">
+							<Button x:Name="btnTokenOriginal" Click="BtnToken_Click" Tag="{}{original}" Content="+ {original}" 
+									Padding="5,2" Margin="0,0,4,2" FontSize="10" Background="{DynamicResource AppCardBackgroundBrush}" 
+									Foreground="{DynamicResource AppTextSecondaryBrush}" ToolTip.Tip="{DynamicResource TipTokenOriginal}" Focusable="False" CornerRadius="3"/>
+							<Button x:Name="btnTokenIndex" Click="BtnToken_Click" Tag="{}{index:02}" Content="+ {index:02}" 
+									Padding="5,2" Margin="0,0,4,2" FontSize="10" Background="{DynamicResource AppCardBackgroundBrush}" 
+									Foreground="{DynamicResource AppTextSecondaryBrush}" ToolTip.Tip="{DynamicResource TipTokenIndex}" Focusable="False" CornerRadius="3"/>
+							<Button x:Name="btnTokenYear" Click="BtnToken_Click" Tag="{}{year}" Content="+ {year}" 
+									Padding="5,2" Margin="0,0,4,2" FontSize="10" Background="{DynamicResource AppCardBackgroundBrush}" 
+									Foreground="{DynamicResource AppTextSecondaryBrush}" ToolTip.Tip="{DynamicResource TipTokenYear}" Focusable="False" CornerRadius="3"/>
+							<Button x:Name="btnTokenDate" Click="BtnToken_Click" Tag="{}{date}" Content="+ {date}" 
+									Padding="5,2" Margin="0,0,4,2" FontSize="10" Background="{DynamicResource AppCardBackgroundBrush}" 
+									Foreground="{DynamicResource AppTextSecondaryBrush}" ToolTip.Tip="{DynamicResource TipTokenDate}" Focusable="False" CornerRadius="3"/>
+							<Button x:Name="btnTokenTotal" Click="BtnToken_Click" Tag="{}{total}" Content="+ {total}" 
+									Padding="5,2" Margin="0,0,4,2" FontSize="10" Background="{DynamicResource AppCardBackgroundBrush}" 
+									Foreground="{DynamicResource AppTextSecondaryBrush}" ToolTip.Tip="{DynamicResource TipTokenTotal}" Focusable="False" CornerRadius="3"/>
+						</WrapPanel>
+
+						<TextBlock x:Name="txtNamingPreview" Text="Preview: Scan001_1.jpg" FontSize="11" FontStyle="Italic" 
+								   Foreground="{DynamicResource AppAccentBrush}" Margin="2,0,0,0"/>
+					</StackPanel>
+				</Border>
+
+				<!-- Card 4: Vintage Photo Metadata (EXIF) -->
+				<Border Background="{DynamicResource AppSubtleCardBrush}" CornerRadius="6" Padding="12,10" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+					<StackPanel Spacing="8">
+						<TextBlock Text="{DynamicResource LblMetadata}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
+						<WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+							<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,2,12,2">
+								<TextBlock Text="{DynamicResource LblYear}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+								<TextBox x:Name="txtMetadataYear" Width="70" MaxLength="4" PlaceholderText="{DynamicResource WatermarkYear}" 
+										 TextChanged="TxtMetadata_TextChanged" FontSize="11" 
+										 Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" 
+										 Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+							</StackPanel>
+							<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,2,12,2">
+								<TextBlock Text="{DynamicResource LblNotes}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+								<TextBox x:Name="txtMetadataDesc" Width="160" PlaceholderText="{DynamicResource WatermarkDescription}" 
+										 TextChanged="TxtMetadata_TextChanged" FontSize="11" 
+										 Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" 
+										 Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+							</StackPanel>
+							<CheckBox x:Name="chkApplyYearToAll" Content="{DynamicResource ChkApplyYearToAll}" IsChecked="True" 
+									  FontSize="11" VerticalAlignment="Center" Focusable="False"/>
+						</WrapPanel>
+					</StackPanel>
+				</Border>
+
+				<!-- Card 5: Notifications & Behavior -->
+				<Border Background="{DynamicResource AppSubtleCardBrush}" CornerRadius="6" Padding="12,10" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+					<StackPanel Spacing="6">
+						<WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+							<CheckBox x:Name="chkShowNotifications" Content="{DynamicResource LblShowNotifications}" ToolTip.Tip="{DynamicResource TipShowNotifications}" 
+									  IsChecked="True" FontSize="11" VerticalAlignment="Center" Focusable="False" Margin="0,2,14,2"/>
+							<CheckBox x:Name="chkFlashTaskbar" Content="{DynamicResource LblFlashTaskbar}" ToolTip.Tip="{DynamicResource TipFlashTaskbar}" 
+									  IsChecked="True" FontSize="11" VerticalAlignment="Center" Focusable="False" Margin="0,2,14,2"/>
+						</WrapPanel>
+						<Rectangle Height="1" Fill="{DynamicResource AppSeparatorBrush}" Margin="0,4"/>
+						<CheckBox x:Name="chkPromptBeforeExport" Content="{DynamicResource ChkPromptBeforeExport}" 
+								  FontSize="11" VerticalAlignment="Center" Focusable="False"/>
+					</StackPanel>
+				</Border>
+			</StackPanel>
+		</ScrollViewer>
+
+		<!-- Footer Actions -->
+		<Grid Grid.Row="2" ColumnDefinitions="Auto, *" Margin="0,8,0,0">
+			<Rectangle Grid.ColumnSpan="2" Height="1" Fill="{DynamicResource AppSeparatorBrush}" VerticalAlignment="Top" Margin="0,-8,0,0"/>
+			
+			<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+				<Button x:Name="btnCancel" Click="BtnCancel_Click" Padding="14,7" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" CornerRadius="6" Focusable="False">
+					<TextBlock Text="{DynamicResource BtnCancel}"/>
+				</Button>
+				<Button x:Name="btnSavePreferences" Click="BtnSavePreferences_Click" Padding="14,7" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" CornerRadius="6" Focusable="False">
+					<TextBlock Text="{DynamicResource BtnSavePreferences}"/>
+				</Button>
+				<Button x:Name="btnExportNow" Click="BtnExportNow_Click" Padding="16,7" Background="{DynamicResource AppButtonActionBrush}" Foreground="{DynamicResource AppButtonActionTextBrush}" FontWeight="SemiBold" CornerRadius="6" Focusable="False">
+					<StackPanel Orientation="Horizontal" Spacing="6">
+						<TextBlock Text="💾" FontSize="12" VerticalAlignment="Center"/>
+						<TextBlock Text="{DynamicResource BtnExportNow}" VerticalAlignment="Center"/>
+					</StackPanel>
+				</Button>
+			</StackPanel>
+		</Grid>
+	</Grid>
+</Window>

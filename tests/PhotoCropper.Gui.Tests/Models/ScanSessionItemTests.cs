@@ -1,10 +1,8 @@
 using PhotoCropper.Core.Models;
-using PhotoCropper.Gui.Services;
+using PhotoCropper.Gui.Models;
 using PhotoCropper.TestHelpers;
-using Shouldly;
-using Xunit;
 
-namespace PhotoCropper.Gui.Tests.Gui;
+namespace PhotoCropper.Gui.Tests.Models;
 
 public sealed class ScanSessionItemTests : IDisposable
 {
@@ -93,6 +91,40 @@ public sealed class ScanSessionItemTests : IDisposable
 
         savedItem.IsModified = true;
         savedItem.IsModified.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ScanSessionItem_DeactivateIfUnmodified_ShouldOnlyDeactivateWhenNotModified()
+    {
+        var options = new DetectionOptions { BackgroundTolerance = 30.0 };
+        using var modifiedItem = new ScanSessionItem(_scanPath, options, isSaved: false, isModified: true);
+        modifiedItem.Activate();
+        modifiedItem.IsActive.ShouldBeTrue();
+        modifiedItem.DeactivateIfUnmodified();
+        modifiedItem.IsActive.ShouldBeTrue(); // Preserved because IsModified == true
+
+        using var unmodifiedItem = new ScanSessionItem(_scanPath, options, isSaved: true, isModified: false);
+        unmodifiedItem.Activate();
+        unmodifiedItem.IsActive.ShouldBeTrue();
+        unmodifiedItem.DeactivateIfUnmodified();
+        unmodifiedItem.IsActive.ShouldBeFalse(); // Disposed because IsModified == false
+    }
+
+    [Fact]
+    public void ScanSessionItem_Metadata_ShouldStoreAndPersistMetadata()
+    {
+        var options = new DetectionOptions();
+        using var item = new ScanSessionItem(_scanPath, options);
+
+        item.Metadata.ShouldNotBeNull();
+        item.Metadata.Year.ShouldBeNull();
+
+        item.Metadata.Year = 1965;
+        item.Metadata.Description = "Trip to Paris";
+
+        item.Metadata.Year.ShouldBe(1965);
+        item.Metadata.Description.ShouldBe("Trip to Paris");
+        item.Metadata.HasMetadata.ShouldBeTrue();
     }
 
     public void Dispose()

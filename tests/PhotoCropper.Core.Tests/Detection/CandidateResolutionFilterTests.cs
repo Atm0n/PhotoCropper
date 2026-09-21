@@ -41,4 +41,47 @@ public sealed class CandidateResolutionFilterTests
         var filtered = CandidateResolutionFilter.FilterCandidates([cand1, cand2]);
         filtered.Count.ShouldBe(2);
     }
+
+    [Fact]
+    public void CalculatePolygonIntersectionArea_DisjointRects_ReturnsZero()
+    {
+        Point[] pts1 = [new Point(0, 0), new Point(100, 0), new Point(100, 100), new Point(0, 100)];
+        Point[] pts2 = [new Point(200, 200), new Point(300, 200), new Point(300, 300), new Point(200, 300)];
+
+        double overlap = CandidateResolutionFilter.CalculatePolygonIntersectionArea(
+            pts1, new Rectangle(0, 0, 100, 100),
+            pts2, new Rectangle(200, 200, 100, 100));
+
+        overlap.ShouldBe(0);
+    }
+
+    [Fact]
+    public void CalculatePolygonIntersectionArea_OverlappingRects_ReturnsAccurateArea()
+    {
+        Point[] pts1 = [new Point(0, 0), new Point(100, 0), new Point(100, 100), new Point(0, 100)];
+        Point[] pts2 = [new Point(50, 50), new Point(150, 50), new Point(150, 150), new Point(50, 150)];
+
+        // Overlap should be 50x50 = 2500
+        double overlap = CandidateResolutionFilter.CalculatePolygonIntersectionArea(
+            pts1, new Rectangle(0, 0, 100, 100),
+            pts2, new Rectangle(50, 50, 100, 100));
+
+        overlap.ShouldBeInRange(2400, 2600);
+    }
+
+    [Fact]
+    public void FilterCandidates_ShouldRejectExcessiveOverlapInFavorOfHigherScore()
+    {
+        Point[] pts1 = [new Point(0, 0), new Point(200, 0), new Point(200, 200), new Point(0, 200)];
+        var cand1 = new CropCandidate(pts1, new Rectangle(0, 0, 200, 200), 40000, new RotatedRect(new PointF(100, 100), new SizeF(200, 200), 0), 40000, 0.99, 0.99);
+
+        // cand2 heavily overlaps cand1 (shifted by only 20px) with lower score
+        Point[] pts2 = [new Point(20, 20), new Point(220, 20), new Point(220, 220), new Point(20, 220)];
+        var cand2 = new CropCandidate(pts2, new Rectangle(20, 20, 200, 200), 40000, new RotatedRect(new PointF(120, 120), new SizeF(200, 200), 0), 30000, 0.80, 0.80);
+
+        var filtered = CandidateResolutionFilter.FilterCandidates([cand1, cand2]);
+
+        filtered.ShouldHaveSingleItem();
+        filtered[0].Score.ShouldBe(40000);
+    }
 }

@@ -1,6 +1,4 @@
 using PhotoCropper.Core.Scanning;
-using Shouldly;
-using Xunit;
 
 namespace PhotoCropper.Core.Tests.Scanning;
 

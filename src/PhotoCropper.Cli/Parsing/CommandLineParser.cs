@@ -30,6 +30,13 @@ internal static class CommandLineParser
                     options.JpegQuality = Math.Clamp(q, 1, 100);
                 }
             }
+            else if (arg is "-s" or "--sensitivity" && i + 1 < args.Length)
+            {
+                if (double.TryParse(args[++i], CultureInfo.InvariantCulture, out double sens))
+                {
+                    options.Tolerance = PhotoCropper.Core.Models.DetectionOptions.SensitivityToTolerance(sens);
+                }
+            }
             else if (arg is "-t" or "--tolerance" && i + 1 < args.Length)
             {
                 if (double.TryParse(args[++i], CultureInfo.InvariantCulture, out double tol))
@@ -63,6 +70,20 @@ internal static class CommandLineParser
                 if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int th))
                 {
                     options.Threads = Math.Max(1, th);
+                }
+            }
+            else if (arg is "--min-photos" or "--expected-photos" && i + 1 < args.Length)
+            {
+                if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int mp))
+                {
+                    options.MinExpectedPhotos = Math.Max(1, mp);
+                }
+            }
+            else if (arg is "--max-photos" or "--max-expected-photos" && i + 1 < args.Length)
+            {
+                if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int maxP))
+                {
+                    options.MaxExpectedPhotos = Math.Max(1, maxP);
                 }
             }
             else if (arg is "-r" or "--recursive")
@@ -109,6 +130,29 @@ internal static class CommandLineParser
             {
                 options.NonInteractive = true;
             }
+            else if (arg is "-w" or "--wizard" or "--interactive")
+            {
+                options.Interactive = true;
+            }
+            else if (arg is "-p" or "--pattern" or "--naming-pattern" && i + 1 < args.Length)
+            {
+                options.FileNamePattern = args[++i];
+            }
+            else if (arg == "--year" && i + 1 < args.Length)
+            {
+                if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int year))
+                {
+                    options.Year = year;
+                }
+            }
+            else if (arg == "--date" && i + 1 < args.Length)
+            {
+                options.Date = args[++i];
+            }
+            else if (arg is "--desc" or "--description" or "--comment" && i + 1 < args.Length)
+            {
+                options.Description = args[++i];
+            }
             else if (arg is "-i" or "--input" && i + 1 < args.Length)
             {
                 options.Inputs.Add(args[++i]);
@@ -133,14 +177,23 @@ internal static class CommandLineParser
         Console.WriteLine("  -i, --input <path>      Input image file or folder of scans (positional arguments also accepted)");
         Console.WriteLine("  -o, --output <dir>      Output directory for extracted photos (default: <scan_dir>/cropped)");
         Console.WriteLine("  -f, --format <fmt>      Output format: JPEG (default) or PNG");
-        Console.WriteLine("  -q, --quality <1-100>   JPEG compression quality (default: 90)");
+        Console.WriteLine("  -q, --quality <1-100>   JPEG compression quality (default: 100)");
+        Console.WriteLine("  -p, --pattern <pat>     File naming template (default: '{original}_{index}')");
+        Console.WriteLine("                          Tokens: {original}, {index}, {index:02}, {year}, {date}, {total}");
+        Console.WriteLine("  --year <YYYY>           Vintage photo year taken to embed in EXIF and use in {year}");
+        Console.WriteLine("  --date <YYYY-MM-DD>     Approximate or exact photo date to embed in EXIF and {date}");
+        Console.WriteLine("  --desc <text>           Photo description/comment embedded into EXIF metadata");
+        Console.WriteLine("  -s, --sensitivity <0-100> Detection sensitivity percentage (default: 50%)");
         Console.WriteLine("  -t, --tolerance <num>   Background color detection tolerance (default: 25)");
         Console.WriteLine("  -j, --threads <num>     Number of parallel CPU worker threads (default: CPU core count)");
-        Console.WriteLine("  --min-size <percent>    Minimum photo size as % of scan area (default: 15)");
+        Console.WriteLine("  --min-size <percent>    Minimum photo size as % of scan area (default: 25)");
         Console.WriteLine("  --max-size <percent>    Maximum photo size as % of scan area (default: 90)");
+        Console.WriteLine("  --min-photos <num>      Minimum expected photos per scan to flag for review (default: 1)");
+        Console.WriteLine("  --max-photos <num>      Maximum expected photos per scan to flag for review (default: unlimited)");
         Console.WriteLine("  --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)");
         Console.WriteLine("  --auto-tune             Automatically search optimal detection parameters on difficult scans");
         Console.WriteLine("  --copy-undetected <dir> Copy undetected scans with 0 photos to a designated review directory");
+        Console.WriteLine("  -w, --wizard            Launch step-by-step interactive CLI wizard");
         Console.WriteLine("  -y, --non-interactive   Disable interactive prompts (e.g., auto-tune prompts at batch completion)");
         Console.WriteLine("  --auto-orient           Enable AI face & landscape auto-orientation detection (default: on)");
         Console.WriteLine("  --no-auto-orient        Disable auto-orientation detection and preserve raw scanner placement");
@@ -150,6 +203,7 @@ internal static class CommandLineParser
         Console.WriteLine("  --no-remove-dust        Disable automated scratch and dust inpainting");
         Console.WriteLine("  -r, --recursive         Recursively process subdirectories when input is a folder");
         Console.WriteLine("  -v, --verbose           Display individual photo dimensions and debug details");
+        Console.WriteLine("  --check-update          Check GitHub for newer versions of PhotoCropper");
         Console.WriteLine("  -h, --help              Show this help message and exit");
         Console.WriteLine("  --version               Show version information");
         Console.WriteLine();
@@ -166,6 +220,7 @@ internal static class CommandLineParser
 
     public static void PrintVersion()
     {
-        Console.WriteLine("PhotoCropper CLI v2.2.0 (.NET 10 / OpenCV)");
+        var ver = PhotoCropper.Core.Updates.UpdateCheckService.GetCurrentVersion();
+        Console.WriteLine($"PhotoCropper CLI v{ver.Major}.{ver.Minor}.{Math.Max(0, ver.Build)} (.NET 10 / OpenCV)");
     }
 }

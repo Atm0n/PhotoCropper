@@ -2,7 +2,7 @@ using PhotoCropper.Core;
 using PhotoCropper.Core.Models;
 using System.Diagnostics.CodeAnalysis;
 
-namespace PhotoCropper.Gui.Services;
+namespace PhotoCropper.Gui.Models;
 
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Engine lifecycle is managed explicitly via Activate/Deactivate/Dispose methods")]
 internal sealed class ScanSessionItem : IDisposable
@@ -15,6 +15,7 @@ internal sealed class ScanSessionItem : IDisposable
     public int CachedPhotoCount { get; private set; }
     public bool IsSaved { get; set; }
     public bool IsModified { get; set; }
+    public PhotoExportMetadata Metadata { get; set; } = new();
 
     public ScanSessionItem(string filePath, DetectionOptions defaultOptions, bool isSaved = false, bool isModified = true)
     {
@@ -47,6 +48,14 @@ internal sealed class ScanSessionItem : IDisposable
             CachedPhotoCount = Engine.DetectedPhotos.Count;
             Engine.Dispose();
             Engine = null;
+        }
+    }
+
+    public void DeactivateIfUnmodified()
+    {
+        if (!IsModified)
+        {
+            Deactivate();
         }
     }
 

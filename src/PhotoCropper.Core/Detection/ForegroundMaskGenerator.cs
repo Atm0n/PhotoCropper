@@ -1,6 +1,7 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using Emgu.CV.Util;
 using System.Drawing;
 
 namespace PhotoCropper.Core.Detection;
@@ -12,7 +13,18 @@ public static class ForegroundMaskGenerator
         ArgumentNullException.ThrowIfNull(source);
 
         using Mat gray = new();
-        CvInvoke.CvtColor(source, gray, ColorConversion.Bgr2Gray);
+        if (source.NumberOfChannels == 1)
+        {
+            source.CopyTo(gray);
+        }
+        else if (source.NumberOfChannels == 4)
+        {
+            CvInvoke.CvtColor(source, gray, ColorConversion.Bgra2Gray);
+        }
+        else
+        {
+            CvInvoke.CvtColor(source, gray, ColorConversion.Bgr2Gray);
+        }
 
         // Bilateral filter smooths internal photo textures while preserving sharp outer boundaries
         using Mat smoothed = new();
@@ -45,7 +57,22 @@ public static class ForegroundMaskGenerator
         }
         else
         {
-            CvInvoke.CvtColor(source, ownedHsv, ColorConversion.Bgr2Hsv);
+            if (source.NumberOfChannels == 1)
+            {
+                using Mat bgrSource = new();
+                CvInvoke.CvtColor(source, bgrSource, ColorConversion.Gray2Bgr);
+                CvInvoke.CvtColor(bgrSource, ownedHsv, ColorConversion.Bgr2Hsv);
+            }
+            else if (source.NumberOfChannels == 4)
+            {
+                using Mat bgrSource = new();
+                CvInvoke.CvtColor(source, bgrSource, ColorConversion.Bgra2Bgr);
+                CvInvoke.CvtColor(bgrSource, ownedHsv, ColorConversion.Bgr2Hsv);
+            }
+            else
+            {
+                CvInvoke.CvtColor(source, ownedHsv, ColorConversion.Bgr2Hsv);
+            }
             hsvToUse = ownedHsv;
         }
 
@@ -68,5 +95,77 @@ public static class ForegroundMaskGenerator
 
         using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(closeSize, closeSize), new Point(-1, -1));
         CvInvoke.MorphologyEx(outputForeground, outputForeground, MorphOp.Close, closeKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+
+        // Fill internal holes in detected photo contours so light internal regions
+        // (white shirts, pale skies, clouds, faces) do not hollow out the photo or degrade rectangularity
+        using VectorOfVectorOfPoint externalContours = new();
+        CvInvoke.FindContours(outputForeground, externalContours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
+        double minHoleFillArea = (double)source.Width * source.Height * 0.005; // 0.5% min area
+        for (int i = 0; i < externalContours.Size; i++)
+        {
+            if (CvInvoke.ContourArea(externalContours[i]) >= minHoleFillArea)
+            {
+                CvInvoke.DrawContours(outputForeground, externalContours, i, new MCvScalar(255), -1);
+            }
+        }
+    }
+
+    public static void PopulateOtsuForegroundMask(
+        Mat source,
+        Mat outputForeground,
+        double lowThreshold,
+        double highThreshold,
+        bool isLightBackground = true,
+        Mat? precomputedEdgeMap = null)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(outputForeground);
+
+        using Mat gray = new();
+        if (source.NumberOfChannels == 1)
+        {
+            source.CopyTo(gray);
+        }
+        else if (source.NumberOfChannels == 4)
+        {
+            CvInvoke.CvtColor(source, gray, ColorConversion.Bgra2Gray);
+        }
+        else
+        {
+            CvInvoke.CvtColor(source, gray, ColorConversion.Bgr2Gray);
+        }
+
+        using Mat otsuMask = new();
+        var threshType = isLightBackground
+            ? (ThresholdType.BinaryInv | ThresholdType.Otsu)
+            : (ThresholdType.Binary | ThresholdType.Otsu);
+
+        CvInvoke.Threshold(gray, otsuMask, 0, 255, threshType);
+
+        using Mat ownedEdges = precomputedEdgeMap == null ? GeneratePrecomputedEdgeMap(source, lowThreshold, highThreshold) : new Mat();
+        Mat edgesToUse = precomputedEdgeMap ?? ownedEdges;
+
+        CvInvoke.BitwiseOr(otsuMask, edgesToUse, outputForeground);
+
+        int minDim = Math.Min(source.Width, source.Height);
+        int openSize = Math.Max(3, (minDim / 400) | 1);
+        int closeSize = Math.Max(3, (minDim / 500) | 1);
+
+        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(openSize, openSize), new Point(-1, -1));
+        CvInvoke.MorphologyEx(outputForeground, outputForeground, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+
+        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(closeSize, closeSize), new Point(-1, -1));
+        CvInvoke.MorphologyEx(outputForeground, outputForeground, MorphOp.Close, closeKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+
+        using VectorOfVectorOfPoint otsuExternalContours = new();
+        CvInvoke.FindContours(outputForeground, otsuExternalContours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
+        double minHoleFillArea = (double)source.Width * source.Height * 0.005;
+        for (int i = 0; i < otsuExternalContours.Size; i++)
+        {
+            if (CvInvoke.ContourArea(otsuExternalContours[i]) >= minHoleFillArea)
+            {
+                CvInvoke.DrawContours(outputForeground, otsuExternalContours, i, new MCvScalar(255), -1);
+            }
+        }
     }
 }

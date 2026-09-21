@@ -109,6 +109,7 @@ public static class PhotoExtractionEngine
     public static Mat ExtractPhotoFromRotatedRect(RotatedRect rect, Mat original, Mat? paddedSource = null, int padOffset = 0)
     {
         ArgumentNullException.ThrowIfNull(original);
+        if (original.IsEmpty || original.Width <= 0 || original.Height <= 0) return new Mat();
 
         PointF[] srcPoints = OrderBoxPoints(rect.GetVertices());
 
@@ -162,7 +163,11 @@ public static class PhotoExtractionEngine
 
         using Mat roiMat = new(extractSource, roi);
         using Mat bgraRoi = new();
-        if (roiMat.NumberOfChannels == 3)
+        if (roiMat.NumberOfChannels == 1)
+        {
+            CvInvoke.CvtColor(roiMat, bgraRoi, ColorConversion.Gray2Bgra);
+        }
+        else if (roiMat.NumberOfChannels == 3)
         {
             CvInvoke.CvtColor(roiMat, bgraRoi, ColorConversion.Bgr2Bgra);
         }
@@ -188,6 +193,7 @@ public static class PhotoExtractionEngine
         double cannyHigh)
     {
         ArgumentNullException.ThrowIfNull(original);
+        if (original.IsEmpty || original.Width <= 0 || original.Height <= 0) return new Mat();
 
         rect.Intersect(new Rectangle(Point.Empty, original.Size));
         if (rect.Width <= 10 || rect.Height <= 10) return new Mat();
@@ -198,12 +204,13 @@ public static class PhotoExtractionEngine
         if (searchRoi.Width > 10 && searchRoi.Height > 10)
         {
             using Mat roiMat = new(original, searchRoi);
+            using Mat bgrRoi = PhotoCropperEngine.NormalizeToBgr(roiMat);
             using Mat roiHsv = new();
-            CvInvoke.CvtColor(roiMat, roiHsv, ColorConversion.Bgr2Hsv);
+            CvInvoke.CvtColor(bgrRoi, roiHsv, ColorConversion.Bgr2Hsv);
             MCvScalar bgHsv = customBgHsv ?? BackgroundAnalyzer.SampleBackgroundColor(roiHsv);
 
             using Mat foreground = new();
-            ForegroundMaskGenerator.PopulateForegroundMask(roiMat, foreground, bgHsv, bgTolerance, cannyLow, cannyHigh);
+            ForegroundMaskGenerator.PopulateForegroundMask(bgrRoi, foreground, bgHsv, bgTolerance, cannyLow, cannyHigh);
 
             using VectorOfVectorOfPoint contours = new();
             CvInvoke.FindContours(foreground, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);

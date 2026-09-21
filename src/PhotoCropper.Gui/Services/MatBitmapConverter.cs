@@ -11,6 +11,11 @@ internal static class MatBitmapConverter
     {
         ArgumentNullException.ThrowIfNull(mat);
 
+        if (mat.IsEmpty || mat.Width <= 0 || mat.Height <= 0)
+        {
+            throw new ArgumentException("Cannot convert an empty or zero-sized Mat to Bitmap.", nameof(mat));
+        }
+
         if (mat.NumberOfChannels == 4)
         {
             return new Bitmap(
@@ -23,7 +28,14 @@ internal static class MatBitmapConverter
         }
 
         using Mat bgraMat = new();
-        CvInvoke.CvtColor(mat, bgraMat, ColorConversion.Bgr2Bgra);
+        if (mat.NumberOfChannels == 1)
+        {
+            CvInvoke.CvtColor(mat, bgraMat, ColorConversion.Gray2Bgra);
+        }
+        else
+        {
+            CvInvoke.CvtColor(mat, bgraMat, ColorConversion.Bgr2Bgra);
+        }
 
         return new Bitmap(
             PixelFormat.Bgra8888,

@@ -14,7 +14,18 @@ public static class EdgeRefinementService
         if (photo.IsEmpty) return Rectangle.Empty;
 
         using Mat gray = new();
-        CvInvoke.CvtColor(photo, gray, ColorConversion.Bgr2Gray);
+        if (photo.NumberOfChannels == 1)
+        {
+            photo.CopyTo(gray);
+        }
+        else if (photo.NumberOfChannels == 4)
+        {
+            CvInvoke.CvtColor(photo, gray, ColorConversion.Bgra2Gray);
+        }
+        else
+        {
+            CvInvoke.CvtColor(photo, gray, ColorConversion.Bgr2Gray);
+        }
 
         int s = 5;
         if (gray.Width <= s * 2 || gray.Height <= s * 2) return new Rectangle(0, 0, photo.Width, photo.Height);

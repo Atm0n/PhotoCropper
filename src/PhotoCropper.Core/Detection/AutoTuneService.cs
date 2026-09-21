@@ -2,7 +2,6 @@ using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
-using PhotoCropper.Core.Extraction;
 using PhotoCropper.Core.Models;
 using System.Drawing;
 
@@ -10,11 +9,11 @@ namespace PhotoCropper.Core.Detection;
 
 public static class AutoTuneService
 {
-    private static readonly double[] SweepTolerances = [15, 25, 35, 45, 55, 65, 75, 10, 85];
+    private static readonly double[] SweepTolerances = [2, 5, 8, 14, 22, 32];
     private static readonly double[] SweepCannyLows = [10, 20, 30, 40];
-    private static readonly double[] SweepMinAreaFactors = [0.005, 0.01, 0.05, 0.10];
+    private static readonly double[] SweepMinAreaFactors = [0.01, 0.025, 0.05, 0.10];
 
-    public static AutoTuneResult Tune(Mat source, DetectionOptions currentOptions)
+    public static AutoTuneResult Tune(Mat source, DetectionOptions currentOptions, int minExpected = 1, int maxExpected = int.MaxValue)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(currentOptions);
@@ -25,15 +24,17 @@ public static class AutoTuneService
         int scaledW = (int)Math.Round(originalW * scale);
         int scaledH = (int)Math.Round(originalH * scale);
 
-        using Mat detMat = new();
+        using Mat rawDetMat = new();
         if (scale < 0.999)
         {
-            CvInvoke.Resize(source, detMat, new Size(scaledW, scaledH), 0, 0, Inter.Area);
+            CvInvoke.Resize(source, rawDetMat, new Size(scaledW, scaledH), 0, 0, Inter.Area);
         }
         else
         {
-            source.CopyTo(detMat);
+            source.CopyTo(rawDetMat);
         }
+
+        using Mat detMat = PhotoCropperEngine.NormalizeToBgr(rawDetMat);
 
         using Mat detHsv = new();
         CvInvoke.CvtColor(detMat, detHsv, ColorConversion.Bgr2Hsv);
@@ -53,7 +54,7 @@ public static class AutoTuneService
         int pad = (int)Math.Round(Math.Max(originalW, originalH) * 0.05);
         int scaledPad = (int)Math.Round(pad * scale);
 
-        double baselineScore = EvaluateConfiguration(detMat, detHsv, avgBgColorHsv, currentOptions.BackgroundTolerance, currentOptions.CannyLowThreshold, currentOptions.CannyHighThreshold, currentOptions.MinAreaFactor, currentOptions.MaxAreaFactor, scaledPad, scaledW, scaledH, originalW, originalH, scale, out int baselineCount);
+        double baselineScore = EvaluateConfiguration(detMat, detHsv, avgBgColorHsv, currentOptions.BackgroundTolerance, currentOptions.CannyLowThreshold, currentOptions.CannyHighThreshold, currentOptions.MinAreaFactor, currentOptions.MaxAreaFactor, scaledPad, scaledW, scaledH, originalW, originalH, scale, minExpected, maxExpected, out int baselineCount);
 
         double bestScore = baselineScore;
         int bestCount = baselineCount;
@@ -97,12 +98,14 @@ public static class AutoTuneService
                             scaledW,
                             scaledH,
                             minArea,
-                            currentOptions.MaxAreaFactor);
+                            currentOptions.MaxAreaFactor,
+                            detMat,
+                            bgBgr);
 
                         var fullCandidates = MapCandidatesToFullRes(passCandidates, scale, originalW, originalH);
                         var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);
 
-                        double score = CalculateScore(accepted, originalW, originalH);
+                        double score = CalculateScore(accepted, originalW, originalH, minExpected, maxExpected);
                         if (score > bestScore)
                         {
                             bestScore = score;
@@ -110,6 +113,55 @@ public static class AutoTuneService
                             bestOptions = currentOptions with
                             {
                                 BackgroundTolerance = tol,
+                                CannyLowThreshold = cannyLow,
+                                CannyHighThreshold = cannyHigh,
+                                MinAreaFactor = minArea
+                            };
+                        }
+                    }
+                }
+            }
+
+            // Otsu Dual-Segmentation Fallback: if standard HSV background subtraction under-detected
+            // (e.g. faded vintage photos or light skies blending into white lid), try Otsu luminance thresholding
+            if (bestCount < minExpected)
+            {
+                bool isLightBg = avgBgColorHsv.V2 > 120;
+                foreach (double cannyLow in SweepCannyLows)
+                {
+                    Mat edgeMap = edgeMapDict[cannyLow];
+                    double cannyHigh = cannyLow * 2.5;
+
+                    ForegroundMaskGenerator.PopulateOtsuForegroundMask(
+                        detMat,
+                        foreground,
+                        cannyLow,
+                        cannyHigh,
+                        isLightBg,
+                        edgeMap);
+
+                    foreach (double minArea in SweepMinAreaFactors)
+                    {
+                        var passCandidates = CandidateExtractor.ExtractCandidates(
+                            foreground,
+                            scaledPad,
+                            scaledW,
+                            scaledH,
+                            minArea,
+                            currentOptions.MaxAreaFactor,
+                            detMat,
+                            bgBgr);
+
+                        var fullCandidates = MapCandidatesToFullRes(passCandidates, scale, originalW, originalH);
+                        var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);
+
+                        double score = CalculateScore(accepted, originalW, originalH, minExpected, maxExpected);
+                        if (score > bestScore)
+                        {
+                            bestScore = score;
+                            bestCount = accepted.Count;
+                            bestOptions = currentOptions with
+                            {
                                 CannyLowThreshold = cannyLow,
                                 CannyHighThreshold = cannyHigh,
                                 MinAreaFactor = minArea
@@ -146,6 +198,8 @@ public static class AutoTuneService
         int originalW,
         int originalH,
         double scale,
+        int minExpected,
+        int maxExpected,
         out int count)
     {
         using Mat edgeMap = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(detMat, cannyLow, cannyHigh);
@@ -160,25 +214,28 @@ public static class AutoTuneService
             edgeMap,
             detHsv);
 
+        MCvScalar bgBgr = BackgroundAnalyzer.HsvToBgr(avgBgColorHsv);
         var passCandidates = CandidateExtractor.ExtractCandidates(
             foreground,
             scaledPad,
             scaledW,
             scaledH,
             minAreaFactor,
-            maxAreaFactor);
+            maxAreaFactor,
+            detMat,
+            bgBgr);
 
         var fullCandidates = MapCandidatesToFullRes(passCandidates, scale, originalW, originalH);
         var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);
         count = accepted.Count;
-        return CalculateScore(accepted, originalW, originalH);
+        return CalculateScore(accepted, originalW, originalH, minExpected, maxExpected);
     }
 
     private static List<CropCandidate> MapCandidatesToFullRes(IReadOnlyList<CropCandidate> candidates, double scale, int originalW, int originalH)
     {
         if (scale >= 0.999)
         {
-            return new List<CropCandidate>(candidates);
+            return [.. candidates];
         }
 
         double invScale = 1.0 / scale;
@@ -187,7 +244,7 @@ public static class AutoTuneService
         foreach (var cand in candidates)
         {
             PointF fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
-            SizeF fullSize = new SizeF((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
+            SizeF fullSize = new((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
             RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
 
             PointF[] fullVerts = fullRr.GetVertices();
@@ -217,7 +274,7 @@ public static class AutoTuneService
         return fullCandidates;
     }
 
-    private static double CalculateScore(IReadOnlyList<CropCandidate> accepted, int originalW, int originalH)
+    private static double CalculateScore(IReadOnlyList<CropCandidate> accepted, int originalW, int originalH, int minExpected = 1, int maxExpected = int.MaxValue)
     {
         if (accepted.Count == 0) return 0.0;
 
@@ -240,7 +297,38 @@ public static class AutoTuneService
         // Discrete bonus for separating into valid multiple photos
         if (accepted.Count >= 1 && accepted.Count <= 12)
         {
-            scoreSum += accepted.Count * 1000.0;
+            scoreSum += accepted.Count * 15000.0;
+        }
+
+        // Strongly reward rectangularity and convexity of detected photos
+        double shapeQualitySum = 0.0;
+        foreach (var cand in accepted)
+        {
+            shapeQualitySum += cand.Rectangularity * cand.Convexity * 10000.0;
+        }
+        scoreSum += shapeQualitySum;
+
+        // Reward configurations that capture more complete photo area
+        // (strongly avoids partially cut photos in favor of full-sized extractions)
+        double coverageRatio = coveredArea / totalArea;
+        if (coverageRatio <= 0.80)
+        {
+            scoreSum += coverageRatio * 25000.0;
+        }
+
+        // Bonus if candidate count falls within the expected range
+        if (accepted.Count >= minExpected && accepted.Count <= maxExpected)
+        {
+            scoreSum += 50000.0;
+        }
+        else if (accepted.Count < minExpected)
+        {
+            scoreSum *= 0.5;
+        }
+        else if (accepted.Count > maxExpected)
+        {
+            double overage = accepted.Count - maxExpected;
+            scoreSum /= (1.0 + overage * 2.0);
         }
 
         return scoreSum;

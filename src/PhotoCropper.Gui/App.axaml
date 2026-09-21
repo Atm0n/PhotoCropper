@@ -1,10 +1,86 @@
 <Application xmlns="https://github.com/avaloniaui"
          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
          x:Class="PhotoCropper.Gui.App"
-         RequestedThemeVariant="Dark">             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+         RequestedThemeVariant="Dark">
 
     <Application.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#1e1e1e" />
+                    <SolidColorBrush x:Key="AppToolbarBrush" Color="#262626" />
+                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#1e1e1e" />
+                    <SolidColorBrush x:Key="AppSubtleCardBrush" Color="#181818" />
+                    <SolidColorBrush x:Key="AppWorkspaceBrush" Color="#121212" />
+                    <SolidColorBrush x:Key="AppBorderBrush" Color="#353535" />
+                    <SolidColorBrush x:Key="AppBorderSubtleBrush" Color="#2a2a2a" />
+                    <SolidColorBrush x:Key="AppFooterBrush" Color="#252525" />
+                    <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#ffffff" />
+                    <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#aaaaaa" />
+                    <SolidColorBrush x:Key="AppTextMutedBrush" Color="#666666" />
+                    <SolidColorBrush x:Key="AppPhotoCardBrush" Color="#1a1a1a" />
+                    <SolidColorBrush x:Key="AppModalBackgroundBrush" Color="#252525" />
+                    <SolidColorBrush x:Key="AppSplitterBrush" Color="#1e1e1e" />
+                    <SolidColorBrush x:Key="AppEmptyStateBrush" Color="#161616" />
+                    <SolidColorBrush x:Key="AppButtonDefaultBrush" Color="#353535" />
+                    <SolidColorBrush x:Key="AppButtonDefaultTextBrush" Color="#ffffff" />
+                    <SolidColorBrush x:Key="AppButtonActionBrush" Color="#2d2d2d" />
+                    <SolidColorBrush x:Key="AppButtonActionTextBrush" Color="#ffffff" />
+                    <SolidColorBrush x:Key="AppButtonDangerBrush" Color="#442222" />
+                    <SolidColorBrush x:Key="AppButtonDangerTextBrush" Color="#ff5555" />
+                    <SolidColorBrush x:Key="AppCardBackgroundSelectedBrush" Color="#16273b" />
+                    <SolidColorBrush x:Key="AppToggleGroupBrush" Color="#1a1a1a" />
+                    <SolidColorBrush x:Key="AppSeparatorBrush" Color="#3e3e3e" />
+                    <SolidColorBrush x:Key="AppInputBackgroundBrush" Color="#111111" />
+                    <SolidColorBrush x:Key="AppOverlayScrimBrush" Color="#B0000000" />
+                    <SolidColorBrush x:Key="AppHelpBackgroundBrush" Color="#F0121212" />
+                    <SolidColorBrush x:Key="AppAccentBrush" Color="#3399ff" />
+                    <SolidColorBrush x:Key="AppButtonAccentBrush" Color="#1f4e79" />
+                    <SolidColorBrush x:Key="AppButtonAccentTextBrush" Color="#ffffff" />
+                    <SolidColorBrush x:Key="AppSuccessBackgroundBrush" Color="#1b3a26" />
+                    <SolidColorBrush x:Key="AppSuccessTextBrush" Color="#33bb66" />
+                    <SolidColorBrush x:Key="AppWarningBackgroundBrush" Color="#3a301a" />
+                    <SolidColorBrush x:Key="AppDangerBackgroundBrush" Color="#3a1a1a" />
+                    <SolidColorBrush x:Key="AppDangerTextBrush" Color="#ff6666" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#f5f5f7" />
+                    <SolidColorBrush x:Key="AppToolbarBrush" Color="#ffffff" />
+                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#f0f0f4" />
+                    <SolidColorBrush x:Key="AppSubtleCardBrush" Color="#e5e5ea" />
+                    <SolidColorBrush x:Key="AppWorkspaceBrush" Color="#e9e9ee" />
+                    <SolidColorBrush x:Key="AppBorderBrush" Color="#d1d1d6" />
+                    <SolidColorBrush x:Key="AppBorderSubtleBrush" Color="#e5e5ea" />
+                    <SolidColorBrush x:Key="AppFooterBrush" Color="#f2f2f7" />
+                    <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#1c1c1e" />
+                    <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#48484a" />
+                    <SolidColorBrush x:Key="AppTextMutedBrush" Color="#8e8e93" />
+                    <SolidColorBrush x:Key="AppPhotoCardBrush" Color="#ffffff" />
+                    <SolidColorBrush x:Key="AppModalBackgroundBrush" Color="#ffffff" />
+                    <SolidColorBrush x:Key="AppSplitterBrush" Color="#dcdce0" />
+                    <SolidColorBrush x:Key="AppEmptyStateBrush" Color="#f0f0f5" />
+                    <SolidColorBrush x:Key="AppButtonDefaultBrush" Color="#e5e5ea" />
+                    <SolidColorBrush x:Key="AppButtonDefaultTextBrush" Color="#1c1c1e" />
+                    <SolidColorBrush x:Key="AppButtonActionBrush" Color="#e2e2e8" />
+                    <SolidColorBrush x:Key="AppButtonActionTextBrush" Color="#1c1c1e" />
+                    <SolidColorBrush x:Key="AppButtonDangerBrush" Color="#fce8e6" />
+                    <SolidColorBrush x:Key="AppButtonDangerTextBrush" Color="#c5221f" />
+                    <SolidColorBrush x:Key="AppCardBackgroundSelectedBrush" Color="#e3f2fd" />
+                    <SolidColorBrush x:Key="AppToggleGroupBrush" Color="#e5e5ea" />
+                    <SolidColorBrush x:Key="AppSeparatorBrush" Color="#d1d1d6" />
+                    <SolidColorBrush x:Key="AppInputBackgroundBrush" Color="#ffffff" />
+                    <SolidColorBrush x:Key="AppOverlayScrimBrush" Color="#70000000" />
+                    <SolidColorBrush x:Key="AppHelpBackgroundBrush" Color="#F8F8FA" />
+                    <SolidColorBrush x:Key="AppAccentBrush" Color="#0078d4" />
+                    <SolidColorBrush x:Key="AppButtonAccentBrush" Color="#d0ebff" />
+                    <SolidColorBrush x:Key="AppButtonAccentTextBrush" Color="#1864ab" />
+                    <SolidColorBrush x:Key="AppSuccessBackgroundBrush" Color="#d4edda" />
+                    <SolidColorBrush x:Key="AppSuccessTextBrush" Color="#155724" />
+                    <SolidColorBrush x:Key="AppWarningBackgroundBrush" Color="#fff3cd" />
+                    <SolidColorBrush x:Key="AppDangerBackgroundBrush" Color="#f8d7da" />
+                    <SolidColorBrush x:Key="AppDangerTextBrush" Color="#721c24" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="avares://PhotoCropper.Gui/Assets/i18n/en-US.axaml" />
             </ResourceDictionary.MergedDictionaries>

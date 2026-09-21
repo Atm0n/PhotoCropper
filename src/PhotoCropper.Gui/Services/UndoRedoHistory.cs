@@ -197,47 +197,120 @@ internal sealed class AddPhotoAction : IUndoableAction
     }
 }
 
+internal sealed class BatchAction : IUndoableAction
+{
+    private readonly int _scanIndex;
+    private readonly IReadOnlyList<IUndoableAction> _actions;
+    private bool _isDisposed;
+
+    public string Description { get; }
+    public int ScanIndex => _scanIndex;
+
+    public BatchAction(int scanIndex, IReadOnlyList<IUndoableAction> actions, string description)
+    {
+        ArgumentNullException.ThrowIfNull(actions);
+        _scanIndex = scanIndex;
+        _actions = actions;
+        Description = description;
+    }
+
+    public void Undo(PhotoCropperEngine engine)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        if (_isDisposed) return;
+
+        for (int i = _actions.Count - 1; i >= 0; i--)
+        {
+            _actions[i].Undo(engine);
+        }
+    }
+
+    public void Redo(PhotoCropperEngine engine)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        if (_isDisposed) return;
+
+        for (int i = 0; i < _actions.Count; i++)
+        {
+            _actions[i].Redo(engine);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (!_isDisposed)
+        {
+            foreach (var action in _actions)
+            {
+                action.Dispose();
+            }
+            _isDisposed = true;
+        }
+    }
+}
+
 internal sealed class UndoRedoHistory : IDisposable
 {
-    private readonly Stack<IUndoableAction> _undoStack = new();
-    private readonly Stack<IUndoableAction> _redoStack = new();
+    public const int DefaultMaxCapacity = 30;
 
-    public bool CanUndo => _undoStack.Count > 0;
-    public bool CanRedo => _redoStack.Count > 0;
+    private readonly int _maxCapacity;
+    private readonly LinkedList<IUndoableAction> _undoList = new();
+    private readonly LinkedList<IUndoableAction> _redoList = new();
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoStack and disposed on Clear/Dispose")]
+    public int MaxCapacity => _maxCapacity;
+    public int UndoCount => _undoList.Count;
+    public int RedoCount => _redoList.Count;
+    public bool CanUndo => _undoList.Count > 0;
+    public bool CanRedo => _redoList.Count > 0;
+
+    public UndoRedoHistory(int maxCapacity = DefaultMaxCapacity)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxCapacity, 1);
+        _maxCapacity = maxCapacity;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
     public void PushDelete(int scanIndex, int index, Mat photoMat)
     {
-        _undoStack.Push(new DeletePhotoAction(scanIndex, index, photoMat));
-        ClearRedoStack();
+        PushAction(new DeletePhotoAction(scanIndex, index, photoMat));
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoStack and disposed on Clear/Dispose")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
     public void PushRotate(int scanIndex, int index)
     {
-        _undoStack.Push(new RotatePhotoAction(scanIndex, index));
-        ClearRedoStack();
+        PushAction(new RotatePhotoAction(scanIndex, index));
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoStack and disposed on Clear/Dispose")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
     public void PushReplace(int scanIndex, int index, Mat previousMat, Mat newMat, string description = "Crop Refinement")
     {
-        _undoStack.Push(new ReplacePhotoAction(scanIndex, index, previousMat, newMat, description));
-        ClearRedoStack();
+        PushAction(new ReplacePhotoAction(scanIndex, index, previousMat, newMat, description));
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoStack and disposed on Clear/Dispose")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
     public void PushAdd(int scanIndex, int index, Mat addedMat)
     {
-        _undoStack.Push(new AddPhotoAction(scanIndex, index, addedMat));
-        ClearRedoStack();
+        PushAction(new AddPhotoAction(scanIndex, index, addedMat));
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
+    public void PushBatch(int scanIndex, IReadOnlyList<IUndoableAction> actions, string description)
+    {
+        PushAction(new BatchAction(scanIndex, actions, description));
     }
 
     public void PushAction(IUndoableAction action)
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        _undoStack.Push(action);
+        if (_undoList.Count >= _maxCapacity)
+        {
+            var oldest = _undoList.First!.Value;
+            _undoList.RemoveFirst();
+            oldest.Dispose();
+        }
+
+        _undoList.AddLast(action);
         ClearRedoStack();
     }
 
@@ -250,15 +323,25 @@ internal sealed class UndoRedoHistory : IDisposable
     public IUndoableAction? Undo(Func<int, PhotoCropperEngine?> engineAccessor)
     {
         ArgumentNullException.ThrowIfNull(engineAccessor);
-        if (_undoStack.Count == 0) return null;
+        if (_undoList.Count == 0) return null;
 
-        var action = _undoStack.Pop();
+        var action = _undoList.Last!.Value;
+        _undoList.RemoveLast();
+
         var engine = engineAccessor(action.ScanIndex);
         if (engine != null)
         {
             action.Undo(engine);
         }
-        _redoStack.Push(action);
+
+        if (_redoList.Count >= _maxCapacity)
+        {
+            var oldestRedo = _redoList.First!.Value;
+            _redoList.RemoveFirst();
+            oldestRedo.Dispose();
+        }
+
+        _redoList.AddLast(action);
         return action;
     }
 
@@ -271,32 +354,46 @@ internal sealed class UndoRedoHistory : IDisposable
     public IUndoableAction? Redo(Func<int, PhotoCropperEngine?> engineAccessor)
     {
         ArgumentNullException.ThrowIfNull(engineAccessor);
-        if (_redoStack.Count == 0) return null;
+        if (_redoList.Count == 0) return null;
 
-        var action = _redoStack.Pop();
+        var action = _redoList.Last!.Value;
+        _redoList.RemoveLast();
+
         var engine = engineAccessor(action.ScanIndex);
         if (engine != null)
         {
             action.Redo(engine);
         }
-        _undoStack.Push(action);
+
+        if (_undoList.Count >= _maxCapacity)
+        {
+            var oldestUndo = _undoList.First!.Value;
+            _undoList.RemoveFirst();
+            oldestUndo.Dispose();
+        }
+
+        _undoList.AddLast(action);
         return action;
     }
 
     public void Clear()
     {
-        while (_undoStack.Count > 0)
+        while (_undoList.Count > 0)
         {
-            _undoStack.Pop().Dispose();
+            var action = _undoList.Last!.Value;
+            _undoList.RemoveLast();
+            action.Dispose();
         }
         ClearRedoStack();
     }
 
     private void ClearRedoStack()
     {
-        while (_redoStack.Count > 0)
+        while (_redoList.Count > 0)
         {
-            _redoStack.Pop().Dispose();
+            var action = _redoList.Last!.Value;
+            _redoList.RemoveLast();
+            action.Dispose();
         }
     }
 
