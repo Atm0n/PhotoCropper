@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-2.5.0}"
+VERSION="${1:-2.5.1}"
 VERSION="${VERSION#v}"
 
 GUI_DIR="${2:-publish/gui/linux-x64}"
