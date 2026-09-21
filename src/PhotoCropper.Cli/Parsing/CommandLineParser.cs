@@ -168,54 +168,58 @@ internal static class CommandLineParser
 
     public static void PrintHelp()
     {
-        Console.WriteLine("PhotoCropper CLI - Automated Multi-Photo Scanner Cropper & Extractor");
-        Console.WriteLine();
-        Console.WriteLine("Usage:");
-        Console.WriteLine("  PhotoCropperCli [options] <input-file-or-directory> [more-inputs...]");
-        Console.WriteLine();
-        Console.WriteLine("Options:");
-        Console.WriteLine("  -i, --input <path>      Input image file or folder of scans (positional arguments also accepted)");
-        Console.WriteLine("  -o, --output <dir>      Output directory for extracted photos (default: <scan_dir>/cropped)");
-        Console.WriteLine("  -f, --format <fmt>      Output format: JPEG (default) or PNG");
-        Console.WriteLine("  -q, --quality <1-100>   JPEG compression quality (default: 100)");
-        Console.WriteLine("  -p, --pattern <pat>     File naming template (default: '{original}_{index}')");
-        Console.WriteLine("                          Tokens: {original}, {index}, {index:02}, {year}, {date}, {total}");
-        Console.WriteLine("  --year <YYYY>           Vintage photo year taken to embed in EXIF and use in {year}");
-        Console.WriteLine("  --date <YYYY-MM-DD>     Approximate or exact photo date to embed in EXIF and {date}");
-        Console.WriteLine("  --desc <text>           Photo description/comment embedded into EXIF metadata");
-        Console.WriteLine("  -s, --sensitivity <0-100> Detection sensitivity percentage (default: 50%)");
-        Console.WriteLine("  -t, --tolerance <num>   Background color detection tolerance (default: 25)");
-        Console.WriteLine("  -j, --threads <num>     Number of parallel CPU worker threads (default: CPU core count)");
-        Console.WriteLine("  --min-size <percent>    Minimum photo size as % of scan area (default: 25)");
-        Console.WriteLine("  --max-size <percent>    Maximum photo size as % of scan area (default: 90)");
-        Console.WriteLine("  --min-photos <num>      Minimum expected photos per scan to flag for review (default: 1)");
-        Console.WriteLine("  --max-photos <num>      Maximum expected photos per scan to flag for review (default: unlimited)");
-        Console.WriteLine("  --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)");
-        Console.WriteLine("  --auto-tune             Automatically search optimal detection parameters on difficult scans");
-        Console.WriteLine("  --copy-undetected <dir> Copy undetected scans with 0 photos to a designated review directory");
-        Console.WriteLine("  -w, --wizard            Launch step-by-step interactive CLI wizard");
-        Console.WriteLine("  -y, --non-interactive   Disable interactive prompts (e.g., auto-tune prompts at batch completion)");
-        Console.WriteLine("  --auto-orient           Enable AI face & landscape auto-orientation detection (default: on)");
-        Console.WriteLine("  --no-auto-orient        Disable auto-orientation detection and preserve raw scanner placement");
-        Console.WriteLine("  --restore-colors        Enable auto-white balance, contrast & vibrancy color restoration (default: on)");
-        Console.WriteLine("  --no-restore-colors     Disable color restoration and export raw scanned pixels");
-        Console.WriteLine("  --remove-dust           Enable automated scratch and dust inpainting (default: on)");
-        Console.WriteLine("  --no-remove-dust        Disable automated scratch and dust inpainting");
-        Console.WriteLine("  -r, --recursive         Recursively process subdirectories when input is a folder");
-        Console.WriteLine("  -v, --verbose           Display individual photo dimensions and debug details");
-        Console.WriteLine("  --check-update          Check GitHub for newer versions of PhotoCropper");
-        Console.WriteLine("  -h, --help              Show this help message and exit");
-        Console.WriteLine("  --version               Show version information");
-        Console.WriteLine();
-        Console.WriteLine("Examples:");
-        Console.WriteLine("  PhotoCropperCli scan001.jpg");
-        Console.WriteLine("  PhotoCropperCli D:\\Scans -o D:\\Cropped -f PNG -r");
-        Console.WriteLine("  PhotoCropperCli -i scan1.jpg -i scan2.jpg -t 30 -q 95");
-        Console.WriteLine();
-        Console.WriteLine("Acknowledgements & Licenses:");
-        Console.WriteLine("  PhotoCropper is licensed under GNU General Public License v3.0.");
-        Console.WriteLine("  AI Face Detection uses YuNet (face_detection_yunet_2023mar.onnx)");
-        Console.WriteLine("  developed by Shiqi Yu & OpenCV Zoo (Apache License 2.0).");
+        Console.WriteLine(
+            """
+            PhotoCropper CLI - Automated Multi-Photo Scanner Cropper & Extractor
+        
+            Usage:
+              PhotoCropperCli [options] <input-file-or-directory> [more-inputs...]
+        
+            Options:
+              -i, --input <path>      Input image file or folder of scans (positional arguments also accepted)
+              -o, --output <dir>      Output directory for extracted photos (default: <scan_dir>/cropped)
+              -f, --format <fmt>      Output format: JPEG (default) or PNG
+              -q, --quality <1-100>   JPEG compression quality (default: 100)
+              -p, --pattern <pat>     File naming template (default: '{original}_{index}')
+                                      Tokens: {original}, {index}, {index:02}, {year}, {date}, {total}
+              --year <YYYY>           Vintage photo year taken to embed in EXIF and use in {year}
+              --date <YYYY-MM-DD>     Approximate or exact photo date to embed in EXIF and {date}
+              --desc <text>           Photo description/comment embedded into EXIF metadata
+              -s, --sensitivity <0-100> Detection sensitivity percentage (default: 50%)
+              -t, --tolerance <num>   Background color detection tolerance (default: 25)
+              -j, --threads <num>     Number of parallel CPU worker threads (default: CPU core count)
+              --min-size <percent>    Minimum photo size as % of scan area (default: 25)
+              --max-size <percent>    Maximum photo size as % of scan area (default: 90)
+              --min-photos <num>      Minimum expected photos per scan to flag for review (default: 1)
+              --max-photos <num>      Maximum expected photos per scan to flag for review (default: unlimited)
+              --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)
+              --auto-tune             Automatically search optimal detection parameters on difficult scans
+              --copy-undetected <dir> Copy undetected scans with 0 photos to a designated review directory
+              -w, --wizard            Launch step-by-step interactive CLI wizard
+              -y, --non-interactive   Disable interactive prompts (e.g., auto-tune prompts at batch completion)
+              --auto-orient           Enable AI face & landscape auto-orientation detection (default: on)
+              --no-auto-orient        Disable auto-orientation detection and preserve raw scanner placement
+              --restore-colors        Enable auto-white balance, contrast & vibrancy color restoration (default: on)
+              --no-restore-colors     Disable color restoration and export raw scanned pixels
+              --remove-dust           Enable automated scratch and dust inpainting (default: on)
+              --no-remove-dust        Disable automated scratch and dust inpainting
+              -r, --recursive         Recursively process subdirectories when input is a folder
+              -v, --verbose           Display individual photo dimensions and debug details
+              --check-update          Check GitHub for newer versions of PhotoCropper
+              -h, --help              Show this help message and exit
+              --version               Show version information
+        
+            Examples:
+              PhotoCropperCli scan001.jpg
+              PhotoCropperCli D:\Scans -o D:\Cropped -f PNG -r
+              PhotoCropperCli -i scan1.jpg -i scan2.jpg -t 30 -q 95
+        
+            Acknowledgements & Licenses:
+              PhotoCropper is licensed under GNU General Public License v3.0.
+              AI Face Detection uses YuNet (face_detection_yunet_2023mar.onnx)
+              developed by Shiqi Yu & OpenCV Zoo (Apache License 2.0).
+            """);
+
     }
 
     public static void PrintVersion()

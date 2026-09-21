@@ -208,7 +208,30 @@ internal sealed partial class MainWindow
         }, rotatedMsg);
     }
 
-    private async Task BatchRotatePhotosAsync(List<int> selectedIndices)
+    private void RestoreGallerySelection(List<int> validIndices)
+    {
+        if (lstGallery?.SelectedItems == null) return;
+        isSyncingSelection = true;
+        try
+        {
+            lstGallery.SelectedItems.Clear();
+            foreach (var idx in validIndices)
+            {
+                if (idx < lstGallery.Items.Count)
+                {
+                    lstGallery.SelectedItems.Add(lstGallery.Items[idx]);
+                }
+            }
+        }
+        finally
+        {
+            isSyncingSelection = false;
+        }
+    }
+
+    private Task BatchRotatePhotosAsync(List<int> selectedIndices) => RotatePhotosCoreAsync(selectedIndices, clockwise: true);
+
+    private async Task RotatePhotosCoreAsync(List<int> selectedIndices, bool clockwise)
     {
         if (isLoading || ScanSessions.Count == 0 || selectedIndices.Count == 0) return;
 
@@ -228,7 +251,9 @@ internal sealed partial class MainWindow
             actions.Add(new RotatePhotoAction(CurrentIndex, idx));
         }
 
-        string desc = $"Batch Rotate ({validIndices.Count} photos)";
+        string desc = validIndices.Count == 1
+            ? (clockwise ? "Rotate 90° CW" : "Rotate 90° CCW")
+            : (clockwise ? $"Batch Rotate ({validIndices.Count} photos)" : $"Batch Rotate CCW ({validIndices.Count} photos)");
         undoHistory.PushBatch(CurrentIndex, actions, desc);
 
         await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgBatchRotating, "Rotating {0} photos...", validIndices.Count), async ct =>
@@ -238,31 +263,19 @@ internal sealed partial class MainWindow
                 foreach (var idx in validIndices)
                 {
                     ct.ThrowIfCancellationRequested();
-                    currentEngine.RotatePhoto(idx);
+                    if (clockwise)
+                    {
+                        currentEngine.RotatePhoto(idx);
+                    }
+                    else
+                    {
+                        currentEngine.RotatePhotoCounterClockwise(idx);
+                    }
                 }
             }, ct);
 
             LoadCroppedPhotosToSlider();
-
-            if (lstGallery?.SelectedItems != null)
-            {
-                isSyncingSelection = true;
-                try
-                {
-                    lstGallery.SelectedItems.Clear();
-                    foreach (var idx in validIndices)
-                    {
-                        if (idx < lstGallery.Items.Count)
-                        {
-                            lstGallery.SelectedItems.Add(lstGallery.Items[idx]);
-                        }
-                    }
-                }
-                finally
-                {
-                    isSyncingSelection = false;
-                }
-            }
+            RestoreGallerySelection(validIndices);
             UpdateSelectionUi();
         }, LocalizationService.Format(ResourceKeys.MsgBatchRotated, "{0} photos rotated.", validIndices.Count));
     }
@@ -480,36 +493,40 @@ internal sealed partial class MainWindow
         if (!isLoading && slides != null) slides.Next();
     }
 
+    private async Task ApplyUndoRedoActionAsync(IUndoableAction? action, string statusMessageKey, string statusDefaultFormat)
+    {
+        if (action == null) return;
+
+        if (action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
+        {
+            ScanSessions[action.ScanIndex].IsModified = true;
+        }
+
+        if (action.ScanIndex != CurrentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
+        {
+            ScanSessions[CurrentIndex].Deactivate();
+            CurrentIndex = action.ScanIndex;
+            await LoadPhotosToGuiAsync();
+        }
+        else
+        {
+            var engine = ScanSessions[CurrentIndex].Activate();
+            int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, engine.DetectedPhotos.Count - 1)) : 0;
+            LoadCroppedPhotosToSlider();
+            if (slides != null && engine.DetectedPhotos.Count > 0)
+            {
+                slides.SelectedIndex = selected;
+            }
+        }
+        lblStatus.Text = LocalizationService.Format(statusMessageKey, statusDefaultFormat, action.Description);
+    }
+
     private async Task PerformUndoAsync()
     {
         if (ScanSessions.Count == 0 || !undoHistory.CanUndo) return;
 
         var action = undoHistory.Undo(idx => idx >= 0 && idx < ScanSessions.Count ? ScanSessions[idx].Activate() : null);
-        if (action != null)
-        {
-            if (action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
-            {
-                ScanSessions[action.ScanIndex].IsModified = true;
-            }
-
-            if (action.ScanIndex != CurrentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
-            {
-                ScanSessions[CurrentIndex].Deactivate();
-                CurrentIndex = action.ScanIndex;
-                await LoadPhotosToGuiAsync();
-            }
-            else
-            {
-                var engine = ScanSessions[CurrentIndex].Activate();
-                int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, engine.DetectedPhotos.Count - 1)) : 0;
-                LoadCroppedPhotosToSlider();
-                if (slides != null && engine.DetectedPhotos.Count > 0)
-                {
-                    slides.SelectedIndex = selected;
-                }
-            }
-            lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgUndo, "Undid {0}.", action.Description);
-        }
+        await ApplyUndoRedoActionAsync(action, ResourceKeys.MsgUndo, "Undid {0}.");
     }
 
     private async Task PerformRedoAsync()
@@ -517,94 +534,10 @@ internal sealed partial class MainWindow
         if (ScanSessions.Count == 0 || !undoHistory.CanRedo) return;
 
         var action = undoHistory.Redo(idx => idx >= 0 && idx < ScanSessions.Count ? ScanSessions[idx].Activate() : null);
-        if (action != null)
-        {
-            if (action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
-            {
-                ScanSessions[action.ScanIndex].IsModified = true;
-            }
-
-            if (action.ScanIndex != CurrentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
-            {
-                ScanSessions[CurrentIndex].Deactivate();
-                CurrentIndex = action.ScanIndex;
-                await LoadPhotosToGuiAsync();
-            }
-            else
-            {
-                var engine = ScanSessions[CurrentIndex].Activate();
-                int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, engine.DetectedPhotos.Count - 1)) : 0;
-                LoadCroppedPhotosToSlider();
-                if (slides != null && engine.DetectedPhotos.Count > 0)
-                {
-                    slides.SelectedIndex = selected;
-                }
-            }
-            lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgRedo, "Redid {0}.", action.Description);
-        }
+        await ApplyUndoRedoActionAsync(action, ResourceKeys.MsgRedo, "Redid {0}.");
     }
 
-    private async Task RotateSelectedPhotosCcwAsync()
-    {
-        if (isLoading || ScanSessions.Count == 0) return;
-
-        var selectedIndices = GetSelectedPhotoIndices();
-        if (selectedIndices.Count == 0) return;
-
-        var currentEngine = ScanSessions[CurrentIndex].Activate();
-        var validIndices = selectedIndices.Distinct()
-            .Where(idx => idx >= 0 && idx < currentEngine.DetectedPhotos.Count)
-            .OrderBy(idx => idx)
-            .ToList();
-
-        if (validIndices.Count == 0) return;
-
-        ScanSessions[CurrentIndex].IsModified = true;
-
-        var actions = new List<IUndoableAction>();
-        foreach (var idx in validIndices)
-        {
-            actions.Add(new RotatePhotoAction(CurrentIndex, idx));
-        }
-
-        string desc = validIndices.Count == 1 ? "Rotate 90° CCW" : $"Batch Rotate CCW ({validIndices.Count} photos)";
-        undoHistory.PushBatch(CurrentIndex, actions, desc);
-
-        await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgBatchRotating, "Rotating {0} photos...", validIndices.Count), async ct =>
-        {
-            await Task.Run(() =>
-            {
-                foreach (var idx in validIndices)
-                {
-                    ct.ThrowIfCancellationRequested();
-                    currentEngine.RotatePhotoCounterClockwise(idx);
-                }
-            }, ct);
-
-            LoadCroppedPhotosToSlider();
-
-            if (lstGallery?.SelectedItems != null)
-            {
-                isSyncingSelection = true;
-                try
-                {
-                    lstGallery.SelectedItems.Clear();
-                    foreach (var idx in validIndices)
-                    {
-                        if (idx < lstGallery.Items.Count)
-                        {
-                            lstGallery.SelectedItems.Add(lstGallery.Items[idx]);
-                        }
-                    }
-                }
-                finally
-                {
-                    isSyncingSelection = false;
-                }
-            }
-            UpdateSelectionUi();
-        }, LocalizationService.Format(ResourceKeys.MsgBatchRotated, "{0} photos rotated.", validIndices.Count));
-    }
+    private Task RotateSelectedPhotosCcwAsync() => RotatePhotosCoreAsync(GetSelectedPhotoIndices(), clockwise: false);
 
     private async void ContextMenu_RotateCw_Click(object? sender, RoutedEventArgs e)
     {
