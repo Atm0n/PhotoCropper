@@ -41,7 +41,8 @@
 	<sys:String x:Key="MsgSavingProgress">Exportando foto {0} de {1}...</sys:String>
 	<sys:String x:Key="MsgSaved">Se han guardado {0} fotos con éxito.</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">Todos los {0} escaneos ya están guardados en 'Cropped'. No hay cambios por exportar.</sys:String>
-	<sys:String x:Key="MsgReprocessing">Reprocesando con nuevos ajustes...</sys:String>
+	<sys:String x:Key="MsgReprocessing">Reprocesando escaneo con nuevos ajustes...</sys:String>
+	<sys:String x:Key="MsgDetectingPhotos">Detectando fotos...</sys:String>
 	<sys:String x:Key="MsgDetectionComplete">Detección finalizada. Encontradas {0} fotos.</sys:String>
 	<sys:String x:Key="MsgPhotoDeleted">Foto eliminada.</sys:String>
 	<sys:String x:Key="MsgRotating">Rotando foto...</sys:String>
@@ -95,8 +96,7 @@
 	<sys:String x:Key="HelpShortcutF1">[F1] Abrir Ayuda y Atajos</sys:String>
 	<sys:String x:Key="TipRefine">Atajo: N o Ñ</sys:String>
 	<sys:String x:Key="HelpAboutTitle">Acerca de PhotoCropper</sys:String>
-	<sys:String x:Key="HelpAboutDescription">Extractor inteligente de fotos de alto rendimiento. Diseñado para una digitalización rápida y precisa de álbumes antiguos.</sys:String>
-	<sys:String x:Key="HelpVersion">Versión 2.2.0</sys:String>
+	<sys:String x:Key="HelpAboutDescription">Extractor de fotos inteligente de alto rendimiento. Diseñado para digitalizar álbumes antiguos de forma rápida y precisa.</sys:String>
 	<sys:String x:Key="HelpAuthor">Desarrollado por Nil Riera</sys:String>
 	<sys:String x:Key="HelpPoweredBy">Impulsado por Emgu.CV (wrapper de OpenCV)</sys:String>
 	<sys:String x:Key="HelpModelLicense">Detección facial IA: YuNet por Shiqi Yu / OpenCV Zoo (Apache 2.0)</sys:String>
@@ -110,6 +110,7 @@
 	<sys:String x:Key="BtnSampleBackground">Muestrear Fondo</sys:String>
 	<sys:String x:Key="BtnResetBackground">Fondo Automático</sys:String>
 	<sys:String x:Key="MsgClickToSample">Haga clic en cualquier parte del fondo del escaneo para muestrear su color...</sys:String>
+	<sys:String x:Key="MsgBackgroundSampled">Color de fondo personalizado aplicado.</sys:String>
 	<sys:String x:Key="BtnAutoTune">Auto-Ajustar</sys:String>
 	<sys:String x:Key="TipAutoTune">Busca automáticamente los parámetros de detección óptimos para este escaneo. (Atajo: T)</sys:String>
 	<sys:String x:Key="MsgAutoTuning">Auto-ajustando parámetros de detección...</sys:String>
@@ -123,6 +124,7 @@
 	<sys:String x:Key="MsgScanSuccess">Escaneo adquirido y guardado en el espacio de trabajo: {0}</sys:String>
 	<sys:String x:Key="MsgNoScannerFound">No se detectó ningún escáner. Asegúrese de que esté encendido y conectado.</sys:String>
 	<sys:String x:Key="MsgScanFailed">Error al escanear: {0}</sys:String>
+	<sys:String x:Key="MsgNoScanData">El escáner no devolvió ninguna imagen.</sys:String>
 	<sys:String x:Key="MsgResumeSession">Se detectó una sesión previa en esta carpeta ({0} escaneos). ¿Desea reanudarla?</sys:String>
 	<sys:String x:Key="TitleResumeSession">Reanudar Sesión de Escaneo</sys:String>
 	<sys:String x:Key="LblWorkDirStatus">Carpeta: {0}</sys:String>
@@ -132,6 +134,7 @@
 	<sys:String x:Key="MsgScanDeleted">Escaneo '{0}' eliminado.</sys:String>
 	<sys:String x:Key="HelpShortcutDeleteScan">[Shift+Supr] Eliminar escaneo completo</sys:String>
 	<sys:String x:Key="BtnCancel">Cancelar</sys:String>
+	<sys:String x:Key="TxtCancelling">Cancelando...</sys:String>
 	<sys:String x:Key="BtnOk">Aceptar</sys:String>
 	<sys:String x:Key="BtnRefreshScanners">Actualizar Escáneres</sys:String>
 	<sys:String x:Key="TitleNoScanner">No Se Detectó Ningún Escáner</sys:String>

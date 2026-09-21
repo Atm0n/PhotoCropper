@@ -105,7 +105,7 @@ public static class PhotoExporter
         IReadOnlyList<Mat> photos,
         string originalFilePath,
         string? customOutputFolder = null,
-        string format = "JPEG",
+        string format = Common.AppConstants.DefaultImageFormat,
         int jpegQuality = 100,
         string fileNamePattern = FileNameTemplateHelper.DefaultPattern,
         PhotoCropper.Core.Models.PhotoExportMetadata? metadata = null,

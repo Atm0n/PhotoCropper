@@ -134,7 +134,7 @@ internal sealed partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            lblStatus.Text = Avalonia.Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Operation cancelled.";
+            lblStatus.Text = LocalizationService.GetString(ResourceKeys.MsgScanCancelled, "Operation cancelled.");
         }
         catch (Exception ex)
         {
@@ -164,7 +164,7 @@ internal sealed partial class MainWindow : Window
     private void BtnCancelLoading_Click(object? sender, RoutedEventArgs e)
     {
         btnCancelLoading.IsEnabled = false;
-        txtLoadingText.Text = Avalonia.Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Cancelling...";
+        txtLoadingText.Text = LocalizationService.GetString(ResourceKeys.TxtCancelling, "Cancelling...");
         _activeOperationCts?.Cancel();
     }
 
@@ -324,7 +324,7 @@ internal sealed partial class MainWindow : Window
         if (pnlLoadingOverlay.IsVisible && btnCancelLoading.IsVisible && e.Key == Key.Escape)
         {
             btnCancelLoading.IsEnabled = false;
-            txtLoadingText.Text = Avalonia.Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Cancelling...";
+            txtLoadingText.Text = LocalizationService.GetString(ResourceKeys.TxtCancelling, "Cancelling...");
             _activeOperationCts?.Cancel();
             e.Handled = true;
             return;

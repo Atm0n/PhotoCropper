@@ -115,7 +115,7 @@ internal sealed partial class MainWindow
             }
         }
         UpdateSelectionUi();
-        lblStatus.Text = Avalonia.Application.Current?.FindResource("MsgPhotoDeleted")?.ToString() ?? "Photo deleted.";
+        lblStatus.Text = LocalizationService.GetString(ResourceKeys.MsgPhotoDeleted, "Photo deleted.");
     }
 
     private void BatchDeletePhotos(List<int> selectedIndices)
@@ -158,8 +158,7 @@ internal sealed partial class MainWindow
         }
 
         UpdateSelectionUi();
-        string format = Avalonia.Application.Current?.FindResource("MsgBatchDeleted")?.ToString() ?? "{0} photos deleted.";
-        lblStatus.Text = string.Format(format, sortedIndices.Count);
+        lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgBatchDeleted, "{0} photos deleted.", sortedIndices.Count);
     }
 
     private async void BtnRotate_Click(object? sender, RoutedEventArgs e)
@@ -193,8 +192,8 @@ internal sealed partial class MainWindow
         ScanSessions[currentIndex].IsModified = true;
         undoHistory.PushRotate(currentIndex, photoIndex);
 
-        string rotatingMsg = Avalonia.Application.Current?.FindResource("MsgRotating")?.ToString() ?? "Rotating...";
-        string rotatedMsg = Avalonia.Application.Current?.FindResource("MsgPhotoRotated")?.ToString() ?? "Photo rotated.";
+        string rotatingMsg = LocalizationService.GetString(ResourceKeys.MsgRotating, "Rotating...");
+        string rotatedMsg = LocalizationService.GetString(ResourceKeys.MsgPhotoRotated, "Photo rotated.");
 
         await ExecuteWithLoadingAsync(rotatingMsg, async () =>
         {
@@ -232,10 +231,7 @@ internal sealed partial class MainWindow
         string desc = $"Batch Rotate ({validIndices.Count} photos)";
         undoHistory.PushBatch(currentIndex, actions, desc);
 
-        string rotatingFormat = Avalonia.Application.Current?.FindResource("MsgBatchRotating")?.ToString() ?? "Rotating {0} photos...";
-        string rotatedFormat = Avalonia.Application.Current?.FindResource("MsgBatchRotated")?.ToString() ?? "{0} photos rotated.";
-
-        await ExecuteWithLoadingAsync(string.Format(rotatingFormat, validIndices.Count), async () =>
+        await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgBatchRotating, "Rotating {0} photos...", validIndices.Count), async () =>
         {
             await Task.Run(() =>
             {
@@ -267,7 +263,7 @@ internal sealed partial class MainWindow
                 }
             }
             UpdateSelectionUi();
-        }, string.Format(rotatedFormat, validIndices.Count));
+        }, LocalizationService.Format(ResourceKeys.MsgBatchRotated, "{0} photos rotated.", validIndices.Count));
     }
 
     private void Slides_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -426,28 +422,25 @@ internal sealed partial class MainWindow
 
         if (isGrid && selectedCount > 1)
         {
-            string selectedFormat = Avalonia.Application.Current?.FindResource("TxtSelectedCount")?.ToString() ?? "({0} of {1} selected)";
-            txtGallerySelection.Text = string.Format(selectedFormat, selectedCount, totalCount);
+            txtGallerySelection.Text = LocalizationService.Format(ResourceKeys.TxtSelectedCount, "({0} of {1} selected)", selectedCount, totalCount);
             txtGallerySelection.IsVisible = true;
 
-            string deleteCountFormat = Avalonia.Application.Current?.FindResource("BtnDeleteCount")?.ToString() ?? "Delete ({0})";
-            txtBtnDelete.Text = string.Format(deleteCountFormat, selectedCount);
+            txtBtnDelete.Text = LocalizationService.Format(ResourceKeys.BtnDeleteCount, "Delete ({0})", selectedCount);
 
-            string rotateCountFormat = Avalonia.Application.Current?.FindResource("BtnRotateCount")?.ToString() ?? "Rotate ({0})";
-            txtBtnRotate.Text = string.Format(rotateCountFormat, selectedCount);
+            txtBtnRotate.Text = LocalizationService.Format(ResourceKeys.BtnRotateCount, "Rotate ({0})", selectedCount);
 
             btnRefine.IsEnabled = false;
-            ToolTip.SetTip(btnRefine, Avalonia.Application.Current?.FindResource("TipRefineMultiDisabled"));
+            ToolTip.SetTip(btnRefine, LocalizationService.GetString(ResourceKeys.TipRefineMultiDisabled, "Select a single photo to refine edges"));
         }
         else
         {
             txtGallerySelection.IsVisible = false;
-            txtBtnDelete.Text = Avalonia.Application.Current?.FindResource("BtnDelete")?.ToString() ?? "Delete";
-            txtBtnRotate.Text = Avalonia.Application.Current?.FindResource("BtnRotate")?.ToString() ?? "Rotate";
+            txtBtnDelete.Text = LocalizationService.GetString(ResourceKeys.BtnDelete, "Delete");
+            txtBtnRotate.Text = LocalizationService.GetString(ResourceKeys.BtnRotate, "Rotate");
 
             bool hasValidSelection = totalCount > 0 && selectedCount > 0;
             btnRefine.IsEnabled = hasValidSelection;
-            ToolTip.SetTip(btnRefine, Avalonia.Application.Current?.FindResource("TipRefine"));
+            ToolTip.SetTip(btnRefine, LocalizationService.GetString(ResourceKeys.TipRefine, "Shortcut: N"));
         }
 
         if (pnlBatchSelectionActions != null)
@@ -473,8 +466,7 @@ internal sealed partial class MainWindow
         }
 
         int current = slides.SelectedIndex + 1;
-        string format = Avalonia.Application.Current?.FindResource("PhotoCounter")?.ToString() ?? "PHOTO {0} OF {1}";
-        lblPhotoInfo.Text = string.Format(format, current, total);
+        lblPhotoInfo.Text = LocalizationService.Format(ResourceKeys.PhotoCounter, "PHOTO {0} OF {1}", current, total);
     }
 
     private void BtnPreviousCroppedImage_Click(object? sender, RoutedEventArgs e)
@@ -515,8 +507,7 @@ internal sealed partial class MainWindow
                     slides.SelectedIndex = selected;
                 }
             }
-            string undoFormat = Avalonia.Application.Current?.FindResource("MsgUndo")?.ToString() ?? "Undid {0}.";
-            lblStatus.Text = string.Format(undoFormat, action.Description);
+            lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgUndo, "Undid {0}.", action.Description);
         }
     }
 
@@ -548,8 +539,7 @@ internal sealed partial class MainWindow
                     slides.SelectedIndex = selected;
                 }
             }
-            string redoFormat = Avalonia.Application.Current?.FindResource("MsgRedo")?.ToString() ?? "Redid {0}.";
-            lblStatus.Text = string.Format(redoFormat, action.Description);
+            lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgRedo, "Redid {0}.", action.Description);
         }
     }
 
@@ -579,10 +569,7 @@ internal sealed partial class MainWindow
         string desc = validIndices.Count == 1 ? "Rotate 90° CCW" : $"Batch Rotate CCW ({validIndices.Count} photos)";
         undoHistory.PushBatch(currentIndex, actions, desc);
 
-        string rotatingFormat = Avalonia.Application.Current?.FindResource("MsgBatchRotating")?.ToString() ?? "Rotating {0} photos...";
-        string rotatedFormat = Avalonia.Application.Current?.FindResource("MsgBatchRotated")?.ToString() ?? "{0} photos rotated.";
-
-        await ExecuteWithLoadingAsync(string.Format(rotatingFormat, validIndices.Count), async () =>
+        await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgBatchRotating, "Rotating {0} photos...", validIndices.Count), async () =>
         {
             await Task.Run(() =>
             {
@@ -614,7 +601,7 @@ internal sealed partial class MainWindow
                 }
             }
             UpdateSelectionUi();
-        }, string.Format(rotatedFormat, validIndices.Count));
+        }, LocalizationService.Format(ResourceKeys.MsgBatchRotated, "{0} photos rotated.", validIndices.Count));
     }
 
     private async void ContextMenu_RotateCw_Click(object? sender, RoutedEventArgs e)

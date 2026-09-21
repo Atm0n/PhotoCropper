@@ -111,7 +111,7 @@
 					<TextBlock Text="{DynamicResource HelpAboutTitle}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Foreground="{DynamicResource AppAccentBrush}"/>
 					<TextBlock Text="{DynamicResource HelpAboutDescription}" HorizontalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}" TextAlignment="Center"/>
 					<StackPanel Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center" Margin="0,10,0,0">
-						<TextBlock x:Name="txtAppVersion" Text="{DynamicResource HelpVersion}" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="12"/>
+						<TextBlock x:Name="txtAppVersion" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="12"/>
 						<TextBlock Text="{DynamicResource HelpAuthor}" Foreground="{DynamicResource AppTextMutedBrush}" FontSize="12" FontWeight="Bold"/>
 					</StackPanel>
 

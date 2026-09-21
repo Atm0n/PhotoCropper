@@ -14,7 +14,7 @@ public static class UpdateCheckService
     {
         var assembly = Assembly.GetEntryAssembly() ?? typeof(UpdateCheckService).Assembly;
         var ver = assembly.GetName().Version;
-        return ver != null ? new Version(ver.Major, ver.Minor, Math.Max(0, ver.Build)) : new Version(2, 4, 0);
+        return ver != null ? new Version(ver.Major, ver.Minor, Math.Max(0, ver.Build)) : new Version(0, 0, 0);
     }
 
     public static bool TryParseTagVersion(string? tag, out Version? version)

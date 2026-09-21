@@ -18,16 +18,16 @@ public class PhotoCropperEngine : IDisposable
     public string OriginalFilePath { get; }
 
     // Configurable Detection Parameters
-    public double BackgroundTolerance { get; set; } = 30;
-    public double MinAreaFactor { get; set; } = 0.01; // 1% of scan
-    public double MaxAreaFactor { get; set; } = 0.90; // 90% of scan
-    public double CannyLowThreshold { get; set; } = 20;
-    public double CannyHighThreshold { get; set; } = 50;
+    public double BackgroundTolerance { get; set; } = Common.AppConstants.DefaultBackgroundTolerance;
+    public double MinAreaFactor { get; set; } = Common.AppConstants.DefaultMinAreaFactor;
+    public double MaxAreaFactor { get; set; } = Common.AppConstants.DefaultMaxAreaFactor;
+    public double CannyLowThreshold { get; set; } = Common.AppConstants.DefaultCannyLow;
+    public double CannyHighThreshold { get; set; } = Common.AppConstants.DefaultCannyHigh;
     public MCvScalar? CustomBackgroundColorHsv { get; set; }
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; } = true;
     public bool RemoveDustAndScratches { get; set; } = true;
-    public string BoundingBoxColor { get; set; } = "Red";
+    public string BoundingBoxColor { get; set; } = Common.AppConstants.DefaultBoundingBoxColor;
 
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
@@ -544,7 +544,7 @@ public class PhotoCropperEngine : IDisposable
 
     public void SaveDetectedPhotos(
         string? customOutputFolder = null,
-        string format = "JPEG",
+        string format = Common.AppConstants.DefaultImageFormat,
         int jpegQuality = 100,
         string fileNamePattern = FileNameTemplateHelper.DefaultPattern,
         PhotoExportMetadata? metadata = null,

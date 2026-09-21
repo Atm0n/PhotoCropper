@@ -39,7 +39,7 @@ internal sealed partial class MainWindow
             {
                 var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
                 {
-                    Title = Avalonia.Application.Current?.FindResource("BtnWorkDir")?.ToString() ?? "Select Work Directory for Raw Scans",
+                    Title = LocalizationService.GetString(ResourceKeys.BtnWorkDir, "Select Work Directory for Raw Scans"),
                     AllowMultiple = false
                 });
 
@@ -114,9 +114,7 @@ internal sealed partial class MainWindow
             ColorMode = ScannerColorMode.Color
         };
 
-        string scanningMsg = string.Format(
-            Avalonia.Application.Current?.FindResource("MsgScanning")?.ToString() ?? "Scanning image from {0}...",
-            selectedDevice.Name);
+        string scanningMsg = LocalizationService.Format(ResourceKeys.MsgScanning, "Scanning image from {0}...", selectedDevice.Name);
 
         var stagedPaths = new List<string>();
         try
@@ -154,17 +152,18 @@ internal sealed partial class MainWindow
         catch (OperationCanceledException)
         {
             ResetScannerService();
-            string cancelledMsg = Avalonia.Application.Current?.FindResource("MsgScanCancelled")?.ToString() ?? "Scanning was cancelled or timed out.";
+            string cancelledMsg = LocalizationService.GetString(ResourceKeys.MsgScanCancelled, "Scanning was cancelled or timed out.");
             lblStatus.Text = cancelledMsg;
             return;
         }
         catch (ScannerNotFoundException ex)
         {
             ResetScannerService();
-            string notFoundTitle = Avalonia.Application.Current?.FindResource("TitleScannerNotFound")?.ToString() ?? "Scanner Not Found";
-            string notFoundTemplate = Avalonia.Application.Current?.FindResource("MsgScannerNotFoundDetails")?.ToString() ??
-                "{0}\n\n• Verify your scanner is powered on and connected.\n• Make sure no other application is using the scanner.\n• Reconnect the scanner and click 'Refresh Scanners'.";
-            string notFoundDetails = string.Format(notFoundTemplate, ex.Message);
+            string notFoundTitle = LocalizationService.GetString(ResourceKeys.TitleScannerNotFound, "Scanner Not Found");
+            string notFoundDetails = LocalizationService.Format(
+                ResourceKeys.MsgScannerNotFoundDetails,
+                "{0}\n\n• Verify your scanner is powered on and connected.\n• Make sure no other application is using the scanner.\n• Reconnect the scanner and click 'Refresh Scanners'.",
+                ex.Message);
 
             lblStatus.Text = ex.Message;
             ShowScannerError(notFoundTitle, notFoundDetails);
@@ -173,13 +172,15 @@ internal sealed partial class MainWindow
         catch (Exception ex)
         {
             ResetScannerService();
-            string failedTemplate = Avalonia.Application.Current?.FindResource("MsgScanFailed")?.ToString() ?? "Scanning failed: {0}";
-            string errorTitle = Avalonia.Application.Current?.FindResource("TitleScannerError")?.ToString() ?? "Scanner Communication Error";
-            string errorTemplate = Avalonia.Application.Current?.FindResource("MsgScannerErrorDetails")?.ToString() ??
-                "Failed to communicate with scanner '{0}':\n\n{1}\n\nTroubleshooting:\n• Check scanner power and USB/network cables.\n• Verify scanner driver status in your operating system.\n• Restart the scanner and click 'Refresh Scanners'.";
-            string errorDetails = string.Format(errorTemplate, selectedDevice.Name, ex.Message);
+            string failedTemplate = LocalizationService.Format(ResourceKeys.MsgScanFailed, "Scanning failed: {0}", ex.Message);
+            string errorTitle = LocalizationService.GetString(ResourceKeys.TitleScannerError, "Scanner Communication Error");
+            string errorDetails = LocalizationService.Format(
+                ResourceKeys.MsgScannerErrorDetails,
+                "Failed to communicate with scanner '{0}':\n\n{1}\n\nTroubleshooting:\n• Check scanner power and USB/network cables.\n• Verify scanner driver status in your operating system.\n• Restart the scanner and click 'Refresh Scanners'.",
+                selectedDevice.Name,
+                ex.Message);
 
-            lblStatus.Text = string.Format(failedTemplate, ex.Message);
+            lblStatus.Text = failedTemplate;
             ShowScannerError(errorTitle, errorDetails);
             return;
         }
@@ -199,7 +200,7 @@ internal sealed partial class MainWindow
         }
         else
         {
-            lblStatus.Text = Avalonia.Application.Current?.FindResource("MsgNoScanData")?.ToString() ?? "No image was returned by the scanner.";
+            lblStatus.Text = LocalizationService.GetString(ResourceKeys.MsgNoScanData, "No image was returned by the scanner.");
         }
     }
 

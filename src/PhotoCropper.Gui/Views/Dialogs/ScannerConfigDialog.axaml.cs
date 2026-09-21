@@ -96,8 +96,8 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
             if (btnSaveAndScan != null) btnSaveAndScan.IsEnabled = false;
             if (txtScannerStatus != null)
             {
-                txtScannerStatus.Text = Avalonia.Application.Current?.FindResource("TxtScanningSearching")?.ToString() ?? "Searching for connected scanners...";
-                txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppAccentBrush") as IBrush) ?? Brush.Parse("#3399ff");
+                txtScannerStatus.Text = LocalizationService.GetString(ResourceKeys.TxtScanningSearching, "Searching for connected scanners...");
+                txtScannerStatus.Foreground = LocalizationService.TryGetResource<IBrush>(ResourceKeys.AppAccentBrush, out var accentBrush) && accentBrush != null ? accentBrush : Brush.Parse("#3399ff");
             }
         });
 
@@ -170,8 +170,8 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
 
         if (_availableScanners.Count == 0)
         {
-            txtScannerStatus.Text = Avalonia.Application.Current?.FindResource("MsgNoScannerFound")?.ToString() ?? "No scanner detected. Click 🔄 to refresh.";
-            txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppDangerTextBrush") as IBrush) ?? Brush.Parse("#ffaa44");
+            txtScannerStatus.Text = LocalizationService.GetString(ResourceKeys.MsgNoScannerFound, "No scanner detected. Click 🔄 to refresh.");
+            txtScannerStatus.Foreground = LocalizationService.TryGetResource<IBrush>(ResourceKeys.AppDangerTextBrush, out var dangerBrush) && dangerBrush != null ? dangerBrush : Brush.Parse("#ffaa44");
             if (cbScanner != null)
             {
                 cbScanner.SelectedIndex = -1;
@@ -180,7 +180,7 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
         else
         {
             txtScannerStatus.Text = $"{_availableScanners.Count} scanner(s) found.";
-            txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppSuccessTextBrush") as IBrush) ?? Brush.Parse("#44cc66");
+            txtScannerStatus.Foreground = LocalizationService.TryGetResource<IBrush>(ResourceKeys.AppSuccessTextBrush, out var successBrush) && successBrush != null ? successBrush : Brush.Parse("#44cc66");
         }
 
         if (btnSaveAndScan != null)

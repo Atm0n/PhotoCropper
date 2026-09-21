@@ -145,8 +145,8 @@ internal sealed partial class MainWindow
 
         if (cropRect.Width <= 10 || cropRect.Height <= 10) return;
 
-        string extractingMsg = Avalonia.Application.Current?.FindResource("MsgExtractingCrop")?.ToString() ?? "Extracting manual crop...";
-        string addedMsg = Avalonia.Application.Current?.FindResource("MsgManualCropAdded")?.ToString() ?? "Manual crop added.";
+        string extractingMsg = LocalizationService.GetString(ResourceKeys.MsgExtractingCrop, "Extracting manual crop...");
+        string addedMsg = LocalizationService.GetString(ResourceKeys.MsgManualCropAdded, "Manual crop added.");
 
         await ExecuteWithLoadingAsync(extractingMsg, async () =>
         {
@@ -193,7 +193,7 @@ internal sealed partial class MainWindow
 
         isRefining = true;
         pnlRefineOverlay.IsVisible = true;
-        lblStatus.Text = Avalonia.Application.Current?.FindResource("MsgRefineModeHelp")?.ToString() ?? "Refinement mode active.";
+        lblStatus.Text = LocalizationService.GetString(ResourceKeys.MsgRefineModeHelp, "Refinement mode active.");
 
         UpdateRefinePreview();
     }
@@ -281,8 +281,8 @@ internal sealed partial class MainWindow
         if (!isRefining) return;
         int photoIndex = slides.SelectedIndex;
 
-        string applyingMsg = Avalonia.Application.Current?.FindResource("MsgApplyingRefine")?.ToString() ?? "Applying refinement...";
-        string successMsg = Avalonia.Application.Current?.FindResource("MsgRefineSuccess")?.ToString() ?? "Crop refined successfully.";
+        string applyingMsg = LocalizationService.GetString(ResourceKeys.MsgApplyingRefine, "Applying refinement...");
+        string successMsg = LocalizationService.GetString(ResourceKeys.MsgRefineSuccess, "Crop refined successfully.");
 
         var currentEngine = ScanSessions[currentIndex].Activate();
         var beforeMat = currentEngine.DetectedPhotos[photoIndex].Clone();
@@ -303,7 +303,7 @@ internal sealed partial class MainWindow
     {
         if (!isRefining) return;
         CloseRefineMode();
-        lblStatus.Text = Avalonia.Application.Current?.FindResource("MsgRefineCancelled")?.ToString() ?? "Refinement cancelled.";
+        lblStatus.Text = LocalizationService.GetString(ResourceKeys.MsgRefineCancelled, "Refinement cancelled.");
     }
 
     private void CloseRefineMode()
@@ -338,15 +338,14 @@ internal sealed partial class MainWindow
             var photo = ScanSessions[currentIndex].Activate();
             photo.ApplyOptions(defaultOptions);
 
-            string reprocessingMsg = Avalonia.Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
+            string reprocessingMsg = LocalizationService.GetString(ResourceKeys.MsgReprocessing, "Reprocessing...");
             await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
             {
                 await Task.Run(() => photo.DetectPhotos());
                 SetMainImage(photo.OriginalWithDetected);
                 LoadCroppedPhotosToSlider();
                 UpdatePhotoCounterLabel();
-                string msgFormat = Avalonia.Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
-                lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
+                lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgDetectionComplete, "Detection complete. Found {0} photos.", photo.DetectedPhotos.Count);
             });
         }
     }
@@ -370,8 +369,8 @@ internal sealed partial class MainWindow
         pnlOriginal.Cursor = Cursor.Default;
         tglColorPicker.IsChecked = false;
 
-        string samplingMsg = Avalonia.Application.Current?.FindResource("MsgClickToSample")?.ToString() ?? "Sampling background color...";
-        string completeMsg = Avalonia.Application.Current?.FindResource("MsgBackgroundSampled")?.ToString() ?? "Custom background color applied.";
+        string samplingMsg = LocalizationService.GetString(ResourceKeys.MsgClickToSample, "Sampling background color...");
+        string completeMsg = LocalizationService.GetString(ResourceKeys.MsgBackgroundSampled, "Custom background color applied.");
 
         await ExecuteWithLoadingAsync(samplingMsg, async () =>
         {
@@ -395,8 +394,8 @@ internal sealed partial class MainWindow
         ScanSessions[currentIndex].IsModified = true;
         btnResetBackground.IsEnabled = false;
 
-        string reprocessingMsg = Avalonia.Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing with automatic background...";
-        string completeMsg = Avalonia.Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete.";
+        string reprocessingMsg = LocalizationService.GetString(ResourceKeys.MsgReprocessing, "Reprocessing with automatic background...");
+        string completeMsg = LocalizationService.GetString(ResourceKeys.MsgDetectionComplete, "Detection complete.");
 
         await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
         {

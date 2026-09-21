@@ -65,7 +65,7 @@ internal sealed partial class MainWindow
 
         var fileResult = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = Avalonia.Application.Current?.FindResource("BtnOpenScans")?.ToString() ?? "Select Files",
+            Title = LocalizationService.GetString(ResourceKeys.BtnOpenScans, "Select Files"),
             FileTypeFilter = [FilePickerFileTypes.ImageAll],
             AllowMultiple = true
         });
@@ -82,7 +82,7 @@ internal sealed partial class MainWindow
         if (ScanSessions.Count == 0 || isLoading) return;
 
         string fileName = Path.GetFileName(ScanSessions[currentIndex].FilePath);
-        string processingMsg = Avalonia.Application.Current?.FindResource("ProcessingScan")?.ToString() ?? "Processing...";
+        string processingMsg = LocalizationService.GetString(ResourceKeys.ProcessingScan, "Processing...");
 
         await ExecuteWithLoadingAsync($"{processingMsg} {fileName}", async () =>
         {
@@ -92,8 +92,7 @@ internal sealed partial class MainWindow
 
             SetMainImage(currentPhoto.OriginalWithDetected);
 
-            string scanCounterFormat = Avalonia.Application.Current?.FindResource("ScanCounter")?.ToString() ?? "Scan {0} of {1}";
-            txtFileCounter.Text = string.Format(scanCounterFormat, currentIndex + 1, ScanSessions.Count);
+            txtFileCounter.Text = LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", currentIndex + 1, ScanSessions.Count);
             lblStatus.Text = fileName;
 
             LoadCroppedPhotosToSlider();
@@ -166,14 +165,13 @@ internal sealed partial class MainWindow
             }
         }
 
-        string msgTemplate = Avalonia.Application.Current?.FindResource("MsgScanDeleted")?.ToString() ?? "Scan '{0}' deleted.";
-        string statusMsg = string.Format(msgTemplate, fileName);
+        string statusMsg = LocalizationService.Format(ResourceKeys.MsgScanDeleted, "Scan '{0}' deleted.", fileName);
 
         if (!_sessionManager.HasScans)
         {
             SetMainImage(null);
             ClearGalleryBitmaps();
-            txtFileCounter.Text = Avalonia.Application.Current?.FindResource("TxtNoFiles")?.ToString() ?? "No files loaded";
+            txtFileCounter.Text = LocalizationService.GetString(ResourceKeys.TxtNoFiles, "No files loaded");
             lblPhotoInfo.Text = "";
             lblStatus.Text = statusMsg;
             UpdateEmptyStateVisibility();
@@ -211,7 +209,7 @@ internal sealed partial class MainWindow
         if (isLoading || ScanSessions.Count == 0) return;
 
         var photo = ScanSessions[currentIndex].Activate();
-        string tuningMsg = Avalonia.Application.Current?.FindResource("MsgAutoTuning")?.ToString() ?? "Auto-tuning detection parameters...";
+        string tuningMsg = LocalizationService.GetString(ResourceKeys.MsgAutoTuning, "Auto-tuning detection parameters...");
 
         await ExecuteWithLoadingAsync(tuningMsg, async () =>
         {
@@ -224,12 +222,16 @@ internal sealed partial class MainWindow
 
             if (result.Improved || result.PhotoCount > 0)
             {
-                string successFormat = Avalonia.Application.Current?.FindResource("MsgAutoTuneSuccess")?.ToString() ?? "Auto-tuned: found {0} photos (Sensitivity: {1:0}%, Edge: {2:0}).";
-                lblStatus.Text = string.Format(successFormat, result.PhotoCount, DetectionOptions.ToleranceToSensitivity(result.BestOptions.BackgroundTolerance), result.BestOptions.CannyLowThreshold);
+                lblStatus.Text = LocalizationService.Format(
+                    ResourceKeys.MsgAutoTuneSuccess,
+                    "Auto-tuned: found {0} photos (Sensitivity: {1:0}%, Edge: {2:0}).",
+                    result.PhotoCount,
+                    DetectionOptions.ToleranceToSensitivity(result.BestOptions.BackgroundTolerance),
+                    result.BestOptions.CannyLowThreshold);
             }
             else
             {
-                lblStatus.Text = Avalonia.Application.Current?.FindResource("MsgAutoTuneFailed")?.ToString() ?? "Auto-tune did not find additional photos.";
+                lblStatus.Text = LocalizationService.GetString(ResourceKeys.MsgAutoTuneFailed, "Auto-tune did not find additional photos.");
             }
         });
     }
@@ -273,14 +275,13 @@ internal sealed partial class MainWindow
         var photo = session.Activate();
         photo.ApplyOptions(GetDetectionOptionsFromUi());
 
-        await ExecuteWithLoadingAsync(Avalonia.Application.Current?.FindResource("MsgDetectingPhotos")?.ToString() ?? "Detecting photos...", async () =>
+        await ExecuteWithLoadingAsync(LocalizationService.GetString(ResourceKeys.MsgDetectingPhotos, "Detecting photos..."), async () =>
         {
             await Task.Run(() => photo.DetectPhotos());
             SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();
-            string msgFormat = Avalonia.Application.Current?.FindResource("MsgDetectionComplete")?.ToString() ?? "Detection complete. Found {0} photos.";
-            lblStatus.Text = string.Format(msgFormat, photo.DetectedPhotos.Count);
+            lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgDetectionComplete, "Detection complete. Found {0} photos.", photo.DetectedPhotos.Count);
         });
     }
 

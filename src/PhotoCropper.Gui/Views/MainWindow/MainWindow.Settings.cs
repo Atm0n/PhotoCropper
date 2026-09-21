@@ -90,7 +90,7 @@ internal sealed partial class MainWindow
 
             foreach (var (key, value) in themeItems)
             {
-                string headerText = Avalonia.Application.Current?.FindResource(key)?.ToString() ?? value;
+                string headerText = LocalizationService.GetString(key, value);
                 var item = new MenuItem
                 {
                     Header = string.Equals(currentTheme, value, StringComparison.OrdinalIgnoreCase) ? $"✓ {headerText}" : $"   {headerText}",
@@ -145,7 +145,7 @@ internal sealed partial class MainWindow
 
             foreach (var (key, value, hex) in colorItems)
             {
-                string headerText = Avalonia.Application.Current?.FindResource(key)?.ToString() ?? value;
+                string headerText = LocalizationService.GetString(key, value);
                 bool isSelected = string.Equals(currentColor, value, StringComparison.OrdinalIgnoreCase);
                 var item = new MenuItem
                 {
@@ -171,7 +171,7 @@ internal sealed partial class MainWindow
                 ? parsedCustom
                 : Color.Parse("#00D4FF");
 
-            string customBaseText = Avalonia.Application.Current?.FindResource("ColorCustom")?.ToString() ?? "Custom Color...";
+            string customBaseText = LocalizationService.GetString(ResourceKeys.ColorCustom, "Custom Color...");
             string customText = isCustomSelected ? $"{customBaseText} ({currentColor})" : customBaseText;
 
             var customItem = new MenuItem

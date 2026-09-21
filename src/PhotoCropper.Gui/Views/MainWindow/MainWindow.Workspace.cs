@@ -42,8 +42,7 @@ internal sealed partial class MainWindow
             if (rawPaths.Count > 0)
             {
                 await LoadScansFromPathsAsync(rawPaths);
-                string resumedTemplate = Avalonia.Application.Current?.FindResource("MsgScanSuccess")?.ToString() ?? "Workspace: loaded {0} scans.";
-                lblStatus.Text = string.Format(resumedTemplate, rawPaths.Count);
+                lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgScanSuccess, "Workspace: loaded {0} scans.", rawPaths.Count);
             }
         }
     }
@@ -59,8 +58,11 @@ internal sealed partial class MainWindow
                 projectName = cleanDir;
             }
 
-            string tipTemplate = Avalonia.Application.Current?.FindResource("TipActiveProject")?.ToString() ?? "Active Project: {0}\nPath: {1}\n\nClick to switch project or work directory.";
-            string tooltip = string.Format(tipTemplate, projectName, cleanDir);
+            string tooltip = LocalizationService.Format(
+                ResourceKeys.TipActiveProject,
+                "Active Project: {0}\nPath: {1}\n\nClick to switch project or work directory.",
+                projectName,
+                cleanDir);
 
             if (txtWorkDirBtn != null)
             {
@@ -68,7 +70,7 @@ internal sealed partial class MainWindow
             }
             if (btnWorkDir != null)
             {
-                if (Avalonia.Application.Current?.FindResource("AppButtonActionBrush") is IBrush brush)
+                if (LocalizationService.TryGetResource<IBrush>(ResourceKeys.AppButtonActionBrush, out var brush) && brush != null)
                 {
                     btnWorkDir.Background = brush;
                 }
@@ -84,9 +86,9 @@ internal sealed partial class MainWindow
         }
         else
         {
-            string defaultBtn = Avalonia.Application.Current?.FindResource("BtnWorkDir")?.ToString() ?? "Folder";
-            string noProject = Avalonia.Application.Current?.FindResource("LblNoProject")?.ToString() ?? "No Project";
-            string defaultTip = Avalonia.Application.Current?.FindResource("TipWorkDir")?.ToString() ?? "Select a work directory for automatic raw scan staging and session recovery";
+            string defaultBtn = LocalizationService.GetString(ResourceKeys.BtnWorkDir, "Folder");
+            string noProject = LocalizationService.GetString(ResourceKeys.LblNoProject, "No Project");
+            string defaultTip = LocalizationService.GetString(ResourceKeys.TipWorkDir, "Select a work directory for automatic raw scan staging and session recovery");
 
             if (txtWorkDirBtn != null)
             {
@@ -94,7 +96,7 @@ internal sealed partial class MainWindow
             }
             if (btnWorkDir != null)
             {
-                if (Avalonia.Application.Current?.FindResource("AppSubtleCardBrush") is IBrush brush)
+                if (LocalizationService.TryGetResource<IBrush>(ResourceKeys.AppSubtleCardBrush, out var brush) && brush != null)
                 {
                     btnWorkDir.Background = brush;
                 }
@@ -123,7 +125,7 @@ internal sealed partial class MainWindow
         ClearGalleryBitmaps();
         if (txtFileCounter != null)
         {
-            txtFileCounter.Text = Avalonia.Application.Current?.FindResource("TxtNoFiles")?.ToString() ?? "No files loaded";
+            txtFileCounter.Text = LocalizationService.GetString(ResourceKeys.TxtNoFiles, "No files loaded");
         }
         if (lblPhotoInfo != null) lblPhotoInfo.Text = "";
         UpdateSelectionUi();
@@ -157,9 +159,8 @@ internal sealed partial class MainWindow
         else
         {
             _workspaceSession = new WorkspaceSessionState();
-            string newProjectReady = Avalonia.Application.Current?.FindResource("MsgNewProjectReady")?.ToString() ?? "Project '{0}' ready. Click Scan or Open Files to begin.";
             string cleanName = Path.GetFileName(Path.TrimEndingDirectorySeparator(newWorkDir));
-            lblStatus.Text = string.Format(newProjectReady, cleanName);
+            lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgNewProjectReady, "Project '{0}' ready. Click Scan or Open Files to begin.", cleanName);
         }
     }
 
@@ -170,7 +171,7 @@ internal sealed partial class MainWindow
 
         var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = Avalonia.Application.Current?.FindResource("BtnNewProject")?.ToString() ?? "Select Folder for New Batch",
+            Title = LocalizationService.GetString(ResourceKeys.BtnNewProject, "Select Folder for New Batch"),
             AllowMultiple = false
         });
 
@@ -188,7 +189,7 @@ internal sealed partial class MainWindow
 
         var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = Avalonia.Application.Current?.FindResource("BtnWorkDir")?.ToString() ?? "Select Work Directory",
+            Title = LocalizationService.GetString(ResourceKeys.BtnWorkDir, "Select Work Directory"),
             AllowMultiple = false
         });
 

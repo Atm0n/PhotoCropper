@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
@@ -37,9 +38,10 @@ internal sealed partial class MainWindow
         var pendingSessions = _sessionManager.GetPendingExportSessions();
         if (pendingSessions.Count == 0)
         {
-            string alreadySavedMsg = Avalonia.Application.Current?.FindResource("MsgAllScansAlreadySaved")?.ToString()
-                ?? "All {0} scans are already saved to 'Cropped'. No changes to export.";
-            lblStatus.Text = string.Format(alreadySavedMsg, ScanSessions.Count);
+            lblStatus.Text = LocalizationService.Format(
+                ResourceKeys.MsgAllScansAlreadySaved,
+                "All {0} scans are already saved to 'Cropped'. No changes to export.",
+                ScanSessions.Count);
 
             if (closeAfterSave)
             {
@@ -54,9 +56,6 @@ internal sealed partial class MainWindow
         int completedScans = 0;
         int totalSavedPhotos = 0;
 
-        string savingMsg = Avalonia.Application.Current?.FindResource("MsgSavingProgress")?.ToString() ?? "Exporting scan {0} of {1} ({2} photos saved)...";
-        string msgFormat = Avalonia.Application.Current?.FindResource("MsgSaved")?.ToString() ?? "Successfully saved {0} photos to 'cropped' folders.";
-
         string targetOutputFolder = ExportPathResolver.ResolveOutputDirectory(
             pendingSessions[0].FilePath,
             settings.CustomOutputDirectory,
@@ -64,7 +63,7 @@ internal sealed partial class MainWindow
 
         int maxConcurrency = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
 
-        await ExecuteWithLoadingAsync(string.Format(savingMsg, 1, totalScans, 0), async () =>
+        await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgSavingProgress, "Exporting scan {0} of {1} ({2} photos saved)...", 1, totalScans, 0), async () =>
         {
             await Task.Run(() =>
             {
@@ -73,8 +72,8 @@ internal sealed partial class MainWindow
                 {
                     try
                     {
-                        bool wasActive = session.IsActive;
                         var engine = session.Activate();
+                        bool wasActive = session.IsActive;
                         try
                         {
                             string scanTargetFolder = ExportPathResolver.ResolveOutputDirectory(
@@ -133,7 +132,7 @@ internal sealed partial class MainWindow
 
                     Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                     {
-                        lblStatus.Text = string.Format(savingMsg, done, totalScans, totalSavedPhotos);
+                        lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgSavingProgress, "Exporting scan {0} of {1} ({2} photos saved)...", done, totalScans, totalSavedPhotos);
                     });
                 });
 
@@ -147,7 +146,7 @@ internal sealed partial class MainWindow
             {
                 _notificationService.NotifyExportCompleted(totalSavedPhotos, targetOutputFolder);
             }
-        }, string.Format(msgFormat, totalSavedPhotos));
+        }, LocalizationService.Format(ResourceKeys.MsgSaved, "Successfully saved {0} photos to 'cropped' folders.", totalSavedPhotos));
 
         if (closeAfterSave)
         {
@@ -162,14 +161,14 @@ internal sealed partial class MainWindow
     {
         if (isLoading || ScanSessions.Count == 0 || photoIndex < 0) return;
 
-        var engine = ScanSessions[currentIndex].Activate();
-        if (photoIndex >= engine.DetectedPhotos.Count) return;
-
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.StorageProvider == null) return;
 
+        var engine = ScanSessions[currentIndex].Activate();
+        if (photoIndex >= engine.DetectedPhotos.Count) return;
+
         var settings = SettingsManager.Instance.Settings;
-        string defaultExt = string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
+        string defaultExt = string.Equals(settings.PreferredFormat, AppConstants.FormatPng, StringComparison.OrdinalIgnoreCase) ? AppConstants.ExtensionPng : AppConstants.ExtensionJpg;
         string baseName = Path.GetFileNameWithoutExtension(ScanSessions[currentIndex].FilePath);
 
         var scanMetadata = settings.ApplyYearToAllScans
@@ -186,7 +185,7 @@ internal sealed partial class MainWindow
 
         var fileResult = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = Avalonia.Application.Current?.FindResource("MenuExportSingle")?.ToString() ?? "Export Single Photo",
+            Title = LocalizationService.GetString(ResourceKeys.MenuExportSingle, "Export Single Photo"),
             SuggestedFileName = suggestedName,
             DefaultExtension = defaultExt
         });
@@ -197,10 +196,10 @@ internal sealed partial class MainWindow
             var photoMat = engine.DetectedPhotos[photoIndex];
             var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(ScanSessions[currentIndex].FilePath);
 
-            if (targetPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+            if (targetPath.EndsWith(AppConstants.ExtensionPng, StringComparison.OrdinalIgnoreCase))
             {
                 using var buf = new Emgu.CV.Util.VectorOfByte();
-                Emgu.CV.CvInvoke.Imencode(".png", photoMat, buf);
+                Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionPng, photoMat, buf);
                 await File.WriteAllBytesAsync(targetPath, buf.ToArray());
                 PhotoExporter.EmbedPngDpi(targetPath, xDpi, yDpi);
                 if (scanMetadata.HasMetadata)
@@ -215,7 +214,7 @@ internal sealed partial class MainWindow
                     new KeyValuePair<Emgu.CV.CvEnum.ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegOptimize, 1)
                 };
                 using var buf = new Emgu.CV.Util.VectorOfByte();
-                Emgu.CV.CvInvoke.Imencode(".jpg", photoMat, buf, parameters);
+                Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionJpg, photoMat, buf, parameters);
                 await File.WriteAllBytesAsync(targetPath, buf.ToArray());
                 PhotoExporter.EmbedJpegDpi(targetPath, xDpi, yDpi);
                 if (scanMetadata.HasMetadata)

@@ -1,19 +1,20 @@
 using Emgu.CV.Structure;
+using PhotoCropper.Core.Common;
 
 namespace PhotoCropper.Core.Models;
 
 public record DetectionOptions
 {
-    public double BackgroundTolerance { get; set; } = 30;
-    public double MinAreaFactor { get; set; } = 0.01; // 1% of scan
-    public double MaxAreaFactor { get; set; } = 0.90; // 90% of scan
-    public double CannyLowThreshold { get; set; } = 20;
-    public double CannyHighThreshold { get; set; } = 50;
+    public double BackgroundTolerance { get; set; } = AppConstants.DefaultBackgroundTolerance;
+    public double MinAreaFactor { get; set; } = AppConstants.DefaultMinAreaFactor;
+    public double MaxAreaFactor { get; set; } = AppConstants.DefaultMaxAreaFactor;
+    public double CannyLowThreshold { get; set; } = AppConstants.DefaultCannyLow;
+    public double CannyHighThreshold { get; set; } = AppConstants.DefaultCannyHigh;
     public MCvScalar? CustomBackgroundColorHsv { get; set; }
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; } = true;
     public bool RemoveDustAndScratches { get; set; } = true;
-    public string BoundingBoxColor { get; set; } = "Red";
+    public string BoundingBoxColor { get; set; } = AppConstants.DefaultBoundingBoxColor;
 
     /// <summary>
     /// Converts a user-facing sensitivity percentage (0% to 100%) to internal background match tolerance.

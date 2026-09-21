@@ -171,7 +171,7 @@ internal sealed partial class ExportSettingsDialog : Window
 
         var folderResult = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = Avalonia.Application.Current?.FindResource("LblOutputDir")?.ToString() ?? "Select Export Folder",
+            Title = LocalizationService.GetString(ResourceKeys.LblOutputDir, "Select Export Folder"),
             AllowMultiple = false
         });
 
@@ -287,8 +287,7 @@ internal sealed partial class ExportSettingsDialog : Window
         }
 
         string previewFile = FileNameTemplateHelper.FormatPreview(pattern, _sampleOriginal, 1, 4, meta, ext);
-        string previewFmt = Avalonia.Application.Current?.FindResource("LblNamingPreview")?.ToString() ?? "Preview: {0}";
-        txtNamingPreview.Text = string.Format(CultureInfo.InvariantCulture, previewFmt, previewFile);
+        txtNamingPreview.Text = LocalizationService.Format(ResourceKeys.LblNamingPreview, "Preview: {0}", previewFile);
     }
 
     private void BtnCancel_Click(object? sender, RoutedEventArgs e)
