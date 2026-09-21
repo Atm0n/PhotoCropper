@@ -127,12 +127,34 @@ jobs:
             & $iscc "/DMyAppVersion=$appVersion" packaging/windows/PhotoCropper.iss
           }
 
+          # Build Linux Packages (.deb and .AppImage)
+          if ('${{ matrix.platform }}' -eq 'Linux') {
+            $rawTag = '${{ github.ref_name }}'
+            $appVersion = if ($rawTag.StartsWith('v')) { $rawTag.Substring(1) } else { $rawTag }
+            if (-not $appVersion) { $appVersion = "2.5.0" }
+
+            Write-Host "Building Linux .deb package with version $appVersion..."
+            bash packaging/linux/build-deb.sh $appVersion
+
+            Write-Host "Building Linux AppImage with version $appVersion..."
+            bash packaging/linux/build-appimage.sh $appVersion
+          }
+
       - name: Upload Windows Installer Artifact
         if: startsWith(github.ref, 'refs/tags/v') && matrix.platform == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: PhotoCropper-Windows-Setup
           path: ./publish/installer/PhotoCropper-Windows-Setup.exe
+
+      - name: Upload Linux Installer Artifacts (.deb and .AppImage)
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.platform == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhotoCropper-Linux-Packages
+          path: |
+            ./publish/installer/*.deb
+            ./publish/installer/*.AppImage
 
       - name: Upload GUI Artifact
         if: startsWith(github.ref, 'refs/tags/v')
@@ -168,6 +190,8 @@ jobs:
           files: |
             ./release-artifacts/**/*.zip
             ./release-artifacts/**/*.exe
+            ./release-artifacts/**/*.deb
+            ./release-artifacts/**/*.AppImage
           draft: false
           prerelease: false
           generate_release_notes: true

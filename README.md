@@ -233,12 +233,15 @@ dotnet run --project tests/PhotoCropper.Gui.Tests/PhotoCropper.Gui.Tests.csproj
 
 Pre-compiled, self-contained single-file binaries for **Windows** and **Linux** are automatically built and packaged on GitHub for every release:
 
-- **GUI Application**:
-  - `PhotoCropper-GUI-Windows.zip` (standalone desktop app for Windows x64)
-  - `PhotoCropper-GUI-Linux.zip` (standalone desktop app for Ubuntu/Linux x64)
-- **CLI Batch Extractor**:
-  - `PhotoCropper-CLI-Windows.zip` (unattended batch processor for Windows x64)
-  - `PhotoCropper-CLI-Linux.zip` (unattended batch processor for Linux x64)
+- **Windows**:
+  - `PhotoCropper-Windows-Setup.exe` (Windows Installer with Start Menu / Desktop shortcuts & optional CLI PATH integration)
+  - `PhotoCropper-GUI-Windows.zip` (standalone portable desktop app for Windows x64)
+  - `PhotoCropper-CLI-Windows.zip` (standalone portable batch processor for Windows x64)
+- **Linux**:
+  - `PhotoCropper-<version>-x86_64.AppImage` (universal standalone executable for modern Linux distributions)
+  - `PhotoCropper-<version>-linux-x64.deb` (Debian/Ubuntu package with desktop menu integration & system PATH binaries)
+  - `PhotoCropper-GUI-Linux.zip` (standalone portable desktop app for Ubuntu/Linux x64)
+  - `PhotoCropper-CLI-Linux.zip` (standalone portable batch processor for Linux x64)
 
 No .NET runtime installation is required on the target systems.
 
