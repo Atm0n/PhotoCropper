@@ -107,26 +107,7 @@ public static class ExifMetadataWriter
 
         foreach (var entry in ifd0Entries)
         {
-            writer.Write(entry.Tag);
-            writer.Write(entry.Type);
-            writer.Write(entry.Count);
-
-            if (entry.ValueBytes != null && entry.ValueBytes.Length <= 4)
-            {
-                byte[] padded = new byte[4];
-                Buffer.BlockCopy(entry.ValueBytes, 0, padded, 0, entry.ValueBytes.Length);
-                writer.Write(padded);
-            }
-            else if (entry.ValueBytes != null)
-            {
-                uint valOffset = (uint)(dataStartOffset + dataHeap.Position);
-                writer.Write(valOffset);
-                dataHeap.Write(entry.ValueBytes, 0, entry.ValueBytes.Length);
-            }
-            else
-            {
-                writer.Write((uint)0);
-            }
+            WriteIFD(writer, dataStartOffset, dataHeap, entry);
         }
 
         if (hasSubIfd)
@@ -147,26 +128,7 @@ public static class ExifMetadataWriter
             writer.Write((ushort)subIfdEntries.Count);
             foreach (var entry in subIfdEntries)
             {
-                writer.Write(entry.Tag);
-                writer.Write(entry.Type);
-                writer.Write(entry.Count);
-
-                if (entry.ValueBytes != null && entry.ValueBytes.Length <= 4)
-                {
-                    byte[] padded = new byte[4];
-                    Buffer.BlockCopy(entry.ValueBytes, 0, padded, 0, entry.ValueBytes.Length);
-                    writer.Write(padded);
-                }
-                else if (entry.ValueBytes != null)
-                {
-                    uint valOffset = (uint)(dataStartOffset + dataHeap.Position);
-                    writer.Write(valOffset);
-                    dataHeap.Write(entry.ValueBytes, 0, entry.ValueBytes.Length);
-                }
-                else
-                {
-                    writer.Write((uint)0);
-                }
+                WriteIFD(writer, dataStartOffset, dataHeap, entry);
             }
 
             // Sub-IFD Next IFD pointer
@@ -185,6 +147,30 @@ public static class ExifMetadataWriter
         writer.Write((byte)(totalApp1Length & 0xFF));
 
         return ms.ToArray();
+    }
+
+    private static void WriteIFD(BinaryWriter writer, long dataStartOffset, MemoryStream dataHeap, (ushort Tag, ushort Type, uint Count, byte[]? ValueBytes) entry)
+    {
+        writer.Write(entry.Tag);
+        writer.Write(entry.Type);
+        writer.Write(entry.Count);
+
+        if (entry.ValueBytes != null && entry.ValueBytes.Length <= 4)
+        {
+            byte[] padded = new byte[4];
+            Buffer.BlockCopy(entry.ValueBytes, 0, padded, 0, entry.ValueBytes.Length);
+            writer.Write(padded);
+        }
+        else if (entry.ValueBytes != null)
+        {
+            uint valOffset = (uint)(dataStartOffset + dataHeap.Position);
+            writer.Write(valOffset);
+            dataHeap.Write(entry.ValueBytes, 0, entry.ValueBytes.Length);
+        }
+        else
+        {
+            writer.Write((uint)0);
+        }
     }
 
     public static byte[] InjectJpegMetadata(ReadOnlySpan<byte> jpegBytes, PhotoExportMetadata metadata)
