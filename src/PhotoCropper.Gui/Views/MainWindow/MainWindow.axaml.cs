@@ -350,7 +350,7 @@ internal sealed partial class MainWindow : Window
             {
                 case Key.Enter:
                 case Key.A:
-                    AcceptRefine();
+                    await AcceptRefineAsync();
                     e.Handled = true;
                     break;
                 case Key.Back:

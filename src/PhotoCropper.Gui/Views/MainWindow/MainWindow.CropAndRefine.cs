@@ -273,10 +273,10 @@ internal sealed partial class MainWindow
         return new Rect(x, y, w, h);
     }
 
-    private void BtnAcceptRefine_Click(object? sender, RoutedEventArgs e) => AcceptRefine();
+    private async void BtnAcceptRefine_Click(object? sender, RoutedEventArgs e) => await AcceptRefineAsync();
     private void BtnRejectRefine_Click(object? sender, RoutedEventArgs e) => RejectRefine();
 
-    private async void AcceptRefine()
+    private async Task AcceptRefineAsync()
     {
         if (!isRefining) return;
         int photoIndex = slides.SelectedIndex;

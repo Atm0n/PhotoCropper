@@ -188,13 +188,9 @@ jobs:
           path: ./release-artifacts
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            ./release-artifacts/**/*.zip
-            ./release-artifacts/**/*.exe
-            ./release-artifacts/**/*.deb
-            ./release-artifacts/**/*.AppImage
-          draft: false
-          prerelease: false
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s globstar nullglob
+          files=(release-artifacts/**/*.{zip,exe,deb,AppImage})
+          gh release create "$GITHUB_REF_NAME" "${files[@]}" --generate-notes
