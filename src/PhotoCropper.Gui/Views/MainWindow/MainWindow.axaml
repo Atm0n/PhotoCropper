@@ -162,7 +162,7 @@
 							<Rectangle Width="1" Height="18" Fill="{DynamicResource AppSeparatorBrush}" Margin="2,0"/>
 
 							<TextBlock Text="{DynamicResource LblDetectionSensitivity}" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-							<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="25" Width="70" 
+							<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="50" Width="70" 
 									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
 							<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" 
 									   VerticalAlignment="Center" Width="30" FontSize="11" FontWeight="Bold"/>

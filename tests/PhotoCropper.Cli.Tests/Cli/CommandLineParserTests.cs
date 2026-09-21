@@ -202,4 +202,16 @@ public sealed class CommandLineParserTests
             Console.SetOut(originalOut);
         }
     }
+
+    [Fact]
+    public void CommandLineParser_SensitivityFlag_ShouldMapToTolerance()
+    {
+        string[] args = ["--sensitivity", "75"];
+        var options = CommandLineParser.Parse(args);
+        options.Tolerance.ShouldBeInRange(9.0, 11.0);
+
+        string[] shortArgs = ["-s", "100"];
+        var shortOptions = CommandLineParser.Parse(shortArgs);
+        shortOptions.Tolerance.ShouldBe(4.0);
+    }
 }

@@ -15,6 +15,27 @@ public record DetectionOptions
     public bool RemoveDustAndScratches { get; set; } = true;
     public string BoundingBoxColor { get; set; } = "Red";
 
+    /// <summary>
+    /// Converts a user-facing sensitivity percentage (0% to 100%) to internal background match tolerance.
+    /// Higher sensitivity means higher eagerness to detect photos (tighter background subtraction, retaining light regions).
+    /// </summary>
+    public static double SensitivityToTolerance(double sensitivity)
+    {
+        double clamped = Math.Clamp(sensitivity, 0.0, 100.0);
+        double t = (100.0 - clamped) / 100.0;
+        return Math.Round(4.0 + Math.Pow(t, 1.4) * 41.0, 1);
+    }
+
+    /// <summary>
+    /// Converts internal background match tolerance to user-facing sensitivity percentage (0% to 100%).
+    /// </summary>
+    public static double ToleranceToSensitivity(double tolerance)
+    {
+        double clamped = Math.Clamp(tolerance, 4.0, 45.0);
+        double t = Math.Clamp((clamped - 4.0) / 41.0, 0.0, 1.0);
+        return Math.Round(100.0 - Math.Pow(t, 1.0 / 1.4) * 100.0);
+    }
+
     public MCvScalar GetBoundingBoxColorBgr()
     {
         if (!string.IsNullOrWhiteSpace(BoundingBoxColor) && BoundingBoxColor.StartsWith('#'))

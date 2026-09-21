@@ -10,7 +10,7 @@ internal sealed partial class MainWindow
     private void ApplySettingsToUi()
     {
         var settings = SettingsManager.Instance.Settings;
-        sldSensitivity.Value = settings.BackgroundTolerance;
+        sldSensitivity.Value = PhotoCropper.Core.Models.DetectionOptions.ToleranceToSensitivity(settings.BackgroundTolerance);
         sldZoom.Value = settings.ZoomLevel;
         sldMinArea.Value = settings.MinAreaFactor;
         sldMaxArea.Value = settings.MaxAreaFactor;

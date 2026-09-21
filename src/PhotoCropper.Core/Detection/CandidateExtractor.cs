@@ -25,7 +25,7 @@ public static class CandidateExtractor
         var result = new List<CropCandidate>();
 
         using VectorOfVectorOfPoint contours = new();
-        CvInvoke.FindContours(foregroundMap, contours, null, RetrType.Ccomp, ChainApproxMethod.ChainApproxSimple);
+        CvInvoke.FindContours(foregroundMap, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
 
         double totalArea = (double)originalWidth * originalHeight;
         double minArea = totalArea * minAreaFactor;

@@ -1,6 +1,7 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using Emgu.CV.Util;
 using System.Drawing;
 
 namespace PhotoCropper.Core.Detection;
@@ -94,6 +95,19 @@ public static class ForegroundMaskGenerator
 
         using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(closeSize, closeSize), new Point(-1, -1));
         CvInvoke.MorphologyEx(outputForeground, outputForeground, MorphOp.Close, closeKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+
+        // Fill internal holes in detected photo contours so light internal regions
+        // (white shirts, pale skies, clouds, faces) do not hollow out the photo or degrade rectangularity
+        using VectorOfVectorOfPoint externalContours = new();
+        CvInvoke.FindContours(outputForeground, externalContours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
+        double minHoleFillArea = (double)source.Width * source.Height * 0.005; // 0.5% min area
+        for (int i = 0; i < externalContours.Size; i++)
+        {
+            if (CvInvoke.ContourArea(externalContours[i]) >= minHoleFillArea)
+            {
+                CvInvoke.DrawContours(outputForeground, externalContours, i, new MCvScalar(255), -1);
+            }
+        }
     }
 
     public static void PopulateOtsuForegroundMask(
@@ -142,5 +156,16 @@ public static class ForegroundMaskGenerator
 
         using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(closeSize, closeSize), new Point(-1, -1));
         CvInvoke.MorphologyEx(outputForeground, outputForeground, MorphOp.Close, closeKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+
+        using VectorOfVectorOfPoint otsuExternalContours = new();
+        CvInvoke.FindContours(outputForeground, otsuExternalContours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
+        double minHoleFillArea = (double)source.Width * source.Height * 0.005;
+        for (int i = 0; i < otsuExternalContours.Size; i++)
+        {
+            if (CvInvoke.ContourArea(otsuExternalContours[i]) >= minHoleFillArea)
+            {
+                CvInvoke.DrawContours(outputForeground, otsuExternalContours, i, new MCvScalar(255), -1);
+            }
+        }
     }
 }

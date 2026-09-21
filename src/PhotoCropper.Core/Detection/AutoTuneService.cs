@@ -9,7 +9,7 @@ namespace PhotoCropper.Core.Detection;
 
 public static class AutoTuneService
 {
-    private static readonly double[] SweepTolerances = [3, 8, 15, 22, 32, 42];
+    private static readonly double[] SweepTolerances = [2, 5, 8, 14, 22, 32];
     private static readonly double[] SweepCannyLows = [10, 20, 30, 40];
     private static readonly double[] SweepMinAreaFactors = [0.01, 0.025, 0.05, 0.10];
 

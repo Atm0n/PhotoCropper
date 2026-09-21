@@ -33,6 +33,7 @@ public class PhotoCropperEngine : IDisposable
     public Mat OriginalWithDetected { get; set; }
     public Collection<Mat> DetectedPhotos { get; } = [];
     public Collection<Mat> RawDetectedPhotos { get; } = [];
+    public IReadOnlyList<CropCandidate> AcceptedCandidates { get; private set; } = [];
 
     public PhotoCropperEngine(string originalFilePath)
     {
@@ -389,6 +390,7 @@ public class PhotoCropperEngine : IDisposable
 
         // Composite resolution and overlap filtering
         var acceptedCandidates = CandidateResolutionFilter.FilterCandidates(candidateDetections);
+        AcceptedCandidates = acceptedCandidates;
 
         // Draw bounding boxes on OriginalWithDetected
         MCvScalar boxColor = CurrentOptions.GetBoundingBoxColorBgr();

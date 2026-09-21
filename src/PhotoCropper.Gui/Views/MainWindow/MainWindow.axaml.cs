@@ -495,7 +495,7 @@ internal sealed partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         var settings = SettingsManager.Instance.Settings;
-        settings.BackgroundTolerance = sldSensitivity.Value;
+        settings.BackgroundTolerance = PhotoCropper.Core.Models.DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
         settings.ZoomLevel = sldZoom.Value;
         settings.MinAreaFactor = sldMinArea.Value;
         settings.MaxAreaFactor = sldMaxArea.Value;

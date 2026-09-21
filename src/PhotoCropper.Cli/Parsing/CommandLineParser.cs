@@ -30,6 +30,13 @@ internal static class CommandLineParser
                     options.JpegQuality = Math.Clamp(q, 1, 100);
                 }
             }
+            else if (arg is "-s" or "--sensitivity" && i + 1 < args.Length)
+            {
+                if (double.TryParse(args[++i], CultureInfo.InvariantCulture, out double sens))
+                {
+                    options.Tolerance = PhotoCropper.Core.Models.DetectionOptions.SensitivityToTolerance(sens);
+                }
+            }
             else if (arg is "-t" or "--tolerance" && i + 1 < args.Length)
             {
                 if (double.TryParse(args[++i], CultureInfo.InvariantCulture, out double tol))
@@ -176,6 +183,7 @@ internal static class CommandLineParser
         Console.WriteLine("  --year <YYYY>           Vintage photo year taken to embed in EXIF and use in {year}");
         Console.WriteLine("  --date <YYYY-MM-DD>     Approximate or exact photo date to embed in EXIF and {date}");
         Console.WriteLine("  --desc <text>           Photo description/comment embedded into EXIF metadata");
+        Console.WriteLine("  -s, --sensitivity <0-100> Detection sensitivity percentage (default: 50%)");
         Console.WriteLine("  -t, --tolerance <num>   Background color detection tolerance (default: 25)");
         Console.WriteLine("  -j, --threads <num>     Number of parallel CPU worker threads (default: CPU core count)");
         Console.WriteLine("  --min-size <percent>    Minimum photo size as % of scan area (default: 25)");

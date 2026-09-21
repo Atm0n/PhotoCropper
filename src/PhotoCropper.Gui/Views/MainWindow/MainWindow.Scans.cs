@@ -190,14 +190,14 @@ internal sealed partial class MainWindow
         if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
 
         var settings = SettingsManager.Instance.Settings;
-        settings.BackgroundTolerance = sldSensitivity.Value;
+        settings.BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
         settings.MinAreaFactor = sldMinArea.Value;
         settings.MaxAreaFactor = sldMaxArea.Value;
         settings.CannyLowThreshold = sldEdge.Value;
         SettingsManager.Instance.Save();
 
         var session = ScanSessions[currentIndex];
-        session.Options.BackgroundTolerance = sldSensitivity.Value;
+        session.Options.BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
         session.Options.MinAreaFactor = sldMinArea.Value / 100.0;
         session.Options.MaxAreaFactor = sldMaxArea.Value / 100.0;
         session.Options.CannyLowThreshold = sldEdge.Value;
@@ -224,8 +224,8 @@ internal sealed partial class MainWindow
 
             if (result.Improved || result.PhotoCount > 0)
             {
-                string successFormat = Avalonia.Application.Current?.FindResource("MsgAutoTuneSuccess")?.ToString() ?? "Auto-tuned: found {0} photos (Tolerance: {1:0}, Edge: {2:0}).";
-                lblStatus.Text = string.Format(successFormat, result.PhotoCount, result.BestOptions.BackgroundTolerance, result.BestOptions.CannyLowThreshold);
+                string successFormat = Avalonia.Application.Current?.FindResource("MsgAutoTuneSuccess")?.ToString() ?? "Auto-tuned: found {0} photos (Sensitivity: {1:0}%, Edge: {2:0}).";
+                lblStatus.Text = string.Format(successFormat, result.PhotoCount, DetectionOptions.ToleranceToSensitivity(result.BestOptions.BackgroundTolerance), result.BestOptions.CannyLowThreshold);
             }
             else
             {
@@ -273,8 +273,7 @@ internal sealed partial class MainWindow
         var photo = session.Activate();
         photo.ApplyOptions(GetDetectionOptionsFromUi());
 
-        string reprocessingMsg = Avalonia.Application.Current?.FindResource("MsgReprocessing")?.ToString() ?? "Reprocessing...";
-        await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
+        await ExecuteWithLoadingAsync(Avalonia.Application.Current?.FindResource("MsgDetectingPhotos")?.ToString() ?? "Detecting photos...", async () =>
         {
             await Task.Run(() => photo.DetectPhotos());
             SetMainImage(photo.OriginalWithDetected);
@@ -291,7 +290,7 @@ internal sealed partial class MainWindow
         isUpdatingUiFromScan = true;
         try
         {
-            sldSensitivity.Value = options.BackgroundTolerance;
+            sldSensitivity.Value = DetectionOptions.ToleranceToSensitivity(options.BackgroundTolerance);
             sldMinArea.Value = options.MinAreaFactor * 100.0;
             sldMaxArea.Value = options.MaxAreaFactor * 100.0;
             sldEdge.Value = options.CannyLowThreshold;
@@ -309,7 +308,7 @@ internal sealed partial class MainWindow
     {
         return new DetectionOptions
         {
-            BackgroundTolerance = sldSensitivity.Value,
+            BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value),
             MinAreaFactor = sldMinArea.Value / 100.0,
             MaxAreaFactor = sldMaxArea.Value / 100.0,
             CannyLowThreshold = sldEdge.Value,
