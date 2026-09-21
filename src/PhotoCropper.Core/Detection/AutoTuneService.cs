@@ -9,9 +9,9 @@ namespace PhotoCropper.Core.Detection;
 
 public static class AutoTuneService
 {
-    private static readonly double[] SweepTolerances = [5, 10, 16, 22, 30, 40, 50];
+    private static readonly double[] SweepTolerances = [3, 8, 15, 22, 32, 42];
     private static readonly double[] SweepCannyLows = [10, 20, 30, 40];
-    private static readonly double[] SweepMinAreaFactors = [0.05, 0.08, 0.14, 0.22];
+    private static readonly double[] SweepMinAreaFactors = [0.01, 0.025, 0.05, 0.10];
 
     public static AutoTuneResult Tune(Mat source, DetectionOptions currentOptions, int minExpected = 1, int maxExpected = int.MaxValue)
     {
@@ -297,8 +297,16 @@ public static class AutoTuneService
         // Discrete bonus for separating into valid multiple photos
         if (accepted.Count >= 1 && accepted.Count <= 12)
         {
-            scoreSum += accepted.Count * 1000.0;
+            scoreSum += accepted.Count * 15000.0;
         }
+
+        // Strongly reward rectangularity and convexity of detected photos
+        double shapeQualitySum = 0.0;
+        foreach (var cand in accepted)
+        {
+            shapeQualitySum += cand.Rectangularity * cand.Convexity * 10000.0;
+        }
+        scoreSum += shapeQualitySum;
 
         // Reward configurations that capture more complete photo area
         // (strongly avoids partially cut photos in favor of full-sized extractions)

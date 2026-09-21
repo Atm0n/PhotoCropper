@@ -104,8 +104,13 @@ public static class BackgroundAnalyzer
 
         if (isNeutralLight)
         {
-            double maxS = Math.Min(255, Math.Max(avgColor.V1 + tolerance * 1.5, 65));
-            double minV = Math.Max(40, avgColor.V2 - tolerance * 3.5);
+            // Background tolerance scales realistically to physical scanner lid variance:
+            // Scanner lids vary by ~10-25 levels due to CIS lighting falloff and texture.
+            // Tolerance 0: tight match to lid (V within 8 levels)
+            // Tolerance 25 (default): absorbs ~19 levels of shadow
+            // Tolerance 100: absorbs up to ~53 levels of shadow without eating photo content (V stays >= 160)
+            double maxS = Math.Clamp(avgColor.V1 + 10.0 + (tolerance * 0.25), 25.0, 60.0);
+            double minV = Math.Max(160.0, avgColor.V2 - (8.0 + tolerance * 0.45));
 
             lower = new MCvScalar(0, 0, minV);
             upper = new MCvScalar(180, maxS, 255);

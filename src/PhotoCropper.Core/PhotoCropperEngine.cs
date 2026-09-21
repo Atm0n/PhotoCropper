@@ -248,7 +248,7 @@ public class PhotoCropperEngine : IDisposable
             CannyHighThreshold);
 
         // Multi-pass sensitivity detection:
-        // Evaluates fine-grained search tolerances around base tolerance
+        // Evaluates balanced search tolerances around base tolerance (both tighter and wider)
         var candidateDetections = new List<CropCandidate>();
         double baseTol = BackgroundTolerance;
         double[] searchTolerances = [
@@ -256,8 +256,8 @@ public class PhotoCropperEngine : IDisposable
             baseTol + 4,
             baseTol + 8,
             baseTol + 15,
-            baseTol + 25,
-            Math.Max(5, baseTol - 6)
+            Math.Max(5, baseTol - 6),
+            Math.Max(2, baseTol - 12)
         ];
 
         using Mat foreground = new();
@@ -320,6 +320,70 @@ public class PhotoCropperEngine : IDisposable
             else
             {
                 candidateDetections.AddRange(passCandidates);
+            }
+        }
+
+        // Automatic Otsu Fallback: If HSV background subtraction failed to find any photos
+        // (common with faint vintage prints, light skies, or low-contrast scan lids),
+        // run an automatic global luminance Otsu segmentation pass
+        if (candidateDetections.Count == 0)
+        {
+            bool isLightBg = avgBackgroundColorHsv.V2 > 120;
+            using Mat otsuForeground = new();
+            ForegroundMaskGenerator.PopulateOtsuForegroundMask(
+                detectionMat,
+                otsuForeground,
+                CannyLowThreshold,
+                CannyHighThreshold,
+                isLightBg,
+                precomputedEdges);
+
+            var otsuCandidates = CandidateExtractor.ExtractCandidates(
+                otsuForeground,
+                scaledPad,
+                (int)Math.Round(originalW * scale),
+                (int)Math.Round(originalH * scale),
+                MinAreaFactor,
+                MaxAreaFactor,
+                detectionMat,
+                bgBgr);
+
+            if (scale < 0.999)
+            {
+                double invScale = 1.0 / scale;
+                foreach (var cand in otsuCandidates)
+                {
+                    PointF fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
+                    SizeF fullSize = new((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
+                    RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
+
+                    PointF[] fullVerts = fullRr.GetVertices();
+                    Point[] fullPoints = new Point[4];
+                    for (int p = 0; p < 4; p++)
+                    {
+                        fullPoints[p] = new Point(
+                            Math.Clamp((int)Math.Round(fullVerts[p].X), 0, originalW - 1),
+                            Math.Clamp((int)Math.Round(fullVerts[p].Y), 0, originalH - 1)
+                        );
+                    }
+
+                    using VectorOfPoint fullShape = new(fullPoints);
+                    double fullArea = (double)fullSize.Width * fullSize.Height;
+                    double score = fullArea * Math.Pow(cand.Rectangularity, 3) * Math.Pow(cand.Convexity, 2);
+
+                    candidateDetections.Add(new CropCandidate(
+                        fullPoints,
+                        CvInvoke.BoundingRectangle(fullShape),
+                        score,
+                        fullRr,
+                        fullArea,
+                        cand.Rectangularity,
+                        cand.Convexity));
+                }
+            }
+            else
+            {
+                candidateDetections.AddRange(otsuCandidates);
             }
         }
 
