@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.atm0n.photocropper</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>PhotoCropper</name>
+  <summary>Batch photo cropper and scanner image extractor</summary>
+  <description>
+    <p>
+      PhotoCropper automatically detects, crops, deskews, and restores multiple photos scanned together on flatbed scanners.
+    </p>
+    <p>
+      Features high-performance AI contour detection, automated rotation heuristics, CLAHE contrast enhancement, color balance restoration, dust inpainting, and an unattended high-throughput CLI batch processor.
+    </p>
+  </description>
+  <launchable type="desktop-id">PhotoCropper.desktop</launchable>
+  <url type="homepage">https://github.com/Atm0n/PhotoCropper</url>
+  <url type="bugtracker">https://github.com/Atm0n/PhotoCropper/issues</url>
+  <provides>
+    <binary>photocropper</binary>
+    <binary>photocropper-cli</binary>
+  </provides>
+  <content_rating type="oars-1.1" />
+</component>

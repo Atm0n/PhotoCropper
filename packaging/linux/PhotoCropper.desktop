@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=PhotoCropper
+GenericName=Photo Cropper & Scanner Extractor
+Comment=Batch photo cropper and scanner image extractor
+Exec=photocropper %F
+Icon=photocropper
+Terminal=false
+Categories=Graphics;Photography;Utility;
+StartupWMClass=PhotoCropper.Gui
+MimeType=image/jpeg;image/png;image/tiff;image/bmp;image/webp;
+Keywords=photo;crop;scanner;extractor;deskew;restore;

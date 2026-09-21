@@ -233,14 +233,35 @@ dotnet run --project tests/PhotoCropper.Gui.Tests/PhotoCropper.Gui.Tests.csproj
 
 Pre-compiled, self-contained single-file binaries for **Windows** and **Linux** are automatically built and packaged on GitHub for every release:
 
-- **GUI Application**:
-  - `PhotoCropper-GUI-Windows.zip` (standalone desktop app for Windows x64)
-  - `PhotoCropper-GUI-Linux.zip` (standalone desktop app for Ubuntu/Linux x64)
-- **CLI Batch Extractor**:
-  - `PhotoCropper-CLI-Windows.zip` (unattended batch processor for Windows x64)
-  - `PhotoCropper-CLI-Linux.zip` (unattended batch processor for Linux x64)
+- **Windows**:
+  - `PhotoCropper-<version>-Windows-Setup.exe` (Windows Installer with Start Menu / Desktop shortcuts & optional CLI PATH integration)
+  - `PhotoCropper-<version>-GUI-Windows.zip` (standalone portable desktop app for Windows x64)
+  - `PhotoCropper-<version>-CLI-Windows.zip` (standalone portable batch processor for Windows x64)
+- **Linux**:
+  - `PhotoCropper-<version>-x86_64.AppImage` (universal standalone executable for modern Linux distributions)
+  - `PhotoCropper-<version>-linux-x64.deb` (Debian/Ubuntu package with desktop menu integration & system PATH binaries)
+  - `PhotoCropper-<version>-GUI-Linux.zip` (standalone portable desktop app for Ubuntu/Linux x64)
+  - `PhotoCropper-<version>-CLI-Linux.zip` (standalone portable batch processor for Linux x64)
 
 No .NET runtime installation is required on the target systems.
+
+### Installation & Running
+
+- **Windows Installer (`.exe`)**:
+  Download and run `PhotoCropper-<version>-Windows-Setup.exe`. Choose whether to install for the current user or all users, create desktop shortcuts, and optionally add the CLI to your system `PATH`.
+- **Linux AppImage**:
+  Download the `.AppImage` file, make it executable, and run:
+  ```bash
+  chmod +x PhotoCropper-*-x86_64.AppImage
+  ./PhotoCropper-*-x86_64.AppImage
+  ```
+- **Debian / Ubuntu Package (`.deb`)**:
+  Install via `apt` (automatically resolving system library dependencies):
+  ```bash
+  sudo apt install ./PhotoCropper-*-linux-x64.deb
+  ```
+- **Portable Archives (`.zip`)**:
+  Extract the `.zip` archive to any directory and run `PhotoCropper` (GUI) or `PhotoCropper.Cli` (CLI) directly without installation.
 
 ### Building Standalone Binaries Locally
 To publish self-contained single-file binaries manually via the .NET CLI:
