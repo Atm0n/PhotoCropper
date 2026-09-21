@@ -43,4 +43,17 @@ public sealed class MatBitmapConverterTests
         bitmap.PixelSize.Width.ShouldBe(80);
         bitmap.PixelSize.Height.ShouldBe(50);
     }
+
+    [Fact]
+    public void ToAvaloniaBitmap_1ChannelGrayMat_ShouldConvertToBitmap()
+    {
+        using var mat = new Mat(50, 80, DepthType.Cv8U, 1);
+        mat.SetTo(new MCvScalar(128));
+
+        var bitmap = MatBitmapConverter.ToAvaloniaBitmap(mat);
+
+        bitmap.ShouldNotBeNull();
+        bitmap.PixelSize.Width.ShouldBe(80);
+        bitmap.PixelSize.Height.ShouldBe(50);
+    }
 }

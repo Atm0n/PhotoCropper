@@ -59,8 +59,38 @@ public class PhotoCropperEngine : IDisposable
         {
             throw new InvalidOperationException($"Failed to decode image from file '{originalFilePath}'. The image format may be invalid or corrupt.");
         }
-        Original = rawMat.Clone();
+        Original = NormalizeToBgr(rawMat);
         OriginalWithDetected = Original.Clone();
+    }
+
+    public static Mat NormalizeToBgr(Mat source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (source.IsEmpty || source.Width <= 0 || source.Height <= 0)
+        {
+            return new Mat();
+        }
+
+        if (source.NumberOfChannels == 3)
+        {
+            return source.Clone();
+        }
+
+        Mat bgr = new();
+        if (source.NumberOfChannels == 1)
+        {
+            CvInvoke.CvtColor(source, bgr, ColorConversion.Gray2Bgr);
+        }
+        else if (source.NumberOfChannels == 4)
+        {
+            CvInvoke.CvtColor(source, bgr, ColorConversion.Bgra2Bgr);
+        }
+        else
+        {
+            source.CopyTo(bgr);
+        }
+
+        return bgr;
     }
 
     public void ApplyOptions(DetectionOptions options)
@@ -142,6 +172,13 @@ public class PhotoCropperEngine : IDisposable
         if (Original == null || Original.IsEmpty || Original.Width <= 0 || Original.Height <= 0)
         {
             return;
+        }
+
+        if (Original.NumberOfChannels != 3)
+        {
+            var oldOriginal = Original;
+            Original = NormalizeToBgr(oldOriginal);
+            oldOriginal.Dispose();
         }
 
         // Sample background color before padding

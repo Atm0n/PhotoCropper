@@ -24,15 +24,17 @@ public static class AutoTuneService
         int scaledW = (int)Math.Round(originalW * scale);
         int scaledH = (int)Math.Round(originalH * scale);
 
-        using Mat detMat = new();
+        using Mat rawDetMat = new();
         if (scale < 0.999)
         {
-            CvInvoke.Resize(source, detMat, new Size(scaledW, scaledH), 0, 0, Inter.Area);
+            CvInvoke.Resize(source, rawDetMat, new Size(scaledW, scaledH), 0, 0, Inter.Area);
         }
         else
         {
-            source.CopyTo(detMat);
+            source.CopyTo(rawDetMat);
         }
+
+        using Mat detMat = PhotoCropperEngine.NormalizeToBgr(rawDetMat);
 
         using Mat detHsv = new();
         CvInvoke.CvtColor(detMat, detHsv, ColorConversion.Bgr2Hsv);

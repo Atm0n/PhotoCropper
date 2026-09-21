@@ -33,7 +33,7 @@ public sealed class ScannerDeviceInfo
 
     public ScannerDriverType Driver { get; init; } = ScannerDriverType.Default;
 
-    public override string ToString() => $"{Name} ({Driver})";
+    public override string ToString() => $"{(string.IsNullOrWhiteSpace(Name) ? "Unknown Scanner" : Name)} ({Driver})";
 }
 
 /// <summary>

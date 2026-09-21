@@ -19,6 +19,10 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
     private readonly IScannerService _scannerService;
     private readonly bool _ownsService;
     private readonly List<ScannerDeviceInfo> _availableScanners = [];
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private readonly CancellationTokenSource _cts = new();
+    private bool _isInitializing = true;
+    private bool _disposed;
 
     public ScannerConfigDialog() : this(new Naps2ScannerService(), ownsService: true)
     {
@@ -51,21 +55,29 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
 
     private async void ScannerConfigDialog_Loaded(object? sender, RoutedEventArgs e)
     {
-        var settings = SettingsManager.Instance.Settings;
-
-        if (chkNetworkScanners != null)
+        _isInitializing = true;
+        try
         {
-            chkNetworkScanners.IsChecked = settings.IncludeNetworkScanners;
-        }
+            var settings = SettingsManager.Instance.Settings;
 
-        if (cbScannerDpi != null)
-        {
-            cbScannerDpi.SelectedIndex = settings.ScannerDpi switch
+            if (chkNetworkScanners != null)
             {
-                150 => 0,
-                600 => 2,
-                _ => 1
-            };
+                chkNetworkScanners.IsChecked = settings.IncludeNetworkScanners;
+            }
+
+            if (cbScannerDpi != null)
+            {
+                cbScannerDpi.SelectedIndex = settings.ScannerDpi switch
+                {
+                    150 => 0,
+                    600 => 2,
+                    _ => 1
+                };
+            }
+        }
+        finally
+        {
+            _isInitializing = false;
         }
 
         await RefreshScannersAsync();
@@ -73,27 +85,44 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
 
     private async Task RefreshScannersAsync()
     {
-        if (txtScannerStatus != null)
+        if (!await _refreshLock.WaitAsync(0))
         {
-            txtScannerStatus.Text = Avalonia.Application.Current?.FindResource("TxtScanningSearching")?.ToString() ?? "Searching for connected scanners...";
-            txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppAccentBrush") as IBrush) ?? Brush.Parse("#3399ff");
+            return;
         }
+
+        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (btnRefreshScanners != null) btnRefreshScanners.IsEnabled = false;
+            if (btnSaveAndScan != null) btnSaveAndScan.IsEnabled = false;
+            if (txtScannerStatus != null)
+            {
+                txtScannerStatus.Text = Avalonia.Application.Current?.FindResource("TxtScanningSearching")?.ToString() ?? "Searching for connected scanners...";
+                txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppAccentBrush") as IBrush) ?? Brush.Parse("#3399ff");
+            }
+        });
 
         try
         {
             var settings = SettingsManager.Instance.Settings;
-            bool includeNetwork = settings.IncludeNetworkScanners;
-            var devices = await _scannerService.GetDevicesAsync(includeNetwork).ConfigureAwait(false);
-            _availableScanners.Clear();
-            _availableScanners.AddRange(devices);
+            bool includeNetwork = settings.IncludeNetworkScanners ||
+                                  settings.SelectedScannerId?.StartsWith("ESCL:", StringComparison.OrdinalIgnoreCase) == true;
+            var devices = await _scannerService.GetDevicesAsync(includeNetwork, _cts.Token).ConfigureAwait(false);
+            var safeDevices = devices?.Where(d => d != null).ToList() ?? [];
+
+            if (_disposed) return;
 
             await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
             {
+                if (_disposed) return;
+
+                _availableScanners.Clear();
+                _availableScanners.AddRange(safeDevices);
+
                 if (cbScanner != null)
                 {
-                    cbScanner.ItemsSource = _availableScanners.Select(d => d.ToString()).ToList();
+                    cbScanner.ItemsSource = _availableScanners.Where(d => d != null).Select(d => d.ToString()).ToList();
 
-                    int selectedIdx = _availableScanners.FindIndex(d => d.Id == settings.SelectedScannerId);
+                    int selectedIdx = _availableScanners.FindIndex(d => d != null && d.Id == settings.SelectedScannerId);
                     if (selectedIdx >= 0)
                     {
                         cbScanner.SelectedIndex = selectedIdx;
@@ -102,14 +131,36 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
                     {
                         cbScanner.SelectedIndex = 0;
                     }
+                    else
+                    {
+                        cbScanner.SelectedIndex = -1;
+                    }
                 }
 
                 UpdateStatusLabel();
             });
         }
+        catch (OperationCanceledException)
+        {
+            // Dialog closed or refresh cancelled
+        }
         catch
         {
-            UpdateStatusLabel();
+            if (!_disposed)
+            {
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(UpdateStatusLabel);
+            }
+        }
+        finally
+        {
+            if (!_disposed)
+            {
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (btnRefreshScanners != null) btnRefreshScanners.IsEnabled = true;
+                });
+                _refreshLock.Release();
+            }
         }
     }
 
@@ -121,24 +172,39 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
         {
             txtScannerStatus.Text = Avalonia.Application.Current?.FindResource("MsgNoScannerFound")?.ToString() ?? "No scanner detected. Click 🔄 to refresh.";
             txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppDangerTextBrush") as IBrush) ?? Brush.Parse("#ffaa44");
+            if (cbScanner != null)
+            {
+                cbScanner.SelectedIndex = -1;
+            }
         }
         else
         {
             txtScannerStatus.Text = $"{_availableScanners.Count} scanner(s) found.";
             txtScannerStatus.Foreground = (Avalonia.Application.Current?.FindResource("AppSuccessTextBrush") as IBrush) ?? Brush.Parse("#44cc66");
         }
+
+        if (btnSaveAndScan != null)
+        {
+            btnSaveAndScan.IsEnabled = _availableScanners.Count > 0;
+        }
     }
 
     private void CbScanner_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (cbScanner.SelectedIndex >= 0 && cbScanner.SelectedIndex < _availableScanners.Count)
+        if (_isInitializing) return;
+        if (cbScanner != null && cbScanner.SelectedIndex >= 0 && cbScanner.SelectedIndex < _availableScanners.Count)
         {
-            SettingsManager.Instance.Settings.SelectedScannerId = _availableScanners[cbScanner.SelectedIndex].Id;
+            var selected = _availableScanners[cbScanner.SelectedIndex];
+            if (selected != null)
+            {
+                SettingsManager.Instance.Settings.SelectedScannerId = selected.Id;
+            }
         }
     }
 
     private void CbScannerDpi_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (_isInitializing) return;
         if (cbScannerDpi?.SelectedItem is ComboBoxItem item)
         {
             string? content = item.Content?.ToString();
@@ -155,6 +221,7 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
 
     private async void ChkNetworkScanners_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
+        if (_isInitializing) return;
         if (chkNetworkScanners != null)
         {
             SettingsManager.Instance.Settings.IncludeNetworkScanners = chkNetworkScanners.IsChecked ?? false;
@@ -173,7 +240,7 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
         var settings = SettingsManager.Instance.Settings;
         if (cbScanner.SelectedIndex >= 0 && cbScanner.SelectedIndex < _availableScanners.Count)
         {
-            settings.SelectedScannerId = _availableScanners[cbScanner.SelectedIndex].Id;
+            settings.SelectedScannerId = _availableScanners[cbScanner.SelectedIndex]?.Id ?? string.Empty;
         }
         if (cbScannerDpi?.SelectedItem is ComboBoxItem item)
         {
@@ -213,6 +280,11 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+        _cts.Cancel();
+        _cts.Dispose();
+        _refreshLock.Dispose();
         if (_ownsService)
         {
             _scannerService.Dispose();

@@ -99,8 +99,14 @@ internal sealed partial class MainWindow
         }
     }
 
-    private async Task ExecuteScanAsync(string workDir, ScannerDeviceInfo selectedDevice, int dpi)
+    private async Task ExecuteScanAsync(string workDir, ScannerDeviceInfo? selectedDevice, int dpi)
     {
+        if (selectedDevice == null)
+        {
+            await ShowScannerConfigAsync();
+            return;
+        }
+
         var scannerOptions = new ScannerOptions
         {
             Device = selectedDevice,
@@ -143,7 +149,7 @@ internal sealed partial class MainWindow
                 {
                     ProjectWorkspaceService.SaveSession(workDir, _workspaceSession);
                 }
-            }, null, canCancel: true, timeout: TimeSpan.FromSeconds(45));
+            }, null, canCancel: true, timeout: TimeSpan.FromSeconds(dpi >= 600 ? 180 : 90));
         }
         catch (OperationCanceledException)
         {
@@ -191,6 +197,10 @@ internal sealed partial class MainWindow
             currentIndex = _sessionManager.Count - stagedPaths.Count;
             await LoadPhotosToGuiAsync();
         }
+        else
+        {
+            lblStatus.Text = Avalonia.Application.Current?.FindResource("MsgNoScanData")?.ToString() ?? "No image was returned by the scanner.";
+        }
     }
 
     private async Task RefreshScannersAsync()
@@ -200,8 +210,13 @@ internal sealed partial class MainWindow
             var settings = SettingsManager.Instance.Settings;
             bool includeNetwork = settings.IncludeNetworkScanners;
             var devices = await _scannerService.GetDevicesAsync(includeNetwork).ConfigureAwait(false);
-            _availableScanners.Clear();
-            _availableScanners.AddRange(devices);
+            var safeDevices = devices?.Where(d => d != null).ToList() ?? [];
+
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _availableScanners.Clear();
+                _availableScanners.AddRange(safeDevices);
+            });
         }
         catch
         {

@@ -28,7 +28,14 @@ internal static class MatBitmapConverter
         }
 
         using Mat bgraMat = new();
-        CvInvoke.CvtColor(mat, bgraMat, ColorConversion.Bgr2Bgra);
+        if (mat.NumberOfChannels == 1)
+        {
+            CvInvoke.CvtColor(mat, bgraMat, ColorConversion.Gray2Bgra);
+        }
+        else
+        {
+            CvInvoke.CvtColor(mat, bgraMat, ColorConversion.Bgr2Bgra);
+        }
 
         return new Bitmap(
             PixelFormat.Bgra8888,

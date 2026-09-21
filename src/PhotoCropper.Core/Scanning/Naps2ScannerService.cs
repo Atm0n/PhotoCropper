@@ -13,6 +13,7 @@ public sealed class Naps2ScannerService : IScannerService
 {
     private readonly ScanningContext _context;
     private readonly ScanController _controller;
+    private readonly SemaphoreSlim _deviceScanLock = new(1, 1);
     private bool _disposed;
 
     public Naps2ScannerService()
@@ -42,20 +43,31 @@ public sealed class Naps2ScannerService : IScannerService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var devices = await GetAllDevicesInternalAsync(includeNetwork, cancellationToken).ConfigureAwait(false);
-        var result = new List<ScannerDeviceInfo>(devices.Count);
-
-        foreach (var dev in devices)
+        await _deviceScanLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            result.Add(new ScannerDeviceInfo
-            {
-                Id = $"{dev.Driver.ToString().ToUpperInvariant()}:{dev.ID}",
-                Name = dev.Name,
-                Driver = MapDriver(dev.Driver)
-            });
-        }
+            var devices = await GetAllDevicesInternalAsync(includeNetwork, cancellationToken).ConfigureAwait(false);
+            var result = new List<ScannerDeviceInfo>(devices.Count);
 
-        return result.AsReadOnly();
+            foreach (var dev in devices)
+            {
+                if (dev == null) continue;
+                string devId = dev.ID ?? string.Empty;
+                string devName = string.IsNullOrWhiteSpace(dev.Name) ? (string.IsNullOrEmpty(devId) ? "Scanner" : devId) : dev.Name;
+                result.Add(new ScannerDeviceInfo
+                {
+                    Id = $"{dev.Driver.ToString().ToUpperInvariant()}:{devId}",
+                    Name = devName,
+                    Driver = MapDriver(dev.Driver)
+                });
+            }
+
+            return result.AsReadOnly();
+        }
+        finally
+        {
+            _deviceScanLock.Release();
+        }
     }
 
     public async Task<IReadOnlyList<Mat>> ScanAsync(ScannerOptions options, CancellationToken cancellationToken = default)
@@ -65,33 +77,42 @@ public sealed class Naps2ScannerService : IScannerService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var napsOptions = await BuildScanOptionsAsync(options, cancellationToken).ConfigureAwait(false);
-        var mats = new List<Mat>();
-
+        await _deviceScanLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await foreach (var image in _controller.Scan(napsOptions, cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false))
-            {
-                using (image)
-                using (var ms = new MemoryStream())
-                {
-                    image.Save(ms, ImageFileFormat.Png);
-                    var bytes = ms.ToArray();
-                    var mat = new Mat();
-                    CvInvoke.Imdecode(bytes, ImreadModes.AnyColor, mat);
-                    mats.Add(mat);
-                }
-            }
+            var napsOptions = await BuildScanOptionsAsync(options, cancellationToken).ConfigureAwait(false);
+            var mats = new List<Mat>();
 
-            return mats.AsReadOnly();
-        }
-        catch
-        {
-            foreach (var mat in mats)
+            try
             {
-                mat.Dispose();
+                await foreach (var image in _controller.Scan(napsOptions, cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false))
+                {
+                    using (image)
+                    using (var ms = new MemoryStream())
+                    {
+                        image.Save(ms, ImageFileFormat.Png);
+                        var bytes = ms.ToArray();
+                        using var raw = new Mat();
+                        CvInvoke.Imdecode(bytes, ImreadModes.AnyColor, raw);
+                        var bgrMat = PhotoCropperEngine.NormalizeToBgr(raw);
+                        mats.Add(bgrMat);
+                    }
+                }
+
+                return mats.AsReadOnly();
             }
-            throw;
+            catch
+            {
+                foreach (var mat in mats)
+                {
+                    mat.Dispose();
+                }
+                throw;
+            }
+        }
+        finally
+        {
+            _deviceScanLock.Release();
         }
     }
 
@@ -219,11 +240,14 @@ public sealed class Naps2ScannerService : IScannerService
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var esclDevices = await _controller.GetDeviceList(Driver.Escl).ConfigureAwait(false);
-                foreach (var escl in esclDevices)
+                if (esclDevices != null)
                 {
-                    if (!allDevices.Any(d => string.Equals(d.ID, escl.ID, StringComparison.OrdinalIgnoreCase)))
+                    foreach (var escl in esclDevices)
                     {
-                        allDevices.Add(escl);
+                        if (escl != null && !string.IsNullOrEmpty(escl.ID) && !allDevices.Any(d => d != null && string.Equals(d.ID, escl.ID, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            allDevices.Add(escl);
+                        }
                     }
                 }
             }
@@ -313,8 +337,9 @@ public sealed class Naps2ScannerService : IScannerService
     {
         if (!_disposed)
         {
-            _context.Dispose();
             _disposed = true;
+            _deviceScanLock.Dispose();
+            _context.Dispose();
         }
     }
 }

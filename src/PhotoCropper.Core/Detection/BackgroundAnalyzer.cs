@@ -75,8 +75,9 @@ public static class BackgroundAnalyzer
         int h = Math.Min(bgr.Height - startY, sampleSize);
 
         using Mat sampledArea = new(bgr, new Rectangle(startX, startY, w, h));
+        using Mat bgrSampled = PhotoCropperEngine.NormalizeToBgr(sampledArea);
         using Mat hsvSampled = new();
-        CvInvoke.CvtColor(sampledArea, hsvSampled, ColorConversion.Bgr2Hsv);
+        CvInvoke.CvtColor(bgrSampled, hsvSampled, ColorConversion.Bgr2Hsv);
         return CvInvoke.Mean(hsvSampled);
     }
 
@@ -139,15 +140,17 @@ public static class BackgroundAnalyzer
         int scaledW = (int)Math.Round(w * scale);
         int scaledH = (int)Math.Round(h * scale);
 
-        using Mat smallSource = new();
+        using Mat rawSmallSource = new();
         if (scale < 0.999)
         {
-            CvInvoke.Resize(source, smallSource, new Size(scaledW, scaledH), 0, 0, Inter.Area);
+            CvInvoke.Resize(source, rawSmallSource, new Size(scaledW, scaledH), 0, 0, Inter.Area);
         }
         else
         {
-            source.CopyTo(smallSource);
+            source.CopyTo(rawSmallSource);
         }
+
+        using Mat smallSource = PhotoCropperEngine.NormalizeToBgr(rawSmallSource);
 
         using Mat hsv = new();
         CvInvoke.CvtColor(smallSource, hsv, ColorConversion.Bgr2Hsv);

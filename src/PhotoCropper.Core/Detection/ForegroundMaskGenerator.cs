@@ -12,7 +12,18 @@ public static class ForegroundMaskGenerator
         ArgumentNullException.ThrowIfNull(source);
 
         using Mat gray = new();
-        CvInvoke.CvtColor(source, gray, ColorConversion.Bgr2Gray);
+        if (source.NumberOfChannels == 1)
+        {
+            source.CopyTo(gray);
+        }
+        else if (source.NumberOfChannels == 4)
+        {
+            CvInvoke.CvtColor(source, gray, ColorConversion.Bgra2Gray);
+        }
+        else
+        {
+            CvInvoke.CvtColor(source, gray, ColorConversion.Bgr2Gray);
+        }
 
         // Bilateral filter smooths internal photo textures while preserving sharp outer boundaries
         using Mat smoothed = new();
@@ -45,7 +56,22 @@ public static class ForegroundMaskGenerator
         }
         else
         {
-            CvInvoke.CvtColor(source, ownedHsv, ColorConversion.Bgr2Hsv);
+            if (source.NumberOfChannels == 1)
+            {
+                using Mat bgrSource = new();
+                CvInvoke.CvtColor(source, bgrSource, ColorConversion.Gray2Bgr);
+                CvInvoke.CvtColor(bgrSource, ownedHsv, ColorConversion.Bgr2Hsv);
+            }
+            else if (source.NumberOfChannels == 4)
+            {
+                using Mat bgrSource = new();
+                CvInvoke.CvtColor(source, bgrSource, ColorConversion.Bgra2Bgr);
+                CvInvoke.CvtColor(bgrSource, ownedHsv, ColorConversion.Bgr2Hsv);
+            }
+            else
+            {
+                CvInvoke.CvtColor(source, ownedHsv, ColorConversion.Bgr2Hsv);
+            }
             hsvToUse = ownedHsv;
         }
 
@@ -82,7 +108,18 @@ public static class ForegroundMaskGenerator
         ArgumentNullException.ThrowIfNull(outputForeground);
 
         using Mat gray = new();
-        CvInvoke.CvtColor(source, gray, ColorConversion.Bgr2Gray);
+        if (source.NumberOfChannels == 1)
+        {
+            source.CopyTo(gray);
+        }
+        else if (source.NumberOfChannels == 4)
+        {
+            CvInvoke.CvtColor(source, gray, ColorConversion.Bgra2Gray);
+        }
+        else
+        {
+            CvInvoke.CvtColor(source, gray, ColorConversion.Bgr2Gray);
+        }
 
         using Mat otsuMask = new();
         var threshType = isLightBackground
