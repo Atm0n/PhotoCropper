@@ -22,7 +22,7 @@ internal sealed partial class MainWindow
             {
                 try
                 {
-                    var result = await UpdateCheckService.CheckForUpdateAsync();
+                    var result = await UpdateCheckService.CheckForUpdateAsync(cancellationToken: CancellationToken.None);
                     if (result.IsUpdateAvailable && result.Tag != null && result.ReleaseUri != null)
                     {
                         var releaseUri = result.ReleaseUri;
@@ -42,7 +42,7 @@ internal sealed partial class MainWindow
                 {
                     // Ignore background update check failures
                 }
-            });
+            }, CancellationToken.None);
         }
     }
 
@@ -52,7 +52,7 @@ internal sealed partial class MainWindow
         _notificationService.ShowInformation("PhotoCropper", checkingMsg, TimeSpan.FromSeconds(2));
 
         var curVersion = UpdateCheckService.GetCurrentVersion();
-        var result = await UpdateCheckService.CheckForUpdateAsync(curVersion);
+        var result = await UpdateCheckService.CheckForUpdateAsync(curVersion, CancellationToken.None);
 
         SettingsManager.Instance.Settings.LastUpdateCheckUtc = DateTime.UtcNow;
         SettingsManager.Instance.Save();

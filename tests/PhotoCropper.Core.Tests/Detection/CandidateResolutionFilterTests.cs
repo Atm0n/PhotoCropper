@@ -26,7 +26,7 @@ public sealed class CandidateResolutionFilterTests
 
         // Parent should be rejected as composite, retaining child 1 and child 2
         filtered.Count.ShouldBe(2);
-        filtered.ShouldNotContain(c => c.Area == 500000);
+        filtered.ShouldNotContain(parent);
     }
 
     [Fact]

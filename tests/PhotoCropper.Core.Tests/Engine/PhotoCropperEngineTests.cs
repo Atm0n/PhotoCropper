@@ -293,8 +293,8 @@ public sealed class PhotoCropperEngineTests : IDisposable
     public void RotatePhoto_OutOfBounds_ShouldNotThrow()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
-        cropper.RotatePhoto(-1);
-        cropper.RotatePhoto(100);
+        Should.NotThrow(() => cropper.RotatePhoto(-1));
+        Should.NotThrow(() => cropper.RotatePhoto(100));
     }
 
     [Fact]
@@ -309,8 +309,9 @@ public sealed class PhotoCropperEngineTests : IDisposable
     public void ApplyCropToPhoto_OutOfBounds_ShouldNotThrow()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
-        cropper.ApplyCropToPhoto(-1, new Rectangle(0, 0, 10, 10));
-        cropper.ApplyCropToPhoto(100, new Rectangle(0, 0, 10, 10));
+        Should.NotThrow(() => cropper.ApplyCropToPhoto(-1, new Rectangle(0, 0, 10, 10)));
+        Should.NotThrow(() => cropper.ApplyCropToPhoto(100, new Rectangle(0, 0, 10, 10)));
+
     }
 
     [Fact]

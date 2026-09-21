@@ -49,7 +49,7 @@ public static class ForegroundMaskGenerator
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(outputForeground);
 
-        using Mat ownedHsv = precomputedHsv == null ? new Mat() : new Mat();
+        using Mat? ownedHsv = precomputedHsv == null ? new Mat() : null;
         Mat hsvToUse;
         if (precomputedHsv != null)
         {
@@ -57,29 +57,30 @@ public static class ForegroundMaskGenerator
         }
         else
         {
+            Mat targetHsv = ownedHsv!;
             if (source.NumberOfChannels == 1)
             {
                 using Mat bgrSource = new();
                 CvInvoke.CvtColor(source, bgrSource, ColorConversion.Gray2Bgr);
-                CvInvoke.CvtColor(bgrSource, ownedHsv, ColorConversion.Bgr2Hsv);
+                CvInvoke.CvtColor(bgrSource, targetHsv, ColorConversion.Bgr2Hsv);
             }
             else if (source.NumberOfChannels == 4)
             {
                 using Mat bgrSource = new();
                 CvInvoke.CvtColor(source, bgrSource, ColorConversion.Bgra2Bgr);
-                CvInvoke.CvtColor(bgrSource, ownedHsv, ColorConversion.Bgr2Hsv);
+                CvInvoke.CvtColor(bgrSource, targetHsv, ColorConversion.Bgr2Hsv);
             }
             else
             {
-                CvInvoke.CvtColor(source, ownedHsv, ColorConversion.Bgr2Hsv);
+                CvInvoke.CvtColor(source, targetHsv, ColorConversion.Bgr2Hsv);
             }
-            hsvToUse = ownedHsv;
+            hsvToUse = targetHsv;
         }
 
         using Mat backgroundMask = BackgroundAnalyzer.CreateBackgroundMask(hsvToUse, avgBackgroundColorHsv, backgroundTolerance);
 
-        using Mat ownedEdges = precomputedEdgeMap == null ? GeneratePrecomputedEdgeMap(source, lowThreshold, highThreshold) : new Mat();
-        Mat edgesToUse = precomputedEdgeMap ?? ownedEdges;
+        using Mat? ownedEdges = precomputedEdgeMap == null ? GeneratePrecomputedEdgeMap(source, lowThreshold, highThreshold) : null;
+        Mat edgesToUse = precomputedEdgeMap ?? ownedEdges!;
 
         CvInvoke.BitwiseNot(backgroundMask, outputForeground);
         CvInvoke.BitwiseOr(outputForeground, edgesToUse, outputForeground);

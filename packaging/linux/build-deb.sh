@@ -24,20 +24,20 @@ mkdir -p "${PKG_DIR}/usr/share/doc/photocropper"
 
 # Copy binaries
 cp -r "${REPO_ROOT}/${GUI_DIR}/"* "${PKG_DIR}/usr/lib/photocropper/"
-if [ -f "${REPO_ROOT}/${CLI_DIR}/PhotoCropper.Cli" ]; then
+if [[ -f "${REPO_ROOT}/${CLI_DIR}/PhotoCropper.Cli" ]]; then
   cp "${REPO_ROOT}/${CLI_DIR}/PhotoCropper.Cli" "${PKG_DIR}/usr/lib/photocropper/"
 fi
 
 # Ensure executable permissions
 chmod +x "${PKG_DIR}/usr/lib/photocropper/PhotoCropper.Gui"
-if [ -f "${PKG_DIR}/usr/lib/photocropper/PhotoCropper.Cli" ]; then
+if [[ -f "${PKG_DIR}/usr/lib/photocropper/PhotoCropper.Cli" ]]; then
   chmod +x "${PKG_DIR}/usr/lib/photocropper/PhotoCropper.Cli"
 fi
 
 # Symlinks in /usr/bin
 ln -sf "/usr/lib/photocropper/PhotoCropper.Gui" "${PKG_DIR}/usr/bin/photocropper"
 ln -sf "/usr/lib/photocropper/PhotoCropper.Gui" "${PKG_DIR}/usr/bin/PhotoCropper"
-if [ -f "${PKG_DIR}/usr/lib/photocropper/PhotoCropper.Cli" ]; then
+if [[ -f "${PKG_DIR}/usr/lib/photocropper/PhotoCropper.Cli" ]]; then
   ln -sf "/usr/lib/photocropper/PhotoCropper.Cli" "${PKG_DIR}/usr/bin/photocropper-cli"
   ln -sf "/usr/lib/photocropper/PhotoCropper.Cli" "${PKG_DIR}/usr/bin/PhotoCropper.Cli"
 fi

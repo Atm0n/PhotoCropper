@@ -35,13 +35,19 @@ public static class FaceOrientationService
                 return null;
             }
 
-            string tempPath = Path.Combine(Path.GetTempPath(), "face_detection_yunet_2023mar.onnx");
-            if (!File.Exists(tempPath) || new FileInfo(tempPath).Length != stream.Length)
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string modelsDir = string.IsNullOrWhiteSpace(appData)
+                ? AppContext.BaseDirectory
+                : Path.Combine(appData, "PhotoCropper", "Models");
+
+            Directory.CreateDirectory(modelsDir);
+            string modelPath = Path.Combine(modelsDir, "face_detection_yunet_2023mar.onnx");
+            if (!File.Exists(modelPath) || new FileInfo(modelPath).Length != stream.Length)
             {
-                using FileStream fileStream = File.Create(tempPath);
+                using FileStream fileStream = File.Create(modelPath);
                 stream.CopyTo(fileStream);
             }
-            return tempPath;
+            return modelPath;
         }
         catch
         {

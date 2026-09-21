@@ -246,7 +246,7 @@ internal sealed partial class MainWindow
 
         if (ScanSessions.Count > 0)
         {
-            var session = ScanSessions[currentIndex];
+            var session = ScanSessions[CurrentIndex];
             session.Options.BoundingBoxColor = colorName;
             if (session.IsActive && session.Engine != null)
             {

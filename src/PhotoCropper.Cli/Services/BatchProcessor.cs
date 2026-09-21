@@ -204,7 +204,6 @@ internal static class BatchProcessor
         }
 
         totalStopwatch.Stop();
-        PhotoCropper.Core.Utils.NotificationSound.PlayCompletionSound();
 
         // Process undetected audit log & isolation
         if (!undetectedScans.IsEmpty)
