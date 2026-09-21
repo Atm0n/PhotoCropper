@@ -23,7 +23,7 @@ mkdir -p "${APPDIR}/usr/share/metainfo"
 cp -r "${REPO_ROOT}/${GUI_DIR}/"* "${APPDIR}/usr/bin/"
 chmod +x "${APPDIR}/usr/bin/PhotoCropper.Gui"
 
-if [ -f "${REPO_ROOT}/${CLI_DIR}/PhotoCropper.Cli" ]; then
+if [[ -f "${REPO_ROOT}/${CLI_DIR}/PhotoCropper.Cli" ]]; then
   cp "${REPO_ROOT}/${CLI_DIR}/PhotoCropper.Cli" "${APPDIR}/usr/bin/"
   chmod +x "${APPDIR}/usr/bin/PhotoCropper.Cli"
   ln -sf "PhotoCropper.Cli" "${APPDIR}/usr/bin/photocropper-cli"
@@ -51,7 +51,7 @@ export PATH="${HERE}/usr/bin:${PATH}"
 export LD_LIBRARY_PATH="${HERE}/usr/bin:${LD_LIBRARY_PATH:-}"
 
 INVOKED_NAME="$(basename "${0}")"
-if [ "$INVOKED_NAME" = "photocropper-cli" ] || [ "$INVOKED_NAME" = "PhotoCropper.Cli" ]; then
+if [[ "$INVOKED_NAME" == "photocropper-cli" || "$INVOKED_NAME" == "PhotoCropper.Cli" ]]; then
   exec "${HERE}/usr/bin/PhotoCropper.Cli" "$@"
 fi
 
@@ -63,7 +63,7 @@ chmod +x "${APPDIR}/AppRun"
 if ! command -v appimagetool >/dev/null 2>&1; then
   TOOL_DIR=$(mktemp -d -t appimagetool-XXXXXX)
   echo "Downloading appimagetool..."
-  curl -sSL "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -o "${TOOL_DIR}/appimagetool"
+  curl --proto '=https' --proto-redir '=https' -sSfL "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -o "${TOOL_DIR}/appimagetool"
   chmod +x "${TOOL_DIR}/appimagetool"
   cd "${TOOL_DIR}"
   ./appimagetool --appimage-extract >/dev/null 2>&1

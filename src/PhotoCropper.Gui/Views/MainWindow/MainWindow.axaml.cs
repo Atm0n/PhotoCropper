@@ -17,7 +17,7 @@ internal sealed record GalleryPhotoItem(Avalonia.Media.Imaging.Bitmap Image, str
 internal sealed partial class MainWindow : Window
 {
     private readonly ScanSessionManager _sessionManager = new();
-    private int currentIndex
+    private int CurrentIndex
     {
         get => _sessionManager.CurrentIndex;
         set => _sessionManager.MoveTo(value);
@@ -177,8 +177,8 @@ internal sealed partial class MainWindow : Window
     }
 
     private void MenuExit_Click(object? sender, RoutedEventArgs e) => Close();
-    private void MenuUndo_Click(object? sender, RoutedEventArgs e) => PerformUndo();
-    private void MenuRedo_Click(object? sender, RoutedEventArgs e) => PerformRedo();
+    private async void MenuUndo_Click(object? sender, RoutedEventArgs e) => await PerformUndoAsync();
+    private async void MenuRedo_Click(object? sender, RoutedEventArgs e) => await PerformRedoAsync();
     private void MenuViewCarousel_Click(object? sender, RoutedEventArgs e) => SetViewMode(false);
     private void MenuViewGrid_Click(object? sender, RoutedEventArgs e) => SetViewMode(true);
     private void BtnToggleAdvanced_Click(object? sender, RoutedEventArgs e)
@@ -289,13 +289,13 @@ internal sealed partial class MainWindow : Window
             }
             if (e.Key == Key.Z)
             {
-                PerformUndo();
+                await PerformUndoAsync();
                 e.Handled = true;
                 return;
             }
             if (e.Key == Key.Y)
             {
-                PerformRedo();
+                await PerformRedoAsync();
                 e.Handled = true;
                 return;
             }
@@ -325,7 +325,7 @@ internal sealed partial class MainWindow : Window
         {
             btnCancelLoading.IsEnabled = false;
             txtLoadingText.Text = LocalizationService.GetString(ResourceKeys.TxtCancelling, "Cancelling...");
-            _activeOperationCts?.Cancel();
+            _activeOperationCts?.CancelAsync();
             e.Handled = true;
             return;
         }
@@ -432,7 +432,7 @@ internal sealed partial class MainWindow : Window
                 if (!isComparingRaw && ScanSessions.Count > 0 && slides != null && slides.SelectedIndex >= 0)
                 {
                     int sel = slides.SelectedIndex;
-                    var engine = ScanSessions[currentIndex].Activate();
+                    var engine = ScanSessions[CurrentIndex].Activate();
                     if (sel < engine.RawDetectedPhotos.Count)
                     {
                         isComparingRaw = true;
@@ -460,7 +460,7 @@ internal sealed partial class MainWindow : Window
             if (ScanSessions.Count > 0 && slides != null && slides.SelectedIndex >= 0)
             {
                 int sel = slides.SelectedIndex;
-                var engine = ScanSessions[currentIndex].Activate();
+                var engine = ScanSessions[CurrentIndex].Activate();
                 if (sel < engine.DetectedPhotos.Count)
                 {
                     var oldBmp = slides.Items[sel] as IDisposable;

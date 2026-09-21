@@ -81,18 +81,18 @@ internal sealed partial class MainWindow
         UpdateEmptyStateVisibility();
         if (ScanSessions.Count == 0 || isLoading) return;
 
-        string fileName = Path.GetFileName(ScanSessions[currentIndex].FilePath);
+        string fileName = Path.GetFileName(ScanSessions[CurrentIndex].FilePath);
         string processingMsg = LocalizationService.GetString(ResourceKeys.ProcessingScan, "Processing...");
 
-        await ExecuteWithLoadingAsync($"{processingMsg} {fileName}", async () =>
+        await ExecuteWithLoadingAsync($"{processingMsg} {fileName}", async ct =>
         {
-            var session = ScanSessions[currentIndex];
-            var currentPhoto = await Task.Run(() => session.Activate());
+            var session = ScanSessions[CurrentIndex];
+            var currentPhoto = await Task.Run(() => session.Activate(), ct);
             SyncUiWithScanOptions(currentPhoto.CurrentOptions);
 
             SetMainImage(currentPhoto.OriginalWithDetected);
 
-            txtFileCounter.Text = LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", currentIndex + 1, ScanSessions.Count);
+            txtFileCounter.Text = LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", CurrentIndex + 1, ScanSessions.Count);
             lblStatus.Text = fileName;
 
             LoadCroppedPhotosToSlider();
@@ -194,7 +194,7 @@ internal sealed partial class MainWindow
         settings.CannyLowThreshold = sldEdge.Value;
         SettingsManager.Instance.Save();
 
-        var session = ScanSessions[currentIndex];
+        var session = ScanSessions[CurrentIndex];
         session.Options.BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
         session.Options.MinAreaFactor = sldMinArea.Value / 100.0;
         session.Options.MaxAreaFactor = sldMaxArea.Value / 100.0;
@@ -208,13 +208,13 @@ internal sealed partial class MainWindow
     {
         if (isLoading || ScanSessions.Count == 0) return;
 
-        var photo = ScanSessions[currentIndex].Activate();
+        var photo = ScanSessions[CurrentIndex].Activate();
         string tuningMsg = LocalizationService.GetString(ResourceKeys.MsgAutoTuning, "Auto-tuning detection parameters...");
 
-        await ExecuteWithLoadingAsync(tuningMsg, async () =>
+        await ExecuteWithLoadingAsync(tuningMsg, async ct =>
         {
-            var result = await Task.Run(() => photo.AutoTune());
-            ScanSessions[currentIndex].IsModified = true;
+            var result = await Task.Run(() => photo.AutoTune(), ct);
+            ScanSessions[CurrentIndex].IsModified = true;
             SyncUiWithScanOptions(photo.CurrentOptions);
             SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
@@ -241,7 +241,7 @@ internal sealed partial class MainWindow
         if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
         SettingsManager.Instance.Save();
-        var session = ScanSessions[currentIndex];
+        var session = ScanSessions[CurrentIndex];
         session.Options.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
         await ReprocessCurrentScanAsync();
     }
@@ -251,7 +251,7 @@ internal sealed partial class MainWindow
         if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
         SettingsManager.Instance.Save();
-        var session = ScanSessions[currentIndex];
+        var session = ScanSessions[CurrentIndex];
         session.Options.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
         await ReprocessCurrentScanAsync();
     }
@@ -261,7 +261,7 @@ internal sealed partial class MainWindow
         if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
         SettingsManager.Instance.Save();
-        var session = ScanSessions[currentIndex];
+        var session = ScanSessions[CurrentIndex];
         session.Options.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
         await ReprocessCurrentScanAsync();
     }
@@ -270,14 +270,14 @@ internal sealed partial class MainWindow
     {
         if (isLoading || ScanSessions.Count == 0) return;
 
-        var session = ScanSessions[currentIndex];
+        var session = ScanSessions[CurrentIndex];
         session.IsModified = true;
         var photo = session.Activate();
         photo.ApplyOptions(GetDetectionOptionsFromUi());
 
-        await ExecuteWithLoadingAsync(LocalizationService.GetString(ResourceKeys.MsgDetectingPhotos, "Detecting photos..."), async () =>
+        await ExecuteWithLoadingAsync(LocalizationService.GetString(ResourceKeys.MsgDetectingPhotos, "Detecting photos..."), async ct =>
         {
-            await Task.Run(() => photo.DetectPhotos());
+            await Task.Run(() => photo.DetectPhotos(), ct);
             SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();

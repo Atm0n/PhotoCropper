@@ -280,12 +280,12 @@ public static class ExifMetadataWriter
             chunksToInject.Add(BuildPngTextChunk("Comment", metadata.Description));
         }
 
-        chunksToInject.Add(BuildPngTextChunk("Software", "PhotoCropper"));
-
         if (chunksToInject.Count == 0)
         {
             return pngBytes.ToArray();
         }
+
+        chunksToInject.Add(BuildPngTextChunk("Software", "PhotoCropper"));
 
         int totalInjectedBytes = chunksToInject.Sum(c => c.Length);
 

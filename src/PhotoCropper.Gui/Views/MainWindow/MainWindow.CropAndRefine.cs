@@ -41,7 +41,7 @@ internal sealed partial class MainWindow
             double delta = e.Delta.Y > 0 ? 1.1 : 0.9;
             double newZoom = Math.Clamp(oldZoom * delta, sldZoom.Minimum, sldZoom.Maximum);
 
-            if (newZoom != oldZoom)
+            if (Math.Abs(newZoom - oldZoom) > 0.0001)
             {
                 sldZoom.Value = newZoom;
                 double multiplier = newZoom / oldZoom;
@@ -101,7 +101,7 @@ internal sealed partial class MainWindow
         if (tglColorPicker?.IsChecked == true)
         {
             e.Handled = true;
-            SampleBackgroundColorAtPointer(e.GetPosition(pnlOriginal));
+            _ = SampleBackgroundColorAtPointerAsync(e.GetPosition(pnlOriginal));
             return;
         }
 
@@ -133,12 +133,12 @@ internal sealed partial class MainWindow
         var rect = CoordinateMapper.ComputeNormalizedRect(startPoint, e.GetPosition(pnlOriginal));
         if (rect.Width < 5 || rect.Height < 5) return;
 
-        ApplyManualCrop(rect);
+        _ = ApplyManualCropAsync(rect);
     }
 
-    private async void ApplyManualCrop(Rect uiRect)
+    private async Task ApplyManualCropAsync(Rect uiRect)
     {
-        var photo = ScanSessions[currentIndex].Activate();
+        var photo = ScanSessions[CurrentIndex].Activate();
         var imageRect = GetImageRectInsideControl();
         var originalSize = new System.Drawing.Size(photo.Original.Width, photo.Original.Height);
         var cropRect = CoordinateMapper.MapUiRectToImageRect(uiRect, imageRect, originalSize);
@@ -148,15 +148,15 @@ internal sealed partial class MainWindow
         string extractingMsg = LocalizationService.GetString(ResourceKeys.MsgExtractingCrop, "Extracting manual crop...");
         string addedMsg = LocalizationService.GetString(ResourceKeys.MsgManualCropAdded, "Manual crop added.");
 
-        await ExecuteWithLoadingAsync(extractingMsg, async () =>
+        await ExecuteWithLoadingAsync(extractingMsg, async ct =>
         {
             int prevCount = photo.DetectedPhotos.Count;
-            ScanSessions[currentIndex].IsModified = true;
-            await Task.Run(() => photo.AddManualCrop(cropRect));
+            ScanSessions[CurrentIndex].IsModified = true;
+            await Task.Run(() => photo.AddManualCrop(cropRect), ct);
             if (photo.DetectedPhotos.Count > prevCount)
             {
                 int newIndex = photo.DetectedPhotos.Count - 1;
-                undoHistory.PushAdd(currentIndex, newIndex, photo.DetectedPhotos[newIndex]);
+                undoHistory.PushAdd(CurrentIndex, newIndex, photo.DetectedPhotos[newIndex]);
             }
             LoadCroppedPhotosToSlider();
             slides.SelectedIndex = photo.DetectedPhotos.Count - 1;
@@ -183,7 +183,7 @@ internal sealed partial class MainWindow
         if (ScanSessions.Count == 0 || slides == null || slides.SelectedIndex < 0) return;
         int photoIndex = slides.SelectedIndex;
 
-        var photoCropper = ScanSessions[currentIndex].Activate();
+        var photoCropper = ScanSessions[CurrentIndex].Activate();
         currentRefineRect = photoCropper.GetRefinedCropRect(photoIndex);
 
         if (currentRefineRect.IsEmpty || currentRefineRect.Width <= 10 || currentRefineRect.Height <= 10)
@@ -203,7 +203,7 @@ internal sealed partial class MainWindow
         if (ScanSessions.Count == 0 || slides == null || slides.SelectedIndex < 0) return;
         int photoIndex = slides.SelectedIndex;
 
-        var photoCropper = ScanSessions[currentIndex].Activate();
+        var photoCropper = ScanSessions[CurrentIndex].Activate();
         using Mat previewMat = photoCropper.DetectedPhotos[photoIndex].Clone();
 
         System.Drawing.Rectangle drawRect = currentRefineRect;
@@ -247,7 +247,7 @@ internal sealed partial class MainWindow
 
         var imageRect = GetRefineImageRectInsideControl();
         int photoIndex = slides.SelectedIndex;
-        var photo = ScanSessions[currentIndex].Activate().DetectedPhotos[photoIndex];
+        var photo = ScanSessions[CurrentIndex].Activate().DetectedPhotos[photoIndex];
         var photoSize = new System.Drawing.Size(photo.Width, photo.Height);
 
         currentRefineRect = CoordinateMapper.MapUiRectToImageRect(uiRect, imageRect, photoSize);
@@ -284,14 +284,14 @@ internal sealed partial class MainWindow
         string applyingMsg = LocalizationService.GetString(ResourceKeys.MsgApplyingRefine, "Applying refinement...");
         string successMsg = LocalizationService.GetString(ResourceKeys.MsgRefineSuccess, "Crop refined successfully.");
 
-        var currentEngine = ScanSessions[currentIndex].Activate();
+        var currentEngine = ScanSessions[CurrentIndex].Activate();
         var beforeMat = currentEngine.DetectedPhotos[photoIndex].Clone();
 
-        await ExecuteWithLoadingAsync(applyingMsg, async () =>
+        await ExecuteWithLoadingAsync(applyingMsg, async ct =>
         {
-            ScanSessions[currentIndex].IsModified = true;
-            await Task.Run(() => currentEngine.ApplyCropToPhoto(photoIndex, currentRefineRect));
-            undoHistory.PushReplace(currentIndex, photoIndex, beforeMat, currentEngine.DetectedPhotos[photoIndex]);
+            ScanSessions[CurrentIndex].IsModified = true;
+            await Task.Run(() => currentEngine.ApplyCropToPhoto(photoIndex, currentRefineRect), ct);
+            undoHistory.PushReplace(CurrentIndex, photoIndex, beforeMat, currentEngine.DetectedPhotos[photoIndex]);
             beforeMat.Dispose();
             CloseRefineMode();
             LoadCroppedPhotosToSlider();
@@ -335,13 +335,13 @@ internal sealed partial class MainWindow
 
         if (ScanSessions.Count > 0)
         {
-            var photo = ScanSessions[currentIndex].Activate();
+            var photo = ScanSessions[CurrentIndex].Activate();
             photo.ApplyOptions(defaultOptions);
 
             string reprocessingMsg = LocalizationService.GetString(ResourceKeys.MsgReprocessing, "Reprocessing...");
-            await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
+            await ExecuteWithLoadingAsync(reprocessingMsg, async ct =>
             {
-                await Task.Run(() => photo.DetectPhotos());
+                await Task.Run(() => photo.DetectPhotos(), ct);
                 SetMainImage(photo.OriginalWithDetected);
                 LoadCroppedPhotosToSlider();
                 UpdatePhotoCounterLabel();
@@ -358,10 +358,10 @@ internal sealed partial class MainWindow
             : Cursor.Default;
     }
 
-    private async void SampleBackgroundColorAtPointer(Point uiPoint)
+    private async Task SampleBackgroundColorAtPointerAsync(Point uiPoint)
     {
         if (ScanSessions.Count == 0 || tglColorPicker == null || btnResetBackground == null) return;
-        var photo = ScanSessions[currentIndex].Activate();
+        var photo = ScanSessions[CurrentIndex].Activate();
         var imageRect = GetImageRectInsideControl();
         var originalSize = new System.Drawing.Size(photo.Original.Width, photo.Original.Height);
         var pixel = CoordinateMapper.MapUiPointToImagePixel(uiPoint, imageRect, originalSize);
@@ -372,14 +372,14 @@ internal sealed partial class MainWindow
         string samplingMsg = LocalizationService.GetString(ResourceKeys.MsgClickToSample, "Sampling background color...");
         string completeMsg = LocalizationService.GetString(ResourceKeys.MsgBackgroundSampled, "Custom background color applied.");
 
-        await ExecuteWithLoadingAsync(samplingMsg, async () =>
+        await ExecuteWithLoadingAsync(samplingMsg, async ct =>
         {
-            ScanSessions[currentIndex].IsModified = true;
+            ScanSessions[CurrentIndex].IsModified = true;
             await Task.Run(() =>
             {
                 photo.SetCustomBackgroundFromPixel(pixel.X, pixel.Y);
                 photo.DetectPhotos();
-            });
+            }, ct);
             btnResetBackground.IsEnabled = true;
             await LoadPhotosToGuiAsync();
         }, completeMsg);
@@ -388,18 +388,18 @@ internal sealed partial class MainWindow
     private async void BtnResetBackground_Click(object? sender, RoutedEventArgs e)
     {
         if (ScanSessions.Count == 0 || btnResetBackground == null) return;
-        var photo = ScanSessions[currentIndex].Activate();
+        var photo = ScanSessions[CurrentIndex].Activate();
 
         photo.CustomBackgroundColorHsv = null;
-        ScanSessions[currentIndex].IsModified = true;
+        ScanSessions[CurrentIndex].IsModified = true;
         btnResetBackground.IsEnabled = false;
 
         string reprocessingMsg = LocalizationService.GetString(ResourceKeys.MsgReprocessing, "Reprocessing with automatic background...");
         string completeMsg = LocalizationService.GetString(ResourceKeys.MsgDetectionComplete, "Detection complete.");
 
-        await ExecuteWithLoadingAsync(reprocessingMsg, async () =>
+        await ExecuteWithLoadingAsync(reprocessingMsg, async ct =>
         {
-            await Task.Run(() => photo.DetectPhotos());
+            await Task.Run(() => photo.DetectPhotos(), ct);
             await LoadPhotosToGuiAsync();
         }, completeMsg);
     }

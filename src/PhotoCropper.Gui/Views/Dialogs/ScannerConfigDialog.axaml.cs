@@ -80,12 +80,12 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
             _isInitializing = false;
         }
 
-        await RefreshScannersAsync();
+        await RefreshScannersAsync(_cts.Token);
     }
 
-    private async Task RefreshScannersAsync()
+    private async Task RefreshScannersAsync(CancellationToken cancellationToken = default)
     {
-        if (!await _refreshLock.WaitAsync(0))
+        if (!await _refreshLock.WaitAsync(0, cancellationToken))
         {
             return;
         }
@@ -106,7 +106,7 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
             var settings = SettingsManager.Instance.Settings;
             bool includeNetwork = settings.IncludeNetworkScanners ||
                                   settings.SelectedScannerId?.StartsWith("ESCL:", StringComparison.OrdinalIgnoreCase) == true;
-            var devices = await _scannerService.GetDevicesAsync(includeNetwork, _cts.Token).ConfigureAwait(false);
+            var devices = await _scannerService.GetDevicesAsync(includeNetwork, cancellationToken).ConfigureAwait(false);
             var safeDevices = devices?.Where(d => d != null).ToList() ?? [];
 
             if (_disposed) return;
@@ -226,13 +226,13 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
         {
             SettingsManager.Instance.Settings.IncludeNetworkScanners = chkNetworkScanners.IsChecked ?? false;
             SettingsManager.Instance.Save();
-            await RefreshScannersAsync();
+            await RefreshScannersAsync(_cts.Token);
         }
     }
 
     private async void BtnRefreshScanners_Click(object? sender, RoutedEventArgs e)
     {
-        await RefreshScannersAsync();
+        await RefreshScannersAsync(_cts.Token);
     }
 
     private void SaveSettings()

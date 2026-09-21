@@ -39,7 +39,7 @@ internal sealed partial class MainWindow
     {
         ClearGalleryBitmaps();
 
-        var detected = ScanSessions[currentIndex].Activate().DetectedPhotos;
+        var detected = ScanSessions[CurrentIndex].Activate().DetectedPhotos;
         for (int i = 0; i < detected.Count; i++)
         {
             var mat = detected[i];
@@ -95,12 +95,12 @@ internal sealed partial class MainWindow
     {
         if (isLoading || ScanSessions.Count == 0 || photoIndex < 0) return;
 
-        ScanSessions[currentIndex].IsModified = true;
-        var currentEngine = ScanSessions[currentIndex].Activate();
+        ScanSessions[CurrentIndex].IsModified = true;
+        var currentEngine = ScanSessions[CurrentIndex].Activate();
         if (photoIndex >= currentEngine.DetectedPhotos.Count) return;
 
         var matToDelete = currentEngine.DetectedPhotos[photoIndex];
-        undoHistory.PushDelete(currentIndex, photoIndex, matToDelete);
+        undoHistory.PushDelete(CurrentIndex, photoIndex, matToDelete);
 
         currentEngine.DeletePhoto(photoIndex);
 
@@ -122,7 +122,7 @@ internal sealed partial class MainWindow
     {
         if (isLoading || ScanSessions.Count == 0 || selectedIndices.Count == 0) return;
 
-        var currentEngine = ScanSessions[currentIndex].Activate();
+        var currentEngine = ScanSessions[CurrentIndex].Activate();
         var sortedIndices = selectedIndices.Distinct()
             .Where(idx => idx >= 0 && idx < currentEngine.DetectedPhotos.Count)
             .OrderByDescending(idx => idx)
@@ -130,7 +130,7 @@ internal sealed partial class MainWindow
 
         if (sortedIndices.Count == 0) return;
 
-        ScanSessions[currentIndex].IsModified = true;
+        ScanSessions[CurrentIndex].IsModified = true;
 
         var actions = new List<IUndoableAction>();
         int minIndex = sortedIndices.Min();
@@ -138,12 +138,12 @@ internal sealed partial class MainWindow
         foreach (var idx in sortedIndices)
         {
             var mat = currentEngine.DetectedPhotos[idx];
-            actions.Add(new DeletePhotoAction(currentIndex, idx, mat));
+            actions.Add(new DeletePhotoAction(CurrentIndex, idx, mat));
             currentEngine.DeletePhoto(idx);
         }
 
         string desc = $"Batch Delete ({sortedIndices.Count} photos)";
-        undoHistory.PushBatch(currentIndex, actions, desc);
+        undoHistory.PushBatch(CurrentIndex, actions, desc);
 
         LoadCroppedPhotosToSlider();
 
@@ -189,15 +189,15 @@ internal sealed partial class MainWindow
     {
         if (isLoading || ScanSessions.Count == 0 || photoIndex < 0) return;
 
-        ScanSessions[currentIndex].IsModified = true;
-        undoHistory.PushRotate(currentIndex, photoIndex);
+        ScanSessions[CurrentIndex].IsModified = true;
+        undoHistory.PushRotate(CurrentIndex, photoIndex);
 
         string rotatingMsg = LocalizationService.GetString(ResourceKeys.MsgRotating, "Rotating...");
         string rotatedMsg = LocalizationService.GetString(ResourceKeys.MsgPhotoRotated, "Photo rotated.");
 
-        await ExecuteWithLoadingAsync(rotatingMsg, async () =>
+        await ExecuteWithLoadingAsync(rotatingMsg, async ct =>
         {
-            await Task.Run(() => ScanSessions[currentIndex].Activate().RotatePhoto(photoIndex));
+            await Task.Run(() => ScanSessions[CurrentIndex].Activate().RotatePhoto(photoIndex), ct);
             LoadCroppedPhotosToSlider();
             if (slides != null) slides.SelectedIndex = photoIndex;
             if (lstGallery != null && photoIndex < lstGallery.Items.Count)
@@ -212,7 +212,7 @@ internal sealed partial class MainWindow
     {
         if (isLoading || ScanSessions.Count == 0 || selectedIndices.Count == 0) return;
 
-        var currentEngine = ScanSessions[currentIndex].Activate();
+        var currentEngine = ScanSessions[CurrentIndex].Activate();
         var validIndices = selectedIndices.Distinct()
             .Where(idx => idx >= 0 && idx < currentEngine.DetectedPhotos.Count)
             .OrderBy(idx => idx)
@@ -220,26 +220,27 @@ internal sealed partial class MainWindow
 
         if (validIndices.Count == 0) return;
 
-        ScanSessions[currentIndex].IsModified = true;
+        ScanSessions[CurrentIndex].IsModified = true;
 
         var actions = new List<IUndoableAction>();
         foreach (var idx in validIndices)
         {
-            actions.Add(new RotatePhotoAction(currentIndex, idx));
+            actions.Add(new RotatePhotoAction(CurrentIndex, idx));
         }
 
         string desc = $"Batch Rotate ({validIndices.Count} photos)";
-        undoHistory.PushBatch(currentIndex, actions, desc);
+        undoHistory.PushBatch(CurrentIndex, actions, desc);
 
-        await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgBatchRotating, "Rotating {0} photos...", validIndices.Count), async () =>
+        await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgBatchRotating, "Rotating {0} photos...", validIndices.Count), async ct =>
         {
             await Task.Run(() =>
             {
                 foreach (var idx in validIndices)
                 {
+                    ct.ThrowIfCancellationRequested();
                     currentEngine.RotatePhoto(idx);
                 }
-            });
+            }, ct);
 
             LoadCroppedPhotosToSlider();
 
@@ -451,13 +452,13 @@ internal sealed partial class MainWindow
 
     private void UpdatePhotoCounterLabel()
     {
-        if (lblPhotoInfo == null || slides == null || ScanSessions.Count == 0 || currentIndex >= ScanSessions.Count)
+        if (lblPhotoInfo == null || slides == null || ScanSessions.Count == 0 || CurrentIndex >= ScanSessions.Count)
         {
             if (lblPhotoInfo != null) lblPhotoInfo.Text = "";
             return;
         }
 
-        var session = ScanSessions[currentIndex];
+        var session = ScanSessions[CurrentIndex];
         int total = session.PhotoCount;
         if (total == 0)
         {
@@ -479,7 +480,7 @@ internal sealed partial class MainWindow
         if (!isLoading && slides != null) slides.Next();
     }
 
-    private async void PerformUndo()
+    private async Task PerformUndoAsync()
     {
         if (ScanSessions.Count == 0 || !undoHistory.CanUndo) return;
 
@@ -491,15 +492,15 @@ internal sealed partial class MainWindow
                 ScanSessions[action.ScanIndex].IsModified = true;
             }
 
-            if (action.ScanIndex != currentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
+            if (action.ScanIndex != CurrentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
             {
-                ScanSessions[currentIndex].Deactivate();
-                currentIndex = action.ScanIndex;
+                ScanSessions[CurrentIndex].Deactivate();
+                CurrentIndex = action.ScanIndex;
                 await LoadPhotosToGuiAsync();
             }
             else
             {
-                var engine = ScanSessions[currentIndex].Activate();
+                var engine = ScanSessions[CurrentIndex].Activate();
                 int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, engine.DetectedPhotos.Count - 1)) : 0;
                 LoadCroppedPhotosToSlider();
                 if (slides != null && engine.DetectedPhotos.Count > 0)
@@ -511,7 +512,7 @@ internal sealed partial class MainWindow
         }
     }
 
-    private async void PerformRedo()
+    private async Task PerformRedoAsync()
     {
         if (ScanSessions.Count == 0 || !undoHistory.CanRedo) return;
 
@@ -523,15 +524,15 @@ internal sealed partial class MainWindow
                 ScanSessions[action.ScanIndex].IsModified = true;
             }
 
-            if (action.ScanIndex != currentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
+            if (action.ScanIndex != CurrentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
             {
-                ScanSessions[currentIndex].Deactivate();
-                currentIndex = action.ScanIndex;
+                ScanSessions[CurrentIndex].Deactivate();
+                CurrentIndex = action.ScanIndex;
                 await LoadPhotosToGuiAsync();
             }
             else
             {
-                var engine = ScanSessions[currentIndex].Activate();
+                var engine = ScanSessions[CurrentIndex].Activate();
                 int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, engine.DetectedPhotos.Count - 1)) : 0;
                 LoadCroppedPhotosToSlider();
                 if (slides != null && engine.DetectedPhotos.Count > 0)
@@ -550,7 +551,7 @@ internal sealed partial class MainWindow
         var selectedIndices = GetSelectedPhotoIndices();
         if (selectedIndices.Count == 0) return;
 
-        var currentEngine = ScanSessions[currentIndex].Activate();
+        var currentEngine = ScanSessions[CurrentIndex].Activate();
         var validIndices = selectedIndices.Distinct()
             .Where(idx => idx >= 0 && idx < currentEngine.DetectedPhotos.Count)
             .OrderBy(idx => idx)
@@ -558,26 +559,27 @@ internal sealed partial class MainWindow
 
         if (validIndices.Count == 0) return;
 
-        ScanSessions[currentIndex].IsModified = true;
+        ScanSessions[CurrentIndex].IsModified = true;
 
         var actions = new List<IUndoableAction>();
         foreach (var idx in validIndices)
         {
-            actions.Add(new RotatePhotoAction(currentIndex, idx));
+            actions.Add(new RotatePhotoAction(CurrentIndex, idx));
         }
 
         string desc = validIndices.Count == 1 ? "Rotate 90° CCW" : $"Batch Rotate CCW ({validIndices.Count} photos)";
-        undoHistory.PushBatch(currentIndex, actions, desc);
+        undoHistory.PushBatch(CurrentIndex, actions, desc);
 
-        await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgBatchRotating, "Rotating {0} photos...", validIndices.Count), async () =>
+        await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgBatchRotating, "Rotating {0} photos...", validIndices.Count), async ct =>
         {
             await Task.Run(() =>
             {
                 foreach (var idx in validIndices)
                 {
+                    ct.ThrowIfCancellationRequested();
                     currentEngine.RotatePhotoCounterClockwise(idx);
                 }
-            });
+            }, ct);
 
             LoadCroppedPhotosToSlider();
 
@@ -634,7 +636,7 @@ internal sealed partial class MainWindow
         int selectedIndex = slides?.SelectedIndex ?? -1;
         if (selectedIndex >= 0)
         {
-            await ExportSinglePhotoAsync(selectedIndex);
+            await ExportSinglePhotoAsync(selectedIndex, CancellationToken.None);
         }
     }
 

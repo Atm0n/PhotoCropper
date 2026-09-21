@@ -52,10 +52,18 @@ internal sealed partial class MainWindow
                 }
             }
 
-            if (string.IsNullOrEmpty(workDir))
+            if (string.IsNullOrWhiteSpace(workDir))
             {
                 string picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-                if (string.IsNullOrEmpty(picturesDir)) picturesDir = Path.GetTempPath();
+                if (string.IsNullOrWhiteSpace(picturesDir))
+                {
+                    picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                }
+                if (string.IsNullOrWhiteSpace(picturesDir))
+                {
+                    picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                }
+
                 workDir = Path.Combine(picturesDir, "PhotoCropper_Workspace");
                 settings.WorkDirectory = workDir;
                 SettingsManager.Instance.Save();
@@ -68,7 +76,7 @@ internal sealed partial class MainWindow
         // 2. Discover scanner if needed
         if (_availableScanners.Count == 0)
         {
-            await RefreshScannersAsync();
+            await RefreshScannersAsync(CancellationToken.None);
         }
 
         // 3. If no scanner has been configured yet or no scanner is detected, show configuration modal
@@ -92,7 +100,7 @@ internal sealed partial class MainWindow
     {
         using var dialog = new Dialogs.ScannerConfigDialog(_scannerService);
         var result = await dialog.ShowDialog<Dialogs.ScannerConfigResult>(this);
-        await RefreshScannersAsync();
+        await RefreshScannersAsync(CancellationToken.None);
         if (result == Dialogs.ScannerConfigResult.SaveAndScan)
         {
             BtnScan_Click(this, new RoutedEventArgs());
@@ -195,7 +203,7 @@ internal sealed partial class MainWindow
             var newItems = stagedPaths.Select(path => new ScanSessionItem(path, options, isSaved: false, isModified: true)).ToList();
             _sessionManager.AddRange(newItems);
 
-            currentIndex = _sessionManager.Count - stagedPaths.Count;
+            CurrentIndex = _sessionManager.Count - stagedPaths.Count;
             await LoadPhotosToGuiAsync();
         }
         else
@@ -204,13 +212,13 @@ internal sealed partial class MainWindow
         }
     }
 
-    private async Task RefreshScannersAsync()
+    private async Task RefreshScannersAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             var settings = SettingsManager.Instance.Settings;
             bool includeNetwork = settings.IncludeNetworkScanners;
-            var devices = await _scannerService.GetDevicesAsync(includeNetwork).ConfigureAwait(false);
+            var devices = await _scannerService.GetDevicesAsync(includeNetwork, cancellationToken).ConfigureAwait(false);
             var safeDevices = devices?.Where(d => d != null).ToList() ?? [];
 
             await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
@@ -235,6 +243,6 @@ internal sealed partial class MainWindow
     private async void BtnErrorRefresh_Click(object? sender, RoutedEventArgs e)
     {
         pnlErrorOverlay.IsVisible = false;
-        await RefreshScannersAsync();
+        await RefreshScannersAsync(CancellationToken.None);
     }
 }

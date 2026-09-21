@@ -63,12 +63,12 @@ internal sealed partial class MainWindow
 
         int maxConcurrency = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
 
-        await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgSavingProgress, "Exporting scan {0} of {1} ({2} photos saved)...", 1, totalScans, 0), async () =>
+        await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgSavingProgress, "Exporting scan {0} of {1} ({2} photos saved)...", 1, totalScans, 0), async ct =>
         {
             await Task.Run(() =>
             {
                 PhotoExporter.ClearClaimedExportPaths();
-                Parallel.ForEach(pendingSessions, new ParallelOptions { MaxDegreeOfParallelism = maxConcurrency }, (session) =>
+                Parallel.ForEach(pendingSessions, new ParallelOptions { MaxDegreeOfParallelism = maxConcurrency, CancellationToken = ct }, (session) =>
                 {
                     try
                     {
@@ -140,7 +140,7 @@ internal sealed partial class MainWindow
                 {
                     ProjectWorkspaceService.SaveSession(settings.WorkDirectory, _workspaceSession);
                 }
-            });
+            }, ct);
 
             if (totalSavedPhotos > 0)
             {
@@ -157,23 +157,23 @@ internal sealed partial class MainWindow
         return true;
     }
 
-    private async Task ExportSinglePhotoAsync(int photoIndex)
+    private async Task ExportSinglePhotoAsync(int photoIndex, CancellationToken cancellationToken = default)
     {
         if (isLoading || ScanSessions.Count == 0 || photoIndex < 0) return;
 
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.StorageProvider == null) return;
 
-        var engine = ScanSessions[currentIndex].Activate();
+        var engine = ScanSessions[CurrentIndex].Activate();
         if (photoIndex >= engine.DetectedPhotos.Count) return;
 
         var settings = SettingsManager.Instance.Settings;
         string defaultExt = string.Equals(settings.PreferredFormat, AppConstants.FormatPng, StringComparison.OrdinalIgnoreCase) ? AppConstants.ExtensionPng : AppConstants.ExtensionJpg;
-        string baseName = Path.GetFileNameWithoutExtension(ScanSessions[currentIndex].FilePath);
+        string baseName = Path.GetFileNameWithoutExtension(ScanSessions[CurrentIndex].FilePath);
 
         var scanMetadata = settings.ApplyYearToAllScans
             ? new PhotoExportMetadata { Year = settings.DefaultYear, Description = settings.DefaultDescription }
-            : ScanSessions[currentIndex].Metadata;
+            : ScanSessions[CurrentIndex].Metadata;
 
         string suggestedName = FileNameTemplateHelper.FormatFileName(
             settings.FileNamePattern,
@@ -194,13 +194,13 @@ internal sealed partial class MainWindow
         {
             string targetPath = fileResult.Path.LocalPath;
             var photoMat = engine.DetectedPhotos[photoIndex];
-            var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(ScanSessions[currentIndex].FilePath);
+            var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(ScanSessions[CurrentIndex].FilePath);
 
             if (targetPath.EndsWith(AppConstants.ExtensionPng, StringComparison.OrdinalIgnoreCase))
             {
                 using var buf = new Emgu.CV.Util.VectorOfByte();
                 Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionPng, photoMat, buf);
-                await File.WriteAllBytesAsync(targetPath, buf.ToArray());
+                await File.WriteAllBytesAsync(targetPath, buf.ToArray(), cancellationToken);
                 PhotoExporter.EmbedPngDpi(targetPath, xDpi, yDpi);
                 if (scanMetadata.HasMetadata)
                 {
@@ -215,7 +215,7 @@ internal sealed partial class MainWindow
                 };
                 using var buf = new Emgu.CV.Util.VectorOfByte();
                 Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionJpg, photoMat, buf, parameters);
-                await File.WriteAllBytesAsync(targetPath, buf.ToArray());
+                await File.WriteAllBytesAsync(targetPath, buf.ToArray(), cancellationToken);
                 PhotoExporter.EmbedJpegDpi(targetPath, xDpi, yDpi);
                 if (scanMetadata.HasMetadata)
                 {
@@ -238,8 +238,8 @@ internal sealed partial class MainWindow
     {
         if (isLoading) return;
 
-        string sampleName = ScanSessions.Count > 0 && currentIndex >= 0 && currentIndex < ScanSessions.Count
-            ? Path.GetFileNameWithoutExtension(ScanSessions[currentIndex].FilePath)
+        string sampleName = ScanSessions.Count > 0 && CurrentIndex >= 0 && CurrentIndex < ScanSessions.Count
+            ? Path.GetFileNameWithoutExtension(ScanSessions[CurrentIndex].FilePath)
             : "Scan001";
 
         var dialog = new Dialogs.ExportSettingsDialog(hasScans: _sessionManager.HasScans, sampleOriginal: sampleName);
