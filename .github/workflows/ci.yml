@@ -2,11 +2,20 @@ name: CI & Release Pipeline
 
 on:
   push:
-    branches: [ master, main, developer ]
     tags:
       - 'v*'
   pull_request:
     branches: [ master, main, developer ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
