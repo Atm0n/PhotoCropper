@@ -1,5 +1,4 @@
 using PhotoCropper.Core.Updates;
-using Shouldly;
 using System.Net;
 
 namespace PhotoCropper.Core.Tests.Updates;
