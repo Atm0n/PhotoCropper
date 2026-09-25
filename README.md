@@ -114,6 +114,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 The codebase strictly enforces the highest standard of static analysis and memory hygiene:
 - **Warnings-as-Errors Policy:** Enforced solution-wide via `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<AnalysisLevel>latest-All</AnalysisLevel>` inside `Directory.Build.props`.
 - **Zero-Warning Success:** Compiles with `0 Warnings` and `0 Errors` across both Debug and Release configurations.
+- **NuGet Compatibility (`NU1701`):** `Directory.Build.props` explicitly suppresses `NU1701` (`<NoWarn>$(NoWarn);...;NU1701</NoWarn>`). Emgu CV's Windows runtime package (`Emgu.CV.runtime.windows`) bundles MSVC C++ Redistributable sub-packages (`Emgu.runtime.windows.msvc.rt.*`) whose internal package metadata uses `.NETFramework` target tags. Suppressing `NU1701` allows NuGet to perform standard framework fallback on modern .NET without failing solution-wide `TreatWarningsAsErrors`.
 - **OpenCV & Avalonia Memory Safety (CA2000):** Implements explicit `using` statements, unmanaged resource trackers, proactive native `Bitmap` disposal, and bounded undo action queues to guarantee zero memory leaks.
 - **Encapsulation & Security:** Core internal helper elements expose APIs through read-only interfaces (`IReadOnlyList`, `IReadOnlySet`, `Collection<T>`) to guarantee architectural robustness.
 - **Clean Structure:** No `#region` / `#endregion` directives; decomposed monolithic components into clean, single-responsibility services.
