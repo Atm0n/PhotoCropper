@@ -33,6 +33,8 @@ public sealed class PhotoCropperEngineTests : IDisposable
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         cropper.DetectPhotos();
         cropper.DetectedPhotos.Count.ShouldBeGreaterThanOrEqualTo(2);
+        cropper.TotalDetectedAreaRatio.ShouldBeGreaterThan(0.0);
+        cropper.TotalDetectedAreaRatio.ShouldBeLessThanOrEqualTo(1.0);
     }
 
     [Fact]

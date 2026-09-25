@@ -114,6 +114,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 The codebase strictly enforces the highest standard of static analysis and memory hygiene:
 - **Warnings-as-Errors Policy:** Enforced solution-wide via `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<AnalysisLevel>latest-All</AnalysisLevel>` inside `Directory.Build.props`.
 - **Zero-Warning Success:** Compiles with `0 Warnings` and `0 Errors` across both Debug and Release configurations.
+- **NuGet Compatibility (`NU1701`):** `Directory.Build.props` explicitly suppresses `NU1701` (`<NoWarn>$(NoWarn);...;NU1701</NoWarn>`). Emgu CV's Windows runtime package (`Emgu.CV.runtime.windows`) bundles MSVC C++ Redistributable sub-packages (`Emgu.runtime.windows.msvc.rt.*`) whose internal package metadata uses `.NETFramework` target tags. Suppressing `NU1701` allows NuGet to perform standard framework fallback on modern .NET without failing solution-wide `TreatWarningsAsErrors`.
 - **OpenCV & Avalonia Memory Safety (CA2000):** Implements explicit `using` statements, unmanaged resource trackers, proactive native `Bitmap` disposal, and bounded undo action queues to guarantee zero memory leaks.
 - **Encapsulation & Security:** Core internal helper elements expose APIs through read-only interfaces (`IReadOnlyList`, `IReadOnlySet`, `Collection<T>`) to guarantee architectural robustness.
 - **Clean Structure:** No `#region` / `#endregion` directives; decomposed monolithic components into clean, single-responsibility services.
@@ -202,6 +203,8 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `--max-photos <num>` | Maximum expected photos per scan to flag for review | *Unlimited* |
 | `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
 | `--auto-tune` | Automatically search optimal detection parameters on difficult scans | `false` |
+| `--auto-adjust-low-coverage` | Auto-tune only scans where detected area coverage is lower than threshold | `false` |
+| `--min-coverage <percent>` | Set low coverage threshold percentage for auto-adjust | `50` |
 | `--copy-undetected <dir>` | Copy scans with 0 detected photos to a designated review directory | `null` |
 | `-w, --wizard` | Launch step-by-step interactive CLI setup wizard | `false` |
 | `-y, --non-interactive` | Disable interactive prompts (e.g. post-batch auto-tune review prompt) | `false` |

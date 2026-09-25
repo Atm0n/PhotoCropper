@@ -25,4 +25,10 @@ public interface IScannerService : IDisposable
         string outputDirectory,
         string fileNamePrefix = "scan_",
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Queries the scanner hardware driver to determine its maximum physical flatbed scan area.
+    /// Returns null if the scanner is not connected or bed dimensions cannot be queried.
+    /// </summary>
+    Task<string?> GetDeviceBedDimensionsAsync(ScannerDeviceInfo device, CancellationToken cancellationToken = default);
 }

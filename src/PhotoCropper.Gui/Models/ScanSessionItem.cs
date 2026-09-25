@@ -15,7 +15,11 @@ internal sealed class ScanSessionItem : IDisposable
     public int CachedPhotoCount { get; private set; }
     public bool IsSaved { get; set; }
     public bool IsModified { get; set; }
+    public bool IsAutoTuned { get; set; }
+    public bool IsProcessing { get; set; }
     public PhotoExportMetadata Metadata { get; set; } = new();
+
+    private readonly object _lock = new();
 
     public ScanSessionItem(string filePath, DetectionOptions defaultOptions, bool isSaved = false, bool isModified = true)
     {
@@ -32,31 +36,56 @@ internal sealed class ScanSessionItem : IDisposable
     {
         if (Engine == null)
         {
-            Engine = new PhotoCropperEngine(FilePath);
-            Engine.ApplyOptions(Options);
-            Engine.DetectPhotos();
-            CachedPhotoCount = Engine.DetectedPhotos.Count;
+            lock (_lock)
+            {
+                if (Engine == null)
+                {
+                    var engine = new PhotoCropperEngine(FilePath);
+                    engine.ApplyOptions(Options);
+                    engine.DetectPhotos();
+                    CachedPhotoCount = engine.DetectedPhotos.Count;
+                    Engine = engine;
+                }
+            }
         }
         return Engine;
     }
 
     public void Deactivate()
     {
-        if (Engine != null)
+        lock (_lock)
         {
-            Options = Engine.CurrentOptions with { };
-            CachedPhotoCount = Engine.DetectedPhotos.Count;
-            Engine.Dispose();
-            Engine = null;
+            if (Engine != null && !IsProcessing)
+            {
+                Options = Engine.CurrentOptions with { };
+                CachedPhotoCount = Engine.DetectedPhotos.Count;
+                Engine.Dispose();
+                Engine = null;
+                IsAutoTuned = false;
+            }
+        }
+    }
+
+    public bool TryDeactivateIfUnmodified()
+    {
+        lock (_lock)
+        {
+            if (!IsModified && !IsProcessing && Engine != null)
+            {
+                Options = Engine.CurrentOptions with { };
+                CachedPhotoCount = Engine.DetectedPhotos.Count;
+                Engine.Dispose();
+                Engine = null;
+                IsAutoTuned = false;
+                return true;
+            }
+            return false;
         }
     }
 
     public void DeactivateIfUnmodified()
     {
-        if (!IsModified)
-        {
-            Deactivate();
-        }
+        TryDeactivateIfUnmodified();
     }
 
     public void Dispose()

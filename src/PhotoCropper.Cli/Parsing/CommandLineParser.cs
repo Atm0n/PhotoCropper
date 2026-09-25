@@ -122,6 +122,18 @@ internal static class CommandLineParser
             {
                 options.AutoTune = true;
             }
+            else if (arg == "--auto-adjust-low-coverage")
+            {
+                options.AutoAdjustLowCoverage = true;
+            }
+            else if (arg == "--min-coverage" && i + 1 < args.Length)
+            {
+                if (double.TryParse(args[++i], CultureInfo.InvariantCulture, out double cov))
+                {
+                    options.MinCoverageThresholdPercent = Math.Clamp(cov, 1.0, 99.0);
+                    options.AutoAdjustLowCoverage = true;
+                }
+            }
             else if (arg is "--copy-undetected" or "--isolate-undetected" && i + 1 < args.Length)
             {
                 options.CopyUndetectedDirectory = args[++i];
@@ -194,6 +206,8 @@ internal static class CommandLineParser
               --max-photos <num>      Maximum expected photos per scan to flag for review (default: unlimited)
               --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)
               --auto-tune             Automatically search optimal detection parameters on difficult scans
+              --auto-adjust-low-coverage Auto-tune only scans with low detected area coverage (default: <50%)
+              --min-coverage <percent>   Set low coverage threshold percentage for auto-adjust (default: 50)
               --copy-undetected <dir> Copy undetected scans with 0 photos to a designated review directory
               -w, --wizard            Launch step-by-step interactive CLI wizard
               -y, --non-interactive   Disable interactive prompts (e.g., auto-tune prompts at batch completion)

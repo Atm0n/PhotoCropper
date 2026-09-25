@@ -26,6 +26,10 @@ internal static class ResourceKeys
     public const string BtnOk = nameof(BtnOk);
 
     public const string LblDetectionSensitivity = nameof(LblDetectionSensitivity);
+    public const string LblAutoTuneOnPass = nameof(LblAutoTuneOnPass);
+    public const string LblAutoAdjustOnLowCoverage = nameof(LblAutoAdjustOnLowCoverage);
+    public const string LblCoveragePercent = nameof(LblCoveragePercent);
+    public const string LblLookaheadPreloaded = nameof(LblLookaheadPreloaded);
     public const string LblNoProject = nameof(LblNoProject);
     public const string TxtNoFiles = nameof(TxtNoFiles);
     public const string TxtSelectedCount = nameof(TxtSelectedCount);
@@ -43,6 +47,8 @@ internal static class ResourceKeys
     public const string TipActiveProject = nameof(TipActiveProject);
     public const string TipWorkDir = nameof(TipWorkDir);
     public const string TipAutoTune = nameof(TipAutoTune);
+    public const string TipAutoTuneOnPass = nameof(TipAutoTuneOnPass);
+    public const string TipAutoAdjustOnLowCoverage = nameof(TipAutoAdjustOnLowCoverage);
 
     public const string MsgUndo = nameof(MsgUndo);
     public const string MsgRedo = nameof(MsgRedo);
@@ -89,6 +95,8 @@ internal static class ResourceKeys
     public const string MenuExportSingle = nameof(MenuExportSingle);
     public const string LblOutputDir = nameof(LblOutputDir);
     public const string LblNamingPreview = nameof(LblNamingPreview);
+    public const string LblScannerPageSize = nameof(LblScannerPageSize);
+    public const string TipScannerPageSize = nameof(TipScannerPageSize);
     public const string TxtScanningSearching = nameof(TxtScanningSearching);
     public const string MsgClickToSample = nameof(MsgClickToSample);
     public const string MsgBackgroundSampled = nameof(MsgBackgroundSampled);

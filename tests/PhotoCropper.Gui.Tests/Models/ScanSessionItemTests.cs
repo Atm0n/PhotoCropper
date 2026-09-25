@@ -127,6 +127,22 @@ public sealed class ScanSessionItemTests : IDisposable
         item.Metadata.HasMetadata.ShouldBeTrue();
     }
 
+    [Fact]
+    public void ScanSessionItem_ConcurrentActivation_ShouldBeThreadSafe()
+    {
+        var options = new DetectionOptions { BackgroundTolerance = 30.0 };
+        using var item = new ScanSessionItem(_scanPath, options);
+
+        Parallel.For(0, 10, _ =>
+        {
+            var engine = item.Activate();
+            engine.ShouldNotBeNull();
+        });
+
+        item.IsActive.ShouldBeTrue();
+        item.Engine.ShouldNotBeNull();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

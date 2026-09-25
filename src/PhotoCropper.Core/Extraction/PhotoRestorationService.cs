@@ -54,7 +54,7 @@ public static class PhotoRestorationService
         CvInvoke.Split(lab, labChannels);
 
         using Mat lEnhanced = new();
-        CvInvoke.CLAHE(labChannels[0], 1.3, new Size(8, 8), 1, lEnhanced);
+        CvInvoke.CLAHE(labChannels[0], 1.3, new Size(8, 8), lEnhanced);
 
         using var mergedLabVec = new Emgu.CV.Util.VectorOfMat(lEnhanced, labChannels[1], labChannels[2]);
         using Mat enhancedLab = new();

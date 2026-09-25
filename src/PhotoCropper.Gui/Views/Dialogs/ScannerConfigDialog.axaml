@@ -47,6 +47,19 @@
 				</ComboBox>
 			</StackPanel>
 
+			<!-- Bed / Page Size -->
+			<StackPanel Spacing="6">
+				<TextBlock Text="{DynamicResource LblScannerPageSize}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+				<ComboBox x:Name="cbScannerPageSize" SelectedIndex="0" HorizontalAlignment="Stretch" SelectionChanged="CbScannerPageSize_SelectionChanged" Focusable="False" FontSize="12" ToolTip.Tip="{DynamicResource TipScannerPageSize}">
+					<ComboBoxItem x:Name="cbiPageSizeAuto" Content="Auto / Full Bed (Auto-Detect Maximum)"/>
+					<ComboBoxItem Content="A4 (210 × 297 mm)"/>
+					<ComboBoxItem Content="Letter / LTR (8.5 × 11 in / 216 × 279 mm)"/>
+					<ComboBoxItem Content="Legal (8.5 × 14 in / 216 × 356 mm)"/>
+					<ComboBoxItem Content="B5 (182 × 257 mm)"/>
+					<ComboBoxItem Content="A5 (148 × 210 mm)"/>
+				</ComboBox>
+			</StackPanel>
+
 			<!-- Network Scanners Checkbox -->
 			<CheckBox x:Name="chkNetworkScanners" Content="{DynamicResource LblNetworkScanners}" ToolTip.Tip="{DynamicResource TipNetworkScanners}" IsCheckedChanged="ChkNetworkScanners_IsCheckedChanged" FontSize="11" Focusable="False"/>
 

@@ -15,6 +15,11 @@ namespace PhotoCropper.Core.Extraction;
 
 public static class FaceOrientationService
 {
+    static FaceOrientationService()
+    {
+        CvInvoke.LogLevel = LogLevel.Error;
+    }
+
     private static readonly Lazy<string?> LazyModelPath = new(ExtractModelToTemp);
 
     public static bool IsModelAvailable => LazyModelPath.Value != null && File.Exists(LazyModelPath.Value);

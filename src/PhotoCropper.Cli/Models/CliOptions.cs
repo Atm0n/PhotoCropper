@@ -17,6 +17,8 @@ internal sealed class CliOptions
     public bool Recursive { get; set; }
     public bool Verbose { get; set; }
     public bool AutoTune { get; set; }
+    public bool AutoAdjustLowCoverage { get; set; }
+    public double MinCoverageThresholdPercent { get; set; } = PhotoCropper.Core.Common.AppConstants.LowCoverageThreshold * 100.0;
     public string? CopyUndetectedDirectory { get; set; }
     public bool NonInteractive { get; set; }
     public bool Interactive { get; set; }
