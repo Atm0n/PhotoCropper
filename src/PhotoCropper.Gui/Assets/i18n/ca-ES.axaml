@@ -20,6 +20,7 @@
 	<sys:String x:Key="LblAutoAdjustOnLowCoverage">Auto-Ajustar si la detecció és &lt; 50%</sys:String>
 	<sys:String x:Key="TipAutoAdjustOnLowCoverage">Executa automàticament l'Auto-Ajust si l'àrea de foto detectada cobreix menys del 50% del límit de l'escaneig.</sys:String>
 	<sys:String x:Key="LblCoveragePercent">Cobertura: {0}%</sys:String>
+	<sys:String x:Key="LblLookaheadPreloaded">⚡ Precarregat</sys:String>
 	<sys:String x:Key="LblShowNotifications">Notificacions de Finalització</sys:String>
 	<sys:String x:Key="TipShowNotifications">Mostra una notificació emergent a l'aplicació quan finalitza l'exportació de fotos.</sys:String>
 	<sys:String x:Key="LblFlashTaskbar">Parpellejar Barra de Tasques</sys:String>

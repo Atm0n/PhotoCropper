@@ -20,6 +20,7 @@
 	<sys:String x:Key="LblAutoAdjustOnLowCoverage">Auto-Tune if Detection &lt; 50%</sys:String>
 	<sys:String x:Key="TipAutoAdjustOnLowCoverage">Automatically executes Auto-Tune if detected photo area covers less than 50% of expected scan boundaries.</sys:String>
 	<sys:String x:Key="LblCoveragePercent">Coverage: {0}%</sys:String>
+	<sys:String x:Key="LblLookaheadPreloaded">⚡ Pre-loaded</sys:String>
 	<sys:String x:Key="LblShowNotifications">Completion Notifications</sys:String>
 	<sys:String x:Key="TipShowNotifications">Display an in-app popup notification when photo export completes.</sys:String>
 	<sys:String x:Key="LblFlashTaskbar">Flash Taskbar</sys:String>

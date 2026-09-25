@@ -203,6 +203,8 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `--max-photos <num>` | Maximum expected photos per scan to flag for review | *Unlimited* |
 | `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
 | `--auto-tune` | Automatically search optimal detection parameters on difficult scans | `false` |
+| `--auto-adjust-low-coverage` | Auto-tune only scans where detected area coverage is lower than threshold | `false` |
+| `--min-coverage <percent>` | Set low coverage threshold percentage for auto-adjust | `50` |
 | `--copy-undetected <dir>` | Copy scans with 0 detected photos to a designated review directory | `null` |
 | `-w, --wizard` | Launch step-by-step interactive CLI setup wizard | `false` |
 | `-y, --non-interactive` | Disable interactive prompts (e.g. post-batch auto-tune review prompt) | `false` |

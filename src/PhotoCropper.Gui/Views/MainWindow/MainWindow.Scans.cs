@@ -87,6 +87,10 @@ internal sealed partial class MainWindow
         string processingMsg = LocalizationService.GetString(ResourceKeys.ProcessingScan, "Processing...");
 
         bool isPreprocessed = session.IsActive && session.IsAutoTuned;
+        if (bdrLookaheadStatus != null)
+        {
+            bdrLookaheadStatus.IsVisible = isPreprocessed;
+        }
 
         if (isPreprocessed)
         {
@@ -348,6 +352,7 @@ internal sealed partial class MainWindow
             txtFileCounter.Text = LocalizationService.GetString(ResourceKeys.TxtNoFiles, "No files loaded");
             lblPhotoInfo.Text = "";
             lblStatus.Text = statusMsg;
+            if (bdrLookaheadStatus != null) bdrLookaheadStatus.IsVisible = false;
             UpdateEmptyStateVisibility();
         }
         else

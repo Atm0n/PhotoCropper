@@ -29,6 +29,7 @@ internal static class ResourceKeys
     public const string LblAutoTuneOnPass = nameof(LblAutoTuneOnPass);
     public const string LblAutoAdjustOnLowCoverage = nameof(LblAutoAdjustOnLowCoverage);
     public const string LblCoveragePercent = nameof(LblCoveragePercent);
+    public const string LblLookaheadPreloaded = nameof(LblLookaheadPreloaded);
     public const string LblNoProject = nameof(LblNoProject);
     public const string TxtNoFiles = nameof(TxtNoFiles);
     public const string TxtSelectedCount = nameof(TxtSelectedCount);

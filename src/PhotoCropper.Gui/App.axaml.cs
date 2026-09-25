@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Emgu.CV;
+using Emgu.CV.CvEnum;
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;
@@ -9,6 +11,7 @@ internal sealed partial class App : Application
 {
     public override void Initialize()
     {
+        CvInvoke.LogLevel = LogLevel.Error;
         AvaloniaXamlLoader.Load(this);
     }
 

@@ -214,4 +214,18 @@ public sealed class CommandLineParserTests
         var shortOptions = CommandLineParser.Parse(shortArgs);
         shortOptions.Tolerance.ShouldBe(4.0);
     }
+
+    [Fact]
+    public void CommandLineParser_AutoAdjustLowCoverageFlags_ShouldBeParsed()
+    {
+        string[] args1 = ["--auto-adjust-low-coverage"];
+        var options1 = CommandLineParser.Parse(args1);
+        options1.AutoAdjustLowCoverage.ShouldBeTrue();
+        options1.MinCoverageThresholdPercent.ShouldBe(50.0);
+
+        string[] args2 = ["--min-coverage", "40"];
+        var options2 = CommandLineParser.Parse(args2);
+        options2.AutoAdjustLowCoverage.ShouldBeTrue();
+        options2.MinCoverageThresholdPercent.ShouldBe(40.0);
+    }
 }

@@ -24,7 +24,7 @@ internal static class BatchProcessor
         grid.AddRow("[bold cyan]Scans Found:[/]", $"[bold white]{scanFiles.Count}[/]");
         grid.AddRow("[bold cyan]Output Format:[/]", $"[bold white]{options.Format}[/] (Quality: {options.JpegQuality})");
         grid.AddRow("[bold cyan]Detection:[/]", $"Tolerance: [bold white]{options.Tolerance}[/], MinSize: [bold white]{options.MinAreaFactor * 100:0}%[/], MaxSize: [bold white]{options.MaxAreaFactor * 100:0}%[/]");
-        grid.AddRow("[bold cyan]Auto-Tune:[/]", options.AutoTune ? "[bold green]Enabled (Sweeping)[/]" : "[grey]Disabled[/]");
+        grid.AddRow("[bold cyan]Auto-Tune:[/]", options.AutoTune ? "[bold green]Enabled (Sweeping)[/]" : options.AutoAdjustLowCoverage ? $"[bold yellow]Low-Coverage Trigger (< {options.MinCoverageThresholdPercent:0}%)[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Auto-Orient:[/]", options.AutoOrient ? "[bold green]Enabled (AI Face + Sky)[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Restoration:[/]", options.RestoreColors ? "[bold green]Enabled (Auto-WB + CLAHE)[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Dust Inpainting:[/]", options.RemoveDust ? "[bold green]Enabled (Morphological)[/]" : "[grey]Disabled[/]");
@@ -128,11 +128,13 @@ internal static class BatchProcessor
                             bool wasAutoTuned = false;
                             bool isUnderDetected = photoCount < options.MinExpectedPhotos;
                             bool isOverDetected = photoCount > options.MaxExpectedPhotos;
+                            bool isLowCoverage = options.AutoAdjustLowCoverage && !options.AutoTune && engine.TotalDetectedAreaRatio < (options.MinCoverageThresholdPercent / 100.0);
+                            bool shouldAutoTune = ((isUnderDetected || isOverDetected) && options.AutoTune) || isLowCoverage;
 
-                            if ((isUnderDetected || isOverDetected) && options.AutoTune)
+                            if (shouldAutoTune)
                             {
                                 var tuneResult = engine.AutoTune(options.MinExpectedPhotos, options.MaxExpectedPhotos);
-                                if (tuneResult.PhotoCount != photoCount)
+                                if (tuneResult.PhotoCount != photoCount || tuneResult.Improved)
                                 {
                                     photoCount = tuneResult.PhotoCount;
                                     wasAutoTuned = true;

@@ -13,6 +13,11 @@ namespace PhotoCropper.Core;
 
 public class PhotoCropperEngine : IDisposable
 {
+    static PhotoCropperEngine()
+    {
+        CvInvoke.LogLevel = LogLevel.Error;
+    }
+
     private bool disposedValue;
 
     public string OriginalFilePath { get; }

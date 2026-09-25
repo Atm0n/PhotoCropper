@@ -195,6 +195,9 @@
 								<TextBlock Text="◀" FontSize="10"/>
 							</Button>
 							<TextBlock x:Name="txtFileCounter" Text="{DynamicResource TxtNoFiles}" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center" Margin="4,0" FontSize="11"/>
+							<Border x:Name="bdrLookaheadStatus" IsVisible="False" Background="{DynamicResource AppSubtleCardBrush}" BorderBrush="#3db85a" BorderThickness="1" CornerRadius="4" Padding="5,2" Margin="3,0" ToolTip.Tip="Pre-processed in background thread for 0ms navigation">
+								<TextBlock x:Name="txtLookaheadBadge" Text="{DynamicResource LblLookaheadPreloaded}" FontSize="10" FontWeight="Bold" Foreground="#3db85a" VerticalAlignment="Center"/>
+							</Border>
 							<Button x:Name="btnNextScan" Click="BtnNextScan_Click" Padding="6,4" Background="Transparent" BorderThickness="0" Focusable="False" ToolTip.Tip="Next Scan (PageDown / ↓)">
 								<TextBlock Text="▶" FontSize="10"/>
 							</Button>
