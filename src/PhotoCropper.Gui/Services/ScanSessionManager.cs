@@ -35,7 +35,7 @@ internal sealed class ScanSessionManager : IDisposable
 
         if (index != CurrentIndex)
         {
-            CurrentSession?.DeactivateIfUnmodified();
+            CurrentSession?.TryDeactivateIfUnmodified();
             CurrentIndex = index;
         }
 
@@ -45,7 +45,7 @@ internal sealed class ScanSessionManager : IDisposable
     public bool MoveNext()
     {
         if (!HasScans) return false;
-        CurrentSession?.DeactivateIfUnmodified();
+        CurrentSession?.TryDeactivateIfUnmodified();
         CurrentIndex = (CurrentIndex + 1) % _sessions.Count;
         return true;
     }
@@ -53,7 +53,7 @@ internal sealed class ScanSessionManager : IDisposable
     public bool MovePrevious()
     {
         if (!HasScans) return false;
-        CurrentSession?.DeactivateIfUnmodified();
+        CurrentSession?.TryDeactivateIfUnmodified();
         CurrentIndex = (CurrentIndex - 1 + _sessions.Count) % _sessions.Count;
         return true;
     }

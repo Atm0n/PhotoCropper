@@ -15,6 +15,11 @@
 	<sys:String x:Key="TipRestoreColors">Neutralizes aging yellow casts, recovers shadow/highlight contrast via LAB CLAHE, and revives faded photo pigments.</sys:String>
 	<sys:String x:Key="LblRemoveDust">Remove Dust &amp; Scratches</sys:String>
 	<sys:String x:Key="TipRemoveDust">Automated inpainting of hairline scratches, dust specks, and fibers.</sys:String>
+	<sys:String x:Key="LblAutoTuneOnPass">Auto-Tune on Scan Switch</sys:String>
+	<sys:String x:Key="TipAutoTuneOnPass">Automatically runs detection Auto-Tune every time you switch or load a scan image.</sys:String>
+	<sys:String x:Key="LblAutoAdjustOnLowCoverage">Auto-Tune if Detection &lt; 50%</sys:String>
+	<sys:String x:Key="TipAutoAdjustOnLowCoverage">Automatically executes Auto-Tune if detected photo area covers less than 50% of expected scan boundaries.</sys:String>
+	<sys:String x:Key="LblCoveragePercent">Coverage: {0}%</sys:String>
 	<sys:String x:Key="LblShowNotifications">Completion Notifications</sys:String>
 	<sys:String x:Key="TipShowNotifications">Display an in-app popup notification when photo export completes.</sys:String>
 	<sys:String x:Key="LblFlashTaskbar">Flash Taskbar</sys:String>

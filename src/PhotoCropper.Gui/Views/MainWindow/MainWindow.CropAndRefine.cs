@@ -345,6 +345,7 @@ internal sealed partial class MainWindow
                 SetMainImage(photo.OriginalWithDetected);
                 LoadCroppedPhotosToSlider();
                 UpdatePhotoCounterLabel();
+                UpdateDetectionCoverageLabel();
                 lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgDetectionComplete, "Detection complete. Found {0} photos.", photo.DetectedPhotos.Count);
             });
         }

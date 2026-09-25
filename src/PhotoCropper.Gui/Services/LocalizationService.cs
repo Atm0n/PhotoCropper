@@ -26,6 +26,9 @@ internal static class ResourceKeys
     public const string BtnOk = nameof(BtnOk);
 
     public const string LblDetectionSensitivity = nameof(LblDetectionSensitivity);
+    public const string LblAutoTuneOnPass = nameof(LblAutoTuneOnPass);
+    public const string LblAutoAdjustOnLowCoverage = nameof(LblAutoAdjustOnLowCoverage);
+    public const string LblCoveragePercent = nameof(LblCoveragePercent);
     public const string LblNoProject = nameof(LblNoProject);
     public const string TxtNoFiles = nameof(TxtNoFiles);
     public const string TxtSelectedCount = nameof(TxtSelectedCount);
@@ -43,6 +46,8 @@ internal static class ResourceKeys
     public const string TipActiveProject = nameof(TipActiveProject);
     public const string TipWorkDir = nameof(TipWorkDir);
     public const string TipAutoTune = nameof(TipAutoTune);
+    public const string TipAutoTuneOnPass = nameof(TipAutoTuneOnPass);
+    public const string TipAutoAdjustOnLowCoverage = nameof(TipAutoAdjustOnLowCoverage);
 
     public const string MsgUndo = nameof(MsgUndo);
     public const string MsgRedo = nameof(MsgRedo);

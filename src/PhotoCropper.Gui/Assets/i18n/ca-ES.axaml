@@ -15,6 +15,11 @@
 	<sys:String x:Key="TipRestoreColors">Neutralitza el grogueig per envelliment, recupera ombres i llums amb LAB CLAHE i reviu colors descolorits.</sys:String>
 	<sys:String x:Key="LblRemoveDust">Eliminar Pols i Ratllades</sys:String>
 	<sys:String x:Key="TipRemoveDust">Inpainting automàtic de ratllades fines, borrissol i partícules de pols de l'escàner.</sys:String>
+	<sys:String x:Key="LblAutoTuneOnPass">Auto-Ajustar en canviar d'imatge</sys:String>
+	<sys:String x:Key="TipAutoTuneOnPass">Executa automàticament l'Auto-Ajust de detecció cada vegada que canvia o carrega una imatge.</sys:String>
+	<sys:String x:Key="LblAutoAdjustOnLowCoverage">Auto-Ajustar si la detecció és &lt; 50%</sys:String>
+	<sys:String x:Key="TipAutoAdjustOnLowCoverage">Executa automàticament l'Auto-Ajust si l'àrea de foto detectada cobreix menys del 50% del límit de l'escaneig.</sys:String>
+	<sys:String x:Key="LblCoveragePercent">Cobertura: {0}%</sys:String>
 	<sys:String x:Key="LblShowNotifications">Notificacions de Finalització</sys:String>
 	<sys:String x:Key="TipShowNotifications">Mostra una notificació emergent a l'aplicació quan finalitza l'exportació de fotos.</sys:String>
 	<sys:String x:Key="LblFlashTaskbar">Parpellejar Barra de Tasques</sys:String>
