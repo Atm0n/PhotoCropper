@@ -1,3 +1,4 @@
+using PhotoCropper.Core.Common;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
@@ -7,26 +8,28 @@ namespace PhotoCropper.Gui.Services;
 
 internal sealed class UserSettings
 {
-    public string Language { get; set; } = "en-US";
+    public string Language { get; set; } = AppConstants.DefaultLanguage;
     public double BackgroundTolerance { get; set; } = 25;
     public double MinAreaFactor { get; set; } = 25; // 25%
     public double MaxAreaFactor { get; set; } = 90; // 90%
-    public double CannyLowThreshold { get; set; } = 20;
+    public double CannyLowThreshold { get; set; } = AppConstants.DefaultCannyLow;
     public double ZoomLevel { get; set; } = 1;
     public bool AdvancedVisible { get; set; }
     public string? CustomOutputDirectory { get; set; }
-    public string PreferredFormat { get; set; } = "JPEG"; // JPEG or PNG
-    public int JpegQuality { get; set; } = 100; // 1-100 (default: 100 maximum quality)
+    public string PreferredFormat { get; set; } = AppConstants.FormatJpeg; // JPEG or PNG
+    public int JpegQuality { get; set; } = AppConstants.DefaultJpegQuality; // 1-100 (default: 100 maximum quality)
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; } = true;
     public bool RemoveDustAndScratches { get; set; } = true;
+    public bool AutoTuneOnScanChange { get; set; }
+    public bool AutoAdjustOnLowCoverage { get; set; } = true;
     public string? WorkDirectory { get; set; }
     public string? SelectedScannerId { get; set; }
-    public int ScannerDpi { get; set; } = 300;
+    public int ScannerDpi { get; set; } = AppConstants.DefaultScannerDpi;
     public bool IncludeNetworkScanners { get; set; }
-    public string Theme { get; set; } = "Dark"; // "Dark", "Light", "System"
-    public string DetectionBoxColor { get; set; } = "Red"; // "Red", "Amber", "Cyan", "Lime", "Magenta"
-    public string FileNamePattern { get; set; } = "{original}_{index}";
+    public string Theme { get; set; } = AppConstants.DefaultTheme; // "Dark", "Light", "System"
+    public string DetectionBoxColor { get; set; } = AppConstants.DefaultBoundingBoxColor; // "Red", "Amber", "Cyan", "Lime", "Magenta"
+    public string FileNamePattern { get; set; } = AppConstants.DefaultNamingPattern;
     public int? DefaultYear { get; set; }
     public string? DefaultDescription { get; set; }
     public bool ApplyYearToAllScans { get; set; } = true;
@@ -127,6 +130,8 @@ internal sealed class SettingsManager
         Settings.AutoOrientPhotos = defaults.AutoOrientPhotos;
         Settings.RestoreVintageColors = defaults.RestoreVintageColors;
         Settings.RemoveDustAndScratches = defaults.RemoveDustAndScratches;
+        Settings.AutoTuneOnScanChange = defaults.AutoTuneOnScanChange;
+        Settings.AutoAdjustOnLowCoverage = defaults.AutoAdjustOnLowCoverage;
         Save();
     }
 }

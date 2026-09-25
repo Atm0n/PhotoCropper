@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.IO;
 using PhotoCropper.Core.Models;
@@ -81,15 +82,20 @@ internal sealed partial class MainWindow
         UpdateEmptyStateVisibility();
         if (ScanSessions.Count == 0 || isLoading) return;
 
-        string fileName = Path.GetFileName(ScanSessions[CurrentIndex].FilePath);
+        var session = ScanSessions[CurrentIndex];
+        string fileName = Path.GetFileName(session.FilePath);
         string processingMsg = LocalizationService.GetString(ResourceKeys.ProcessingScan, "Processing...");
 
-        await ExecuteWithLoadingAsync($"{processingMsg} {fileName}", async ct =>
+        bool isPreprocessed = session.IsActive && session.IsAutoTuned;
+        if (bdrLookaheadStatus != null)
         {
-            var session = ScanSessions[CurrentIndex];
-            var currentPhoto = await Task.Run(() => session.Activate(), ct);
-            SyncUiWithScanOptions(currentPhoto.CurrentOptions);
+            bdrLookaheadStatus.IsVisible = isPreprocessed;
+        }
 
+        if (isPreprocessed)
+        {
+            var currentPhoto = session.Activate();
+            SyncUiWithScanOptions(currentPhoto.CurrentOptions);
             SetMainImage(currentPhoto.OriginalWithDetected);
 
             txtFileCounter.Text = LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", CurrentIndex + 1, ScanSessions.Count);
@@ -97,12 +103,184 @@ internal sealed partial class MainWindow
 
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();
+            UpdateDetectionCoverageLabel();
 
             if (btnResetBackground != null)
             {
                 btnResetBackground.IsEnabled = currentPhoto.CustomBackgroundColorHsv != null;
             }
-        });
+        }
+        else
+        {
+            await ExecuteWithLoadingAsync($"{processingMsg} {fileName}", async ct =>
+            {
+                var currentPhoto = await Task.Run(() => session.Activate(), ct);
+
+                bool shouldAutoTune = !session.IsAutoTuned && (
+                    SettingsManager.Instance.Settings.AutoTuneOnScanChange ||
+                    (SettingsManager.Instance.Settings.AutoAdjustOnLowCoverage && currentPhoto.TotalDetectedAreaRatio < AppConstants.LowCoverageThreshold)
+                );
+
+                if (shouldAutoTune)
+                {
+                    var tuneResult = await Task.Run(() => currentPhoto.AutoTune(), ct);
+                    session.IsAutoTuned = true;
+                    if (tuneResult.Improved || tuneResult.PhotoCount > 0)
+                    {
+                        session.IsModified = true;
+                    }
+                }
+                else
+                {
+                    session.IsAutoTuned = true;
+                }
+
+                SyncUiWithScanOptions(currentPhoto.CurrentOptions);
+                SetMainImage(currentPhoto.OriginalWithDetected);
+
+                txtFileCounter.Text = LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", CurrentIndex + 1, ScanSessions.Count);
+                lblStatus.Text = fileName;
+
+                LoadCroppedPhotosToSlider();
+                UpdatePhotoCounterLabel();
+                UpdateDetectionCoverageLabel();
+
+                if (btnResetBackground != null)
+                {
+                    btnResetBackground.IsEnabled = currentPhoto.CustomBackgroundColorHsv != null;
+                }
+            });
+        }
+
+        TriggerBackgroundLookahead(CurrentIndex);
+    }
+
+    private void UpdateDetectionCoverageLabel()
+    {
+        if (lblDetectionCoverage == null) return;
+        if (ScanSessions.Count == 0 || CurrentIndex < 0 || CurrentIndex >= ScanSessions.Count)
+        {
+            lblDetectionCoverage.Text = "";
+            return;
+        }
+
+        var session = ScanSessions[CurrentIndex];
+        if (session.IsActive && session.Engine != null)
+        {
+            int percent = (int)Math.Round(session.Engine.TotalDetectedAreaRatio * 100.0);
+            lblDetectionCoverage.Text = LocalizationService.Format(ResourceKeys.LblCoveragePercent, "Coverage: {0}%", percent);
+        }
+        else
+        {
+            lblDetectionCoverage.Text = "";
+        }
+    }
+
+    private CancellationTokenSource? _lookaheadCts;
+    private readonly SemaphoreSlim _lookaheadSemaphore = new(1, 1);
+
+    private void TriggerBackgroundLookahead(int currentIndex, int lookaheadAhead = AppConstants.DefaultLookaheadAhead, int lookaheadBehind = AppConstants.DefaultLookaheadBehind)
+    {
+        if (ScanSessions.Count == 0 || currentIndex < 0 || currentIndex >= ScanSessions.Count) return;
+
+        _lookaheadCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _lookaheadCts = cts;
+        var ct = cts.Token;
+
+        var sessionsToProcess = new List<ScanSessionItem>();
+
+        for (int offset = 1; offset <= lookaheadAhead; offset++)
+        {
+            int idx = (currentIndex + offset) % ScanSessions.Count;
+            if (idx >= 0 && idx < ScanSessions.Count)
+            {
+                var s = ScanSessions[idx];
+                if (!s.IsActive || !s.IsAutoTuned)
+                {
+                    sessionsToProcess.Add(s);
+                }
+            }
+        }
+
+        int prevIdx = (currentIndex - lookaheadBehind + ScanSessions.Count) % ScanSessions.Count;
+        if (prevIdx >= 0 && prevIdx < ScanSessions.Count)
+        {
+            var prevS = ScanSessions[prevIdx];
+            if (!prevS.IsActive || !prevS.IsAutoTuned)
+            {
+                sessionsToProcess.Add(prevS);
+            }
+        }
+
+        for (int i = 0; i < ScanSessions.Count; i++)
+        {
+            if (i == currentIndex) continue;
+            int dist = Math.Min(Math.Abs(i - currentIndex), ScanSessions.Count - Math.Abs(i - currentIndex));
+            if (dist > lookaheadAhead + 1 && ScanSessions[i].IsActive)
+            {
+                ScanSessions[i].TryDeactivateIfUnmodified();
+            }
+        }
+
+        if (sessionsToProcess.Count == 0) return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _lookaheadSemaphore.WaitAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            try
+            {
+                var settings = SettingsManager.Instance.Settings;
+                foreach (var session in sessionsToProcess)
+                {
+                    if (ct.IsCancellationRequested) break;
+                    session.IsProcessing = true;
+                    try
+                    {
+                        var photo = session.Activate();
+                        if (ct.IsCancellationRequested) break;
+
+                        bool shouldAutoTune = !session.IsAutoTuned && (
+                            settings.AutoTuneOnScanChange ||
+                            (settings.AutoAdjustOnLowCoverage && photo.TotalDetectedAreaRatio < AppConstants.LowCoverageThreshold)
+                        );
+
+                        if (shouldAutoTune && !ct.IsCancellationRequested)
+                        {
+                            var tuneResult = photo.AutoTune();
+                            session.IsAutoTuned = true;
+                            if (tuneResult.Improved || tuneResult.PhotoCount > 0)
+                            {
+                                session.IsModified = true;
+                            }
+                        }
+                        else
+                        {
+                            session.IsAutoTuned = true;
+                        }
+                    }
+                    catch (Exception ex) when (ex is IOException or InvalidOperationException)
+                    {
+                    }
+                    finally
+                    {
+                        session.IsProcessing = false;
+                    }
+                }
+            }
+            finally
+            {
+                _lookaheadSemaphore.Release();
+            }
+        }, ct);
     }
 
     private void UpdateEmptyStateVisibility()
@@ -174,6 +352,7 @@ internal sealed partial class MainWindow
             txtFileCounter.Text = LocalizationService.GetString(ResourceKeys.TxtNoFiles, "No files loaded");
             lblPhotoInfo.Text = "";
             lblStatus.Text = statusMsg;
+            if (bdrLookaheadStatus != null) bdrLookaheadStatus.IsVisible = false;
             UpdateEmptyStateVisibility();
         }
         else
@@ -219,6 +398,7 @@ internal sealed partial class MainWindow
             SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();
+            UpdateDetectionCoverageLabel();
 
             if (result.Improved || result.PhotoCount > 0)
             {
@@ -266,6 +446,49 @@ internal sealed partial class MainWindow
         await ReprocessCurrentScanAsync();
     }
 
+    private void ChkAutoTuneOnPass_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (isUpdatingUiFromScan || isLoading) return;
+        bool isChecked = chkAutoTuneOnPass?.IsChecked == true;
+        SettingsManager.Instance.Settings.AutoTuneOnScanChange = isChecked;
+        SettingsManager.Instance.Save();
+        if (isChecked && ScanSessions.Count > 0)
+        {
+            BtnAutoTune_Click(sender, e);
+        }
+    }
+
+    private void MenuAutoTuneOnPass_Click(object? sender, RoutedEventArgs e)
+    {
+        bool newValue = !SettingsManager.Instance.Settings.AutoTuneOnScanChange;
+        SettingsManager.Instance.Settings.AutoTuneOnScanChange = newValue;
+        SettingsManager.Instance.Save();
+        if (chkAutoTuneOnPass != null)
+        {
+            chkAutoTuneOnPass.IsChecked = newValue;
+        }
+        if (newValue && ScanSessions.Count > 0)
+        {
+            BtnAutoTune_Click(sender, e);
+        }
+    }
+
+    private void ChkAutoAdjustOnLowCoverage_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (isUpdatingUiFromScan || isLoading) return;
+        bool isChecked = chkAutoAdjustOnLowCoverage?.IsChecked == true;
+        SettingsManager.Instance.Settings.AutoAdjustOnLowCoverage = isChecked;
+        SettingsManager.Instance.Save();
+        if (isChecked && ScanSessions.Count > 0)
+        {
+            var photo = ScanSessions[CurrentIndex].Activate();
+            if (photo.TotalDetectedAreaRatio < AppConstants.LowCoverageThreshold)
+            {
+                BtnAutoTune_Click(sender, e);
+            }
+        }
+    }
+
     private async Task ReprocessCurrentScanAsync()
     {
         if (isLoading || ScanSessions.Count == 0) return;
@@ -281,6 +504,7 @@ internal sealed partial class MainWindow
             SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();
+            UpdateDetectionCoverageLabel();
             lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgDetectionComplete, "Detection complete. Found {0} photos.", photo.DetectedPhotos.Count);
         });
     }
@@ -298,6 +522,8 @@ internal sealed partial class MainWindow
             if (chkAutoOrient != null) chkAutoOrient.IsChecked = options.AutoOrientPhotos;
             if (chkRestoreColors != null) chkRestoreColors.IsChecked = options.RestoreVintageColors;
             if (chkRemoveDust != null) chkRemoveDust.IsChecked = options.RemoveDustAndScratches;
+            if (chkAutoTuneOnPass != null) chkAutoTuneOnPass.IsChecked = SettingsManager.Instance.Settings.AutoTuneOnScanChange;
+            if (chkAutoAdjustOnLowCoverage != null) chkAutoAdjustOnLowCoverage.IsChecked = SettingsManager.Instance.Settings.AutoAdjustOnLowCoverage;
         }
         finally
         {

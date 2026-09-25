@@ -13,6 +13,11 @@ namespace PhotoCropper.Core;
 
 public class PhotoCropperEngine : IDisposable
 {
+    static PhotoCropperEngine()
+    {
+        CvInvoke.LogLevel = LogLevel.Error;
+    }
+
     private bool disposedValue;
 
     public string OriginalFilePath { get; }
@@ -129,6 +134,21 @@ public class PhotoCropperEngine : IDisposable
         ApplyOptions(tuneResult.BestOptions);
         DetectPhotos();
         return tuneResult;
+    }
+
+    public double TotalDetectedAreaRatio
+    {
+        get
+        {
+            if (Original.IsEmpty || Original.Width <= 0 || Original.Height <= 0) return 0.0;
+            double totalArea = (double)Original.Width * Original.Height;
+            double coveredArea = 0.0;
+            foreach (var candidate in AcceptedCandidates)
+            {
+                coveredArea += candidate.Area;
+            }
+            return Math.Clamp(coveredArea / totalArea, 0.0, 1.0);
+        }
     }
 
     private void ResetState()

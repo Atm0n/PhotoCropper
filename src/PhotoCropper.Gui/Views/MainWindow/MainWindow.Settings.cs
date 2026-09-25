@@ -28,6 +28,14 @@ internal sealed partial class MainWindow
         {
             chkRemoveDust.IsChecked = settings.RemoveDustAndScratches;
         }
+        if (chkAutoTuneOnPass != null)
+        {
+            chkAutoTuneOnPass.IsChecked = settings.AutoTuneOnScanChange;
+        }
+        if (chkAutoAdjustOnLowCoverage != null)
+        {
+            chkAutoAdjustOnLowCoverage.IsChecked = settings.AutoAdjustOnLowCoverage;
+        }
 
         UpdateWorkspaceUi(settings.WorkDirectory);
         UpdateCropStrokeColor(settings.DetectionBoxColor);
