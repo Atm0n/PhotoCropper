@@ -169,6 +169,8 @@
 	<sys:String x:Key="BtnSaveAndScan">Guardar y Escanear</sys:String>
 	<sys:String x:Key="BtnSaveSettings">Guardar</sys:String>
 	<sys:String x:Key="LblScannerResolution">Resolución (PPP):</sys:String>
+	<sys:String x:Key="LblScannerPageSize">Tamaño de cama / página:</sys:String>
+	<sys:String x:Key="TipScannerPageSize">Selecciona el área de la cama del escáner (ej. Detección automática completa, A4, Letter, B5) para evitar cortes en fotos cercanas al borde inferior.</sys:String>
 	<sys:String x:Key="LblScannerDevice">Dispositivo de Escáner:</sys:String>
 	<sys:String x:Key="TxtScanningSearching">Buscando escáneres conectados...</sys:String>
 	<sys:String x:Key="BtnSelectAll">Seleccionar Todo</sys:String>

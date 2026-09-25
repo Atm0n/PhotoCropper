@@ -263,6 +263,68 @@ public sealed class Naps2ScannerService : IScannerService
         return allDevices.AsReadOnly();
     }
 
+    public async Task<string?> GetDeviceBedDimensionsAsync(ScannerDeviceInfo device, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(device);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await _deviceScanLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            bool includeNetwork = device.Driver == ScannerDriverType.Escl ||
+                                  device.Id.StartsWith("ESCL:", StringComparison.OrdinalIgnoreCase);
+            var allDevices = await GetAllDevicesInternalAsync(includeNetwork, cancellationToken).ConfigureAwait(false);
+            var selectedDevice = FindMatchingDevice(allDevices, device);
+            if (selectedDevice == null) return null;
+
+            var caps = await _controller.GetCaps(selectedDevice, cancellationToken).ConfigureAwait(false);
+            var scanArea = caps?.FlatbedCaps?.PageSizeCaps?.ScanArea;
+            if (scanArea != null && scanArea.Width > 0 && scanArea.Height > 0)
+            {
+                int widthMm = (int)Math.Round(scanArea.WidthInMm, MidpointRounding.AwayFromZero);
+                int heightMm = (int)Math.Round(scanArea.HeightInMm, MidpointRounding.AwayFromZero);
+                return $"{widthMm} × {heightMm} mm";
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            _deviceScanLock.Release();
+        }
+    }
+
+    private static ScanDevice? FindMatchingDevice(IReadOnlyList<ScanDevice> allDevices, ScannerDeviceInfo? deviceInfo)
+    {
+        if (deviceInfo == null)
+        {
+            return allDevices.Count > 0 ? allDevices[0] : null;
+        }
+
+        var match = allDevices.FirstOrDefault(d =>
+            string.Equals($"{d.Driver.ToString().ToUpperInvariant()}:{d.ID}", deviceInfo.Id, StringComparison.OrdinalIgnoreCase));
+
+        match ??= allDevices.FirstOrDefault(d =>
+            string.Equals(d.ID, deviceInfo.Id, StringComparison.OrdinalIgnoreCase) &&
+            (deviceInfo.Driver == ScannerDriverType.Default || MapDriver(d.Driver) == deviceInfo.Driver));
+
+        match ??= allDevices.FirstOrDefault(d =>
+            string.Equals(d.Name, deviceInfo.Name, StringComparison.OrdinalIgnoreCase) &&
+            (deviceInfo.Driver == ScannerDriverType.Default || MapDriver(d.Driver) == deviceInfo.Driver));
+
+        match ??= allDevices.FirstOrDefault(d =>
+            string.Equals(d.ID, deviceInfo.Id, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(d.Name, deviceInfo.Name, StringComparison.OrdinalIgnoreCase));
+
+        return match;
+    }
+
     private async Task<ScanOptions> BuildScanOptionsAsync(ScannerOptions options, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -271,40 +333,47 @@ public sealed class Naps2ScannerService : IScannerService
         var allDevices = await GetAllDevicesInternalAsync(includeNetwork, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
-        ScanDevice? selectedDevice = null;
-
-        if (options.Device != null)
+        ScanDevice? selectedDevice = FindMatchingDevice(allDevices, options.Device);
+        if (selectedDevice == null)
         {
-            selectedDevice = allDevices.FirstOrDefault(d =>
-                string.Equals($"{d.Driver.ToString().ToUpperInvariant()}:{d.ID}", options.Device.Id, StringComparison.OrdinalIgnoreCase));
-
-            selectedDevice ??= allDevices.FirstOrDefault(d =>
-                string.Equals(d.ID, options.Device.Id, StringComparison.OrdinalIgnoreCase) &&
-                (options.Device.Driver == ScannerDriverType.Default || MapDriver(d.Driver) == options.Device.Driver));
-
-            selectedDevice ??= allDevices.FirstOrDefault(d =>
-                string.Equals(d.Name, options.Device.Name, StringComparison.OrdinalIgnoreCase) &&
-                (options.Device.Driver == ScannerDriverType.Default || MapDriver(d.Driver) == options.Device.Driver));
-
-            selectedDevice ??= allDevices.FirstOrDefault(d =>
-                string.Equals(d.ID, options.Device.Id, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(d.Name, options.Device.Name, StringComparison.OrdinalIgnoreCase));
-
-            if (selectedDevice == null)
+            if (options.Device != null)
             {
                 throw new ScannerNotFoundException(
                     $"The selected scanner '{options.Device.Name}' was not found or is disconnected. Please check that the scanner is turned on and connected.");
             }
+
+            throw new ScannerNotFoundException(
+                "No scanner devices were detected on this system. Please verify that your scanner is turned on and connected.");
+        }
+
+        PageSize? targetPageSize = null;
+        if (options.PageSize == ScannerPageSize.Auto)
+        {
+            try
+            {
+                var caps = await _controller.GetCaps(selectedDevice, cancellationToken).ConfigureAwait(false);
+                var scanArea = caps?.FlatbedCaps?.PageSizeCaps?.ScanArea;
+                if (scanArea != null && scanArea.Width > 0 && scanArea.Height > 0)
+                {
+                    targetPageSize = scanArea;
+                }
+            }
+            catch
+            {
+                targetPageSize = PageSize.A4;
+            }
         }
         else
         {
-            if (allDevices.Count == 0)
+            targetPageSize = options.PageSize switch
             {
-                throw new ScannerNotFoundException(
-                    "No scanner devices were detected on this system. Please verify that your scanner is turned on and connected.");
-            }
-
-            selectedDevice = allDevices[0];
+                ScannerPageSize.A4 => PageSize.A4,
+                ScannerPageSize.Letter => PageSize.Letter,
+                ScannerPageSize.Legal => PageSize.Legal,
+                ScannerPageSize.B5 => new PageSize(182m, 257m, PageSizeUnit.Millimetre),
+                ScannerPageSize.A5 => PageSize.A5,
+                _ => null
+            };
         }
 
         var scanOptions = new ScanOptions
@@ -318,7 +387,8 @@ public sealed class Naps2ScannerService : IScannerService
                 _ => BitDepth.Color
             },
             Brightness = options.Brightness,
-            Contrast = options.Contrast
+            Contrast = options.Contrast,
+            PageSize = targetPageSize
         };
 
         return scanOptions;

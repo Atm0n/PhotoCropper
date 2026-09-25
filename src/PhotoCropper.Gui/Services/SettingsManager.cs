@@ -26,6 +26,7 @@ internal sealed class UserSettings
     public string? WorkDirectory { get; set; }
     public string? SelectedScannerId { get; set; }
     public int ScannerDpi { get; set; } = AppConstants.DefaultScannerDpi;
+    public string ScannerPageSize { get; set; } = AppConstants.DefaultScannerPageSize;
     public bool IncludeNetworkScanners { get; set; }
     public string Theme { get; set; } = AppConstants.DefaultTheme; // "Dark", "Light", "System"
     public string DetectionBoxColor { get; set; } = AppConstants.DefaultBoundingBoxColor; // "Red", "Amber", "Cyan", "Lime", "Magenta"

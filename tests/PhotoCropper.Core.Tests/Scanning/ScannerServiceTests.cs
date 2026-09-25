@@ -11,9 +11,30 @@ public sealed class ScannerServiceTests
         var options = new ScannerOptions();
         options.Dpi.ShouldBe(300);
         options.ColorMode.ShouldBe(ScannerColorMode.Color);
+        options.PageSize.ShouldBe(ScannerPageSize.Auto);
         options.Brightness.ShouldBe(0);
         options.Contrast.ShouldBe(0);
         options.Device.ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData("A4", ScannerPageSize.A4, "A4")]
+    [InlineData("a4", ScannerPageSize.A4, "A4")]
+    [InlineData("Letter", ScannerPageSize.Letter, "Letter")]
+    [InlineData("LTR", ScannerPageSize.Letter, "Letter")]
+    [InlineData("Legal", ScannerPageSize.Legal, "Legal")]
+    [InlineData("B5", ScannerPageSize.B5, "B5")]
+    [InlineData("A5", ScannerPageSize.A5, "A5")]
+    [InlineData("Auto", ScannerPageSize.Auto, "Auto")]
+    [InlineData("Max", ScannerPageSize.Auto, "Auto")]
+    [InlineData("Default", ScannerPageSize.Auto, "Auto")]
+    [InlineData("UnknownValue", ScannerPageSize.Auto, "Auto")]
+    [InlineData(null, ScannerPageSize.Auto, "Auto")]
+    public void ScannerPageSizeExtensions_Conversions_AreExpected(string? input, ScannerPageSize expectedEnum, string expectedSetting)
+    {
+        var parsed = ScannerPageSizeExtensions.ToScannerPageSize(input);
+        parsed.ShouldBe(expectedEnum);
+        parsed.ToSettingValue().ShouldBe(expectedSetting);
     }
 
     [Fact]

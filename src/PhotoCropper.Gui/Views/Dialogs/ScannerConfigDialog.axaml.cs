@@ -74,6 +74,20 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
                     _ => 1
                 };
             }
+
+            if (cbScannerPageSize != null)
+            {
+                var pageSize = ScannerPageSizeExtensions.ToScannerPageSize(settings.ScannerPageSize);
+                cbScannerPageSize.SelectedIndex = pageSize switch
+                {
+                    ScannerPageSize.A4 => 1,
+                    ScannerPageSize.Letter => 2,
+                    ScannerPageSize.Legal => 3,
+                    ScannerPageSize.B5 => 4,
+                    ScannerPageSize.A5 => 5,
+                    _ => 0
+                };
+            }
         }
         finally
         {
@@ -138,6 +152,11 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
                 }
 
                 UpdateStatusLabel();
+
+                if (cbScanner != null && cbScanner.SelectedIndex >= 0 && cbScanner.SelectedIndex < _availableScanners.Count)
+                {
+                    _ = UpdateDetectedBedDimensionsAsync(_availableScanners[cbScanner.SelectedIndex], cancellationToken);
+                }
             });
         }
         catch (OperationCanceledException)
@@ -189,7 +208,7 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
         }
     }
 
-    private void CbScanner_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private async void CbScanner_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_isInitializing) return;
         if (cbScanner != null && cbScanner.SelectedIndex >= 0 && cbScanner.SelectedIndex < _availableScanners.Count)
@@ -198,7 +217,37 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
             if (selected != null)
             {
                 SettingsManager.Instance.Settings.SelectedScannerId = selected.Id;
+                await UpdateDetectedBedDimensionsAsync(selected, _cts.Token);
             }
+        }
+    }
+
+    private async Task UpdateDetectedBedDimensionsAsync(ScannerDeviceInfo? selectedDevice, CancellationToken cancellationToken = default)
+    {
+        if (cbiPageSizeAuto == null) return;
+        if (selectedDevice == null)
+        {
+            cbiPageSizeAuto.Content = "Auto / Full Bed (Auto-Detect Maximum)";
+            return;
+        }
+
+        try
+        {
+            var dims = await _scannerService.GetDeviceBedDimensionsAsync(selectedDevice, cancellationToken).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(dims) && !_disposed)
+            {
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (cbiPageSizeAuto != null)
+                    {
+                        cbiPageSizeAuto.Content = $"Auto / Full Bed (Detected: {dims})";
+                    }
+                });
+            }
+        }
+        catch
+        {
+            // Leave default auto label if querying dimensions fails
         }
     }
 
@@ -217,6 +266,28 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
             }
             SettingsManager.Instance.Settings.ScannerDpi = dpi;
         }
+    }
+
+    private void CbScannerPageSize_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_isInitializing) return;
+        if (cbScannerPageSize != null)
+        {
+            SettingsManager.Instance.Settings.ScannerPageSize = GetSelectedPageSizeSetting();
+        }
+    }
+
+    private string GetSelectedPageSizeSetting()
+    {
+        return cbScannerPageSize?.SelectedIndex switch
+        {
+            1 => "A4",
+            2 => "Letter",
+            3 => "Legal",
+            4 => "B5",
+            5 => "A5",
+            _ => "Auto"
+        };
     }
 
     private async void ChkNetworkScanners_IsCheckedChanged(object? sender, RoutedEventArgs e)
@@ -253,6 +324,10 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
                 else if (int.TryParse(content, out int parsed)) dpi = parsed;
             }
             settings.ScannerDpi = dpi;
+        }
+        if (cbScannerPageSize != null)
+        {
+            settings.ScannerPageSize = GetSelectedPageSizeSetting();
         }
         if (chkNetworkScanners != null)
         {

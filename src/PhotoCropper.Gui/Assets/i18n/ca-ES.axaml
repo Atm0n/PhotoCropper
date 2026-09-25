@@ -169,6 +169,8 @@
 	<sys:String x:Key="BtnSaveAndScan">Desar i Escanejar</sys:String>
 	<sys:String x:Key="BtnSaveSettings">Desar</sys:String>
 	<sys:String x:Key="LblScannerResolution">Resolució (PPP):</sys:String>
+	<sys:String x:Key="LblScannerPageSize">Mida de llit / pàgina:</sys:String>
+	<sys:String x:Key="TipScannerPageSize">Selecciona l'àrea del llit de l'escàner (ex. Detecció automàtica completa, A4, Letter, B5) per evitar talls a les fotos properes a la vora inferior.</sys:String>
 	<sys:String x:Key="LblScannerDevice">Dispositiu d'Escàner:</sys:String>
 	<sys:String x:Key="TxtScanningSearching">Cercant escàners connectats...</sys:String>
 	<sys:String x:Key="BtnSelectAll">Seleccionar Tot</sys:String>

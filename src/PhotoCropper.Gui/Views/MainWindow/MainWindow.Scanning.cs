@@ -115,11 +115,13 @@ internal sealed partial class MainWindow
             return;
         }
 
+        var settings = SettingsManager.Instance.Settings;
         var scannerOptions = new ScannerOptions
         {
             Device = selectedDevice,
             Dpi = dpi,
-            ColorMode = ScannerColorMode.Color
+            ColorMode = ScannerColorMode.Color,
+            PageSize = ScannerPageSizeExtensions.ToScannerPageSize(settings.ScannerPageSize)
         };
 
         string scanningMsg = LocalizationService.Format(ResourceKeys.MsgScanning, "Scanning image from {0}...", selectedDevice.Name);
