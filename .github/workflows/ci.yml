@@ -111,7 +111,7 @@ jobs:
           # Extract version from tag (e.g. v2.5.2 -> 2.5.2)
           $rawTag = $env:REF_NAME
           $appVersion = if ($rawTag -and $rawTag.StartsWith('v')) { $rawTag.Substring(1) } else { $rawTag }
-          if (-not $appVersion) { $appVersion = "2.6.0" }
+          if (-not $appVersion) { $appVersion = "2.7.0" }
 
           # Package separate zip archives
           Compress-Archive -Path ./publish/gui/$env:TARGET_RUNTIME/* -DestinationPath ./PhotoCropper-${appVersion}-GUI-${env:TARGET_PLATFORM}.zip
