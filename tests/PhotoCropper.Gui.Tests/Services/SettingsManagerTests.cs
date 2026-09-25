@@ -46,6 +46,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.PromptBeforeExport.ShouldBeFalse();
         manager.Settings.CheckForUpdatesAutomatically.ShouldBeTrue();
         manager.Settings.LastUpdateCheckUtc.ShouldBeNull();
+        manager.Settings.ScannerPageSize.ShouldBe("Auto");
     }
 
     [Fact]
@@ -65,6 +66,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.CustomOutputDirectory = "C:\\CroppedPhotos";
         manager.Settings.WorkDirectory = "C:\\ScannerWorkspace";
         manager.Settings.SelectedScannerId = "canon-lide-400";
+        manager.Settings.ScannerPageSize = "A4";
         manager.Settings.RemoveDustAndScratches = false;
         manager.Settings.AutoTuneOnScanChange = true;
         manager.Settings.Theme = "Light";
@@ -97,6 +99,7 @@ public sealed class SettingsManagerTests : IDisposable
         secondManager.Settings.RestoreVintageColors.ShouldBeTrue();
         secondManager.Settings.RemoveDustAndScratches.ShouldBeFalse();
         secondManager.Settings.AutoTuneOnScanChange.ShouldBeTrue();
+        secondManager.Settings.ScannerPageSize.ShouldBe("A4");
         secondManager.Settings.Theme.ShouldBe("Light");
         secondManager.Settings.DetectionBoxColor.ShouldBe("Amber");
         secondManager.Settings.FileNamePattern.ShouldBe("{year}_{original}_{index:02}");

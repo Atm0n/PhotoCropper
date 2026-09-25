@@ -29,6 +29,7 @@ public static class AppConstants
     public const double DefaultMaxAreaFactor = 0.90;
     public const double LowCoverageThreshold = 0.50;
     public const int DefaultScannerDpi = 300;
+    public const string DefaultScannerPageSize = "Auto";
     public const int DefaultJpegQuality = 100;
     public const int DefaultLookaheadAhead = 4;
     public const int DefaultLookaheadBehind = 1;

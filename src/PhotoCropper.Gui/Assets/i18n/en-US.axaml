@@ -169,6 +169,8 @@
 	<sys:String x:Key="BtnSaveAndScan">Save &amp; Scan</sys:String>
 	<sys:String x:Key="BtnSaveSettings">Save</sys:String>
 	<sys:String x:Key="LblScannerResolution">Resolution (DPI):</sys:String>
+	<sys:String x:Key="LblScannerPageSize">Bed / Page Size:</sys:String>
+	<sys:String x:Key="TipScannerPageSize">Select the scanner bed area (e.g., Auto-detect full bed, A4, Letter, B5) to prevent photos near the bottom edge from being cut off.</sys:String>
 	<sys:String x:Key="LblScannerDevice">Scanner Device:</sys:String>
 	<sys:String x:Key="TxtScanningSearching">Searching for connected scanners...</sys:String>
 	<sys:String x:Key="BtnSelectAll">Select All</sys:String>

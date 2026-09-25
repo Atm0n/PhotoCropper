@@ -23,6 +23,19 @@ public enum ScannerColorMode
 }
 
 /// <summary>
+/// Preset bed or page size dimensions for scanner acquisition.
+/// </summary>
+public enum ScannerPageSize
+{
+    Auto = 0,
+    A4 = 1,
+    Letter = 2,
+    Legal = 3,
+    B5 = 4,
+    A5 = 5
+}
+
+/// <summary>
 /// Represents a hardware scanner detected on the host system.
 /// </summary>
 public sealed class ScannerDeviceInfo
@@ -47,9 +60,38 @@ public sealed class ScannerOptions
 
     public ScannerColorMode ColorMode { get; set; } = ScannerColorMode.Color;
 
+    public ScannerPageSize PageSize { get; set; } = ScannerPageSize.Auto;
+
     public int Brightness { get; set; }
 
     public int Contrast { get; set; }
+}
+
+/// <summary>
+/// Helper extensions for parsing and formatting <see cref="ScannerPageSize"/>.
+/// </summary>
+public static class ScannerPageSizeExtensions
+{
+    public static ScannerPageSize ToScannerPageSize(string? value) => value?.ToUpperInvariant() switch
+    {
+        "A4" => ScannerPageSize.A4,
+        "LETTER" or "LTR" => ScannerPageSize.Letter,
+        "LEGAL" => ScannerPageSize.Legal,
+        "B5" => ScannerPageSize.B5,
+        "A5" => ScannerPageSize.A5,
+        "AUTO" or "MAX" or "DEFAULT" => ScannerPageSize.Auto,
+        _ => ScannerPageSize.Auto
+    };
+
+    public static string ToSettingValue(this ScannerPageSize size) => size switch
+    {
+        ScannerPageSize.A4 => "A4",
+        ScannerPageSize.Letter => "Letter",
+        ScannerPageSize.Legal => "Legal",
+        ScannerPageSize.B5 => "B5",
+        ScannerPageSize.A5 => "A5",
+        _ => "Auto"
+    };
 }
 
 /// <summary>

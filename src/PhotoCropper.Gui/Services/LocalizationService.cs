@@ -95,6 +95,8 @@ internal static class ResourceKeys
     public const string MenuExportSingle = nameof(MenuExportSingle);
     public const string LblOutputDir = nameof(LblOutputDir);
     public const string LblNamingPreview = nameof(LblNamingPreview);
+    public const string LblScannerPageSize = nameof(LblScannerPageSize);
+    public const string TipScannerPageSize = nameof(TipScannerPageSize);
     public const string TxtScanningSearching = nameof(TxtScanningSearching);
     public const string MsgClickToSample = nameof(MsgClickToSample);
     public const string MsgBackgroundSampled = nameof(MsgBackgroundSampled);
