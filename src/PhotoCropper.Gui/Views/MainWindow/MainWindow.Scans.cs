@@ -51,7 +51,19 @@ internal sealed partial class MainWindow
                 settings.CustomOutputDirectory,
                 settings.WorkDirectory);
 
-            newSessions.Add(new ScanSessionItem(path, options, isSaved: isAlreadyExported, isModified: !isAlreadyExported));
+            PhotoCropper.Core.Workspace.WorkspaceScanEntry? entry = null;
+            if (_workspaceSession != null)
+            {
+                entry = _workspaceSession.Scans.FirstOrDefault(s =>
+                    string.Equals(s.RelativePath, path, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(Path.GetFileName(s.RelativePath), Path.GetFileName(path), StringComparison.OrdinalIgnoreCase));
+            }
+
+            bool hasSavedCrops = entry != null && entry.FinalCrops.Count > 0;
+            bool treatAsSaved = isAlreadyExported && hasSavedCrops;
+            bool isModified = !treatAsSaved;
+
+            newSessions.Add(new ScanSessionItem(path, options, isSaved: treatAsSaved, isModified: isModified, savedCrops: entry?.FinalCrops));
         }
 
         _sessionManager.ReplaceAll(newSessions);
@@ -116,7 +128,7 @@ internal sealed partial class MainWindow
             {
                 var currentPhoto = await Task.Run(() => session.Activate(), ct);
 
-                bool shouldAutoTune = !session.IsAutoTuned && (
+                bool shouldAutoTune = !session.IsAutoTuned && !session.IsSaved && (
                     SettingsManager.Instance.Settings.AutoTuneOnScanChange ||
                     (SettingsManager.Instance.Settings.AutoAdjustOnLowCoverage && currentPhoto.TotalDetectedAreaRatio < AppConstants.LowCoverageThreshold)
                 );
@@ -248,7 +260,7 @@ internal sealed partial class MainWindow
                         var photo = session.Activate();
                         if (ct.IsCancellationRequested) break;
 
-                        bool shouldAutoTune = !session.IsAutoTuned && (
+                        bool shouldAutoTune = !session.IsAutoTuned && !session.IsSaved && (
                             settings.AutoTuneOnScanChange ||
                             (settings.AutoAdjustOnLowCoverage && photo.TotalDetectedAreaRatio < AppConstants.LowCoverageThreshold)
                         );

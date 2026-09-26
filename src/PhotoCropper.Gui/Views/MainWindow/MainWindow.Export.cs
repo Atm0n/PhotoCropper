@@ -90,7 +90,9 @@ internal sealed partial class MainWindow
                                 settings.PreferredFormat,
                                 settings.JpegQuality,
                                 settings.FileNamePattern,
-                                scanMetadata);
+                                scanMetadata,
+                                progressCallback: null,
+                                cleanOldExports: true);
 
                             int savedCount = engine.DetectedPhotos.Count;
                             Interlocked.Add(ref totalSavedPhotos, savedCount);
@@ -108,6 +110,19 @@ internal sealed partial class MainWindow
                                     entry.IsProcessed = true;
                                     entry.ExtractedPhotoCount = savedCount;
                                     entry.Metadata = scanMetadata;
+                                    
+                                    entry.FinalCrops.Clear();
+                                    foreach (var cand in engine.AcceptedCandidates)
+                                    {
+                                        entry.FinalCrops.Add(new PhotoCropper.Core.Workspace.WorkspaceCropData
+                                        {
+                                            CenterX = cand.Rotated.Center.X,
+                                            CenterY = cand.Rotated.Center.Y,
+                                            Width = cand.Rotated.Size.Width,
+                                            Height = cand.Rotated.Size.Height,
+                                            Angle = cand.Rotated.Angle
+                                        });
+                                    }
                                 }
                             }
                         }

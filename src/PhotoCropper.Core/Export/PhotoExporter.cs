@@ -109,7 +109,8 @@ public static class PhotoExporter
         int jpegQuality = 100,
         string fileNamePattern = FileNameTemplateHelper.DefaultPattern,
         PhotoCropper.Core.Models.PhotoExportMetadata? metadata = null,
-        Action<int, int>? progressCallback = null)
+        Action<int, int>? progressCallback = null,
+        bool cleanOldExports = false)
     {
         ArgumentNullException.ThrowIfNull(photos);
         ArgumentNullException.ThrowIfNull(originalFilePath);
@@ -121,6 +122,12 @@ public static class PhotoExporter
         Directory.CreateDirectory(outputFolder);
 
         string baseFileName = Path.GetFileNameWithoutExtension(originalFilePath);
+        
+        if (cleanOldExports)
+        {
+            CleanOldExports(outputFolder, baseFileName);
+        }
+
         string extension = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
         var (xDpi, yDpi) = GetDpiFromSource(originalFilePath);
 
@@ -180,6 +187,29 @@ public static class PhotoExporter
     private static readonly ConcurrentDictionary<string, byte> ClaimedExportPaths = new(StringComparer.OrdinalIgnoreCase);
 
     public static void ClearClaimedExportPaths() => ClaimedExportPaths.Clear();
+
+    private static void CleanOldExports(string outputFolder, string baseFileName)
+    {
+        try
+        {
+            var files = Directory.GetFiles(outputFolder, $"{baseFileName}_*.*")
+                .Concat(Directory.GetFiles(outputFolder, $"*_{baseFileName}_*.*"))
+                .Distinct();
+
+            foreach (var f in files)
+            {
+                string ext = Path.GetExtension(f).ToUpperInvariant();
+                if (ext == ".JPG" || ext == ".JPEG" || ext == ".PNG")
+                {
+                    File.Delete(f);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to clean old exports for {baseFileName}: {ex.Message}");
+        }
+    }
 
     public static string ResolveUniqueExportPath(string targetPath)
     {

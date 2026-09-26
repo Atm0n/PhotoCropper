@@ -5,6 +5,15 @@ using System.Text.Json.Serialization;
 
 namespace PhotoCropper.Core.Workspace;
 
+public sealed class WorkspaceCropData
+{
+    public float CenterX { get; set; }
+    public float CenterY { get; set; }
+    public float Width { get; set; }
+    public float Height { get; set; }
+    public float Angle { get; set; }
+}
+
 public sealed class WorkspaceScanEntry
 {
     public string RelativePath { get; set; } = string.Empty;
@@ -17,6 +26,9 @@ public sealed class WorkspaceScanEntry
 
     [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]
     public Collection<Rectangle> ManualCrops { get; } = [];
+
+    [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]
+    public Collection<WorkspaceCropData> FinalCrops { get; } = [];
 
     public bool IsProcessed { get; set; }
     public int ExtractedPhotoCount { get; set; }
