@@ -18,7 +18,7 @@ internal sealed class ScanSessionItem : IDisposable
     public bool IsAutoTuned { get; set; }
     public bool IsProcessing { get; set; }
     public PhotoExportMetadata Metadata { get; set; } = new();
-    
+
     public IReadOnlyList<PhotoCropper.Core.Workspace.WorkspaceCropData>? SavedCrops { get; }
 
     private readonly object _lock = new();
@@ -45,7 +45,7 @@ internal sealed class ScanSessionItem : IDisposable
                 {
                     var engine = new PhotoCropperEngine(FilePath);
                     engine.ApplyOptions(Options);
-                    
+
                     if (SavedCrops != null && SavedCrops.Count > 0 && IsSaved && !IsModified)
                     {
                         engine.RestoreFromSavedCrops(SavedCrops);
@@ -54,7 +54,7 @@ internal sealed class ScanSessionItem : IDisposable
                     {
                         engine.DetectPhotos();
                     }
-                    
+
                     CachedPhotoCount = engine.DetectedPhotos.Count;
                     Engine = engine;
                 }

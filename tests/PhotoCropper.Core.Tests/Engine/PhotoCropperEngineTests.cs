@@ -23,7 +23,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     public void RestoreFromSavedCrops_ShouldBypassDetectionAndLoadCrops()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
-        
+
         var savedCrops = new List<PhotoCropper.Core.Workspace.WorkspaceCropData>
         {
             new PhotoCropper.Core.Workspace.WorkspaceCropData { CenterX = 100, CenterY = 100, Width = 50, Height = 50, Angle = 0 }

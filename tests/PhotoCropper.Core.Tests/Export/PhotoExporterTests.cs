@@ -26,7 +26,7 @@ public sealed class PhotoExporterTests : IDisposable
             scan.SetTo(new MCvScalar(200, 200, 200));
             scan.Save(scanPath);
         }
-        
+
         string oldFile1 = Path.Combine(outputDir, "batch_scan_1.jpg");
         string oldFile2 = Path.Combine(outputDir, "batch_scan_2.jpg");
         File.WriteAllText(oldFile1, "old");
@@ -38,7 +38,7 @@ public sealed class PhotoExporterTests : IDisposable
         PhotoExporter.SavePhotos([photo], scanPath, customOutputFolder: outputDir, cleanOldExports: true);
 
         File.Exists(oldFile2).ShouldBeFalse("Old file 2 should have been deleted");
-        
+
         // oldFile1 was overwritten, let's verify it contains the actual image, not "old"
         var newFile1Bytes = File.ReadAllBytes(oldFile1);
         newFile1Bytes.Length.ShouldBeGreaterThan(3);

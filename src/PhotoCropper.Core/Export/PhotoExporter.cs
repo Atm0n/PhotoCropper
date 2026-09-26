@@ -122,7 +122,7 @@ public static class PhotoExporter
         Directory.CreateDirectory(outputFolder);
 
         string baseFileName = Path.GetFileNameWithoutExtension(originalFilePath);
-        
+
         if (cleanOldExports)
         {
             CleanOldExports(outputFolder, baseFileName);

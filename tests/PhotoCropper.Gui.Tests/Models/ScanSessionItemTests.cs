@@ -28,7 +28,7 @@ public sealed class ScanSessionItemTests : IDisposable
         item.PhotoCount.ShouldBe(0);
         item.CachedPhotoCount.ShouldBe(0);
     }
-    
+
     [Fact]
     public void ScanSessionItem_WithSavedCrops_ShouldRestoreCrops()
     {
@@ -40,13 +40,13 @@ public sealed class ScanSessionItemTests : IDisposable
 
         // Needs to be IsSaved = true and IsModified = false to bypass detection
         using var item = new ScanSessionItem(_scanPath, options, isSaved: true, isModified: false, savedCrops: savedCrops);
-        
+
         item.SavedCrops.ShouldNotBeNull();
         item.SavedCrops.Count.ShouldBe(1);
-        
+
         var engine = item.Activate();
         item.IsActive.ShouldBeTrue();
-        
+
         // normally the test image has 2 photos, but we injected 1 crop and bypassed detection
         engine.DetectedPhotos.Count.ShouldBe(1);
         item.PhotoCount.ShouldBe(1);

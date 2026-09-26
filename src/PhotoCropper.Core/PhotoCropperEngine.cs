@@ -191,7 +191,7 @@ public class PhotoCropperEngine : IDisposable
     public void RestoreFromSavedCrops(IEnumerable<PhotoCropper.Core.Workspace.WorkspaceCropData> savedCrops)
     {
         ArgumentNullException.ThrowIfNull(savedCrops);
-        
+
         ResetState();
         if (Original == null || Original.IsEmpty || Original.Width <= 0 || Original.Height <= 0)
         {
@@ -204,11 +204,11 @@ public class PhotoCropperEngine : IDisposable
             var center = new System.Drawing.PointF(crop.CenterX, crop.CenterY);
             var size = new System.Drawing.SizeF(crop.Width, crop.Height);
             var rr = new Emgu.CV.Structure.RotatedRect(center, size, crop.Angle);
-            candidates.Add(new CropCandidate { Rotated = rr, Area = crop.Width * crop.Height, ShapePoints = [], Rect = new Rectangle(0,0, (int)crop.Width, (int)crop.Height) });
+            candidates.Add(new CropCandidate { Rotated = rr, Area = crop.Width * crop.Height, ShapePoints = [], Rect = new Rectangle(0, 0, (int)crop.Width, (int)crop.Height) });
         }
-        
+
         AcceptedCandidates = candidates;
-        
+
         MCvScalar boxColor = CurrentOptions.GetBoundingBoxColorBgr();
         foreach (var cand in AcceptedCandidates)
         {
