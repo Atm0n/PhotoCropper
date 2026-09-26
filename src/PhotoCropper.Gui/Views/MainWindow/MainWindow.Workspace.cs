@@ -31,6 +31,10 @@ internal sealed partial class MainWindow
         {
             _workspaceSession = ProjectWorkspaceService.ReconstructSessionFromRawFiles(workDir);
         }
+        else
+        {
+            _workspaceSession = ProjectWorkspaceService.SyncSessionWithRawFiles(workDir, _workspaceSession);
+        }
 
         if (_workspaceSession?.Scans.Count > 0)
         {

@@ -193,6 +193,59 @@ public static partial class ProjectWorkspaceService
         return state;
     }
 
+    public static WorkspaceSessionState SyncSessionWithRawFiles(string workDirectory, WorkspaceSessionState session)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workDirectory);
+        ArgumentNullException.ThrowIfNull(session);
+
+        string rawDir = GetRawScansDirectory(workDirectory);
+        if (!Directory.Exists(rawDir)) return session;
+
+        var files = Directory.GetFiles(rawDir).Where(f => 
+            f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+            f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+            f.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+            f.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) ||
+            f.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase) ||
+            f.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase) ||
+            f.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)
+        ).OrderBy(f => f).ToList();
+        
+        bool sessionChanged = false;
+
+        foreach (string file in files)
+        {
+            string relPath = Path.GetRelativePath(workDirectory, file);
+            bool exists = session.Scans.Any(s => string.Equals(s.RelativePath, relPath, StringComparison.OrdinalIgnoreCase) ||
+                                                 string.Equals(Path.GetFileName(s.RelativePath), Path.GetFileName(file), StringComparison.OrdinalIgnoreCase));
+            if (!exists)
+            {
+                sessionChanged = true;
+                string baseName = Path.GetFileNameWithoutExtension(file);
+                string croppedDir = GetCroppedDirectory(workDirectory);
+                int existingCroppedCount = Directory.Exists(croppedDir)
+                    ? Directory.EnumerateFiles(croppedDir, $"{baseName}_*.*").Count()
+                    : 0;
+
+                session.Scans.Add(new WorkspaceScanEntry
+                {
+                    RelativePath = relPath,
+                    OriginalFileName = Path.GetFileName(file),
+                    StagedAtUtc = File.GetCreationTimeUtc(file),
+                    IsProcessed = existingCroppedCount > 0,
+                    ExtractedPhotoCount = existingCroppedCount
+                });
+            }
+        }
+
+        if (sessionChanged)
+        {
+            SaveSession(workDirectory, session);
+        }
+        
+        return session;
+    }
+
     public static bool DeleteScan(string workDirectory, string relativeOrAbsolutePath, WorkspaceSessionState? session = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workDirectory);
