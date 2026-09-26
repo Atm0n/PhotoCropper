@@ -267,6 +267,59 @@ public class PhotoCropperEngine : IDisposable
         }
     }
 
+    
+    private void ExtractAndProcessCandidates(System.Collections.Generic.IReadOnlyList<PhotoCropper.Core.Models.CropCandidate> candidates, Mat? padded = null, int pad = 0)
+    {
+        Mat?[] results = new Mat[candidates.Count];
+        Mat?[] rawResults = new Mat[candidates.Count];
+
+        System.Threading.Tasks.Parallel.For(0, candidates.Count, i =>
+        {
+            Mat extracted = (padded != null && !padded.IsEmpty && pad > 0)
+                ? PhotoCropper.Core.Extraction.PhotoExtractionEngine.ExtractPhotoFromRotatedRect(candidates[i].Rotated, Original, padded, pad)
+                : PhotoCropper.Core.Extraction.PhotoExtractionEngine.ExtractPhotoFromRotatedRect(candidates[i].Rotated, Original);
+
+            if (AutoOrientPhotos && !extracted.IsEmpty)
+            {
+                Mat oriented = PhotoCropper.Core.Extraction.AutoOrientationService.OrientPhoto(extracted);
+                if (!ReferenceEquals(oriented, extracted))
+                {
+                    extracted.Dispose();
+                    extracted = oriented;
+                }
+            }
+
+            rawResults[i] = extracted.Clone();
+
+            if (RestoreVintageColors && !extracted.IsEmpty)
+            {
+                Mat restored = PhotoCropper.Core.Extraction.PhotoRestorationService.RestoreColors(extracted, removeDust: RemoveDustAndScratches);
+                if (!ReferenceEquals(restored, extracted))
+                {
+                    extracted.Dispose();
+                    extracted = restored;
+                }
+            }
+            results[i] = extracted;
+        });
+
+        for (int i = 0; i < results.Length; i++)
+        {
+            var mat = results[i];
+            var raw = rawResults[i];
+            if (mat != null && !mat.IsEmpty && raw != null && !raw.IsEmpty)
+            {
+                DetectedPhotos.Add(mat);
+                RawDetectedPhotos.Add(raw);
+            }
+            else
+            {
+                mat?.Dispose();
+                raw?.Dispose();
+            }
+        }
+    }
+
     public void DetectPhotos()
     {
         ResetState();
