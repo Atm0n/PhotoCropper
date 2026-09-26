@@ -3,12 +3,12 @@
 
 #define MyAppName "PhotoCropper"
 #ifndef MyAppVersion
-  #define MyAppVersion "2.6.0"
+  #define MyAppVersion "2.7.1"
 #endif
 #define MyAppPublisher "Atm0n"
 #define MyAppURL "https://github.com/Atm0n/PhotoCropper"
 #define MyAppExeName "PhotoCropper.exe"
-#define MyCliExeName "PhotoCropperCli.exe"
+#define MyCliExeName "PhotoCropper.Cli.exe"
 
 [Setup]
 AppId={{D1A3F531-E4F9-44F8-9F31-9A3E4E81E991}}
@@ -43,13 +43,19 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "envPath"; Description: "Add PhotoCropper CLI to PATH environment variable"; GroupDescription: "System Integration:"
 
+[InstallDelete]
+; Clean up redundant duplicate binaries from previous installations
+Type: files; Name: "{app}\PhotoCropper.Gui.exe"
+Type: files; Name: "{app}\photocropper-cli.exe"
+
 [Files]
-; GUI application single-file executable and any accompanying files
-Source: "..\..\publish\gui\win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; GUI application single-file executable and any accompanying files (excluding unrenamed PhotoCropper.Gui.exe)
+Source: "..\..\publish\gui\win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "PhotoCropper.Gui.exe"
 Source: "..\..\publish\gui\win-x64\PhotoCropper.Gui.exe"; DestDir: "{app}"; DestName: "PhotoCropper.exe"; Flags: ignoreversion
-; CLI application single-file executable and terminal alias
+; CLI application single-file executable and lightweight terminal alias
 Source: "..\..\publish\cli\win-x64\PhotoCropper.Cli.exe"; DestDir: "{app}"; DestName: "PhotoCropper.Cli.exe"; Flags: ignoreversion
-Source: "..\..\publish\cli\win-x64\PhotoCropper.Cli.exe"; DestDir: "{app}"; DestName: "photocropper-cli.exe"; Flags: ignoreversion
+Source: "photocropper-cli.cmd"; DestDir: "{app}"; Flags: ignoreversion
+Source: "photocropper.cmd"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

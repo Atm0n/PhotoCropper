@@ -5,7 +5,7 @@ on:
     tags:
       - 'v*'
   pull_request:
-    branches: [ master, main, developer ]
+    branches: [ main, developer ]
     paths-ignore:
       - '**.md'
       - 'docs/**'
@@ -111,11 +111,23 @@ jobs:
           # Extract version from tag (e.g. v2.5.2 -> 2.5.2)
           $rawTag = $env:REF_NAME
           $appVersion = if ($rawTag -and $rawTag.StartsWith('v')) { $rawTag.Substring(1) } else { $rawTag }
-          if (-not $appVersion) { $appVersion = "2.6.0" }
+          if (-not $appVersion) { $appVersion = "2.7.1" }
 
-          # Package separate zip archives
-          Compress-Archive -Path ./publish/gui/$env:TARGET_RUNTIME/* -DestinationPath ./PhotoCropper-${appVersion}-GUI-${env:TARGET_PLATFORM}.zip
-          Compress-Archive -Path ./publish/cli/$env:TARGET_RUNTIME/* -DestinationPath ./PhotoCropper-${appVersion}-CLI-${env:TARGET_PLATFORM}.zip
+          # Package separate zip archives (preserving Unix execution permissions on Linux)
+          if ($env:TARGET_PLATFORM -eq 'Linux') {
+            chmod +x ./publish/gui/$env:TARGET_RUNTIME/PhotoCropper.Gui
+            chmod +x ./publish/cli/$env:TARGET_RUNTIME/PhotoCropper.Cli
+            $repoRoot = (Get-Location).Path
+            Push-Location "./publish/gui/$env:TARGET_RUNTIME"
+            zip -q -r "$repoRoot/PhotoCropper-${appVersion}-GUI-${env:TARGET_PLATFORM}.zip" .
+            Pop-Location
+            Push-Location "./publish/cli/$env:TARGET_RUNTIME"
+            zip -q -r "$repoRoot/PhotoCropper-${appVersion}-CLI-${env:TARGET_PLATFORM}.zip" .
+            Pop-Location
+          } else {
+            Compress-Archive -Path ./publish/gui/$env:TARGET_RUNTIME/* -DestinationPath ./PhotoCropper-${appVersion}-GUI-${env:TARGET_PLATFORM}.zip
+            Compress-Archive -Path ./publish/cli/$env:TARGET_RUNTIME/* -DestinationPath ./PhotoCropper-${appVersion}-CLI-${env:TARGET_PLATFORM}.zip
+          }
 
           # Build Windows Inno Setup Installer
           if ($env:TARGET_PLATFORM -eq 'Windows') {
