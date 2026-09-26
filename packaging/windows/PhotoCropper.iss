@@ -50,7 +50,7 @@ Type: files; Name: "{app}\photocropper-cli.exe"
 
 [Files]
 ; GUI application single-file executable and any accompanying files (excluding unrenamed PhotoCropper.Gui.exe)
-Source: "..\..\publish\gui\win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "PhotoCropper.Gui.exe"
+Source: "..\..\publish\gui\win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist; Excludes: "PhotoCropper.Gui.exe"
 Source: "..\..\publish\gui\win-x64\PhotoCropper.Gui.exe"; DestDir: "{app}"; DestName: "PhotoCropper.exe"; Flags: ignoreversion
 ; CLI application single-file executable and lightweight terminal alias
 Source: "..\..\publish\cli\win-x64\PhotoCropper.Cli.exe"; DestDir: "{app}"; DestName: "PhotoCropper.Cli.exe"; Flags: ignoreversion
