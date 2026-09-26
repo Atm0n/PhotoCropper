@@ -111,7 +111,7 @@ jobs:
           # Extract version from tag (e.g. v2.5.2 -> 2.5.2)
           $rawTag = $env:REF_NAME
           $appVersion = if ($rawTag -and $rawTag.StartsWith('v')) { $rawTag.Substring(1) } else { $rawTag }
-          if (-not $appVersion) { $appVersion = "2.7.0" }
+          if (-not $appVersion) { $appVersion = "2.7.1" }
 
           # Package separate zip archives (preserving Unix execution permissions on Linux)
           if ($env:TARGET_PLATFORM -eq 'Linux') {
