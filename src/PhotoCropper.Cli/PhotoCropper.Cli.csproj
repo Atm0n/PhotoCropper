@@ -5,6 +5,7 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<ApplicationIcon>..\PhotoCropper.Gui\Assets\app_icon.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<ItemGroup>
