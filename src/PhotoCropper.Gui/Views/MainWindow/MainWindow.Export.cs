@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Emgu.CV.CvEnum;
+using Emgu.CV.Util;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
@@ -90,7 +92,9 @@ internal sealed partial class MainWindow
                                 settings.PreferredFormat,
                                 settings.JpegQuality,
                                 settings.FileNamePattern,
-                                scanMetadata);
+                                scanMetadata,
+                                progressCallback: null,
+                                cleanOldExports: true);
 
                             int savedCount = engine.DetectedPhotos.Count;
                             Interlocked.Add(ref totalSavedPhotos, savedCount);
@@ -108,6 +112,19 @@ internal sealed partial class MainWindow
                                     entry.IsProcessed = true;
                                     entry.ExtractedPhotoCount = savedCount;
                                     entry.Metadata = scanMetadata;
+
+                                    entry.FinalCrops.Clear();
+                                    foreach (var cand in engine.AcceptedCandidates)
+                                    {
+                                        entry.FinalCrops.Add(new WorkspaceCropData
+                                        {
+                                            CenterX = cand.Rotated.Center.X,
+                                            CenterY = cand.Rotated.Center.Y,
+                                            Width = cand.Rotated.Size.Width,
+                                            Height = cand.Rotated.Size.Height,
+                                            Angle = cand.Rotated.Angle
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -210,10 +227,10 @@ internal sealed partial class MainWindow
             else
             {
                 var parameters = new[] {
-                    new KeyValuePair<Emgu.CV.CvEnum.ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegQuality, settings.JpegQuality),
+                    new KeyValuePair<ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegQuality, settings.JpegQuality),
                     new KeyValuePair<Emgu.CV.CvEnum.ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegOptimize, 1)
                 };
-                using var buf = new Emgu.CV.Util.VectorOfByte();
+                using var buf = new VectorOfByte();
                 Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionJpg, photoMat, buf, parameters);
                 await File.WriteAllBytesAsync(targetPath, buf.ToArray(), cancellationToken);
                 PhotoExporter.EmbedJpegDpi(targetPath, xDpi, yDpi);

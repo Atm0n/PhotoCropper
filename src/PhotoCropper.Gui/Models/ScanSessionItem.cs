@@ -19,9 +19,11 @@ internal sealed class ScanSessionItem : IDisposable
     public bool IsProcessing { get; set; }
     public PhotoExportMetadata Metadata { get; set; } = new();
 
+    public IReadOnlyList<PhotoCropper.Core.Workspace.WorkspaceCropData>? SavedCrops { get; }
+
     private readonly object _lock = new();
 
-    public ScanSessionItem(string filePath, DetectionOptions defaultOptions, bool isSaved = false, bool isModified = true)
+    public ScanSessionItem(string filePath, DetectionOptions defaultOptions, bool isSaved = false, bool isModified = true, IEnumerable<PhotoCropper.Core.Workspace.WorkspaceCropData>? savedCrops = null)
     {
         ArgumentNullException.ThrowIfNull(filePath);
         ArgumentNullException.ThrowIfNull(defaultOptions);
@@ -30,6 +32,7 @@ internal sealed class ScanSessionItem : IDisposable
         Options = defaultOptions with { };
         IsSaved = isSaved;
         IsModified = isModified;
+        SavedCrops = savedCrops?.ToList();
     }
 
     public PhotoCropperEngine Activate()
@@ -42,7 +45,16 @@ internal sealed class ScanSessionItem : IDisposable
                 {
                     var engine = new PhotoCropperEngine(FilePath);
                     engine.ApplyOptions(Options);
-                    engine.DetectPhotos();
+
+                    if (SavedCrops != null && SavedCrops.Count > 0 && IsSaved && !IsModified)
+                    {
+                        engine.RestoreFromSavedCrops(SavedCrops);
+                    }
+                    else
+                    {
+                        engine.DetectPhotos();
+                    }
+
                     CachedPhotoCount = engine.DetectedPhotos.Count;
                     Engine = engine;
                 }

@@ -99,6 +99,8 @@ public class PhotoCropperEngine : IDisposable
         return bgr;
     }
 
+
+
     public void ApplyOptions(DetectionOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -184,6 +186,85 @@ public class PhotoCropperEngine : IDisposable
     {
         Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    public void RestoreFromSavedCrops(IEnumerable<PhotoCropper.Core.Workspace.WorkspaceCropData> savedCrops)
+    {
+        ArgumentNullException.ThrowIfNull(savedCrops);
+
+        ResetState();
+        if (Original == null || Original.IsEmpty || Original.Width <= 0 || Original.Height <= 0)
+        {
+            return;
+        }
+
+        var candidates = new List<CropCandidate>();
+        foreach (var crop in savedCrops)
+        {
+            var center = new System.Drawing.PointF(crop.CenterX, crop.CenterY);
+            var size = new System.Drawing.SizeF(crop.Width, crop.Height);
+            var rr = new Emgu.CV.Structure.RotatedRect(center, size, crop.Angle);
+            candidates.Add(new CropCandidate { Rotated = rr, Area = crop.Width * crop.Height, ShapePoints = [], Rect = new Rectangle(0, 0, (int)crop.Width, (int)crop.Height) });
+        }
+
+        AcceptedCandidates = candidates;
+
+        MCvScalar boxColor = CurrentOptions.GetBoundingBoxColorBgr();
+        foreach (var cand in AcceptedCandidates)
+        {
+            PointF[] vertices = cand.Rotated.GetVertices();
+            for (int j = 0; j < 4; j++)
+            {
+                CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), boxColor, 12);
+            }
+        }
+
+        Mat?[] results = new Mat[candidates.Count];
+        Mat?[] rawResults = new Mat[candidates.Count];
+
+        Parallel.For(0, candidates.Count, i =>
+        {
+            Mat extracted = Extraction.PhotoExtractionEngine.ExtractPhotoFromRotatedRect(candidates[i].Rotated, Original);
+
+            if (AutoOrientPhotos && !extracted.IsEmpty)
+            {
+                Mat oriented = AutoOrientationService.OrientPhoto(extracted);
+                if (!ReferenceEquals(oriented, extracted))
+                {
+                    extracted.Dispose();
+                    extracted = oriented;
+                }
+            }
+
+            rawResults[i] = extracted.Clone();
+
+            if (RestoreVintageColors && !extracted.IsEmpty)
+            {
+                Mat restored = PhotoRestorationService.RestoreColors(extracted, removeDust: RemoveDustAndScratches);
+                if (!ReferenceEquals(restored, extracted))
+                {
+                    extracted.Dispose();
+                    extracted = restored;
+                }
+            }
+            results[i] = extracted;
+        });
+
+        for (int i = 0; i < results.Length; i++)
+        {
+            var mat = results[i];
+            var raw = rawResults[i];
+            if (mat != null && !mat.IsEmpty && raw != null && !raw.IsEmpty)
+            {
+                DetectedPhotos.Add(mat);
+                RawDetectedPhotos.Add(raw);
+            }
+            else
+            {
+                mat?.Dispose();
+                raw?.Dispose();
+            }
+        }
     }
 
     public void DetectPhotos()
@@ -481,9 +562,10 @@ public class PhotoCropperEngine : IDisposable
         int jpegQuality = 100,
         string fileNamePattern = FileNameTemplateHelper.DefaultPattern,
         PhotoExportMetadata? metadata = null,
-        Action<int, int>? progressCallback = null)
+        Action<int, int>? progressCallback = null,
+        bool cleanOldExports = false)
     {
-        PhotoExporter.SavePhotos(DetectedPhotos, OriginalFilePath, customOutputFolder, format, jpegQuality, fileNamePattern, metadata, progressCallback);
+        PhotoExporter.SavePhotos(DetectedPhotos, OriginalFilePath, customOutputFolder, format, jpegQuality, fileNamePattern, metadata, progressCallback, cleanOldExports);
     }
 
     private static void MapCandidatesToOriginalSpace(

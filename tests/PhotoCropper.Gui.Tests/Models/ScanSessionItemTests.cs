@@ -30,6 +30,29 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
+    public void ScanSessionItem_WithSavedCrops_ShouldRestoreCrops()
+    {
+        var options = new DetectionOptions();
+        var savedCrops = new List<PhotoCropper.Core.Workspace.WorkspaceCropData>
+        {
+            new PhotoCropper.Core.Workspace.WorkspaceCropData { CenterX = 50, CenterY = 50, Width = 20, Height = 20, Angle = 0 }
+        };
+
+        // Needs to be IsSaved = true and IsModified = false to bypass detection
+        using var item = new ScanSessionItem(_scanPath, options, isSaved: true, isModified: false, savedCrops: savedCrops);
+
+        item.SavedCrops.ShouldNotBeNull();
+        item.SavedCrops.Count.ShouldBe(1);
+
+        var engine = item.Activate();
+        item.IsActive.ShouldBeTrue();
+
+        // normally the test image has 2 photos, but we injected 1 crop and bypassed detection
+        engine.DetectedPhotos.Count.ShouldBe(1);
+        item.PhotoCount.ShouldBe(1);
+    }
+
+    [Fact]
     public void ScanSessionItem_Activate_ShouldInstantiateEngineAndDetectPhotos()
     {
         var options = new DetectionOptions { BackgroundTolerance = 30.0 };
