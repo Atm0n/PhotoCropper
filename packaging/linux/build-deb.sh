@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-2.7.0}"
+VERSION="${1:-2.7.1}"
 VERSION="${VERSION#v}"
 
 GUI_DIR="${2:-publish/gui/linux-x64}"
@@ -60,7 +60,7 @@ Priority: optional
 Architecture: amd64
 Installed-Size: ${INSTALLED_SIZE}
 Maintainer: Atm0n <https://github.com/Atm0n/PhotoCropper>
-Depends: libgomp1, libgl1, libglib2.0-0, libx11-6
+Depends: libgomp1, libgl1, libglib2.0-0 | libglib2.0-0t64, libx11-6
 Recommends: libsane1, sane-utils
 Homepage: https://github.com/Atm0n/PhotoCropper
 Description: Batch photo cropper and scanner image extractor
