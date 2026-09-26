@@ -20,6 +20,25 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
+    public void RestoreFromSavedCrops_ShouldBypassDetectionAndLoadCrops()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        
+        var savedCrops = new List<PhotoCropper.Core.Workspace.WorkspaceCropData>
+        {
+            new PhotoCropper.Core.Workspace.WorkspaceCropData { CenterX = 100, CenterY = 100, Width = 50, Height = 50, Angle = 0 }
+        };
+
+        cropper.RestoreFromSavedCrops(savedCrops);
+
+        // Normally DetectPhotos would find 2 photos in the standard scan. 
+        // Here we bypassed it and injected only 1 crop.
+        cropper.DetectedPhotos.Count.ShouldBe(1);
+        cropper.AcceptedCandidates.Count.ShouldBe(1);
+        cropper.AcceptedCandidates[0].Rotated.Size.Width.ShouldBe(50);
+    }
+
+    [Fact]
     public void Constructor_ShouldLoadImage()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);

@@ -16,6 +16,35 @@ public sealed class PhotoExporterTests : IDisposable
     }
 
     [Fact]
+    public void SavePhotos_WithCleanOldExports_ShouldDeletePreviousFiles()
+    {
+        string outputDir = Path.Combine(_tempDir, "CleanTest");
+        Directory.CreateDirectory(outputDir);
+        string scanPath = Path.Combine(_tempDir, "batch_scan.jpg");
+        using (Mat scan = new(300, 300, DepthType.Cv8U, 3))
+        {
+            scan.SetTo(new MCvScalar(200, 200, 200));
+            scan.Save(scanPath);
+        }
+        
+        string oldFile1 = Path.Combine(outputDir, "batch_scan_1.jpg");
+        string oldFile2 = Path.Combine(outputDir, "batch_scan_2.jpg");
+        File.WriteAllText(oldFile1, "old");
+        File.WriteAllText(oldFile2, "old");
+
+        using Mat photo = new(10, 10, DepthType.Cv8U, 3);
+        photo.SetTo(new MCvScalar(0, 0, 0));
+
+        PhotoExporter.SavePhotos([photo], scanPath, customOutputFolder: outputDir, cleanOldExports: true);
+
+        File.Exists(oldFile2).ShouldBeFalse("Old file 2 should have been deleted");
+        
+        // oldFile1 was overwritten, let's verify it contains the actual image, not "old"
+        var newFile1Bytes = File.ReadAllBytes(oldFile1);
+        newFile1Bytes.Length.ShouldBeGreaterThan(3);
+    }
+
+    [Fact]
     public void PhotoExporter_ShouldPreserveDpiAndReportProgress()
     {
         string scanPath = Path.Combine(_tempDir, "dpi_test_scan.jpg");
