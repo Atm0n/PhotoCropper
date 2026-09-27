@@ -15,6 +15,30 @@ namespace PhotoCropper.Core.Extraction;
 
 public static class FaceOrientationService
 {
+    // YuNet ONNX Output Specification (15 columns per face row):
+    // 0-1: Bounding Box (X, Y)
+    // 2-3: Bounding Box (Width, Height)
+    // 4-5: Right Eye (X, Y)
+    // 6-7: Left Eye (X, Y)
+    // 8-9: Nose (X, Y)
+    // 10-11: Right Corner of Mouth (X, Y)
+    // 12-13: Left Corner of Mouth (X, Y)
+    // 14: Confidence Score
+    // private const int YuNetBboxXIndex = 0;
+    // private const int YuNetBboxYIndex = 1;
+    private const int YuNetBboxWidthIndex = 2;
+    private const int YuNetBboxHeightIndex = 3;
+    private const int YuNetRightEyeXIndex = 4;
+    private const int YuNetRightEyeYIndex = 5;
+    private const int YuNetLeftEyeXIndex = 6;
+    private const int YuNetLeftEyeYIndex = 7;
+    // private const int YuNetNoseXIndex = 8;
+    private const int YuNetNoseYIndex = 9;
+    private const int YuNetMouthRightXIndex = 10;
+    private const int YuNetMouthRightYIndex = 11;
+    private const int YuNetMouthLeftXIndex = 12;
+    private const int YuNetMouthLeftYIndex = 13;
+    private const int YuNetConfidenceIndex = 14;
     static FaceOrientationService()
     {
         CvInvoke.LogLevel = LogLevel.Error;
@@ -150,23 +174,23 @@ public static class FaceOrientationService
 
             for (int i = 0; i < faces.Rows; i++)
             {
-                float score = data[i, 14];
+                float score = data[i, YuNetConfidenceIndex];
                 if (score < scoreThreshold) continue;
 
-                float faceW = data[i, 2];
-                float faceH = data[i, 3];
+                float faceW = data[i, YuNetBboxWidthIndex];
+                float faceH = data[i, YuNetBboxHeightIndex];
 
-                float rightEyeX = data[i, 4];
-                float rightEyeY = data[i, 5];
-                float leftEyeX = data[i, 6];
-                float leftEyeY = data[i, 7];
+                float rightEyeX = data[i, YuNetRightEyeXIndex];
+                float rightEyeY = data[i, YuNetRightEyeYIndex];
+                float leftEyeX = data[i, YuNetLeftEyeXIndex];
+                float leftEyeY = data[i, YuNetLeftEyeYIndex];
 
-                float noseY = data[i, 9];
+                float noseY = data[i, YuNetNoseYIndex];
 
-                float mouthRightX = data[i, 10];
-                float mouthRightY = data[i, 11];
-                float mouthLeftX = data[i, 12];
-                float mouthLeftY = data[i, 13];
+                float mouthRightX = data[i, YuNetMouthRightXIndex];
+                float mouthRightY = data[i, YuNetMouthRightYIndex];
+                float mouthLeftX = data[i, YuNetMouthLeftXIndex];
+                float mouthLeftY = data[i, YuNetMouthLeftYIndex];
 
                 float eyeMidY = (rightEyeY + leftEyeY) * 0.5f;
                 float mouthMidY = (mouthRightY + mouthLeftY) * 0.5f;
