@@ -2,6 +2,11 @@
 
 An intelligent, cross-platform .NET 10 desktop application designed to automatically detect, straighten, and extract multiple photos from a single scanner bed image. Built with Avalonia UI and Emgu.CV (OpenCV).
 
+## Documentation
+
+- **[Architecture & Design Details](docs/ARCHITECTURE.md)**: Explore high-level system components, auto-tuning pipelines, AI auto-orientation heuristics, and memory management strategies via Mermaid diagrams.
+- **[Changelog](CHANGELOG.md)**: Detailed history of releases and changes (Semantic Versioning).
+
 ## Project Structure
 
 The solution consists of four main projects organized under `src/` and `tests/`:
