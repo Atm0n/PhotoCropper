@@ -16,76 +16,10 @@ internal static class BatchProcessor
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(scanFiles);
 
-        // Header Panel
-        var grid = new Grid();
-        grid.AddColumn(new GridColumn().PadRight(2));
-        grid.AddColumn(new GridColumn());
+        PrintHeaderPanel(options, scanFiles.Count);
 
-        grid.AddRow("[bold cyan]Scans Found:[/]", $"[bold white]{scanFiles.Count}[/]");
-        grid.AddRow("[bold cyan]Output Format:[/]", $"[bold white]{options.Format}[/] (Quality: {options.JpegQuality})");
-        grid.AddRow("[bold cyan]Detection:[/]", $"Tolerance: [bold white]{options.Tolerance}[/], MinSize: [bold white]{options.MinAreaFactor * 100:0}%[/], MaxSize: [bold white]{options.MaxAreaFactor * 100:0}%[/]");
-        grid.AddRow("[bold cyan]Auto-Tune:[/]", options.AutoTune ? "[bold green]Enabled (Sweeping)[/]" : options.AutoAdjustLowCoverage ? $"[bold yellow]Low-Coverage Trigger (< {options.MinCoverageThresholdPercent:0}%)[/]" : "[grey]Disabled[/]");
-        grid.AddRow("[bold cyan]Auto-Orient:[/]", options.AutoOrient ? "[bold green]Enabled (AI Face + Sky)[/]" : "[grey]Disabled[/]");
-        grid.AddRow("[bold cyan]Restoration:[/]", options.RestoreColors ? "[bold green]Enabled (Auto-WB + CLAHE)[/]" : "[grey]Disabled[/]");
-        grid.AddRow("[bold cyan]Dust Inpainting:[/]", options.RemoveDust ? "[bold green]Enabled (Morphological)[/]" : "[grey]Disabled[/]");
-        if (options.MinExpectedPhotos > 1 || options.MaxExpectedPhotos < int.MaxValue)
-        {
-            string rangeText = options.MaxExpectedPhotos < int.MaxValue
-                ? $"{options.MinExpectedPhotos} - {options.MaxExpectedPhotos}"
-                : $"{options.MinExpectedPhotos}+";
-            grid.AddRow("[bold cyan]Expected Photos:[/]", $"[bold white]{rangeText}[/]");
-        }
-        if (!string.Equals(options.FileNamePattern, FileNameTemplateHelper.DefaultPattern, StringComparison.Ordinal))
-        {
-            grid.AddRow("[bold cyan]Naming Pattern:[/]", $"[bold yellow]{options.FileNamePattern}[/]");
-        }
-        if (options.Year.HasValue || !string.IsNullOrWhiteSpace(options.Date) || !string.IsNullOrWhiteSpace(options.Description))
-        {
-            string metaSummary = "";
-            if (options.Year.HasValue) metaSummary += $"Year: {options.Year.Value} ";
-            if (!string.IsNullOrWhiteSpace(options.Date)) metaSummary += $"Date: {options.Date} ";
-            if (!string.IsNullOrWhiteSpace(options.Description)) metaSummary += $"Desc: '{options.Description}'";
-            grid.AddRow("[bold cyan]EXIF Metadata:[/]", $"[bold green]{metaSummary.Trim()}[/]");
-        }
-        if (options.CopyUndetectedDirectory != null)
-        {
-            grid.AddRow("[bold cyan]Isolation Dir:[/]", $"[yellow]{options.CopyUndetectedDirectory}[/]");
-        }
-
-        AnsiConsole.Write(
-            new Panel(grid)
-                .Header("[bold cyan]PhotoCropper CLI - Batch Extractor[/]")
-                .Border(BoxBorder.Rounded)
-                .BorderColor(Color.Cyan1));
-
-        var detectionOptions = new DetectionOptions
-        {
-            BackgroundTolerance = options.Tolerance,
-            MinAreaFactor = options.MinAreaFactor,
-            MaxAreaFactor = options.MaxAreaFactor,
-            CannyLowThreshold = options.CannyLow,
-            CannyHighThreshold = options.CannyLow * 2.5,
-            AutoOrientPhotos = options.AutoOrient,
-            RestoreVintageColors = options.RestoreColors,
-            RemoveDustAndScratches = options.RemoveDust
-        };
-
-        PhotoExportMetadata? metadata = null;
-        DateTime? parsedDate = null;
-        if (!string.IsNullOrWhiteSpace(options.Date) && DateTime.TryParse(options.Date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
-        {
-            parsedDate = d;
-        }
-
-        if (options.Year.HasValue || parsedDate.HasValue || !string.IsNullOrWhiteSpace(options.Description))
-        {
-            metadata = new PhotoExportMetadata
-            {
-                Year = options.Year,
-                DateTaken = parsedDate,
-                Description = options.Description
-            };
-        }
+        var detectionOptions = CreateDetectionOptions(options);
+        var metadata = CreateExportMetadata(options);
 
         PhotoCropper.Core.Export.PhotoExporter.ClearClaimedExportPaths();
 
@@ -392,5 +326,83 @@ internal static class BatchProcessor
                 }
             }
         }
+    }
+    private static void PrintHeaderPanel(CliOptions options, int scanCount)
+    {
+        var grid = new Grid();
+        grid.AddColumn(new GridColumn().PadRight(2));
+        grid.AddColumn(new GridColumn());
+
+        grid.AddRow("[bold cyan]Scans Found:[/]", $"[bold white]{scanCount}[/]");
+        grid.AddRow("[bold cyan]Output Format:[/]", $"[bold white]{options.Format}[/] (Quality: {options.JpegQuality})");
+        grid.AddRow("[bold cyan]Detection:[/]", $"Tolerance: [bold white]{options.Tolerance}[/], MinSize: [bold white]{options.MinAreaFactor * 100:0}%[/], MaxSize: [bold white]{options.MaxAreaFactor * 100:0}%[/]");
+        grid.AddRow("[bold cyan]Auto-Tune:[/]", options.AutoTune ? "[bold green]Enabled (Sweeping)[/]" : options.AutoAdjustLowCoverage ? $"[bold yellow]Low-Coverage Trigger (< {options.MinCoverageThresholdPercent:0}%)[/]" : "[grey]Disabled[/]");
+        grid.AddRow("[bold cyan]Auto-Orient:[/]", options.AutoOrient ? "[bold green]Enabled (AI Face + Sky)[/]" : "[grey]Disabled[/]");
+        grid.AddRow("[bold cyan]Restoration:[/]", options.RestoreColors ? "[bold green]Enabled (Auto-WB + CLAHE)[/]" : "[grey]Disabled[/]");
+        grid.AddRow("[bold cyan]Dust Inpainting:[/]", options.RemoveDust ? "[bold green]Enabled (Morphological)[/]" : "[grey]Disabled[/]");
+        if (options.MinExpectedPhotos > 1 || options.MaxExpectedPhotos < int.MaxValue)
+        {
+            string rangeText = options.MaxExpectedPhotos < int.MaxValue
+                ? $"{options.MinExpectedPhotos} - {options.MaxExpectedPhotos}"
+                : $"{options.MinExpectedPhotos}+";
+            grid.AddRow("[bold cyan]Expected Photos:[/]", $"[bold white]{rangeText}[/]");
+        }
+        if (!string.Equals(options.FileNamePattern, FileNameTemplateHelper.DefaultPattern, StringComparison.Ordinal))
+        {
+            grid.AddRow("[bold cyan]Naming Pattern:[/]", $"[bold yellow]{options.FileNamePattern}[/]");
+        }
+        if (options.Year.HasValue || !string.IsNullOrWhiteSpace(options.Date) || !string.IsNullOrWhiteSpace(options.Description))
+        {
+            string metaSummary = "";
+            if (options.Year.HasValue) metaSummary += $"Year: {options.Year.Value} ";
+            if (!string.IsNullOrWhiteSpace(options.Date)) metaSummary += $"Date: {options.Date} ";
+            if (!string.IsNullOrWhiteSpace(options.Description)) metaSummary += $"Desc: '{options.Description}'";
+            grid.AddRow("[bold cyan]EXIF Metadata:[/]", $"[bold green]{metaSummary.Trim()}[/]");
+        }
+        if (options.CopyUndetectedDirectory != null)
+        {
+            grid.AddRow("[bold cyan]Isolation Dir:[/]", $"[yellow]{options.CopyUndetectedDirectory}[/]");
+        }
+
+        AnsiConsole.Write(
+            new Panel(grid)
+                .Header("[bold cyan]PhotoCropper CLI - Batch Extractor[/]")
+                .Border(BoxBorder.Rounded)
+                .BorderColor(Color.Cyan1));
+    }
+
+    private static DetectionOptions CreateDetectionOptions(CliOptions options)
+    {
+        return new DetectionOptions
+        {
+            BackgroundTolerance = options.Tolerance,
+            MinAreaFactor = options.MinAreaFactor,
+            MaxAreaFactor = options.MaxAreaFactor,
+            CannyLowThreshold = options.CannyLow,
+            CannyHighThreshold = options.CannyLow * 2.5,
+            AutoOrientPhotos = options.AutoOrient,
+            RestoreVintageColors = options.RestoreColors,
+            RemoveDustAndScratches = options.RemoveDust
+        };
+    }
+
+    private static PhotoExportMetadata? CreateExportMetadata(CliOptions options)
+    {
+        DateTime? parsedDate = null;
+        if (!string.IsNullOrWhiteSpace(options.Date) && DateTime.TryParse(options.Date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+        {
+            parsedDate = d;
+        }
+
+        if (options.Year.HasValue || parsedDate.HasValue || !string.IsNullOrWhiteSpace(options.Description))
+        {
+            return new PhotoExportMetadata
+            {
+                Year = options.Year,
+                DateTaken = parsedDate,
+                Description = options.Description
+            };
+        }
+        return null;
     }
 }
