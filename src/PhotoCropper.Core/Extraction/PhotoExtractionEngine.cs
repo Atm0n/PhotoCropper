@@ -3,6 +3,7 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
 using PhotoCropper.Core.Detection;
+using PhotoCropper.Core.Models;
 using System.Drawing;
 
 namespace PhotoCropper.Core.Extraction;
@@ -184,7 +185,7 @@ public static class PhotoExtractionEngine
         return result;
     }
 
-    public static (Emgu.CV.Mat Extracted, PhotoCropper.Core.Models.CropCandidate? Candidate) ExtractManualCrop(
+    public static (Mat Extracted, CropCandidate? Candidate) ExtractManualCrop(
         Mat original,
         Rectangle rect,
         MCvScalar? customBgHsv,
@@ -241,17 +242,17 @@ public static class PhotoExtractionEngine
                 }
                 using VectorOfPoint globalHull = new(points);
 
-                                Emgu.CV.Mat extracted = ExtractPhotoFromContour(globalHull, original);
+                Mat extracted = ExtractPhotoFromContour(globalHull, original);
                 if (!extracted.IsEmpty)
                 {
-                    var minRect = Emgu.CV.CvInvoke.MinAreaRect(globalHull);
-                    var rectBound = Emgu.CV.CvInvoke.BoundingRectangle(globalHull);
-                    var cand = new PhotoCropper.Core.Models.CropCandidate(
+                    var minRect = CvInvoke.MinAreaRect(globalHull);
+                    var rectBound = CvInvoke.BoundingRectangle(globalHull);
+                    var cand = new CropCandidate(
                         globalHull.ToArray(),
                         rectBound,
                         9999.0,
                         minRect,
-                        Emgu.CV.CvInvoke.ContourArea(globalHull),
+                        CvInvoke.ContourArea(globalHull),
                         1.0, 1.0);
                     return (extracted, cand);
                 }
@@ -259,18 +260,18 @@ public static class PhotoExtractionEngine
             }
         }
 
-                using Mat subMat = new(original, rect);
-        var exactMinRect = new Emgu.CV.Structure.RotatedRect(
-            new System.Drawing.PointF(rect.X + rect.Width / 2f, rect.Y + rect.Height / 2f),
-            new System.Drawing.SizeF(rect.Width, rect.Height),
+        using Mat subMat = new(original, rect);
+        var exactMinRect = new RotatedRect(
+            new PointF(rect.X + rect.Width / 2f, rect.Y + rect.Height / 2f),
+            new SizeF(rect.Width, rect.Height),
             0f);
-        var exactCand = new PhotoCropper.Core.Models.CropCandidate(
-            new[] {
-                new System.Drawing.Point(rect.X, rect.Y),
-                new System.Drawing.Point(rect.Right, rect.Y),
-                new System.Drawing.Point(rect.Right, rect.Bottom),
-                new System.Drawing.Point(rect.X, rect.Bottom)
-            },
+        var exactCand = new CropCandidate(
+            [
+                new Point(rect.X, rect.Y),
+                new Point(rect.Right, rect.Y),
+                new Point(rect.Right, rect.Bottom),
+                new Point(rect.X, rect.Bottom)
+            ],
             rect,
             5000.0, exactMinRect,
             rect.Width * rect.Height,

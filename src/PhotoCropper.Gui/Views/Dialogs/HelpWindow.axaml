@@ -42,8 +42,8 @@
 						<TextBlock Text="{DynamicResource HelpZoom}" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 					</StackPanel>
 					<StackPanel Grid.Row="3" Grid.Column="0" Margin="10" Spacing="5">
-						<TextBlock Text="{DynamicResource HelpDragDropTitle}" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
-						<TextBlock Text="{DynamicResource HelpDragDrop}" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+						<TextBlock Text="{DynamicResource HelpInteractiveBoxesTitle}" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
+						<TextBlock Text="{DynamicResource HelpInteractiveBoxes}" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 					</StackPanel>
 					<StackPanel Grid.Row="3" Grid.Column="1" Margin="10" Spacing="5">
 						<TextBlock Text="{DynamicResource HelpDpiTitle}" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>

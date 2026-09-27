@@ -201,7 +201,7 @@ public static partial class ProjectWorkspaceService
         string rawDir = GetRawScansDirectory(workDirectory);
         if (!Directory.Exists(rawDir)) return session;
 
-        var files = Directory.GetFiles(rawDir).Where(f => 
+        var files = Directory.GetFiles(rawDir).Where(f =>
             f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
             f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) ||
             f.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
@@ -210,7 +210,7 @@ public static partial class ProjectWorkspaceService
             f.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase) ||
             f.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)
         ).OrderBy(f => f).ToList();
-        
+
         bool sessionChanged = false;
 
         foreach (string file in files)
@@ -242,7 +242,7 @@ public static partial class ProjectWorkspaceService
         {
             SaveSession(workDirectory, session);
         }
-        
+
         return session;
     }
 

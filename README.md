@@ -73,7 +73,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - Visual color indicator squares next to every option in the menu.
   - Dedicated **Custom Color...** modal dialog featuring a real-time photo simulation preview, 16 accessible quick swatches, RGB sliders, and direct hex input (`#RRGGBB`).
 - **Dual-View Inspection & Gallery Grid (`1` / `2`):** Instantly toggle between a focused single-photo carousel and an interactive thumbnail gallery overview displaying indices and pixel dimensions.
-- **Drag & Drop Queuing:** Drag image files or whole folders anywhere onto the application window to automatically queue and batch-process scans via the centralized `ImageFileCollector`.
+- **Interactive Bounding Boxes:** Click a green box to instantly select it in the gallery. Click the top-right Red 'X' to delete bad detections. Drag corners to manually resize the crop area, and drag the bottom-right Blue circle to rotate the photo by hand.
 - **Safe Exit & Data Loss Prevention:** PhotoCropper detects unsaved photo edits or unexported scans on close, presenting a confirmation dialog with **Save & Exit**, **Discard & Exit**, or **Cancel** choices (closes silently when all work is saved).
 - **Dedicated Multi-Window Dialog Architecture:** Replaced embedded overlay clutter with dedicated, modular Avalonia windows:
   - `HelpWindow`: Non-modal documentation and shortcut reference (<kbd>F1</kbd>) that can be placed side-by-side or on secondary monitors.

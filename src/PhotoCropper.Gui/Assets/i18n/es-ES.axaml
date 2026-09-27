@@ -68,8 +68,8 @@
 	<sys:String x:Key="HelpSensitivity">Ajusta la agresividad con la que el motor busca bordes de fotos. Valores altos encuentran bordes tenues pero pueden incluir ruido.</sys:String>
 	<sys:String x:Key="HelpManualCrop">Haz clic y arrastra sobre el escaneo original (izquierda) para definir manualmente el área de una foto si no fue detectada.</sys:String>
 	<sys:String x:Key="HelpRefine">Entra en un modo especializado para ajustar los bordes de una foto. Ideal para eliminar márgenes blancos del escáner.</sys:String>
-	<sys:String x:Key="HelpDragDropTitle">Arrastrar y Soltar</sys:String>
-	<sys:String x:Key="HelpDragDrop">Arrastra archivos de imagen o carpetas enteras a la ventana para poner en cola y procesar escaneos automáticamente.</sys:String>
+	<sys:String x:Key="HelpInteractiveBoxesTitle">Cajas Interactivas</sys:String>
+	<sys:String x:Key="HelpInteractiveBoxes">Haz clic en una caja verde para seleccionarla. Haz clic en la 'X' roja para borrar. Arrastra las esquinas para redimensionar y el círculo azul para rotar.</sys:String>
 	<sys:String x:Key="HelpDpiTitle">Preservación de DPI</sys:String>
 	<sys:String x:Key="HelpDpi">La resolución original del escáner (ej. 300/600 DPI) se detecta y preserva al exportar para conservar la escala física de impresión 1:1.</sys:String>
 	<sys:String x:Key="HelpAutoOrientTitle">Orientación IA y Paisajes</sys:String>
@@ -206,8 +206,8 @@
 	<sys:String x:Key="MenuRotateCcw">Rotar 90° Antihorario</sys:String>
 	<sys:String x:Key="MenuRefineCrop">Ajustar Bordes del Recorte</sys:String>
 	<sys:String x:Key="MenuExportSingle">Exportar Esta Foto...</sys:String>
-	<sys:String x:Key="EmptyStateTitle">Arrastre y Suelte Escaneos Aquí</sys:String>
-	<sys:String x:Key="EmptyStateDesc">Suelte archivos de imagen o carpetas de escaneo completas aquí, o haga clic en Abrir / Escanear arriba.</sys:String>
+	<sys:String x:Key="EmptyStateTitle">Abre o Escanea Fotos</sys:String>
+	<sys:String x:Key="EmptyStateDesc">Haz clic en Abrir para seleccionar archivos de imagen escaneados, o en Escanear para capturar directamente desde un escáner.</sys:String>
 	<sys:String x:Key="LblFileNamePattern">Patrón de Nombres:</sys:String>
 	<sys:String x:Key="LblNamingPreview">Vista Previa: {0}</sys:String>
 	<sys:String x:Key="LblMetadata">Metadatos de Foto Antigua (EXIF):</sys:String>
