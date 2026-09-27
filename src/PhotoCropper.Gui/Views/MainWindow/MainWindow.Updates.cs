@@ -42,7 +42,7 @@ internal sealed partial class MainWindow
                 {
                     // Ignore background update check failures
                 }
-            }, CancellationToken.None);
+            }, CancellationToken.None).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
         }
     }
 

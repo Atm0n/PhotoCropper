@@ -293,7 +293,7 @@ internal sealed partial class MainWindow
             {
                 _lookaheadSemaphore.Release();
             }
-        }, ct);
+        }, ct).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
     }
 
     private void UpdateEmptyStateVisibility()

@@ -94,7 +94,7 @@ internal static class BatchProcessor
                         bool isUnderDetected = photoCount < options.MinExpectedPhotos;
                         bool isOverDetected = photoCount > options.MaxExpectedPhotos;
                         bool isLowCoverage = options.AutoAdjustLowCoverage && !options.AutoTune && engine.TotalDetectedAreaRatio < (options.MinCoverageThresholdPercent / 100.0);
-                        bool shouldAutoTune = ((isUnderDetected || isOverDetected) && options.AutoTune) || isLowCoverage;
+                        bool shouldAutoTune = options.AlwaysAutoTune || (((isUnderDetected || isOverDetected) && options.AutoTune) || isLowCoverage);
 
                         if (shouldAutoTune)
                         {
@@ -269,7 +269,7 @@ internal static class BatchProcessor
         IReadOnlyList<string> scanFiles,
         int totalExtracted)
     {
-        if (!options.AutoTune && !options.NonInteractive && !undetectedScans.IsEmpty && !Console.IsInputRedirected)
+        if (!options.AlwaysAutoTune && !options.AutoTune && !options.NonInteractive && !undetectedScans.IsEmpty && !Console.IsInputRedirected)
         {
             string underDetectedText = options.MaxExpectedPhotos < int.MaxValue
                 ? $"{undetectedScans.Count} scan(s) had photo count outside expected range ({options.MinExpectedPhotos}-{options.MaxExpectedPhotos})"
@@ -383,7 +383,7 @@ internal static class BatchProcessor
         grid.AddRow("[bold cyan]Scans Found:[/]", $"[bold white]{scanCount}[/]");
         grid.AddRow("[bold cyan]Output Format:[/]", $"[bold white]{options.Format}[/] (Quality: {options.JpegQuality})");
         grid.AddRow("[bold cyan]Detection:[/]", $"Tolerance: [bold white]{options.Tolerance}[/], MinSize: [bold white]{options.MinAreaFactor * 100:0}%[/], MaxSize: [bold white]{options.MaxAreaFactor * 100:0}%[/]");
-        grid.AddRow("[bold cyan]Auto-Tune:[/]", options.AutoTune ? "[bold green]Enabled (Sweeping)[/]" : options.AutoAdjustLowCoverage ? $"[bold yellow]Low-Coverage Trigger (< {options.MinCoverageThresholdPercent:0}%)[/]" : "[grey]Disabled[/]");
+        grid.AddRow("[bold cyan]Auto-Tune:[/]", options.AlwaysAutoTune ? "[bold green]Always[/]" : options.AutoTune ? "[bold yellow]On Mismatch[/]" : options.AutoAdjustLowCoverage ? $"[bold yellow]Low-Coverage Trigger (< {options.MinCoverageThresholdPercent:0}%)[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Auto-Orient:[/]", options.AutoOrient ? "[bold green]Enabled (AI Face + Sky)[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Restoration:[/]", options.RestoreColors ? "[bold green]Enabled (Auto-WB + CLAHE)[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Dust Inpainting:[/]", options.RemoveDust ? "[bold green]Enabled (Morphological)[/]" : "[grey]Disabled[/]");

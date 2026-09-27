@@ -20,7 +20,7 @@ internal sealed partial class MainWindow
             await ResumeWorkspaceSessionAsync(workDir);
         }
 
-        _ = RefreshScannersAsync(CancellationToken.None);
+        _ = RefreshScannersAsync(CancellationToken.None).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
         CheckForUpdatesOnStartupIfDue();
     }
 

@@ -108,7 +108,7 @@ internal sealed partial class MainWindow
         if (tglColorPicker?.IsChecked == true)
         {
             e.Handled = true;
-            _ = SampleBackgroundColorAtPointerAsync(e.GetPosition(pnlOriginal));
+            _ = SampleBackgroundColorAtPointerAsync(e.GetPosition(pnlOriginal)).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
             return;
         }
 
@@ -260,7 +260,7 @@ internal sealed partial class MainWindow
             return;
         }
 
-        _ = ApplyManualCropAsync(rect);
+        _ = ApplyManualCropAsync(rect).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
     }
 
     private void HandleEndHandleRotation()
