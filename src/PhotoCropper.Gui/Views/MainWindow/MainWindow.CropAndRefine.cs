@@ -131,7 +131,51 @@ internal sealed partial class MainWindow
         isDragging = false;
         rectCrop.IsVisible = false;
         var rect = CoordinateMapper.ComputeNormalizedRect(startPoint, e.GetPosition(pnlOriginal));
-        if (rect.Width < 5 || rect.Height < 5) return;
+        
+        if (rect.Width < 5 || rect.Height < 5)
+        {
+            // Click-to-Select / Delete
+            var photo = ScanSessions[CurrentIndex].Activate();
+            var imageRect = GetImageRectInsideControl();
+            var originalSize = new System.Drawing.Size(photo.OriginalWithDetected.Width, photo.OriginalWithDetected.Height);
+            
+            var clickRectImg = CoordinateMapper.MapUiRectToImageRect(rect, imageRect, originalSize);
+            var pt = new System.Drawing.PointF(clickRectImg.X, clickRectImg.Y);
+            
+            // Iterate candidates backwards to hit the top ones first
+            for (int i = photo.AcceptedCandidates.Count - 1; i >= 0; i--)
+            {
+                var cand = photo.AcceptedCandidates[i];
+                var vertices = cand.Rotated.GetVertices();
+                System.Array.Sort(vertices, (a, b) => (b.X - b.Y).CompareTo(a.X - a.Y));
+                var tr = vertices[0];
+                
+                // Check if click is on the Red X
+                double dist = Math.Sqrt(Math.Pow(tr.X - pt.X, 2) + Math.Pow(tr.Y - pt.Y, 2));
+                if (dist <= 60) // Slightly larger hit box for usability
+                {
+                    photo.DeletePhoto(i);
+                    ScanSessions[CurrentIndex].IsModified = true;
+                    // Force refresh image by recreating it
+                    SetMainImage(photo.OriginalWithDetected);
+                    LoadCroppedPhotosToSlider();
+                    UpdatePhotoCounterLabel();
+                    UpdateDetectionCoverageLabel();
+                    return;
+                }
+                
+                // Check if click is inside bounding box
+                using (var vec = new Emgu.CV.Util.VectorOfPointF(cand.Rotated.GetVertices()))
+                {
+                    if (Emgu.CV.CvInvoke.PointPolygonTest(vec, pt, false) >= 0)
+                    {
+                        if (slides != null) slides.SelectedIndex = i;
+                        return;
+                    }
+                }
+            }
+            return;
+        }
 
         _ = ApplyManualCropAsync(rect);
     }

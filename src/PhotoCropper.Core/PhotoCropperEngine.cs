@@ -209,15 +209,7 @@ public class PhotoCropperEngine : IDisposable
 
         AcceptedCandidates = candidates;
 
-        MCvScalar boxColor = CurrentOptions.GetBoundingBoxColorBgr();
-        foreach (var cand in AcceptedCandidates)
-        {
-            PointF[] vertices = cand.Rotated.GetVertices();
-            for (int j = 0; j < 4; j++)
-            {
-                CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), boxColor, 12);
-            }
-        }
+        DrawBoundingBoxes(AcceptedCandidates);
 
         Mat?[] results = new Mat[candidates.Count];
         Mat?[] rawResults = new Mat[candidates.Count];
@@ -318,6 +310,33 @@ public class PhotoCropperEngine : IDisposable
                 raw?.Dispose();
             }
         }
+    }
+
+    
+    private void DrawBoundingBoxes(System.Collections.Generic.IEnumerable<PhotoCropper.Core.Models.CropCandidate> candidates)
+    {
+        MCvScalar boxColor = CurrentOptions.GetBoundingBoxColorBgr();
+        MCvScalar redBadge = new MCvScalar(0, 0, 255); // BGR for Red
+        MCvScalar whiteText = new MCvScalar(255, 255, 255);
+        int radius = 45;
+
+        foreach (var cand in candidates)
+        {
+            System.Drawing.PointF[] vertices = cand.Rotated.GetVertices();
+            for (int j = 0; j < 4; j++)
+            {
+                CvInvoke.Line(OriginalWithDetected, System.Drawing.Point.Round(vertices[j]), System.Drawing.Point.Round(vertices[(j + 1) % 4]), boxColor, 12);
+            }
+            
+            // Find top right corner (max X - Y)
+            System.Array.Sort(vertices, (a, b) => (b.X - b.Y).CompareTo(a.X - a.Y));
+            var tr = System.Drawing.Point.Round(vertices[0]);
+
+            CvInvoke.Circle(OriginalWithDetected, tr, radius, redBadge, -1);
+            CvInvoke.Line(OriginalWithDetected, new System.Drawing.Point(tr.X - 15, tr.Y - 15), new System.Drawing.Point(tr.X + 15, tr.Y + 15), whiteText, 8);
+            CvInvoke.Line(OriginalWithDetected, new System.Drawing.Point(tr.X + 15, tr.Y - 15), new System.Drawing.Point(tr.X - 15, tr.Y + 15), whiteText, 8);
+            
+            }
     }
 
     public void DetectPhotos()
@@ -474,15 +493,7 @@ public class PhotoCropperEngine : IDisposable
         AcceptedCandidates = acceptedCandidates;
 
         // Draw bounding boxes on OriginalWithDetected
-        MCvScalar boxColor = CurrentOptions.GetBoundingBoxColorBgr();
-        foreach (var cand in acceptedCandidates)
-        {
-            PointF[] vertices = cand.Rotated.GetVertices();
-            for (int j = 0; j < 4; j++)
-            {
-                CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), boxColor, 12);
-            }
-        }
+        DrawBoundingBoxes(acceptedCandidates);
 
         // Parallel extraction: Rotate and crop each photo on different CPU cores using the padded source at FULL scan resolution
         Mat?[] results = new Mat[acceptedCandidates.Count];
