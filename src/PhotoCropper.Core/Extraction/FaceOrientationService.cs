@@ -167,61 +167,66 @@ public static class FaceOrientationService
             using Mat faces = new();
             detector.Detect(candidate, faces);
 
-            if (faces.IsEmpty || faces.Rows == 0) return 0f;
-
-            float[,] data = (float[,])faces.GetData();
-            float totalScore = 0f;
-
-            for (int i = 0; i < faces.Rows; i++)
-            {
-                float score = data[i, YuNetConfidenceIndex];
-                if (score < scoreThreshold) continue;
-
-                float faceW = data[i, YuNetBboxWidthIndex];
-                float faceH = data[i, YuNetBboxHeightIndex];
-
-                float rightEyeX = data[i, YuNetRightEyeXIndex];
-                float rightEyeY = data[i, YuNetRightEyeYIndex];
-                float leftEyeX = data[i, YuNetLeftEyeXIndex];
-                float leftEyeY = data[i, YuNetLeftEyeYIndex];
-
-                float noseY = data[i, YuNetNoseYIndex];
-
-                float mouthRightX = data[i, YuNetMouthRightXIndex];
-                float mouthRightY = data[i, YuNetMouthRightYIndex];
-                float mouthLeftX = data[i, YuNetMouthLeftXIndex];
-                float mouthLeftY = data[i, YuNetMouthLeftYIndex];
-
-                float eyeMidY = (rightEyeY + leftEyeY) * 0.5f;
-                float mouthMidY = (mouthRightY + mouthLeftY) * 0.5f;
-
-                // 1. Upright vertical sequence: Eyes are above Nose, Nose is above Mouth
-                float eyeToMouthDist = mouthMidY - eyeMidY;
-                if (eyeToMouthDist < faceH * 0.12f) continue;
-                if (noseY <= eyeMidY || noseY >= mouthMidY) continue;
-
-                // 2. Eyes must be predominantly horizontal (not vertically stacked as in sideways faces)
-                float eyeHorizSpan = Math.Abs(leftEyeX - rightEyeX);
-                float eyeVertSpan = Math.Abs(leftEyeY - rightEyeY);
-                if (eyeHorizSpan < eyeVertSpan * 1.5f) continue;
-
-                // 3. Mouth corners must be predominantly horizontal
-                float mouthHorizSpan = Math.Abs(mouthLeftX - mouthRightX);
-                float mouthVertSpan = Math.Abs(mouthLeftY - mouthRightY);
-                if (mouthHorizSpan < mouthVertSpan * 1.5f) continue;
-
-                // 4. Eye line tilt relative to horizon must be within ±35 degrees
-                double eyeTiltDeg = Math.Abs(Math.Atan2(eyeVertSpan, Math.Max(1f, eyeHorizSpan)) * (180.0 / Math.PI));
-                if (eyeTiltDeg > 35.0) continue;
-
-                totalScore += score;
-            }
-
-            return totalScore;
+            return ScoreFaceData(faces, scoreThreshold);
         }
         catch
         {
             return 0f;
         }
+    }
+
+    internal static float ScoreFaceData(Mat faces, float scoreThreshold)
+    {
+        if (faces.IsEmpty || faces.Rows == 0) return 0f;
+
+        float[,] data = (float[,])faces.GetData();
+        float totalScore = 0f;
+
+        for (int i = 0; i < faces.Rows; i++)
+        {
+            float score = data[i, YuNetConfidenceIndex];
+            if (score < scoreThreshold) continue;
+
+            float faceW = data[i, YuNetBboxWidthIndex];
+            float faceH = data[i, YuNetBboxHeightIndex];
+
+            float rightEyeX = data[i, YuNetRightEyeXIndex];
+            float rightEyeY = data[i, YuNetRightEyeYIndex];
+            float leftEyeX = data[i, YuNetLeftEyeXIndex];
+            float leftEyeY = data[i, YuNetLeftEyeYIndex];
+
+            float noseY = data[i, YuNetNoseYIndex];
+
+            float mouthRightX = data[i, YuNetMouthRightXIndex];
+            float mouthRightY = data[i, YuNetMouthRightYIndex];
+            float mouthLeftX = data[i, YuNetMouthLeftXIndex];
+            float mouthLeftY = data[i, YuNetMouthLeftYIndex];
+
+            float eyeMidY = (rightEyeY + leftEyeY) * 0.5f;
+            float mouthMidY = (mouthRightY + mouthLeftY) * 0.5f;
+
+            // 1. Upright vertical sequence: Eyes are above Nose, Nose is above Mouth
+            float eyeToMouthDist = mouthMidY - eyeMidY;
+            if (eyeToMouthDist < faceH * 0.12f) continue;
+            if (noseY <= eyeMidY || noseY >= mouthMidY) continue;
+
+            // 2. Eyes must be predominantly horizontal (not vertically stacked as in sideways faces)
+            float eyeHorizSpan = Math.Abs(leftEyeX - rightEyeX);
+            float eyeVertSpan = Math.Abs(leftEyeY - rightEyeY);
+            if (eyeHorizSpan < eyeVertSpan * 1.5f) continue;
+
+            // 3. Mouth corners must be predominantly horizontal
+            float mouthHorizSpan = Math.Abs(mouthLeftX - mouthRightX);
+            float mouthVertSpan = Math.Abs(mouthLeftY - mouthRightY);
+            if (mouthHorizSpan < mouthVertSpan * 1.5f) continue;
+
+            // 4. Eye line tilt relative to horizon must be within ±35 degrees
+            double eyeTiltDeg = Math.Abs(Math.Atan2(eyeVertSpan, Math.Max(1f, eyeHorizSpan)) * (180.0 / Math.PI));
+            if (eyeTiltDeg > 35.0) continue;
+
+            totalScore += score;
+        }
+
+        return totalScore;
     }
 }
