@@ -43,7 +43,8 @@ internal static class InteractiveWizard
         ConfigureDetection(console, options);
 
         // 6. Filename Pattern & EXIF Metadata
-        ConfigureNamingAndMetadata(console, options);
+        ConfigureVintageExifMetadata(console, options);
+        ConfigureOutputFilenamePattern(console, options);
 
         // 7. Performance / Threads
         ConfigurePerformance(console, options);
@@ -292,9 +293,8 @@ internal static class InteractiveWizard
         console.WriteLine();
     }
 
-    private static void ConfigureNamingAndMetadata(IAnsiConsole console, CliOptions options)
+    private static void ConfigureVintageExifMetadata(IAnsiConsole console, CliOptions options)
     {
-        // 1. Vintage EXIF Metadata
         console.MarkupLine("[bold cyan]Vintage EXIF Metadata[/]");
         bool addExif = console.Prompt(
             new ConfirmationPrompt("  Embed vintage EXIF capture metadata (Year / Date / Description)?")
@@ -346,8 +346,10 @@ internal static class InteractiveWizard
         }
 
         console.WriteLine();
+    }
 
-        // 2. Output Filename Pattern (incorporates Year & EXIF values)
+    private static void ConfigureOutputFilenamePattern(IAnsiConsole console, CliOptions options)
+    {
         console.MarkupLine("[bold cyan]Output File Naming Pattern[/]");
 
         DateTime? parsedDate = null;

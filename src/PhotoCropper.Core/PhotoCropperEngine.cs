@@ -212,52 +212,7 @@ public class PhotoCropperEngine : IDisposable
 
         DrawBoundingBoxes(AcceptedCandidates);
 
-        Mat?[] results = new Mat[candidates.Count];
-        Mat?[] rawResults = new Mat[candidates.Count];
-
-        Parallel.For(0, candidates.Count, i =>
-        {
-            Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(candidates[i].Rotated, Original);
-
-            if (AutoOrientPhotos && !extracted.IsEmpty)
-            {
-                Mat oriented = AutoOrientationService.OrientPhoto(extracted);
-                if (!ReferenceEquals(oriented, extracted))
-                {
-                    extracted.Dispose();
-                    extracted = oriented;
-                }
-            }
-
-            rawResults[i] = extracted.Clone();
-
-            if (RestoreVintageColors && !extracted.IsEmpty)
-            {
-                Mat restored = PhotoRestorationService.RestoreColors(extracted, removeDust: RemoveDustAndScratches);
-                if (!ReferenceEquals(restored, extracted))
-                {
-                    extracted.Dispose();
-                    extracted = restored;
-                }
-            }
-            results[i] = extracted;
-        });
-
-        for (int i = 0; i < results.Length; i++)
-        {
-            var mat = results[i];
-            var raw = rawResults[i];
-            if (mat != null && !mat.IsEmpty && raw != null && !raw.IsEmpty)
-            {
-                DetectedPhotos.Add(mat);
-                RawDetectedPhotos.Add(raw);
-            }
-            else
-            {
-                mat?.Dispose();
-                raw?.Dispose();
-            }
-        }
+        ExtractAndProcessCandidates(candidates);
     }
 
 
@@ -371,37 +326,11 @@ public class PhotoCropperEngine : IDisposable
             oldOriginal.Dispose();
         }
 
-        // Sample background color before padding
-        using Mat hsv = new();
-        CvInvoke.CvtColor(Original, hsv, ColorConversion.Bgr2Hsv);
-        MCvScalar avgBackgroundColorHsv = CustomBackgroundColorHsv ?? BackgroundAnalyzer.SampleBackgroundColor(hsv);
-
-        // Convert HSV background color to BGR for border padding
-        MCvScalar bgBgr = BackgroundAnalyzer.HsvToBgr(avgBackgroundColorHsv);
-
-        // Pad the full image with a synthetic margin so photos touching or extending to the scan boundary form complete closed contours
-        int pad = Math.Max(20, Math.Min(Original.Width, Original.Height) / 50);
-        using Mat padded = new();
-        CvInvoke.CopyMakeBorder(Original, padded, pad, pad, pad, pad, BorderType.Constant, bgBgr);
-
-        // Neutralize scanner bezel / platen border margins in padded detection image
-        var (Top, Bottom, Left, Right) = BackgroundAnalyzer.DetectBezelMargins(Original, avgBackgroundColorHsv, BackgroundTolerance);
-        if (Top > 0)
-        {
-            CvInvoke.Rectangle(padded, new Rectangle(0, 0, padded.Width, pad + Top), bgBgr, -1);
-        }
-        if (Bottom > 0)
-        {
-            CvInvoke.Rectangle(padded, new Rectangle(0, padded.Height - pad - Bottom, padded.Width, pad + Bottom), bgBgr, -1);
-        }
-        if (Left > 0)
-        {
-            CvInvoke.Rectangle(padded, new Rectangle(0, 0, pad + Left, padded.Height), bgBgr, -1);
-        }
-        if (Right > 0)
-        {
-            CvInvoke.Rectangle(padded, new Rectangle(padded.Width - pad - Right, 0, pad + Right, padded.Height), bgBgr, -1);
-        }
+        var preparation = PreparePaddedDetectionImage();
+        MCvScalar avgBackgroundColorHsv = preparation.AvgBackgroundColorHsv;
+        MCvScalar bgBgr = preparation.BgBgr;
+        int pad = preparation.Pad;
+        using Mat padded = preparation.Padded;
 
         // Determine downscale factor for ultra-fast contour detection on high-DPI scans
         int maxDim = Math.Max(padded.Width, padded.Height);
@@ -511,54 +440,45 @@ public class PhotoCropperEngine : IDisposable
         // Draw bounding boxes on OriginalWithDetected
         DrawBoundingBoxes(acceptedCandidates);
 
-        // Parallel extraction: Rotate and crop each photo on different CPU cores using the padded source at FULL scan resolution
-        Mat?[] results = new Mat[acceptedCandidates.Count];
-        Mat?[] rawResults = new Mat[acceptedCandidates.Count];
+        ExtractAndProcessCandidates(acceptedCandidates, padded, pad);
+    }
 
-        Parallel.For(0, acceptedCandidates.Count, i =>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Mat is returned to caller")]
+    private (Mat Padded, MCvScalar AvgBackgroundColorHsv, MCvScalar BgBgr, int Pad) PreparePaddedDetectionImage()
+    {
+        // Sample background color before padding
+        using Mat hsv = new();
+        CvInvoke.CvtColor(Original, hsv, ColorConversion.Bgr2Hsv);
+        MCvScalar avgBackgroundColorHsv = CustomBackgroundColorHsv ?? BackgroundAnalyzer.SampleBackgroundColor(hsv);
+
+        // Convert HSV background color to BGR for border padding
+        MCvScalar bgBgr = BackgroundAnalyzer.HsvToBgr(avgBackgroundColorHsv);
+
+        // Pad the full image with a synthetic margin so photos touching or extending to the scan boundary form complete closed contours
+        int pad = Math.Max(20, Math.Min(Original.Width, Original.Height) / 50);
+        Mat padded = new();
+        CvInvoke.CopyMakeBorder(Original, padded, pad, pad, pad, pad, BorderType.Constant, bgBgr);
+
+        // Neutralize scanner bezel / platen border margins in padded detection image
+        var (Top, Bottom, Left, Right) = BackgroundAnalyzer.DetectBezelMargins(Original, avgBackgroundColorHsv, BackgroundTolerance);
+        if (Top > 0)
         {
-            Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(acceptedCandidates[i].Rotated, Original, padded, pad);
-
-            // Orient photo if enabled (applies to raw as well so comparison geometry is identical)
-            if (AutoOrientPhotos && !extracted.IsEmpty)
-            {
-                Mat oriented = AutoOrientationService.OrientPhoto(extracted);
-                if (!ReferenceEquals(oriented, extracted))
-                {
-                    extracted.Dispose();
-                    extracted = oriented;
-                }
-            }
-
-            rawResults[i] = extracted.Clone();
-
-            if (RestoreVintageColors && !extracted.IsEmpty)
-            {
-                Mat restored = PhotoRestorationService.RestoreColors(extracted, removeDust: RemoveDustAndScratches);
-                if (!ReferenceEquals(restored, extracted))
-                {
-                    extracted.Dispose();
-                    extracted = restored;
-                }
-            }
-            results[i] = extracted;
-        });
-
-        for (int i = 0; i < results.Length; i++)
-        {
-            var mat = results[i];
-            var raw = rawResults[i];
-            if (mat != null && !mat.IsEmpty && raw != null && !raw.IsEmpty)
-            {
-                DetectedPhotos.Add(mat);
-                RawDetectedPhotos.Add(raw);
-            }
-            else
-            {
-                mat?.Dispose();
-                raw?.Dispose();
-            }
+            CvInvoke.Rectangle(padded, new Rectangle(0, 0, padded.Width, pad + Top), bgBgr, -1);
         }
+        if (Bottom > 0)
+        {
+            CvInvoke.Rectangle(padded, new Rectangle(0, padded.Height - pad - Bottom, padded.Width, pad + Bottom), bgBgr, -1);
+        }
+        if (Left > 0)
+        {
+            CvInvoke.Rectangle(padded, new Rectangle(0, 0, pad + Left, padded.Height), bgBgr, -1);
+        }
+        if (Right > 0)
+        {
+            CvInvoke.Rectangle(padded, new Rectangle(padded.Width - pad - Right, 0, pad + Right, padded.Height), bgBgr, -1);
+        }
+
+        return (padded, avgBackgroundColorHsv, bgBgr, pad);
     }
 
     public void SetCustomBackgroundFromPixel(int x, int y)
