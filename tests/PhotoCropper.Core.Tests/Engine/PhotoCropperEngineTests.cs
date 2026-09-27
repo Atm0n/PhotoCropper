@@ -426,6 +426,55 @@ public sealed class PhotoCropperEngineTests : IDisposable
         cropper.DetectedPhotos.Count.ShouldBe(1);
     }
 
+    [Fact]
+    public void ApplyGrabHandleResize_ShouldExtractPhotoAndReplaceInList()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        cropper.DetectPhotos();
+        
+        int initialPhotosCount = cropper.DetectedPhotos.Count;
+        int candIndex = 0;
+        
+        // Modify the candidate's RotatedRect directly to simulate a user resize
+        var cand = cropper.AcceptedCandidates[candIndex];
+        var newRect = new RotatedRect(cand.Rotated.Center, new SizeF(50, 50), cand.Rotated.Angle);
+        var list = cropper.AcceptedCandidates.ToList();
+        list[candIndex] = cand with { Rotated = newRect };
+        cropper.UpdateCandidates(list);
+        
+        // Apply the resize
+        cropper.ApplyGrabHandleResize(candIndex);
+        
+        cropper.DetectedPhotos.Count.ShouldBe(initialPhotosCount);
+        
+        var newlyExtracted = cropper.DetectedPhotos[candIndex];
+        // After extraction, the width and height should be roughly the RotatedRect's size.
+        // It might be slightly off depending on rotation interpolation, but for 0-angle it's exact.
+        newlyExtracted.Width.ShouldBeInRange(45, 55);
+        newlyExtracted.Height.ShouldBeInRange(45, 55);
+    }
+
+    [Fact]
+    public void RestoreFromSavedCrops_EmptyList_ShouldNotCrash()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        
+        cropper.RestoreFromSavedCrops([]);
+        
+        cropper.DetectedPhotos.ShouldBeEmpty();
+        cropper.AcceptedCandidates.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void SetCustomBackgroundFromPixel_OutsideBounds_ShouldNotThrow()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        
+        // Sampling outside the image bounds should gracefully ignore or clamp
+        Should.NotThrow(() => cropper.SetCustomBackgroundFromPixel(-1, -1));
+        Should.NotThrow(() => cropper.SetCustomBackgroundFromPixel(9999, 9999));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
