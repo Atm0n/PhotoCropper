@@ -7,7 +7,7 @@ using PhotoCropper.Core.Export;
 using PhotoCropper.Core.IO;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
-using PhotoCropper.Gui.Models;
+
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;

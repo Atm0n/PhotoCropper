@@ -58,8 +58,10 @@ public static class ExifMetadataWriter
         writer.Write((uint)8); // IFD0 starts at byte 8 from tiffStartPos
 
         // IFD0 entries count
-        var ifd0Entries = new List<(ushort Tag, ushort Type, uint Count, byte[]? ValueBytes)>();
-        ifd0Entries.Add((TagSoftware, TypeAscii, (uint)software.Length + 1, Encoding.ASCII.GetBytes(software + "\0")));
+        var ifd0Entries = new List<(ushort Tag, ushort Type, uint Count, byte[]? ValueBytes)>
+        {
+            (TagSoftware, TypeAscii, (uint)software.Length + 1, Encoding.ASCII.GetBytes(software + "\0"))
+        };
 
         if (!string.IsNullOrEmpty(exifDate))
         {

@@ -16,7 +16,7 @@ internal sealed class DeletePhotoAction : IUndoableAction
 {
     private readonly int _scanIndex;
     private readonly int _index;
-    private Mat _deletedMat;
+    private readonly Mat _deletedMat;
     private bool _isDisposed;
 
     public string Description => "Delete Photo";
@@ -58,19 +58,13 @@ internal sealed class DeletePhotoAction : IUndoableAction
     }
 }
 
-internal sealed class RotatePhotoAction : IUndoableAction
+internal sealed class RotatePhotoAction(int scanIndex, int index) : IUndoableAction
 {
-    private readonly int _scanIndex;
-    private readonly int _index;
+    private readonly int _scanIndex = scanIndex;
+    private readonly int _index = index;
 
     public string Description => "Rotate Photo";
     public int ScanIndex => _scanIndex;
-
-    public RotatePhotoAction(int scanIndex, int index)
-    {
-        _scanIndex = scanIndex;
-        _index = index;
-    }
 
     public void Undo(PhotoCropperEngine engine)
     {
@@ -102,8 +96,8 @@ internal sealed class ReplacePhotoAction : IUndoableAction
 {
     private readonly int _scanIndex;
     private readonly int _index;
-    private Mat _previousMat;
-    private Mat _newMat;
+    private readonly Mat _previousMat;
+    private readonly Mat _newMat;
     private bool _isDisposed;
 
     public string Description { get; }
@@ -153,7 +147,7 @@ internal sealed class AddPhotoAction : IUndoableAction
 {
     private readonly int _scanIndex;
     private readonly int _index;
-    private Mat _addedMat;
+    private readonly Mat _addedMat;
     private bool _isDisposed;
 
     public string Description => "Add Manual Crop";

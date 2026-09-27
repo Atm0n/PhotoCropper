@@ -199,7 +199,7 @@ internal sealed partial class MainWindow
         {
             await Task.Run(() => ScanSessions[CurrentIndex].Activate().RotatePhoto(photoIndex), ct);
             LoadCroppedPhotosToSlider();
-            if (slides != null) slides.SelectedIndex = photoIndex;
+            slides?.SelectedIndex = photoIndex;
             if (lstGallery != null && photoIndex < lstGallery.Items.Count)
             {
                 lstGallery.SelectedIndex = photoIndex;
@@ -457,17 +457,14 @@ internal sealed partial class MainWindow
             ToolTip.SetTip(btnRefine, LocalizationService.GetString(ResourceKeys.TipRefine, "Shortcut: N"));
         }
 
-        if (pnlBatchSelectionActions != null)
-        {
-            pnlBatchSelectionActions.IsVisible = isGrid;
-        }
+        pnlBatchSelectionActions?.IsVisible = isGrid;
     }
 
     private void UpdatePhotoCounterLabel()
     {
         if (lblPhotoInfo == null || slides == null || ScanSessions.Count == 0 || CurrentIndex >= ScanSessions.Count)
         {
-            if (lblPhotoInfo != null) lblPhotoInfo.Text = "";
+            lblPhotoInfo?.Text = "";
             return;
         }
 

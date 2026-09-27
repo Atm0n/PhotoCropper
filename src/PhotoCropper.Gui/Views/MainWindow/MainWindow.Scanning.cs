@@ -3,7 +3,7 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
-using PhotoCropper.Gui.Models;
+
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;

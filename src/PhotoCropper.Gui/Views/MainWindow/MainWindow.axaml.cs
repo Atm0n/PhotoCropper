@@ -5,7 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
-using PhotoCropper.Gui.Models;
+
 using PhotoCropper.Gui.Services;
 using System.Diagnostics.CodeAnalysis;
 

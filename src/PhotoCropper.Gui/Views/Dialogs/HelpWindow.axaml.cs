@@ -31,7 +31,7 @@ internal sealed partial class HelpWindow : Window
     private async void BtnCheckUpdates_Click(object? sender, RoutedEventArgs e)
     {
         btnCheckUpdates.IsEnabled = false;
-        txtUpdateStatus.Text = LocalizationManager.GetString("TxtCheckingUpdates") ?? "Checking for updates...";
+        txtUpdateStatus.Text = LocalizationService.GetString("TxtCheckingUpdates", "Checking for updates...");
         btnOpenRelease.IsVisible = false;
 
         try
@@ -42,18 +42,18 @@ internal sealed partial class HelpWindow : Window
             if (result.IsUpdateAvailable && result.Tag != null && result.ReleaseUri != null)
             {
                 _latestReleaseUri = result.ReleaseUri;
-                string template = LocalizationManager.GetString("TxtUpdateAvailable") ?? "PhotoCropper {0} is available!";
+                string template = LocalizationService.GetString("TxtUpdateAvailable", "PhotoCropper {0} is available!");
                 txtUpdateStatus.Text = string.Format(System.Globalization.CultureInfo.CurrentCulture, template, result.Tag);
                 btnOpenRelease.IsVisible = true;
             }
             else if (result.ErrorMessage != null)
             {
-                string template = LocalizationManager.GetString("TxtUpdateError") ?? "Unable to check for updates: {0}";
+                string template = LocalizationService.GetString("TxtUpdateError", "Unable to check for updates: {0}");
                 txtUpdateStatus.Text = string.Format(System.Globalization.CultureInfo.CurrentCulture, template, result.ErrorMessage);
             }
             else
             {
-                string template = LocalizationManager.GetString("TxtUpToDate") ?? "You are using the latest version ({0}).";
+                string template = LocalizationService.GetString("TxtUpToDate", "You are using the latest version ({0}).");
                 string verStr = $"v{curVersion.Major}.{curVersion.Minor}.{Math.Max(0, curVersion.Build)}";
                 txtUpdateStatus.Text = string.Format(System.Globalization.CultureInfo.CurrentCulture, template, verStr);
             }

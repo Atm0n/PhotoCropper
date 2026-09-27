@@ -26,7 +26,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
 
         var savedCrops = new List<PhotoCropper.Core.Workspace.WorkspaceCropData>
         {
-            new PhotoCropper.Core.Workspace.WorkspaceCropData { CenterX = 100, CenterY = 100, Width = 50, Height = 50, Angle = 0 }
+            new() { CenterX = 100, CenterY = 100, Width = 50, Height = 50, Angle = 0 }
         };
 
         cropper.RestoreFromSavedCrops(savedCrops);
@@ -371,7 +371,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
             // Photo tilted by ~3 degrees: center at (600, 600), size (400, 500), angle = 3.0
             RotatedRect targetRect = new(new PointF(600, 600), new SizeF(400, 500), 3.0f);
             PointF[] vertices = targetRect.GetVertices();
-            Point[] polyPoints = vertices.Select(v => Point.Round(v)).ToArray();
+            Point[] polyPoints = [.. vertices.Select(v => Point.Round(v))];
             using var vp = new VectorOfPoint(polyPoints);
             CvInvoke.FillConvexPoly(scan, vp, new MCvScalar(20, 20, 20));
             scan.Save(tiltedScanPath);

@@ -36,10 +36,7 @@ internal sealed partial class ExportSettingsDialog : Window
         KeyDown += ExportSettingsDialog_KeyDown;
         Loaded += ExportSettingsDialog_Loaded;
 
-        if (btnExportNow != null)
-        {
-            btnExportNow.IsEnabled = _hasScans;
-        }
+        btnExportNow?.IsEnabled = _hasScans;
     }
 
     private void ExportSettingsDialog_KeyDown(object? sender, KeyEventArgs e)
@@ -70,60 +67,30 @@ internal sealed partial class ExportSettingsDialog : Window
         var settings = SettingsManager.Instance.Settings;
 
         // Output
-        if (txtOutputDir != null)
-        {
-            txtOutputDir.Text = settings.CustomOutputDirectory ?? "";
-        }
+        txtOutputDir?.Text = settings.CustomOutputDirectory ?? "";
 
         // Format & Quality
-        if (cbFormat != null)
-        {
-            cbFormat.SelectedIndex = string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        }
+        cbFormat?.SelectedIndex = string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         if (sldJpegQuality != null)
         {
             sldJpegQuality.Value = settings.JpegQuality;
             UpdateQualityDisplay();
         }
-        if (pnlJpegQuality != null)
-        {
-            pnlJpegQuality.IsVisible = !string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase);
-        }
+        pnlJpegQuality?.IsVisible = !string.Equals(settings.PreferredFormat, "PNG", StringComparison.OrdinalIgnoreCase);
 
         // Naming
-        if (txtFileNamePattern != null)
-        {
-            txtFileNamePattern.Text = settings.FileNamePattern;
-        }
+        txtFileNamePattern?.Text = settings.FileNamePattern;
         SyncNamingPresetDropdown(settings.FileNamePattern);
 
         // Metadata
-        if (txtMetadataYear != null)
-        {
-            txtMetadataYear.Text = settings.DefaultYear?.ToString() ?? "";
-        }
-        if (txtMetadataDesc != null)
-        {
-            txtMetadataDesc.Text = settings.DefaultDescription ?? "";
-        }
-        if (chkApplyYearToAll != null)
-        {
-            chkApplyYearToAll.IsChecked = settings.ApplyYearToAllScans;
-        }
+        txtMetadataYear?.Text = settings.DefaultYear?.ToString() ?? "";
+        txtMetadataDesc?.Text = settings.DefaultDescription ?? "";
+        chkApplyYearToAll?.IsChecked = settings.ApplyYearToAllScans;
 
         // Notifications & prompt
-        if (chkShowNotifications != null)
-        {
-            chkShowNotifications.IsChecked = settings.ShowNotifications;
-        }
-        if (chkFlashTaskbar != null)
-        {
-            chkFlashTaskbar.IsChecked = settings.FlashTaskbarOnCompletion;
-        }
-        if (chkPromptBeforeExport != null)
-        {
-            chkPromptBeforeExport.IsChecked = settings.PromptBeforeExport;
-        }
+        chkShowNotifications?.IsChecked = settings.ShowNotifications;
+        chkFlashTaskbar?.IsChecked = settings.FlashTaskbarOnCompletion;
+        chkPromptBeforeExport?.IsChecked = settings.PromptBeforeExport;
     }
 
     private void SaveAllSettings()
@@ -177,19 +144,13 @@ internal sealed partial class ExportSettingsDialog : Window
 
         if (folderResult != null && folderResult.Count > 0)
         {
-            if (txtOutputDir != null)
-            {
-                txtOutputDir.Text = folderResult[0].Path.LocalPath;
-            }
+            txtOutputDir?.Text = folderResult[0].Path.LocalPath;
         }
     }
 
     private void BtnClearOutputDir_Click(object? sender, RoutedEventArgs e)
     {
-        if (txtOutputDir != null)
-        {
-            txtOutputDir.Text = "";
-        }
+        txtOutputDir?.Text = "";
     }
 
     private void CbFormat_SelectionChanged(object? sender, SelectionChangedEventArgs e)

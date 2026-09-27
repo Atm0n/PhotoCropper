@@ -112,7 +112,7 @@ internal static class InteractiveWizard
                     });
             }
 
-            List<string> collected = FileCollector.CollectFiles(options.Inputs, options.Recursive);
+            List<string> collected = [.. PhotoCropper.Core.IO.ImageFileCollector.CollectFiles(options.Inputs, options.Recursive)];
             if (collected.Count == 0)
             {
                 console.MarkupLine($"[bold yellow]Warning:[/] No supported image files (.jpg, .png, .bmp, .tiff, .webp) found in '{cleanedPath}'.");

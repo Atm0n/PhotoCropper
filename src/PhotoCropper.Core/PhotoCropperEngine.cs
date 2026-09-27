@@ -317,8 +317,8 @@ public class PhotoCropperEngine : IDisposable
     private void DrawBoundingBoxes(IEnumerable<CropCandidate> candidates)
     {
         MCvScalar boxColor = CurrentOptions.GetBoundingBoxColorBgr();
-        MCvScalar redBadge = new MCvScalar(0, 0, 255); // BGR for Red
-        MCvScalar whiteText = new MCvScalar(255, 255, 255);
+        MCvScalar redBadge = new(0, 0, 255); // BGR for Red
+        MCvScalar whiteText = new(255, 255, 255);
         int radius = 45;
 
         foreach (var cand in candidates)
@@ -385,22 +385,22 @@ public class PhotoCropperEngine : IDisposable
         CvInvoke.CopyMakeBorder(Original, padded, pad, pad, pad, pad, BorderType.Constant, bgBgr);
 
         // Neutralize scanner bezel / platen border margins in padded detection image
-        var bezel = BackgroundAnalyzer.DetectBezelMargins(Original, avgBackgroundColorHsv, BackgroundTolerance);
-        if (bezel.Top > 0)
+        var (Top, Bottom, Left, Right) = BackgroundAnalyzer.DetectBezelMargins(Original, avgBackgroundColorHsv, BackgroundTolerance);
+        if (Top > 0)
         {
-            CvInvoke.Rectangle(padded, new Rectangle(0, 0, padded.Width, pad + bezel.Top), bgBgr, -1);
+            CvInvoke.Rectangle(padded, new Rectangle(0, 0, padded.Width, pad + Top), bgBgr, -1);
         }
-        if (bezel.Bottom > 0)
+        if (Bottom > 0)
         {
-            CvInvoke.Rectangle(padded, new Rectangle(0, padded.Height - pad - bezel.Bottom, padded.Width, pad + bezel.Bottom), bgBgr, -1);
+            CvInvoke.Rectangle(padded, new Rectangle(0, padded.Height - pad - Bottom, padded.Width, pad + Bottom), bgBgr, -1);
         }
-        if (bezel.Left > 0)
+        if (Left > 0)
         {
-            CvInvoke.Rectangle(padded, new Rectangle(0, 0, pad + bezel.Left, padded.Height), bgBgr, -1);
+            CvInvoke.Rectangle(padded, new Rectangle(0, 0, pad + Left, padded.Height), bgBgr, -1);
         }
-        if (bezel.Right > 0)
+        if (Right > 0)
         {
-            CvInvoke.Rectangle(padded, new Rectangle(padded.Width - pad - bezel.Right, 0, pad + bezel.Right, padded.Height), bgBgr, -1);
+            CvInvoke.Rectangle(padded, new Rectangle(padded.Width - pad - Right, 0, pad + Right, padded.Height), bgBgr, -1);
         }
 
         // Determine downscale factor for ultra-fast contour detection on high-DPI scans
@@ -702,7 +702,7 @@ public class PhotoCropperEngine : IDisposable
 
     public void AddManualCrop(Rectangle rect)
     {
-        var result = PhotoExtractionEngine.ExtractManualCrop(
+        var (Extracted, Candidate) = PhotoExtractionEngine.ExtractManualCrop(
             Original,
             rect,
             CustomBackgroundColorHsv,
@@ -710,12 +710,12 @@ public class PhotoCropperEngine : IDisposable
             CannyLowThreshold,
             CannyHighThreshold);
 
-        if (!result.Extracted.IsEmpty)
+        if (!Extracted.IsEmpty)
         {
-            DetectedPhotos.Add(result.Extracted);
-            if (result.Candidate.HasValue)
+            DetectedPhotos.Add(Extracted);
+            if (Candidate.HasValue)
             {
-                var cand = result.Candidate.Value;
+                var cand = Candidate.Value;
                 var newList = new List<CropCandidate>(AcceptedCandidates ?? [])
                 {
                     cand
@@ -726,7 +726,7 @@ public class PhotoCropperEngine : IDisposable
         }
         else
         {
-            result.Extracted.Dispose();
+            Extracted.Dispose();
         }
     }
 

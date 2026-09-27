@@ -41,13 +41,13 @@ public static class AutoTuneService
 
         MCvScalar avgBgColorHsv = currentOptions.CustomBackgroundColorHsv ?? BackgroundAnalyzer.SampleBackgroundColor(detHsv);
         MCvScalar bgBgr = BackgroundAnalyzer.HsvToBgr(avgBgColorHsv);
-        var bezel = BackgroundAnalyzer.DetectBezelMargins(detMat, avgBgColorHsv, currentOptions.BackgroundTolerance);
-        if (bezel.Top > 0 || bezel.Bottom > 0 || bezel.Left > 0 || bezel.Right > 0)
+        var (Top, Bottom, Left, Right) = BackgroundAnalyzer.DetectBezelMargins(detMat, avgBgColorHsv, currentOptions.BackgroundTolerance);
+        if (Top > 0 || Bottom > 0 || Left > 0 || Right > 0)
         {
-            if (bezel.Top > 0) CvInvoke.Rectangle(detMat, new Rectangle(0, 0, detMat.Width, bezel.Top), bgBgr, -1);
-            if (bezel.Bottom > 0) CvInvoke.Rectangle(detMat, new Rectangle(0, detMat.Height - bezel.Bottom, detMat.Width, bezel.Bottom), bgBgr, -1);
-            if (bezel.Left > 0) CvInvoke.Rectangle(detMat, new Rectangle(0, 0, bezel.Left, detMat.Height), bgBgr, -1);
-            if (bezel.Right > 0) CvInvoke.Rectangle(detMat, new Rectangle(detMat.Width - bezel.Right, 0, bezel.Right, detMat.Height), bgBgr, -1);
+            if (Top > 0) CvInvoke.Rectangle(detMat, new Rectangle(0, 0, detMat.Width, Top), bgBgr, -1);
+            if (Bottom > 0) CvInvoke.Rectangle(detMat, new Rectangle(0, detMat.Height - Bottom, detMat.Width, Bottom), bgBgr, -1);
+            if (Left > 0) CvInvoke.Rectangle(detMat, new Rectangle(0, 0, Left, detMat.Height), bgBgr, -1);
+            if (Right > 0) CvInvoke.Rectangle(detMat, new Rectangle(detMat.Width - Right, 0, Right, detMat.Height), bgBgr, -1);
             CvInvoke.CvtColor(detMat, detHsv, ColorConversion.Bgr2Hsv);
         }
 

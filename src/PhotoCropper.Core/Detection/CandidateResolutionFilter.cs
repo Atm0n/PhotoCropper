@@ -26,8 +26,8 @@ public static class CandidateResolutionFilter
         mask1.SetTo(new MCvScalar(0));
         mask2.SetTo(new MCvScalar(0));
 
-        Point[] shifted1 = poly1.Select(p => new Point(p.X - intersectBox.X, p.Y - intersectBox.Y)).ToArray();
-        Point[] shifted2 = poly2.Select(p => new Point(p.X - intersectBox.X, p.Y - intersectBox.Y)).ToArray();
+        Point[] shifted1 = [.. poly1.Select(p => new Point(p.X - intersectBox.X, p.Y - intersectBox.Y))];
+        Point[] shifted2 = [.. poly2.Select(p => new Point(p.X - intersectBox.X, p.Y - intersectBox.Y))];
 
         using (VectorOfPoint vp1 = new(shifted1))
         using (VectorOfPoint vp2 = new(shifted2))
@@ -114,25 +114,16 @@ public static class CandidateResolutionFilter
 
         try
         {
-            foreach (var cand in validCandidates)
+        loop_cand: foreach (var cand in validCandidates)
             {
                 Point center = new(cand.Rect.X + cand.Rect.Width / 2, cand.Rect.Y + cand.Rect.Height / 2);
-
-                // Overlap test: ensure center does not fall into an already accepted polygon
-                bool insideAny = false;
                 foreach (var accepted in acceptedPolys)
                 {
                     if (CvInvoke.PointPolygonTest(accepted, center, false) >= 0)
                     {
-                        insideAny = true;
-                        break;
+                        continue loop_cand;
                     }
                 }
-                if (insideAny) continue;
-
-                // Mask-based Polygon Intersection Check:
-                // Prevents a larger detection from invading another photo while allowing genuinely adjacent tilted photos
-                bool excessiveOverlap = false;
                 using VectorOfPoint shape = new(cand.ShapePoints);
 
                 foreach (var accepted in acceptedPolys)
@@ -144,11 +135,9 @@ public static class CandidateResolutionFilter
                     // If overlap exceeds 15% of the smaller photo, reject the duplicate/invading candidate
                     if (minPolyArea > 0 && (overlapPixels / minPolyArea) > 0.15)
                     {
-                        excessiveOverlap = true;
-                        break;
+                        continue loop_cand;
                     }
                 }
-                if (excessiveOverlap) continue;
 
                 acceptedCandidates.Add(cand);
                 acceptedPolys.Add(new VectorOfPoint(cand.ShapePoints));

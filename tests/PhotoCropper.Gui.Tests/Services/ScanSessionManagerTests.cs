@@ -1,5 +1,5 @@
 using PhotoCropper.Core.Models;
-using PhotoCropper.Gui.Models;
+using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
 using PhotoCropper.TestHelpers;
 using System.Diagnostics.CodeAnalysis;

@@ -21,7 +21,7 @@ internal sealed partial class App : Application
         SettingsManager.Instance.Load();
 
         // Initialize localization with preferred language
-        LocalizationManager.Initialize(SettingsManager.Instance.Settings.Language);
+        LocalizationService.Initialize(SettingsManager.Instance.Settings.Language);
 
         // Apply saved theme preference
         ApplyTheme(SettingsManager.Instance.Settings.Theme);

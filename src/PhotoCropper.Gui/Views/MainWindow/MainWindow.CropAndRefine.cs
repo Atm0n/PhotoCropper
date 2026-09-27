@@ -181,8 +181,10 @@ internal sealed partial class MainWindow
             var newRotated = new Emgu.CV.Structure.RotatedRect(cand.Rotated.Center, cand.Rotated.Size, (float)newAngle);
             var updatedCand = cand with { Rotated = newRotated };
 
-            var newList = new System.Collections.Generic.List<PhotoCropper.Core.Models.CropCandidate>(photo.AcceptedCandidates);
-            newList[dragCandIndex] = updatedCand;
+            var newList = new System.Collections.Generic.List<PhotoCropper.Core.Models.CropCandidate>(photo.AcceptedCandidates)
+            {
+                [dragCandIndex] = updatedCand
+            };
 
             photo.UpdateCandidates(newList);
             SetMainImage(photo.OriginalWithDetected);
@@ -214,8 +216,10 @@ internal sealed partial class MainWindow
             var newRotated = new Emgu.CV.Structure.RotatedRect(newCenter, new System.Drawing.SizeF(newW, newH), cand.Rotated.Angle);
             var updatedCand = cand with { Rotated = newRotated };
 
-            var newList = new System.Collections.Generic.List<PhotoCropper.Core.Models.CropCandidate>(photo.AcceptedCandidates);
-            newList[dragCandIndex] = updatedCand;
+            var newList = new System.Collections.Generic.List<PhotoCropper.Core.Models.CropCandidate>(photo.AcceptedCandidates)
+            {
+                [dragCandIndex] = updatedCand
+            };
 
             photo.UpdateCandidates(newList);
             SetMainImage(photo.OriginalWithDetected);
@@ -326,13 +330,11 @@ internal sealed partial class MainWindow
                 }
 
                 // Check if click is inside bounding box
-                using (var vec = new Emgu.CV.Util.VectorOfPointF(cand.Rotated.GetVertices()))
+                using var vec = new Emgu.CV.Util.VectorOfPointF(cand.Rotated.GetVertices());
+                if (Emgu.CV.CvInvoke.PointPolygonTest(vec, pt, false) >= 0)
                 {
-                    if (Emgu.CV.CvInvoke.PointPolygonTest(vec, pt, false) >= 0)
-                    {
-                        if (slides != null) slides.SelectedIndex = i;
-                        return;
-                    }
+                    slides?.SelectedIndex = i;
+                    return;
                 }
             }
             return;

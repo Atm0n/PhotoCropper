@@ -68,10 +68,7 @@ internal sealed partial class MainWindow
                 projectName,
                 cleanDir);
 
-            if (txtWorkDirBtn != null)
-            {
-                txtWorkDirBtn.Text = projectName;
-            }
+            txtWorkDirBtn?.Text = projectName;
             if (btnWorkDir != null)
             {
                 if (LocalizationService.TryGetResource<IBrush>(ResourceKeys.AppButtonActionBrush, out var brush) && brush != null)
@@ -94,10 +91,7 @@ internal sealed partial class MainWindow
             string noProject = LocalizationService.GetString(ResourceKeys.LblNoProject, "No Project");
             string defaultTip = LocalizationService.GetString(ResourceKeys.TipWorkDir, "Select a work directory for automatic raw scan staging and session recovery");
 
-            if (txtWorkDirBtn != null)
-            {
-                txtWorkDirBtn.Text = defaultBtn;
-            }
+            txtWorkDirBtn?.Text = defaultBtn;
             if (btnWorkDir != null)
             {
                 if (LocalizationService.TryGetResource<IBrush>(ResourceKeys.AppSubtleCardBrush, out var brush) && brush != null)
@@ -127,11 +121,8 @@ internal sealed partial class MainWindow
         _sessionManager.Clear();
         SetMainImage(null);
         ClearGalleryBitmaps();
-        if (txtFileCounter != null)
-        {
-            txtFileCounter.Text = LocalizationService.GetString(ResourceKeys.TxtNoFiles, "No files loaded");
-        }
-        if (lblPhotoInfo != null) lblPhotoInfo.Text = "";
+        txtFileCounter?.Text = LocalizationService.GetString(ResourceKeys.TxtNoFiles, "No files loaded");
+        lblPhotoInfo?.Text = "";
         UpdateSelectionUi();
     }
 

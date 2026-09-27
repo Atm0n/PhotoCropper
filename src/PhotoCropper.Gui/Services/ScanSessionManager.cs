@@ -1,4 +1,4 @@
-using PhotoCropper.Gui.Models;
+using PhotoCropper.Core.Workspace;
 
 namespace PhotoCropper.Gui.Services;
 

@@ -56,9 +56,9 @@ public sealed class PhotoExporterTests : IDisposable
 
         // Set source JPEG DPI to 600x600
         PhotoExporter.EmbedJpegDpi(scanPath, 600, 600);
-        var sourceDpi = PhotoExporter.GetDpiFromSource(scanPath);
-        sourceDpi.XDpi.ShouldBe(600);
-        sourceDpi.YDpi.ShouldBe(600);
+        var (XDpi, YDpi) = PhotoExporter.GetDpiFromSource(scanPath);
+        XDpi.ShouldBe(600);
+        YDpi.ShouldBe(600);
 
         using Mat photo1 = new(100, 100, DepthType.Cv8U, 3);
         photo1.SetTo(new MCvScalar(50, 50, 50));
