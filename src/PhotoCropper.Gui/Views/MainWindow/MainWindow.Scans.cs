@@ -71,23 +71,6 @@ internal sealed partial class MainWindow
         await LoadPhotosToGuiAsync();
     }
 
-    private async void BtnOpenFiles_Click(object? sender, RoutedEventArgs e)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider == null) return;
-
-        var fileResult = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = LocalizationService.GetString(ResourceKeys.BtnOpenScans, "Select Files"),
-            FileTypeFilter = [FilePickerFileTypes.ImageAll],
-            AllowMultiple = true
-        });
-
-        if (fileResult.Count > 0)
-        {
-            await LoadScansFromPathsAsync(fileResult.Select(f => f.Path.LocalPath));
-        }
-    }
 
     private async Task LoadPhotosToGuiAsync()
     {
@@ -311,16 +294,14 @@ internal sealed partial class MainWindow
 
     private async void BtnPrevScan_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || !_sessionManager.HasScans) return;
-        _sessionManager.MovePrevious();
-        await LoadPhotosToGuiAsync();
+        if (isLoading || _isNavigating || !_sessionManager.HasScans) return;
+        await NavigateScanAsync(forward: false);
     }
 
     private async void BtnNextScan_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || !_sessionManager.HasScans) return;
-        _sessionManager.MoveNext();
-        await LoadPhotosToGuiAsync();
+        if (isLoading || _isNavigating || !_sessionManager.HasScans) return;
+        await NavigateScanAsync(forward: true);
     }
 
     private async void BtnDeleteScan_Click(object? sender, RoutedEventArgs e)
@@ -330,7 +311,7 @@ internal sealed partial class MainWindow
 
     private async Task DeleteCurrentScanAsync()
     {
-        if (isLoading || !_sessionManager.HasScans) return;
+        if (isLoading || _isNavigating || !_sessionManager.HasScans) return;
 
         var sessionItem = _sessionManager.CurrentSession;
         if (sessionItem == null) return;
@@ -377,7 +358,7 @@ internal sealed partial class MainWindow
 
     private async void SldSensitivity_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
-        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
+        if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
 
         var settings = SettingsManager.Instance.Settings;
         settings.BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
@@ -398,7 +379,7 @@ internal sealed partial class MainWindow
 
     private async void BtnAutoTune_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || ScanSessions.Count == 0) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0) return;
 
         var photo = ScanSessions[CurrentIndex].Activate();
         string tuningMsg = LocalizationService.GetString(ResourceKeys.MsgAutoTuning, "Auto-tuning detection parameters...");
@@ -431,7 +412,7 @@ internal sealed partial class MainWindow
 
     private async void ChkAutoOrient_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
+        if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
         SettingsManager.Instance.Save();
         var session = ScanSessions[CurrentIndex];
@@ -441,7 +422,7 @@ internal sealed partial class MainWindow
 
     private async void ChkRestoreColors_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
+        if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
         SettingsManager.Instance.Save();
         var session = ScanSessions[CurrentIndex];
@@ -451,7 +432,7 @@ internal sealed partial class MainWindow
 
     private async void ChkRemoveDust_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
+        if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
         SettingsManager.Instance.Save();
         var session = ScanSessions[CurrentIndex];
@@ -504,7 +485,7 @@ internal sealed partial class MainWindow
 
     private async Task ReprocessCurrentScanAsync()
     {
-        if (isLoading || ScanSessions.Count == 0) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0) return;
 
         var session = ScanSessions[CurrentIndex];
         session.IsModified = true;

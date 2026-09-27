@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;
@@ -8,16 +9,15 @@ internal sealed partial class MainWindow
 {
     internal void ClearGalleryBitmaps()
     {
-        var disposedBitmaps = new HashSet<IDisposable>();
+        // Collect bitmaps to dispose before clearing collections.
+        // Use a HashSet to deduplicate (slides and lstGallery share the same Bitmap instances).
+        var toDispose = new HashSet<IDisposable>();
 
         if (slides != null)
         {
             foreach (var item in slides.Items)
             {
-                if (item is IDisposable disposable && disposedBitmaps.Add(disposable))
-                {
-                    disposable.Dispose();
-                }
+                if (item is IDisposable d) toDispose.Add(d);
             }
             slides.Items.Clear();
         }
@@ -26,12 +26,18 @@ internal sealed partial class MainWindow
         {
             foreach (var item in lstGallery.Items)
             {
-                if (item is GalleryPhotoItem galleryItem && galleryItem.Image is IDisposable disposable && disposedBitmaps.Add(disposable))
-                {
-                    disposable.Dispose();
-                }
+                if (item is GalleryPhotoItem g && g.Image is IDisposable d) toDispose.Add(d);
             }
             lstGallery.Items.Clear();
+        }
+
+        // Defer disposal to Background priority so the carousel's PageSlide animation
+        // (Duration="0:0:0.2") finishes its current render frame before native bitmap
+        // memory is freed. Disposing while the render thread is mid-animation causes
+        // ObjectDisposedException on the render thread (unevaluable stack trace).
+        if (toDispose.Count > 0)
+        {
+            DeferDispose(toDispose);
         }
     }
 
@@ -77,7 +83,7 @@ internal sealed partial class MainWindow
 
     private void DeleteSelectedPhotos()
     {
-        if (isLoading || ScanSessions.Count == 0) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0) return;
 
         var selectedIndices = GetSelectedPhotoIndices();
         if (selectedIndices.Count == 0) return;
@@ -93,7 +99,7 @@ internal sealed partial class MainWindow
 
     private void DeleteSinglePhoto(int photoIndex)
     {
-        if (isLoading || ScanSessions.Count == 0 || photoIndex < 0) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0 || photoIndex < 0) return;
 
         ScanSessions[CurrentIndex].IsModified = true;
         var currentEngine = ScanSessions[CurrentIndex].Activate();
@@ -120,7 +126,7 @@ internal sealed partial class MainWindow
 
     private void BatchDeletePhotos(List<int> selectedIndices)
     {
-        if (isLoading || ScanSessions.Count == 0 || selectedIndices.Count == 0) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0 || selectedIndices.Count == 0) return;
 
         var currentEngine = ScanSessions[CurrentIndex].Activate();
         var sortedIndices = selectedIndices.Distinct()
@@ -171,7 +177,7 @@ internal sealed partial class MainWindow
 
     private async Task RotateSelectedPhotosAsync()
     {
-        if (isLoading || ScanSessions.Count == 0) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0) return;
 
         var selectedIndices = GetSelectedPhotoIndices();
         if (selectedIndices.Count == 0) return;
@@ -187,7 +193,7 @@ internal sealed partial class MainWindow
 
     private async Task RotateSinglePhotoAsync(int photoIndex)
     {
-        if (isLoading || ScanSessions.Count == 0 || photoIndex < 0) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0 || photoIndex < 0) return;
 
         ScanSessions[CurrentIndex].IsModified = true;
         undoHistory.PushRotate(CurrentIndex, photoIndex);
@@ -233,7 +239,7 @@ internal sealed partial class MainWindow
 
     private async Task RotatePhotosCoreAsync(List<int> selectedIndices, bool clockwise)
     {
-        if (isLoading || ScanSessions.Count == 0 || selectedIndices.Count == 0) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0 || selectedIndices.Count == 0) return;
 
         var currentEngine = ScanSessions[CurrentIndex].Activate();
         var validIndices = selectedIndices.Distinct()
@@ -520,7 +526,7 @@ internal sealed partial class MainWindow
 
     private async Task PerformUndoAsync()
     {
-        if (ScanSessions.Count == 0 || !undoHistory.CanUndo) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0 || !undoHistory.CanUndo) return;
 
         var action = undoHistory.Undo(idx => idx >= 0 && idx < ScanSessions.Count ? ScanSessions[idx].Activate() : null);
         await ApplyUndoRedoActionAsync(action, ResourceKeys.MsgUndo, "Undid {0}.");
@@ -528,7 +534,7 @@ internal sealed partial class MainWindow
 
     private async Task PerformRedoAsync()
     {
-        if (ScanSessions.Count == 0 || !undoHistory.CanRedo) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0 || !undoHistory.CanRedo) return;
 
         var action = undoHistory.Redo(idx => idx >= 0 && idx < ScanSessions.Count ? ScanSessions[idx].Activate() : null);
         await ApplyUndoRedoActionAsync(action, ResourceKeys.MsgRedo, "Redid {0}.");

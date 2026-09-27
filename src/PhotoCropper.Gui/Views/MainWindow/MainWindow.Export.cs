@@ -21,7 +21,7 @@ internal sealed partial class MainWindow
 
     private async void BtnSaveImages_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || !_sessionManager.HasScans) return;
+        if (isLoading || _isNavigating || !_sessionManager.HasScans) return;
 
         var settings = SettingsManager.Instance.Settings;
         if (settings.PromptBeforeExport)
@@ -36,7 +36,7 @@ internal sealed partial class MainWindow
 
     private async Task<bool> SavePendingScansAsync(bool closeAfterSave)
     {
-        if (isLoading || !_sessionManager.HasScans) return false;
+        if (isLoading || _isNavigating || !_sessionManager.HasScans) return false;
 
         var pendingSessions = _sessionManager.GetPendingExportSessions();
         if (pendingSessions.Count == 0)
@@ -191,7 +191,7 @@ internal sealed partial class MainWindow
 
     private async Task ExportSinglePhotoAsync(int photoIndex, CancellationToken cancellationToken = default)
     {
-        if (isLoading || ScanSessions.Count == 0 || photoIndex < 0) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0 || photoIndex < 0) return;
 
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.StorageProvider == null) return;

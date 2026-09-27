@@ -15,7 +15,7 @@ internal sealed partial class MainWindow
         sldMinArea.Value = settings.MinAreaFactor;
         sldMaxArea.Value = settings.MaxAreaFactor;
         sldEdge.Value = settings.CannyLowThreshold;
-        tglAdvanced.IsChecked = settings.AdvancedVisible;
+
         chkAutoOrient?.IsChecked = settings.AutoOrientPhotos;
         chkRestoreColors?.IsChecked = settings.RestoreVintageColors;
         chkRemoveDust?.IsChecked = settings.RemoveDustAndScratches;
@@ -278,6 +278,11 @@ internal sealed partial class MainWindow
         {
             rectRefineCrop.Stroke = new SolidColorBrush(stroke);
             rectRefineCrop.Fill = new SolidColorBrush(fill);
+        }
+
+        if (rectCurrentDetectionColor != null)
+        {
+            rectCurrentDetectionColor.Fill = new SolidColorBrush(stroke);
         }
     }
 }

@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
@@ -30,6 +31,7 @@ internal sealed partial class MainWindow : Window
     private bool isSyncingSelection;
     private bool isUpdatingUiFromScan;
     private bool _isExitingConfirmed;
+    private bool _isNavigating;
     private CancellationTokenSource? _activeOperationCts;
 
     public MainWindow() : this(new Naps2ScannerService())
@@ -178,13 +180,6 @@ internal sealed partial class MainWindow : Window
     private async void MenuRedo_Click(object? sender, RoutedEventArgs e) => await PerformRedoAsync();
     private void MenuViewCarousel_Click(object? sender, RoutedEventArgs e) => SetViewMode(false);
     private void MenuViewGrid_Click(object? sender, RoutedEventArgs e) => SetViewMode(true);
-    private void BtnToggleAdvanced_Click(object? sender, RoutedEventArgs e)
-    {
-        if (tglAdvanced != null)
-        {
-            tglAdvanced.IsChecked = !tglAdvanced.IsChecked;
-        }
-    }
 
     private void BtnReset_Click(object? sender, RoutedEventArgs e) => BtnResetDefaults_Click(sender, e);
 
@@ -248,12 +243,7 @@ internal sealed partial class MainWindow : Window
                 e.Handled = true;
                 return true;
             }
-            if (e.Key == Key.O)
-            {
-                BtnOpenFiles_Click(null, new RoutedEventArgs());
-                e.Handled = true;
-                return true;
-            }
+
         }
 
         return true;
@@ -290,10 +280,7 @@ internal sealed partial class MainWindow : Window
                     BtnSaveImages_Click(null, new RoutedEventArgs());
                     e.Handled = true;
                     return true;
-                case Key.O:
-                    BtnOpenFiles_Click(null, new RoutedEventArgs());
-                    e.Handled = true;
-                    return true;
+
                 case Key.Z:
                     await PerformUndoAsync();
                     e.Handled = true;
@@ -356,7 +343,7 @@ internal sealed partial class MainWindow : Window
             return true;
         }
 
-        if (ScanSessions.Count > 0 && (e.Key == Key.Space || e.Key == Key.B))
+        if (!isLoading && !_isNavigating && ScanSessions.Count > 0 && (e.Key == Key.Space || e.Key == Key.B))
         {
             if (!isComparingRaw && slides != null && slides.SelectedIndex >= 0)
             {
@@ -367,8 +354,8 @@ internal sealed partial class MainWindow : Window
                     isComparingRaw = true;
                     var oldBmp = slides.Items[sel] as IDisposable;
                     slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.RawDetectedPhotos[sel]);
-                    oldBmp?.Dispose();
                     slides.SelectedIndex = sel;
+                    DeferDispose(oldBmp);
                 }
             }
             e.Handled = true;
@@ -437,35 +424,75 @@ internal sealed partial class MainWindow : Window
             {
                 case Key.Up:
                 case Key.PageUp:
-                    FocusManager?.Focus(null);
-                    _sessionManager.MovePrevious();
-                    await LoadPhotosToGuiAsync();
+                    if (isLoading || _isNavigating) { e.Handled = true; return true; }
                     e.Handled = true;
+                    await NavigateScanAsync(forward: false);
                     return true;
 
                 case Key.Down:
                 case Key.PageDown:
-                    FocusManager?.Focus(null);
-                    _sessionManager.MoveNext();
-                    await LoadPhotosToGuiAsync();
+                    if (isLoading || _isNavigating) { e.Handled = true; return true; }
                     e.Handled = true;
+                    await NavigateScanAsync(forward: true);
                     return true;
 
                 case Key.Left:
-                    FocusManager?.Focus(null);
-                    if (slides != null) slides.Previous();
+                    if (!isLoading && !_isNavigating)
+                    {
+                        FocusManager?.Focus(null);
+                        if (slides != null) slides.Previous();
+                    }
                     e.Handled = true;
                     return true;
 
                 case Key.Right:
-                    FocusManager?.Focus(null);
-                    if (slides != null) slides.Next();
+                    if (!isLoading && !_isNavigating)
+                    {
+                        FocusManager?.Focus(null);
+                        if (slides != null) slides.Next();
+                    }
                     e.Handled = true;
                     return true;
             }
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Cancels any in-flight background lookahead and waits (up to 3 s) for it to fully
+    /// release the <see cref="_lookaheadSemaphore"/>. This guarantees no background task
+    /// is concurrently accessing a <see cref="PhotoCropper.Core.Engine.PhotoCropperEngine"/>
+    /// when the caller is about to move or load sessions.
+    /// </summary>
+    private async Task DrainLookaheadAsync()
+    {
+        if (_lookaheadCts != null) await _lookaheadCts.CancelAsync();
+        bool acquired = await _lookaheadSemaphore.WaitAsync(3000, CancellationToken.None);
+        if (acquired) _lookaheadSemaphore.Release();
+    }
+
+    /// <summary>
+    /// Moves to the next or previous scan and loads it into the GUI.
+    /// Sets <see cref="_isNavigating"/> synchronously before any await so that
+    /// re-entrant key events on the UI thread see the flag immediately and bail out.
+    /// Then drains the lookahead to prevent concurrent <c>AutoTune</c> calls on the
+    /// same engine from this task and the background lookahead task.
+    /// </summary>
+    private async Task NavigateScanAsync(bool forward)
+    {
+        _isNavigating = true;
+        FocusManager?.Focus(null);
+        await DrainLookaheadAsync();
+        if (forward) _sessionManager.MoveNext(); else _sessionManager.MovePrevious();
+        try
+        {
+            await LoadPhotosToGuiAsync();
+        }
+        finally
+        {
+            _isNavigating = false;
+        }
     }
 
     private void Window_KeyUp(object? sender, KeyEventArgs e)
@@ -478,7 +505,7 @@ internal sealed partial class MainWindow : Window
         if (isComparingRaw && (e.Key == Key.Space || e.Key == Key.B))
         {
             isComparingRaw = false;
-            if (ScanSessions.Count > 0 && slides != null && slides.SelectedIndex >= 0)
+            if (!isLoading && !_isNavigating && ScanSessions.Count > 0 && slides != null && slides.SelectedIndex >= 0)
             {
                 int sel = slides.SelectedIndex;
                 var engine = ScanSessions[CurrentIndex].Activate();
@@ -486,8 +513,8 @@ internal sealed partial class MainWindow : Window
                 {
                     var oldBmp = slides.Items[sel] as IDisposable;
                     slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.DetectedPhotos[sel]);
-                    oldBmp?.Dispose();
                     slides.SelectedIndex = sel;
+                    DeferDispose(oldBmp);
                 }
             }
             e.Handled = true;
@@ -500,7 +527,7 @@ internal sealed partial class MainWindow : Window
 
         var oldSource = img.Source as IDisposable;
         img.Source = mat != null ? MatBitmapConverter.ToAvaloniaBitmap(mat) : null;
-        oldSource?.Dispose();
+        DeferDispose(oldSource);
         UpdateCropCanvasSize();
     }
 
@@ -510,7 +537,31 @@ internal sealed partial class MainWindow : Window
 
         var oldSource = imgRefine.Source as IDisposable;
         imgRefine.Source = mat != null ? MatBitmapConverter.ToAvaloniaBitmap(mat) : null;
-        oldSource?.Dispose();
+        DeferDispose(oldSource);
+    }
+
+    internal static void DeferDispose(IDisposable? obj, int delayMs = 300)
+    {
+        if (obj == null) return;
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(delayMs);
+            Dispatcher.UIThread.Post(obj.Dispose);
+        });
+    }
+
+    internal static void DeferDispose(IEnumerable<IDisposable> objects, int delayMs = 300)
+    {
+        var list = objects.ToList();
+        if (list.Count == 0) return;
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(delayMs);
+            Dispatcher.UIThread.Post(() =>
+            {
+                foreach (var obj in list) obj.Dispose();
+            });
+        });
     }
 
     protected override void OnClosed(EventArgs e)
@@ -521,7 +572,6 @@ internal sealed partial class MainWindow : Window
         settings.MinAreaFactor = sldMinArea.Value;
         settings.MaxAreaFactor = sldMaxArea.Value;
         settings.CannyLowThreshold = sldEdge.Value;
-        settings.AdvancedVisible = tglAdvanced.IsChecked ?? false;
 
         if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory) && _workspaceSession != null)
         {
