@@ -1,5 +1,6 @@
 using Emgu.CV;
 using Emgu.CV.CvEnum;
+using PhotoCropper.Core.Common;
 using System.Collections.Concurrent;
 
 namespace PhotoCropper.Core.Export;
@@ -222,7 +223,7 @@ public static class PhotoExporter
         string candidate = targetPath;
         int counter = 1;
 
-        while (true)
+        while (counter <= AppConstants.MaxExportPathRetries)
         {
             if (!File.Exists(candidate) && ClaimedExportPaths.TryAdd(candidate, 0))
             {
@@ -231,6 +232,8 @@ public static class PhotoExporter
 
             candidate = Path.Combine(dir, $"{nameWithoutExt} ({counter++}){ext}");
         }
+
+        throw new IOException($"Could not resolve a unique export path for '{targetPath}' after {AppConstants.MaxExportPathRetries} attempts. Check that the output directory is writable and has sufficient disk space.");
     }
 
     private static void WriteBytesToFile(string filePath, byte[] bytes)
@@ -246,7 +249,7 @@ public static class PhotoExporter
             }
             catch (IOException) when (attempt < maxRetries - 1)
             {
-                Thread.Sleep(30);
+                Thread.Sleep(AppConstants.ExportFileRetryDelayMs);
             }
         }
     }

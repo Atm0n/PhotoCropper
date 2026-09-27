@@ -1,8 +1,7 @@
-using System;
-using System.Collections.Generic;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Models;
 using System.Drawing;
 
@@ -125,7 +124,7 @@ public sealed class AutoTuneService : IDisposable
             var edgeMapDict = new Dictionary<double, Mat>();
             foreach (double cannyLow in SweepCannyLows)
             {
-                var map = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(_detMat!, cannyLow, cannyLow * 2.5);
+                var map = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(_detMat!, cannyLow, cannyLow * AppConstants.DefaultCannyHighRatio);
                 edgeMaps.Add(map);
                 edgeMapDict[cannyLow] = map;
             }
@@ -136,7 +135,7 @@ public sealed class AutoTuneService : IDisposable
             foreach (double cannyLow in SweepCannyLows)
             {
                 Mat edgeMap = edgeMapDict[cannyLow];
-                double cannyHigh = cannyLow * 2.5;
+                double cannyHigh = cannyLow * AppConstants.DefaultCannyHighRatio;
 
                 foreach (double tol in SweepTolerances)
                 {
@@ -157,7 +156,7 @@ public sealed class AutoTuneService : IDisposable
                 foreach (double cannyLow in SweepCannyLows)
                 {
                     Mat edgeMap = edgeMapDict[cannyLow];
-                    double cannyHigh = cannyLow * 2.5;
+                    double cannyHigh = cannyLow * AppConstants.DefaultCannyHighRatio;
 
                     ForegroundMaskGenerator.PopulateOtsuForegroundMask(
                         _detMat!, foreground, cannyLow, cannyHigh, isLightBg, edgeMap);

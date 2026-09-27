@@ -8,6 +8,7 @@ using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
+using System.Diagnostics;
 
 namespace PhotoCropper.Gui;
 
@@ -70,6 +71,19 @@ internal sealed partial class MainWindow
             await Task.Run(() =>
             {
                 PhotoExporter.ClearClaimedExportPaths();
+
+                // Build a filename-keyed lookup before entering the parallel loop so that
+                // each thread can resolve its own WorkspaceScanEntry without traversing
+                // _workspaceSession.Scans concurrently (which would be a data race).
+                Dictionary<string, WorkspaceScanEntry>? workspaceLookup = null;
+                if (_workspaceSession != null)
+                {
+                    workspaceLookup = _workspaceSession.Scans
+                        .Where(s => s != null)
+                        .GroupBy(s => Path.GetFileName(s.RelativePath), StringComparer.OrdinalIgnoreCase)
+                        .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+                }
+
                 Parallel.ForEach(pendingSessions, new ParallelOptions { MaxDegreeOfParallelism = maxConcurrency, CancellationToken = ct }, (session) =>
                 {
                     try
@@ -102,12 +116,12 @@ internal sealed partial class MainWindow
                             session.IsSaved = true;
                             session.IsModified = false;
 
-                            if (_workspaceSession != null)
+                            // Each session maps to exactly one WorkspaceScanEntry — resolved via the
+                            // pre-built dict so no concurrent list traversal occurs inside the parallel body.
+                            if (workspaceLookup != null)
                             {
-                                var entry = _workspaceSession.Scans.FirstOrDefault(s =>
-                                    string.Equals(s.RelativePath, session.FilePath, StringComparison.OrdinalIgnoreCase) ||
-                                    string.Equals(Path.GetFileName(s.RelativePath), Path.GetFileName(session.FilePath), StringComparison.OrdinalIgnoreCase));
-                                if (entry != null)
+                                string sessionFileName = Path.GetFileName(session.FilePath);
+                                if (workspaceLookup.TryGetValue(sessionFileName, out var entry))
                                 {
                                     entry.IsProcessed = true;
                                     entry.ExtractedPhotoCount = savedCount;
@@ -138,7 +152,7 @@ internal sealed partial class MainWindow
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Failed to export scan '{session.FilePath}': {ex.Message}");
+                        Trace.TraceError($"[PhotoCropper] Failed to export scan '{session.FilePath}': {ex.GetType().Name}: {ex.Message}");
                     }
 
                     int done = Interlocked.Increment(ref completedScans);
@@ -157,6 +171,7 @@ internal sealed partial class MainWindow
                 {
                     ProjectWorkspaceService.SaveSession(settings.WorkDirectory, _workspaceSession);
                 }
+
             }, ct);
 
             if (totalSavedPhotos > 0)

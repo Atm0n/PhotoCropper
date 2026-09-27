@@ -7,8 +7,8 @@ using PhotoCropper.Core.Export;
 using PhotoCropper.Core.IO;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
-
 using PhotoCropper.Gui.Services;
+using System.Diagnostics;
 
 namespace PhotoCropper.Gui;
 
@@ -281,6 +281,7 @@ internal sealed partial class MainWindow
                     }
                     catch (Exception ex) when (ex is IOException or InvalidOperationException)
                     {
+                        Trace.TraceWarning($"[PhotoCropper] Background lookahead failed for session: {ex.GetType().Name}: {ex.Message}");
                     }
                     finally
                     {
@@ -390,7 +391,7 @@ internal sealed partial class MainWindow
         session.Options.MinAreaFactor = sldMinArea.Value / 100.0;
         session.Options.MaxAreaFactor = sldMaxArea.Value / 100.0;
         session.Options.CannyLowThreshold = sldEdge.Value;
-        session.Options.CannyHighThreshold = sldEdge.Value * 2.5;
+        session.Options.CannyHighThreshold = sldEdge.Value * AppConstants.DefaultCannyHighRatio;
 
         await ReprocessCurrentScanAsync();
     }
@@ -551,7 +552,7 @@ internal sealed partial class MainWindow
             MinAreaFactor = sldMinArea.Value / 100.0,
             MaxAreaFactor = sldMaxArea.Value / 100.0,
             CannyLowThreshold = sldEdge.Value,
-            CannyHighThreshold = sldEdge.Value * 2.5,
+            CannyHighThreshold = sldEdge.Value * AppConstants.DefaultCannyHighRatio,
             AutoOrientPhotos = chkAutoOrient?.IsChecked == true,
             RestoreVintageColors = chkRestoreColors?.IsChecked == true,
             RemoveDustAndScratches = chkRemoveDust?.IsChecked == true,

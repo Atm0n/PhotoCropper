@@ -1,5 +1,6 @@
 using PhotoCropper.Cli.Models;
 using PhotoCropper.Core;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
 using Spectre.Console;
@@ -379,7 +380,7 @@ internal static class BatchProcessor
             MinAreaFactor = options.MinAreaFactor,
             MaxAreaFactor = options.MaxAreaFactor,
             CannyLowThreshold = options.CannyLow,
-            CannyHighThreshold = options.CannyLow * 2.5,
+            CannyHighThreshold = options.CannyLow * AppConstants.DefaultCannyHighRatio,
             AutoOrientPhotos = options.AutoOrient,
             RestoreVintageColors = options.RestoreColors,
             RemoveDustAndScratches = options.RemoveDust

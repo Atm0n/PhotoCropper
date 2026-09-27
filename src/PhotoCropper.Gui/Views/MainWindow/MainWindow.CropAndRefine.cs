@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Emgu.CV;
 using Emgu.CV.Structure;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Gui.Services;
 
@@ -542,7 +543,7 @@ internal sealed partial class MainWindow
             MinAreaFactor = settings.MinAreaFactor / 100.0,
             MaxAreaFactor = settings.MaxAreaFactor / 100.0,
             CannyLowThreshold = settings.CannyLowThreshold,
-            CannyHighThreshold = settings.CannyLowThreshold * 2.5,
+            CannyHighThreshold = settings.CannyLowThreshold * AppConstants.DefaultCannyHighRatio,
             AutoOrientPhotos = settings.AutoOrientPhotos,
             RestoreVintageColors = settings.RestoreVintageColors,
             RemoveDustAndScratches = settings.RemoveDustAndScratches

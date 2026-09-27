@@ -3,8 +3,8 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
-
 using PhotoCropper.Gui.Services;
+using System.Diagnostics;
 
 namespace PhotoCropper.Gui;
 
@@ -19,8 +19,9 @@ internal sealed partial class MainWindow
         {
             _scannerService.Dispose();
         }
-        catch
+        catch (Exception ex)
         {
+            Trace.TraceWarning($"[PhotoCropper] Scanner service disposal failed: {ex.GetType().Name}: {ex.Message}");
         }
         _scannerService = new Naps2ScannerService();
     }
@@ -229,9 +230,10 @@ internal sealed partial class MainWindow
                 _availableScanners.AddRange(safeDevices);
             });
         }
-        catch
+        catch (Exception ex)
         {
-            // Scanner enumeration failed or unsupported platform
+            // Scanner enumeration can fail on unsupported platforms or if the NAPS2 worker is unavailable.
+            Trace.TraceWarning($"[PhotoCropper] Scanner enumeration failed: {ex.GetType().Name}: {ex.Message}");
         }
     }
 
