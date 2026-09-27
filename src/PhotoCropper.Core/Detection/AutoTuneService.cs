@@ -9,9 +9,9 @@ namespace PhotoCropper.Core.Detection;
 
 public sealed class AutoTuneService : IDisposable
 {
-    private static readonly double[] SweepTolerances = [8, 12, 16, 20, 25];
-    private static readonly double[] SweepCannyLows = [20, 30, 50, 70];
-    private static readonly double[] SweepMinAreaFactors = [0.005, 0.01, 0.02, 0.03];
+    internal static readonly double[] SweepTolerances = [8, 12, 16, 20, 25];
+    internal static readonly double[] SweepCannyLows = [20, 30, 50, 70];
+    internal static readonly double[] SweepMinAreaFactors = [0.005, 0.01, 0.02, 0.03];
 
     private readonly Mat _source;
     private readonly DetectionOptions _currentOptions;
@@ -34,7 +34,7 @@ public sealed class AutoTuneService : IDisposable
     private int _bestCount;
     private DetectionOptions _bestOptions;
 
-    private AutoTuneService(Mat source, DetectionOptions currentOptions, int minExpected, int maxExpected)
+    internal AutoTuneService(Mat source, DetectionOptions currentOptions, int minExpected, int maxExpected)
     {
         _source = source ?? throw new ArgumentNullException(nameof(source));
         _currentOptions = currentOptions ?? throw new ArgumentNullException(nameof(currentOptions));
@@ -260,7 +260,7 @@ public sealed class AutoTuneService : IDisposable
         return fullCandidates;
     }
 
-    private double CalculateScore(IReadOnlyList<CropCandidate> accepted)
+    internal double CalculateScore(IReadOnlyList<CropCandidate> accepted)
     {
         if (accepted.Count == 0)
         {
