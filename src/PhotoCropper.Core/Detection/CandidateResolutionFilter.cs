@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
@@ -47,7 +50,18 @@ public static class CandidateResolutionFilter
         ArgumentNullException.ThrowIfNull(candidates);
         if (candidates.Count == 0) return [];
 
-        // 1. Composite resolution: Discard large merged candidate boxes that encompass 2 or more distinct sub-candidates
+        var compositeIndices = FindCompositeIndices(candidates);
+
+        var validCandidates = candidates
+            .Where((_, idx) => !compositeIndices.Contains(idx))
+            .OrderByDescending(c => c.Score)
+            .ToList();
+
+        return FilterOverlappingDuplicates(validCandidates);
+    }
+
+    private static HashSet<int> FindCompositeIndices(IReadOnlyList<CropCandidate> candidates)
+    {
         var compositeIndices = new HashSet<int>();
         for (int i = 0; i < candidates.Count; i++)
         {
@@ -59,91 +73,72 @@ public static class CandidateResolutionFilter
                 if (i == j) continue;
                 var child = candidates[j];
 
-                // Child must be distinctly smaller than parent and have reasonable rectangularity
                 if (child.Area >= parent.Area * 0.85 || child.Area < parent.Area * 0.02) continue;
                 if (child.Rectangularity < 0.60) continue;
 
                 double overlap = CalculatePolygonIntersectionArea(child.ShapePoints, child.Rect, parent.ShapePoints, parent.Rect);
-                // Child is mostly contained inside parent
                 if (overlap / child.Area >= 0.70)
                 {
                     subCandidates.Add(j);
                 }
             }
 
-            // If parent contains at least 2 distinct photos, it is a composite merged box
             if (subCandidates.Count >= 2)
             {
-                bool foundDisjointPair = false;
-                for (int a = 0; a < subCandidates.Count && !foundDisjointPair; a++)
-                {
-                    var candA = candidates[subCandidates[a]];
-                    for (int b = a + 1; b < subCandidates.Count; b++)
-                    {
-                        var candB = candidates[subCandidates[b]];
-                        double subOverlap = CalculatePolygonIntersectionArea(candA.ShapePoints, candA.Rect, candB.ShapePoints, candB.Rect);
-                        double minSubArea = Math.Min(candA.Area, candB.Area);
-
-                        if (minSubArea > 0 && subOverlap / minSubArea < 0.30)
-                        {
-                            foundDisjointPair = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (foundDisjointPair)
+                if (HasDisjointSubCandidates(candidates, subCandidates))
                 {
                     compositeIndices.Add(i);
                 }
             }
-            // If parent occupies a huge portion of the scan bed (> 70%) and contains any sub-candidate, it is the scanner bed
             else if (subCandidates.Count == 1 && parent.Area >= candidates.Max(c => c.Area) * 0.95 && parent.Area > (double)parent.Rect.Width * parent.Rect.Height * 0.70)
             {
                 compositeIndices.Add(i);
             }
         }
+        return compositeIndices;
+    }
 
-        var validCandidates = candidates
-            .Where((_, idx) => !compositeIndices.Contains(idx))
-            .OrderByDescending(c => c.Score)
-            .ToList();
+    private static bool HasDisjointSubCandidates(IReadOnlyList<CropCandidate> candidates, List<int> subCandidates)
+    {
+        for (int a = 0; a < subCandidates.Count; a++)
+        {
+            var candA = candidates[subCandidates[a]];
+            for (int b = a + 1; b < subCandidates.Count; b++)
+            {
+                var candB = candidates[subCandidates[b]];
+                double subOverlap = CalculatePolygonIntersectionArea(candA.ShapePoints, candA.Rect, candB.ShapePoints, candB.Rect);
+                double minSubArea = Math.Min(candA.Area, candB.Area);
 
+                if (minSubArea > 0 && subOverlap / minSubArea < 0.30)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope")]
+    private static List<CropCandidate> FilterOverlappingDuplicates(List<CropCandidate> validCandidates)
+    {
         var acceptedCandidates = new List<CropCandidate>();
         var acceptedPolys = new List<VectorOfPoint>();
 
         try
         {
-        loop_cand: foreach (var cand in validCandidates)
+            foreach (var cand in validCandidates)
             {
-                Point center = new(cand.Rect.X + cand.Rect.Width / 2, cand.Rect.Y + cand.Rect.Height / 2);
-                foreach (var accepted in acceptedPolys)
-                {
-                    if (CvInvoke.PointPolygonTest(accepted, center, false) >= 0)
-                    {
-                        continue loop_cand;
-                    }
-                }
+                if (IsCenterInsideAccepted(cand, acceptedPolys)) continue;
+
                 using VectorOfPoint shape = new(cand.ShapePoints);
 
-                foreach (var accepted in acceptedPolys)
-                {
-                    Rectangle accBounds = CvInvoke.BoundingRectangle(accepted);
-                    double overlapPixels = CalculatePolygonIntersectionArea(cand.ShapePoints, cand.Rect, accepted.ToArray(), accBounds);
-                    double minPolyArea = Math.Min(CvInvoke.ContourArea(shape), CvInvoke.ContourArea(accepted));
-
-                    // If overlap exceeds 15% of the smaller photo, reject the duplicate/invading candidate
-                    if (minPolyArea > 0 && (overlapPixels / minPolyArea) > 0.15)
-                    {
-                        continue loop_cand;
-                    }
-                }
+                if (HasSignificantOverlapWithAccepted(cand, shape, acceptedPolys)) continue;
 
                 acceptedCandidates.Add(cand);
+                
                 acceptedPolys.Add(new VectorOfPoint(cand.ShapePoints));
             }
-
-            return acceptedCandidates;
         }
         finally
         {
@@ -152,5 +147,34 @@ public static class CandidateResolutionFilter
                 poly.Dispose();
             }
         }
+
+        return acceptedCandidates;
+    }
+
+    private static bool IsCenterInsideAccepted(CropCandidate cand, List<VectorOfPoint> acceptedPolys)
+    {
+        Point center = new(cand.Rect.X + cand.Rect.Width / 2, cand.Rect.Y + cand.Rect.Height / 2);
+        foreach (var accepted in acceptedPolys)
+        {
+            if (CvInvoke.PointPolygonTest(accepted, center, false) >= 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool HasSignificantOverlapWithAccepted(CropCandidate cand, VectorOfPoint shape, List<VectorOfPoint> acceptedPolys)
+    {
+        foreach (var accepted in acceptedPolys)
+        {
+            double overlap = CalculatePolygonIntersectionArea(cand.ShapePoints, cand.Rect, accepted.ToArray(), CvInvoke.BoundingRectangle(accepted));
+            double minPolyArea = Math.Min(CvInvoke.ContourArea(shape), CvInvoke.ContourArea(accepted));
+            if (minPolyArea > 0 && overlap / minPolyArea > 0.35)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }
