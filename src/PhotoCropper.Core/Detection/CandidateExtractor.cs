@@ -92,7 +92,7 @@ public static class CandidateExtractor
         if (w < 20 || h < 20) return null;
 
         float aspectRatio = Math.Max(w, h) / Math.Max(1.0f, Math.Min(w, h));
-        if (aspectRatio > 6.0f) return null; 
+        if (aspectRatio > 6.0f) return null;
 
         double rrArea = Math.Max(1.0, (double)w * h);
         double rectangularity = Math.Clamp(contourArea / rrArea, 0.0, 1.0);

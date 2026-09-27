@@ -118,7 +118,7 @@ public static class CandidateResolutionFilter
         return false;
     }
 
-    
+
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope")]
     private static List<CropCandidate> FilterOverlappingDuplicates(List<CropCandidate> validCandidates)
     {
@@ -136,7 +136,7 @@ public static class CandidateResolutionFilter
                 if (HasSignificantOverlapWithAccepted(cand, shape, acceptedPolys)) continue;
 
                 acceptedCandidates.Add(cand);
-                
+
                 acceptedPolys.Add(new VectorOfPoint(cand.ShapePoints));
             }
         }

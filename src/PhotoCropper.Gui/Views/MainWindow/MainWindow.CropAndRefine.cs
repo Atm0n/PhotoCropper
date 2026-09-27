@@ -251,7 +251,7 @@ internal sealed partial class MainWindow
         if (!isDragging) return;
         isDragging = false;
         rectCrop.IsVisible = false;
-        
+
         var rect = CoordinateMapper.ComputeNormalizedRect(startPoint, e.GetPosition(pnlOriginal));
         if (rect.Width < 5 || rect.Height < 5)
         {

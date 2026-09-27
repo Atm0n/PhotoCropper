@@ -72,10 +72,10 @@ public sealed class AutoTuneService : IDisposable
         NeutralizeBezels();
 
         double baselineScore = EvaluateConfiguration(
-            _currentOptions.BackgroundTolerance, 
-            _currentOptions.CannyLowThreshold, 
-            _currentOptions.CannyHighThreshold, 
-            _currentOptions.MinAreaFactor, 
+            _currentOptions.BackgroundTolerance,
+            _currentOptions.CannyLowThreshold,
+            _currentOptions.CannyHighThreshold,
+            _currentOptions.MinAreaFactor,
             out int baselineCount);
 
         _bestScore = baselineScore;
@@ -272,15 +272,15 @@ public sealed class AutoTuneService : IDisposable
 
         if (accepted.Count >= _minExpected && accepted.Count <= _maxExpected)
         {
-            score += 1000; 
+            score += 1000;
         }
         else if (accepted.Count < _minExpected)
         {
-            score += (accepted.Count * 100); 
+            score += (accepted.Count * 100);
         }
-        else 
+        else
         {
-            score += (1000 - ((accepted.Count - _maxExpected) * 50)); 
+            score += (1000 - ((accepted.Count - _maxExpected) * 50));
         }
 
         double totalArea = 0;
@@ -305,7 +305,7 @@ public sealed class AutoTuneService : IDisposable
         if (accepted.Count > 1)
         {
             double arDiff = maxAspectRatio - minAspectRatio;
-            score -= (arDiff * 10); 
+            score -= (arDiff * 10);
         }
 
         return score;
