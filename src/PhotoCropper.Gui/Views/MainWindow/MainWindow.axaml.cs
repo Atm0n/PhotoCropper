@@ -50,9 +50,6 @@ internal sealed partial class MainWindow : Window
         AddHandler(KeyUpEvent, Window_KeyUp, RoutingStrategies.Tunnel);
 
         // Register Drag & Drop event handlers
-        AddHandler(DragDrop.DragOverEvent, Window_DragOver);
-        AddHandler(DragDrop.DropEvent, Window_Drop);
-
         Closing += Window_Closing;
         Loaded += MainWindow_Loaded;
 

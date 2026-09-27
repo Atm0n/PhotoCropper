@@ -68,8 +68,8 @@
 	<sys:String x:Key="HelpSensitivity">Adjust how aggressively the engine looks for photo boundaries. Higher values find more faint borders but may include noise.</sys:String>
 	<sys:String x:Key="HelpManualCrop">Click and drag on the original scan (left) to manually define a photo area if it wasn't detected automatically.</sys:String>
 	<sys:String x:Key="HelpRefine">Enter a specialized mode to fine-tune a photo's edges. Ideal for removing white scanner margins or correcting slight misalignments.</sys:String>
-	<sys:String x:Key="HelpDragDropTitle">Drag &amp; Drop</sys:String>
-	<sys:String x:Key="HelpDragDrop">Drag image files or whole folders anywhere onto the window to automatically queue and process scans.</sys:String>
+	<sys:String x:Key="HelpInteractiveBoxesTitle">Interactive Bounding Boxes</sys:String>
+	<sys:String x:Key="HelpInteractiveBoxes">Click a green box to select it. Click the red 'X' to delete. Drag corners to manually resize, and drag the blue circle to rotate.</sys:String>
 	<sys:String x:Key="HelpDpiTitle">DPI Preservation</sys:String>
 	<sys:String x:Key="HelpDpi">Original scanner resolution metadata (e.g. 300/600 DPI) is automatically detected and preserved on export for 1:1 physical printing scale.</sys:String>
 	<sys:String x:Key="HelpAutoOrientTitle">AI &amp; Landscape Orientation</sys:String>
@@ -206,8 +206,8 @@
 	<sys:String x:Key="MenuRotateCcw">Rotate 90° CCW</sys:String>
 	<sys:String x:Key="MenuRefineCrop">Refine Crop Edges</sys:String>
 	<sys:String x:Key="MenuExportSingle">Export This Photo...</sys:String>
-	<sys:String x:Key="EmptyStateTitle">Drag &amp; Drop Scans Here</sys:String>
-	<sys:String x:Key="EmptyStateDesc">Drop image files or entire scan folders here to extract photos, or click Open / Scan above.</sys:String>
+	<sys:String x:Key="EmptyStateTitle">Open or Scan Photos</sys:String>
+	<sys:String x:Key="EmptyStateDesc">Click Open to select scanned image files, or click Scan to capture directly from a scanner.</sys:String>
 	<sys:String x:Key="LblFileNamePattern">File Naming:</sys:String>
 	<sys:String x:Key="LblNamingPreview">Preview: {0}</sys:String>
 	<sys:String x:Key="LblMetadata">Vintage Photo Metadata (EXIF):</sys:String>
