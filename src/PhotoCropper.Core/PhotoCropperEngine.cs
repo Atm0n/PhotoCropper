@@ -285,9 +285,14 @@ public class PhotoCropperEngine : IDisposable
 
                 // Draw white square for grab handles
                 Rectangle handleRect = new((int)vertices[j].X - 25, (int)vertices[j].Y - 25, 50, 50);
-                CvInvoke.Rectangle(OriginalWithDetected, handleRect, whiteText, -1);
-                // Draw border around the handle
-                CvInvoke.Rectangle(OriginalWithDetected, handleRect, boxColor, 4);
+                handleRect.Intersect(new Rectangle(0, 0, OriginalWithDetected.Width, OriginalWithDetected.Height));
+                
+                if (handleRect.Width > 0 && handleRect.Height > 0)
+                {
+                    CvInvoke.Rectangle(OriginalWithDetected, handleRect, whiteText, -1);
+                    // Draw border around the handle
+                    CvInvoke.Rectangle(OriginalWithDetected, handleRect, boxColor, 4);
+                }
             }
 
             // Find top right corner (max X - Y)
@@ -555,8 +560,15 @@ public class PhotoCropperEngine : IDisposable
         DetectedPhotos[candIndex].Dispose();
         DetectedPhotos[candIndex] = extracted;
 
-        RawDetectedPhotos[candIndex].Dispose();
-        RawDetectedPhotos[candIndex] = extracted.Clone();
+        if (candIndex < RawDetectedPhotos.Count)
+        {
+            RawDetectedPhotos[candIndex].Dispose();
+            RawDetectedPhotos[candIndex] = extracted.Clone();
+        }
+        else
+        {
+            RawDetectedPhotos.Add(extracted.Clone());
+        }
 
         var vertices = cand.Rotated.GetVertices();
         var pts = new Point[4];
@@ -633,6 +645,7 @@ public class PhotoCropperEngine : IDisposable
         if (!Extracted.IsEmpty)
         {
             DetectedPhotos.Add(Extracted);
+            RawDetectedPhotos.Add(Extracted.Clone());
             if (Candidate.HasValue)
             {
                 var cand = Candidate.Value;

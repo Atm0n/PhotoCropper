@@ -181,7 +181,8 @@ public static class BackgroundAnalyzer
     private static int MeasureBezelDepth(Mat bgMask, int maxDepth, int length, bool isHorizontal, bool fromStart)
     {
         int bezel = 0;
-        int crossLength = isHorizontal ? bgMask.Width : bgMask.Height;
+        int crossLength = isHorizontal ? bgMask.Height : bgMask.Width;
+        maxDepth = Math.Min(maxDepth, crossLength);
 
         for (int i = 0; i < maxDepth; i++)
         {

@@ -17,16 +17,15 @@ internal static class BatchProcessor
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(scanFiles);
 
-        PrintHeaderPanel(options, scanFiles.Count);
+        PrintHeader(options, scanFiles.Count);
 
         var detectionOptions = CreateDetectionOptions(options);
         var metadata = CreateExportMetadata(options);
 
-        PhotoCropper.Core.Export.PhotoExporter.ClearClaimedExportPaths();
+        PhotoExporter.ClearClaimedExportPaths();
 
         int totalExtracted = 0;
         int errorCount = 0;
-        int completedScans = 0;
         var undetectedScans = new ConcurrentBag<string>();
         var totalStopwatch = Stopwatch.StartNew();
 
@@ -37,134 +36,239 @@ internal static class BatchProcessor
 
         if (scanFiles.Count > 0)
         {
-            AnsiConsole.Progress()
-                .AutoClear(false)
-                .HideCompleted(false)
-                .Columns(
-                    new TaskDescriptionColumn(),
-                    new ProgressBarColumn(),
-                    new PercentageColumn(),
-                    new RemainingTimeColumn(),
-                    new SpinnerColumn())
-                .Start(ctx =>
-                {
-                    var progressTask = ctx.AddTask("[green]Processing Scans[/]", maxValue: scanFiles.Count);
-
-                    Parallel.ForEach(scanFiles, parallelOptions, (scanPath) =>
-                    {
-                        string fileName = Path.GetFileName(scanPath);
-                        try
-                        {
-                            using var engine = new PhotoCropperEngine(scanPath);
-                            engine.ApplyOptions(detectionOptions);
-                            engine.DetectPhotos();
-
-                            int photoCount = engine.DetectedPhotos.Count;
-                            bool wasAutoTuned = false;
-                            bool isUnderDetected = photoCount < options.MinExpectedPhotos;
-                            bool isOverDetected = photoCount > options.MaxExpectedPhotos;
-                            bool isLowCoverage = options.AutoAdjustLowCoverage && !options.AutoTune && engine.TotalDetectedAreaRatio < (options.MinCoverageThresholdPercent / 100.0);
-                            bool shouldAutoTune = ((isUnderDetected || isOverDetected) && options.AutoTune) || isLowCoverage;
-
-                            if (shouldAutoTune)
-                            {
-                                var tuneResult = engine.AutoTune(options.MinExpectedPhotos, options.MaxExpectedPhotos);
-                                if (tuneResult.PhotoCount != photoCount || tuneResult.Improved)
-                                {
-                                    photoCount = tuneResult.PhotoCount;
-                                    wasAutoTuned = true;
-                                    isUnderDetected = photoCount < options.MinExpectedPhotos;
-                                    isOverDetected = photoCount > options.MaxExpectedPhotos;
-                                }
-                            }
-
-                            if (photoCount > 0)
-                            {
-                                PhotoExporter.SavePhotos(
-                                    engine.DetectedPhotos,
-                                    scanPath,
-                                    options.OutputDirectory,
-                                    options.Format,
-                                    options.JpegQuality,
-                                    options.FileNamePattern,
-                                    metadata);
-
-                                Interlocked.Add(ref totalExtracted, photoCount);
-
-                                if (isUnderDetected)
-                                {
-                                    undetectedScans.Add(scanPath);
-                                    AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ under-detected[/] [bold white]{fileName}[/] -> [yellow]{photoCount}[/] photo(s) (expected >= {options.MinExpectedPhotos})");
-                                }
-                                else if (isOverDetected)
-                                {
-                                    undetectedScans.Add(scanPath);
-                                    AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ over-detected[/] [bold white]{fileName}[/] -> [yellow]{photoCount}[/] photo(s) (expected <= {options.MaxExpectedPhotos})");
-                                }
-                                else
-                                {
-                                    string tag = wasAutoTuned ? "[yellow]⚡ auto-tuned[/]" : "[green]✓ extracted[/]";
-                                    AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] {tag} [bold white]{fileName}[/] -> [green]{photoCount}[/] photo(s)");
-                                }
-
-                                if (options.Verbose)
-                                {
-                                    for (int p = 0; p < photoCount; p++)
-                                    {
-                                        var mat = engine.DetectedPhotos[p];
-                                        AnsiConsole.MarkupLine($"  [dim]-> Photo #{p + 1}: {mat.Width}x{mat.Height} px[/]");
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                undetectedScans.Add(scanPath);
-                                AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ 0 photos[/] [bold white]{fileName}[/]");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Interlocked.Increment(ref errorCount);
-                            AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [bold red]✗ FAILED[/] [bold white]{fileName}[/]: [red]{Markup.Escape(ex.Message)}[/]");
-                        }
-                        finally
-                        {
-                            progressTask.Increment(1);
-                            int done = Interlocked.Increment(ref completedScans);
-                            if (done % 25 == 0)
-                            {
-                                GC.Collect(1, GCCollectionMode.Optimized, false);
-                            }
-                        }
-                    });
-                });
+            var passResult = RunBatchPass(scanFiles, parallelOptions, options, detectionOptions, metadata, undetectedScans);
+            totalExtracted = passResult.Extracted;
+            errorCount = passResult.Errors;
         }
 
         totalStopwatch.Stop();
 
-        // Process undetected audit log & isolation
         if (!undetectedScans.IsEmpty)
         {
             WriteUndetectedAuditLog(undetectedScans, options, scanFiles.Count, scanFiles);
         }
 
-        // Summary Table
-        var summaryTable = new Table()
-            .Border(TableBorder.Rounded)
-            .BorderColor(Color.Cyan1)
-            .AddColumn("[bold]Metric[/]")
-            .AddColumn("[bold]Result[/]");
+        PrintSummary(scanFiles.Count, totalExtracted, undetectedScans.Count, errorCount, totalStopwatch.Elapsed);
 
-        summaryTable.AddRow("Total Scans Processed", $"[bold white]{scanFiles.Count}[/]");
-        summaryTable.AddRow("Photos Extracted", $"[bold green]{totalExtracted}[/]");
-        summaryTable.AddRow("Undetected Scans", undetectedScans.IsEmpty ? "[green]0[/]" : $"[bold yellow]{undetectedScans.Count}[/]");
-        summaryTable.AddRow("Errors", errorCount == 0 ? "[green]0[/]" : $"[bold red]{errorCount}[/]");
-        summaryTable.AddRow("Total Time", $"[bold cyan]{totalStopwatch.Elapsed.TotalSeconds:F2}s[/]");
+        HandleUndetectedReview(options, detectionOptions, metadata, undetectedScans, parallelOptions, scanFiles, totalExtracted);
 
-        AnsiConsole.WriteLine();
-        AnsiConsole.Write(new Panel(summaryTable).Header("[bold cyan]Batch Summary[/]").Border(BoxBorder.Rounded));
+        return errorCount == 0 ? 0 : 1;
+    }
 
-        // Interactive Post-Batch Auto-Tune Review Prompt
+    private static (int Extracted, int Errors) RunBatchPass(
+        IReadOnlyList<string> scanFiles,
+        ParallelOptions parallelOptions,
+        CliOptions options,
+        DetectionOptions detectionOptions,
+        PhotoExportMetadata? metadata,
+        ConcurrentBag<string> undetectedScans)
+    {
+        int extracted = 0;
+        int errors = 0;
+        int completedScans = 0;
+
+        AnsiConsole.Progress()
+            .AutoClear(false)
+            .HideCompleted(false)
+            .Columns(
+                new TaskDescriptionColumn(),
+                new ProgressBarColumn(),
+                new PercentageColumn(),
+                new RemainingTimeColumn(),
+                new SpinnerColumn())
+            .Start(ctx =>
+            {
+                var progressTask = ctx.AddTask("[green]Processing Scans[/]", maxValue: scanFiles.Count);
+
+                Parallel.ForEach(scanFiles, parallelOptions, (scanPath) =>
+                {
+                    string fileName = Path.GetFileName(scanPath);
+                    try
+                    {
+                        using var engine = new PhotoCropperEngine(scanPath);
+                        engine.ApplyOptions(detectionOptions);
+                        engine.DetectPhotos();
+
+                        int photoCount = engine.DetectedPhotos.Count;
+                        bool wasAutoTuned = false;
+                        bool isUnderDetected = photoCount < options.MinExpectedPhotos;
+                        bool isOverDetected = photoCount > options.MaxExpectedPhotos;
+                        bool isLowCoverage = options.AutoAdjustLowCoverage && !options.AutoTune && engine.TotalDetectedAreaRatio < (options.MinCoverageThresholdPercent / 100.0);
+                        bool shouldAutoTune = ((isUnderDetected || isOverDetected) && options.AutoTune) || isLowCoverage;
+
+                        if (shouldAutoTune)
+                        {
+                            var tuneResult = engine.AutoTune(options.MinExpectedPhotos, options.MaxExpectedPhotos);
+                            if (tuneResult.PhotoCount != photoCount || tuneResult.Improved)
+                            {
+                                photoCount = tuneResult.PhotoCount;
+                                wasAutoTuned = true;
+                                isUnderDetected = photoCount < options.MinExpectedPhotos;
+                                isOverDetected = photoCount > options.MaxExpectedPhotos;
+                            }
+                        }
+
+                        if (photoCount > 0)
+                        {
+                            PhotoExporter.SavePhotos(
+                                engine.DetectedPhotos,
+                                scanPath,
+                                options.OutputDirectory,
+                                options.Format,
+                                options.JpegQuality,
+                                options.FileNamePattern,
+                                metadata);
+
+                            Interlocked.Add(ref extracted, photoCount);
+
+                            if (isUnderDetected)
+                            {
+                                undetectedScans.Add(scanPath);
+                                AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ under-detected[/] [bold white]{fileName}[/] -> [yellow]{photoCount}[/] photo(s) (expected >= {options.MinExpectedPhotos})");
+                            }
+                            else if (isOverDetected)
+                            {
+                                undetectedScans.Add(scanPath);
+                                AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ over-detected[/] [bold white]{fileName}[/] -> [yellow]{photoCount}[/] photo(s) (expected <= {options.MaxExpectedPhotos})");
+                            }
+                            else
+                            {
+                                string tag = wasAutoTuned ? "[yellow]⚡ auto-tuned[/]" : "[green]✓ extracted[/]";
+                                AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] {tag} [bold white]{fileName}[/] -> [green]{photoCount}[/] photo(s)");
+                            }
+
+                            if (options.Verbose)
+                            {
+                                for (int p = 0; p < photoCount; p++)
+                                {
+                                    var mat = engine.DetectedPhotos[p];
+                                    AnsiConsole.MarkupLine($"  [dim]-> Photo #{p + 1}: {mat.Width}x{mat.Height} px[/]");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            undetectedScans.Add(scanPath);
+                            AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ 0 photos[/] [bold white]{fileName}[/]");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Interlocked.Increment(ref errors);
+                        AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [bold red]✗ FAILED[/] [bold white]{fileName}[/]: [red]{Markup.Escape(ex.Message)}[/]");
+                    }
+                    finally
+                    {
+                        progressTask.Increment(1);
+                        int done = Interlocked.Increment(ref completedScans);
+                        if (done % 25 == 0)
+                        {
+                            GC.Collect(1, GCCollectionMode.Optimized, false);
+                        }
+                    }
+                });
+            });
+
+        return (extracted, errors);
+    }
+
+    private static (int Extracted, int Recovered, ConcurrentBag<string> Remaining) RunAutoTunePass(
+        List<string> unlist,
+        ParallelOptions parallelOptions,
+        CliOptions options,
+        DetectionOptions detectionOptions,
+        PhotoExportMetadata? metadata)
+    {
+        var remainingUndetected = new ConcurrentBag<string>();
+        int extracted = 0;
+        int recoveredCount = 0;
+
+        AnsiConsole.Progress()
+            .AutoClear(false)
+            .HideCompleted(false)
+            .Columns(
+                new TaskDescriptionColumn(),
+                new ProgressBarColumn(),
+                new PercentageColumn(),
+                new RemainingTimeColumn(),
+                new SpinnerColumn())
+            .Start(ctx =>
+            {
+                var autoTuneTask = ctx.AddTask("[yellow]Auto-Tuning Undetected Scans[/]", maxValue: unlist.Count);
+
+                Parallel.ForEach(unlist, parallelOptions, (scanPath) =>
+                {
+                    string fileName = Path.GetFileName(scanPath);
+                    try
+                    {
+                        using var engine = new PhotoCropperEngine(scanPath);
+                        engine.ApplyOptions(detectionOptions);
+                        var tuneResult = engine.AutoTune(options.MinExpectedPhotos, options.MaxExpectedPhotos);
+
+                        int photoCount = engine.DetectedPhotos.Count;
+                        bool withinRange = photoCount >= options.MinExpectedPhotos && photoCount <= options.MaxExpectedPhotos;
+
+                        if (photoCount > 0 && withinRange)
+                        {
+                            PhotoExporter.SavePhotos(
+                                engine.DetectedPhotos,
+                                scanPath,
+                                options.OutputDirectory,
+                                options.Format,
+                                options.JpegQuality,
+                                options.FileNamePattern,
+                                metadata);
+
+                            Interlocked.Add(ref extracted, photoCount);
+                            Interlocked.Increment(ref recoveredCount);
+
+                            AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [bold green]⚡ Recovered[/] [bold white]{fileName}[/] -> [green]{photoCount}[/] photo(s) (Tolerance: {tuneResult.BestOptions.BackgroundTolerance:0})");
+                        }
+                        else if (photoCount > 0)
+                        {
+                            PhotoExporter.SavePhotos(
+                                engine.DetectedPhotos,
+                                scanPath,
+                                options.OutputDirectory,
+                                options.Format,
+                                options.JpegQuality,
+                                options.FileNamePattern,
+                                metadata);
+
+                            Interlocked.Add(ref extracted, photoCount);
+                            remainingUndetected.Add(scanPath);
+                            AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ Still out of bounds[/] [bold white]{fileName}[/] -> {photoCount} photo(s)");
+                        }
+                        else
+                        {
+                            remainingUndetected.Add(scanPath);
+                            AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [grey]Still 0 photos[/] [bold white]{fileName}[/]");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        remainingUndetected.Add(scanPath);
+                        AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [bold red]✗ FAILED[/] [bold white]{fileName}[/]: [red]{Markup.Escape(ex.Message)}[/]");
+                    }
+                    finally
+                    {
+                        autoTuneTask.Increment(1);
+                    }
+                });
+            });
+
+        return (extracted, recoveredCount, remainingUndetected);
+    }
+
+    private static void HandleUndetectedReview(
+        CliOptions options,
+        DetectionOptions detectionOptions,
+        PhotoExportMetadata? metadata,
+        ConcurrentBag<string> undetectedScans,
+        ParallelOptions parallelOptions,
+        IReadOnlyList<string> scanFiles,
+        int totalExtracted)
+    {
         if (!options.AutoTune && !options.NonInteractive && !undetectedScans.IsEmpty && !Console.IsInputRedirected)
         {
             string underDetectedText = options.MaxExpectedPhotos < int.MaxValue
@@ -179,101 +283,42 @@ internal static class BatchProcessor
 
             if (runAutoTune)
             {
-                var remainingUndetected = new ConcurrentBag<string>();
-                int autoTunedRecovered = 0;
                 var unlist = undetectedScans.ToList();
+                var tuneResult = RunAutoTunePass(unlist, parallelOptions, options, detectionOptions, metadata);
 
-                AnsiConsole.Progress()
-                    .AutoClear(false)
-                    .HideCompleted(false)
-                    .Columns(
-                        new TaskDescriptionColumn(),
-                        new ProgressBarColumn(),
-                        new PercentageColumn(),
-                        new RemainingTimeColumn(),
-                        new SpinnerColumn())
-                    .Start(ctx =>
-                    {
-                        var autoTuneTask = ctx.AddTask("[yellow]Auto-Tuning Undetected Scans[/]", maxValue: unlist.Count);
-
-                        Parallel.ForEach(unlist, parallelOptions, (scanPath) =>
-                        {
-                            string fileName = Path.GetFileName(scanPath);
-                            try
-                            {
-                                using var engine = new PhotoCropperEngine(scanPath);
-                                engine.ApplyOptions(detectionOptions);
-                                var tuneResult = engine.AutoTune(options.MinExpectedPhotos, options.MaxExpectedPhotos);
-
-                                int photoCount = engine.DetectedPhotos.Count;
-                                bool withinRange = photoCount >= options.MinExpectedPhotos && photoCount <= options.MaxExpectedPhotos;
-
-                                if (photoCount > 0 && withinRange)
-                                {
-                                    PhotoExporter.SavePhotos(
-                                        engine.DetectedPhotos,
-                                        scanPath,
-                                        options.OutputDirectory,
-                                        options.Format,
-                                        options.JpegQuality,
-                                        options.FileNamePattern,
-                                        metadata);
-
-                                    Interlocked.Add(ref totalExtracted, photoCount);
-                                    Interlocked.Increment(ref autoTunedRecovered);
-
-                                    AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [bold green]⚡ Recovered[/] [bold white]{fileName}[/] -> [green]{photoCount}[/] photo(s) (Tolerance: {tuneResult.BestOptions.BackgroundTolerance:0})");
-                                }
-                                else if (photoCount > 0)
-                                {
-                                    PhotoExporter.SavePhotos(
-                                        engine.DetectedPhotos,
-                                        scanPath,
-                                        options.OutputDirectory,
-                                        options.Format,
-                                        options.JpegQuality,
-                                        options.FileNamePattern,
-                                        metadata);
-
-                                    Interlocked.Add(ref totalExtracted, photoCount);
-                                    remainingUndetected.Add(scanPath);
-                                    AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ Still out of bounds[/] [bold white]{fileName}[/] -> {photoCount} photo(s)");
-                                }
-                                else
-                                {
-                                    remainingUndetected.Add(scanPath);
-                                    AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [grey]Still 0 photos[/] [bold white]{fileName}[/]");
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                remainingUndetected.Add(scanPath);
-                                AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [bold red]✗ FAILED[/] [bold white]{fileName}[/]: [red]{Markup.Escape(ex.Message)}[/]");
-                            }
-                            finally
-                            {
-                                autoTuneTask.Increment(1);
-                            }
-                        });
-                    });
-
-                WriteUndetectedAuditLog(remainingUndetected, options, scanFiles.Count, scanFiles);
+                WriteUndetectedAuditLog(tuneResult.Remaining, options, scanFiles.Count, scanFiles);
 
                 var reviewTable = new Table()
                     .Border(TableBorder.Rounded)
                     .AddColumn("[bold]Auto-Tune Metric[/]")
                     .AddColumn("[bold]Count[/]");
 
-                reviewTable.AddRow("Scans Recovered", $"[bold green]{autoTunedRecovered}[/]");
-                reviewTable.AddRow("Remaining Undetected", $"[bold yellow]{remainingUndetected.Count}[/]");
-                reviewTable.AddRow("Total Photos Saved", $"[bold cyan]{totalExtracted}[/]");
+                reviewTable.AddRow("Scans Recovered", $"[bold green]{tuneResult.Recovered}[/]");
+                reviewTable.AddRow("Remaining Undetected", $"[bold yellow]{tuneResult.Remaining.Count}[/]");
+                reviewTable.AddRow("Total Photos Saved", $"[bold cyan]{totalExtracted + tuneResult.Extracted}[/]");
 
                 AnsiConsole.WriteLine();
                 AnsiConsole.Write(new Panel(reviewTable).Header("[bold green]Auto-Tune Results[/]").Border(BoxBorder.Rounded));
             }
         }
+    }
 
-        return errorCount == 0 ? 0 : 1;
+    private static void PrintSummary(int scanFilesCount, int totalExtracted, int undetectedCount, int errorCount, TimeSpan elapsed)
+    {
+        var summaryTable = new Table()
+            .Border(TableBorder.Rounded)
+            .BorderColor(Color.Cyan1)
+            .AddColumn("[bold]Metric[/]")
+            .AddColumn("[bold]Result[/]");
+
+        summaryTable.AddRow("Total Scans Processed", $"[bold white]{scanFilesCount}[/]");
+        summaryTable.AddRow("Photos Extracted", $"[bold green]{totalExtracted}[/]");
+        summaryTable.AddRow("Undetected Scans", undetectedCount == 0 ? "[green]0[/]" : $"[bold yellow]{undetectedCount}[/]");
+        summaryTable.AddRow("Errors", errorCount == 0 ? "[green]0[/]" : $"[bold red]{errorCount}[/]");
+        summaryTable.AddRow("Total Time", $"[bold cyan]{elapsed.TotalSeconds:F2}s[/]");
+
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Panel(summaryTable).Header("[bold cyan]Batch Summary[/]").Border(BoxBorder.Rounded));
     }
 
     private static void WriteUndetectedAuditLog(
@@ -328,7 +373,8 @@ internal static class BatchProcessor
             }
         }
     }
-    private static void PrintHeaderPanel(CliOptions options, int scanCount)
+
+    private static void PrintHeader(CliOptions options, int scanCount)
     {
         var grid = new Grid();
         grid.AddColumn(new GridColumn().PadRight(2));
