@@ -572,6 +572,17 @@ public class PhotoCropperEngine : IDisposable
 
     public void RotatePhotoCounterClockwise(int index) => RotatePhotoInternal(index, RotateFlags.Rotate90CounterClockwise);
 
+    
+    public void RedrawBoundingBoxes()
+    {
+        OriginalWithDetected?.Dispose();
+        OriginalWithDetected = Original.Clone();
+        if (AcceptedCandidates != null)
+        {
+            DrawBoundingBoxes(AcceptedCandidates);
+        }
+    }
+
     public void DeletePhoto(int index)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return;
@@ -582,6 +593,19 @@ public class PhotoCropperEngine : IDisposable
         {
             RawDetectedPhotos[index].Dispose();
             RawDetectedPhotos.RemoveAt(index);
+        }
+
+        if (AcceptedCandidates is System.Collections.Generic.List<PhotoCropper.Core.Models.CropCandidate> list && index < list.Count)
+        {
+            list.RemoveAt(index);
+            RedrawBoundingBoxes();
+        }
+        else if (AcceptedCandidates != null && index < AcceptedCandidates.Count)
+        {
+            var newList = new System.Collections.Generic.List<PhotoCropper.Core.Models.CropCandidate>(AcceptedCandidates);
+            newList.RemoveAt(index);
+            AcceptedCandidates = newList;
+            RedrawBoundingBoxes();
         }
     }
 
@@ -600,9 +624,9 @@ public class PhotoCropperEngine : IDisposable
         DetectedPhotos[index] = cropped;
     }
 
-    public void AddManualCrop(Rectangle rect)
+        public void AddManualCrop(Rectangle rect)
     {
-        Mat extracted = PhotoExtractionEngine.ExtractManualCrop(
+        var result = PhotoCropper.Core.Extraction.PhotoExtractionEngine.ExtractManualCrop(
             Original,
             rect,
             CustomBackgroundColorHsv,
@@ -610,13 +634,21 @@ public class PhotoCropperEngine : IDisposable
             CannyLowThreshold,
             CannyHighThreshold);
 
-        if (!extracted.IsEmpty)
+        if (!result.Extracted.IsEmpty)
         {
-            DetectedPhotos.Add(extracted);
+            DetectedPhotos.Add(result.Extracted);
+            if (result.Candidate.HasValue)
+            {
+                var cand = result.Candidate.Value;
+                var newList = new System.Collections.Generic.List<PhotoCropper.Core.Models.CropCandidate>(AcceptedCandidates ?? Array.Empty<PhotoCropper.Core.Models.CropCandidate>());
+                newList.Add(cand);
+                AcceptedCandidates = newList;
+                RedrawBoundingBoxes();
+            }
         }
         else
         {
-            extracted.Dispose();
+            result.Extracted.Dispose();
         }
     }
 

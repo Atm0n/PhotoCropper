@@ -184,7 +184,7 @@ public static class PhotoExtractionEngine
         return result;
     }
 
-    public static Mat ExtractManualCrop(
+    public static (Emgu.CV.Mat Extracted, PhotoCropper.Core.Models.CropCandidate? Candidate) ExtractManualCrop(
         Mat original,
         Rectangle rect,
         MCvScalar? customBgHsv,
@@ -193,10 +193,10 @@ public static class PhotoExtractionEngine
         double cannyHigh)
     {
         ArgumentNullException.ThrowIfNull(original);
-        if (original.IsEmpty || original.Width <= 0 || original.Height <= 0) return new Mat();
+        if (original.IsEmpty || original.Width <= 0 || original.Height <= 0) return (new Emgu.CV.Mat(), null);
 
         rect.Intersect(new Rectangle(Point.Empty, original.Size));
-        if (rect.Width <= 10 || rect.Height <= 10) return new Mat();
+        if (rect.Width <= 10 || rect.Height <= 10) return (new Emgu.CV.Mat(), null);
 
         Rectangle searchRoi = new(rect.X - 20, rect.Y - 20, rect.Width + 40, rect.Height + 40);
         searchRoi.Intersect(new Rectangle(Point.Empty, original.Size));
@@ -241,16 +241,40 @@ public static class PhotoExtractionEngine
                 }
                 using VectorOfPoint globalHull = new(points);
 
-                Mat extracted = ExtractPhotoFromContour(globalHull, original);
+                                Emgu.CV.Mat extracted = ExtractPhotoFromContour(globalHull, original);
                 if (!extracted.IsEmpty)
                 {
-                    return extracted;
+                    var minRect = Emgu.CV.CvInvoke.MinAreaRect(globalHull);
+                    var rectBound = Emgu.CV.CvInvoke.BoundingRectangle(globalHull);
+                    var cand = new PhotoCropper.Core.Models.CropCandidate(
+                        globalHull.ToArray(),
+                        rectBound,
+                        9999.0,
+                        minRect,
+                        Emgu.CV.CvInvoke.ContourArea(globalHull),
+                        1.0, 1.0);
+                    return (extracted, cand);
                 }
                 extracted.Dispose();
             }
         }
 
-        using Mat subMat = new(original, rect);
-        return subMat.Clone();
+                using Mat subMat = new(original, rect);
+        var exactMinRect = new Emgu.CV.Structure.RotatedRect(
+            new System.Drawing.PointF(rect.X + rect.Width / 2f, rect.Y + rect.Height / 2f),
+            new System.Drawing.SizeF(rect.Width, rect.Height),
+            0f);
+        var exactCand = new PhotoCropper.Core.Models.CropCandidate(
+            new[] {
+                new System.Drawing.Point(rect.X, rect.Y),
+                new System.Drawing.Point(rect.Right, rect.Y),
+                new System.Drawing.Point(rect.Right, rect.Bottom),
+                new System.Drawing.Point(rect.X, rect.Bottom)
+            },
+            rect,
+            5000.0, exactMinRect,
+            rect.Width * rect.Height,
+            1.0, 1.0);
+        return (subMat.Clone(), exactCand);
     }
 }
