@@ -286,7 +286,7 @@ public class PhotoCropperEngine : IDisposable
                 // Draw white square for grab handles
                 Rectangle handleRect = new((int)vertices[j].X - 25, (int)vertices[j].Y - 25, 50, 50);
                 handleRect.Intersect(new Rectangle(0, 0, OriginalWithDetected.Width, OriginalWithDetected.Height));
-                
+
                 if (handleRect.Width > 0 && handleRect.Height > 0)
                 {
                     CvInvoke.Rectangle(OriginalWithDetected, handleRect, whiteText, -1);

@@ -87,13 +87,13 @@ public sealed class AutoTuneServiceTests
         using var scan = new Mat(400, 400, DepthType.Cv8U, 3);
         var options = new DetectionOptions();
         using var service = new AutoTuneService(scan, options, minExpected: 2, maxExpected: 2);
-        
+
         var goodCandidates = new List<CropCandidate>
         {
             new() { Area = 100, Rotated = new RotatedRect(new PointF(10, 10), new SizeF(10, 10), 0) },
             new() { Area = 100, Rotated = new RotatedRect(new PointF(30, 30), new SizeF(10, 10), 0) }
         };
-        
+
         var badCandidates = new List<CropCandidate>
         {
             new() { Area = 100, Rotated = new RotatedRect(new PointF(10, 10), new SizeF(10, 10), 0) }
@@ -117,8 +117,8 @@ public sealed class AutoTuneServiceTests
         AutoTuneService.SweepCannyLows.Length.ShouldBeGreaterThan(0);
         AutoTuneService.SweepMinAreaFactors.Length.ShouldBeGreaterThan(0);
 
-        int totalCombos = AutoTuneService.SweepTolerances.Length * 
-                          AutoTuneService.SweepCannyLows.Length * 
+        int totalCombos = AutoTuneService.SweepTolerances.Length *
+                          AutoTuneService.SweepCannyLows.Length *
                           AutoTuneService.SweepMinAreaFactors.Length;
 
         // Ensure we are doing an exhaustive sweep

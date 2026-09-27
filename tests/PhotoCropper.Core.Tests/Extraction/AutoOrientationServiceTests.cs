@@ -3,9 +3,7 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using PhotoCropper.Core.Extraction;
 using PhotoCropper.TestHelpers;
-using Shouldly;
 using System.Drawing;
-using Xunit;
 
 namespace PhotoCropper.Core.Tests.Extraction;
 

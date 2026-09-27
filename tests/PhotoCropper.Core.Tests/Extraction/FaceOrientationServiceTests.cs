@@ -2,9 +2,6 @@ using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using PhotoCropper.Core.Extraction;
-using Shouldly;
-using System.Drawing;
-using Xunit;
 
 namespace PhotoCropper.Core.Tests.Extraction;
 
@@ -90,7 +87,7 @@ public class FaceOrientationServiceTests
         mockData[14] = 0.9f; // Confidence score
         mockData[2] = 100f;  // Width
         mockData[3] = 100f;  // Height
-        
+
         // Right eye
         mockData[4] = 30f;
         mockData[5] = 40f;
@@ -134,7 +131,7 @@ public class FaceOrientationServiceTests
         mockData[14] = 0.9f; // Confidence score
         mockData[2] = 100f;  // Width
         mockData[3] = 100f;  // Height
-        
+
         // Face turned 90 degrees (eyes stacked vertically)
         // Right eye
         mockData[4] = 40f;
