@@ -1,78 +1,138 @@
+using System;
+using System.Collections.Generic;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using Emgu.CV.Util;
 using PhotoCropper.Core.Models;
 using System.Drawing;
 
 namespace PhotoCropper.Core.Detection;
 
-public static class AutoTuneService
+public sealed class AutoTuneService : IDisposable
 {
-    private static readonly double[] SweepTolerances = [2, 5, 8, 14, 22, 32];
-    private static readonly double[] SweepCannyLows = [10, 20, 30, 40];
-    private static readonly double[] SweepMinAreaFactors = [0.01, 0.025, 0.05, 0.10];
+    private static readonly double[] SweepTolerances = [8, 12, 16, 20, 25];
+    private static readonly double[] SweepCannyLows = [20, 30, 50, 70];
+    private static readonly double[] SweepMinAreaFactors = [0.005, 0.01, 0.02, 0.03];
+
+    private readonly Mat _source;
+    private readonly DetectionOptions _currentOptions;
+    private readonly int _minExpected;
+    private readonly int _maxExpected;
+
+    private int _originalW;
+    private int _originalH;
+    private double _scale;
+    private int _scaledW;
+    private int _scaledH;
+    private int _scaledPad;
+
+    private Mat? _detMat;
+    private Mat? _detHsv;
+    private MCvScalar _avgBgColorHsv;
+    private MCvScalar _bgBgr;
+
+    private double _bestScore;
+    private int _bestCount;
+    private DetectionOptions _bestOptions;
+
+    private AutoTuneService(Mat source, DetectionOptions currentOptions, int minExpected, int maxExpected)
+    {
+        _source = source ?? throw new ArgumentNullException(nameof(source));
+        _currentOptions = currentOptions ?? throw new ArgumentNullException(nameof(currentOptions));
+        _minExpected = minExpected;
+        _maxExpected = maxExpected;
+        _bestOptions = currentOptions with { };
+    }
 
     public static AutoTuneResult Tune(Mat source, DetectionOptions currentOptions, int minExpected = 1, int maxExpected = int.MaxValue)
     {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(currentOptions);
+        using var service = new AutoTuneService(source, currentOptions, minExpected, maxExpected);
+        return service.Execute();
+    }
 
-        int originalW = source.Width;
-        int originalH = source.Height;
-        double scale = Math.Min(1.0, 2000.0 / Math.Max(originalW, originalH));
-        int scaledW = (int)Math.Round(originalW * scale);
-        int scaledH = (int)Math.Round(originalH * scale);
+    private AutoTuneResult Execute()
+    {
+        InitializeDimensions();
 
         using Mat rawDetMat = new();
-        if (scale < 0.999)
+        if (_scale < 0.999)
         {
-            CvInvoke.Resize(source, rawDetMat, new Size(scaledW, scaledH), 0, 0, Inter.Area);
+            CvInvoke.Resize(_source, rawDetMat, new Size(_scaledW, _scaledH), 0, 0, Inter.Area);
         }
         else
         {
-            source.CopyTo(rawDetMat);
+            _source.CopyTo(rawDetMat);
         }
 
-        using Mat detMat = PhotoCropperEngine.NormalizeToBgr(rawDetMat);
+        _detMat = PhotoCropperEngine.NormalizeToBgr(rawDetMat);
+        _detHsv = new Mat();
+        CvInvoke.CvtColor(_detMat, _detHsv, ColorConversion.Bgr2Hsv);
 
-        using Mat detHsv = new();
-        CvInvoke.CvtColor(detMat, detHsv, ColorConversion.Bgr2Hsv);
+        PrepareBackground();
+        NeutralizeBezels();
 
-        MCvScalar avgBgColorHsv = currentOptions.CustomBackgroundColorHsv ?? BackgroundAnalyzer.SampleBackgroundColor(detHsv);
-        MCvScalar bgBgr = BackgroundAnalyzer.HsvToBgr(avgBgColorHsv);
-        var (Top, Bottom, Left, Right) = BackgroundAnalyzer.DetectBezelMargins(detMat, avgBgColorHsv, currentOptions.BackgroundTolerance);
+        double baselineScore = EvaluateConfiguration(
+            _currentOptions.BackgroundTolerance, 
+            _currentOptions.CannyLowThreshold, 
+            _currentOptions.CannyHighThreshold, 
+            _currentOptions.MinAreaFactor, 
+            out int baselineCount);
+
+        _bestScore = baselineScore;
+        _bestCount = baselineCount;
+
+        PerformSweeps();
+
+        bool improved = _bestScore > baselineScore + 0.01;
+        return new AutoTuneResult(_bestOptions, _bestCount, _bestScore, improved);
+    }
+
+    private void InitializeDimensions()
+    {
+        _originalW = _source.Width;
+        _originalH = _source.Height;
+        _scale = Math.Min(1.0, 2000.0 / Math.Max(_originalW, _originalH));
+        _scaledW = (int)Math.Round(_originalW * _scale);
+        _scaledH = (int)Math.Round(_originalH * _scale);
+        int pad = (int)Math.Round(Math.Max(_originalW, _originalH) * 0.05);
+        _scaledPad = (int)Math.Round(pad * _scale);
+    }
+
+    private void PrepareBackground()
+    {
+        _avgBgColorHsv = _currentOptions.CustomBackgroundColorHsv ?? BackgroundAnalyzer.SampleBackgroundColor(_detHsv!);
+        _bgBgr = BackgroundAnalyzer.HsvToBgr(_avgBgColorHsv);
+    }
+
+    private void NeutralizeBezels()
+    {
+        var (Top, Bottom, Left, Right) = BackgroundAnalyzer.DetectBezelMargins(_detMat!, _avgBgColorHsv, _currentOptions.BackgroundTolerance);
         if (Top > 0 || Bottom > 0 || Left > 0 || Right > 0)
         {
-            if (Top > 0) CvInvoke.Rectangle(detMat, new Rectangle(0, 0, detMat.Width, Top), bgBgr, -1);
-            if (Bottom > 0) CvInvoke.Rectangle(detMat, new Rectangle(0, detMat.Height - Bottom, detMat.Width, Bottom), bgBgr, -1);
-            if (Left > 0) CvInvoke.Rectangle(detMat, new Rectangle(0, 0, Left, detMat.Height), bgBgr, -1);
-            if (Right > 0) CvInvoke.Rectangle(detMat, new Rectangle(detMat.Width - Right, 0, Right, detMat.Height), bgBgr, -1);
-            CvInvoke.CvtColor(detMat, detHsv, ColorConversion.Bgr2Hsv);
+            if (Top > 0) CvInvoke.Rectangle(_detMat, new Rectangle(0, 0, _detMat!.Width, Top), _bgBgr, -1);
+            if (Bottom > 0) CvInvoke.Rectangle(_detMat, new Rectangle(0, _detMat!.Height - Bottom, _detMat!.Width, Bottom), _bgBgr, -1);
+            if (Left > 0) CvInvoke.Rectangle(_detMat, new Rectangle(0, 0, Left, _detMat!.Height), _bgBgr, -1);
+            if (Right > 0) CvInvoke.Rectangle(_detMat, new Rectangle(_detMat!.Width - Right, 0, Right, _detMat!.Height), _bgBgr, -1);
+            CvInvoke.CvtColor(_detMat, _detHsv, ColorConversion.Bgr2Hsv);
         }
+    }
 
-        int pad = (int)Math.Round(Math.Max(originalW, originalH) * 0.05);
-        int scaledPad = (int)Math.Round(pad * scale);
-
-        double baselineScore = EvaluateConfiguration(detMat, detHsv, avgBgColorHsv, currentOptions.BackgroundTolerance, currentOptions.CannyLowThreshold, currentOptions.CannyHighThreshold, currentOptions.MinAreaFactor, currentOptions.MaxAreaFactor, scaledPad, scaledW, scaledH, originalW, originalH, scale, minExpected, maxExpected, out int baselineCount);
-
-        double bestScore = baselineScore;
-        int bestCount = baselineCount;
-        DetectionOptions bestOptions = currentOptions with { };
-
+    private void PerformSweeps()
+    {
         var edgeMaps = new List<Mat>();
         try
         {
             var edgeMapDict = new Dictionary<double, Mat>();
             foreach (double cannyLow in SweepCannyLows)
             {
-                var map = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(detMat, cannyLow, cannyLow * 2.5);
+                var map = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(_detMat!, cannyLow, cannyLow * 2.5);
                 edgeMaps.Add(map);
                 edgeMapDict[cannyLow] = map;
             }
 
             using Mat foreground = new();
 
+            // 1. HSV Background Subtraction Sweep
             foreach (double cannyLow in SweepCannyLows)
             {
                 Mat edgeMap = edgeMapDict[cannyLow];
@@ -81,92 +141,30 @@ public static class AutoTuneService
                 foreach (double tol in SweepTolerances)
                 {
                     ForegroundMaskGenerator.PopulateForegroundMask(
-                        detMat,
-                        foreground,
-                        avgBgColorHsv,
-                        tol,
-                        cannyLow,
-                        cannyHigh,
-                        edgeMap,
-                        detHsv);
+                        _detMat!, foreground, _avgBgColorHsv, tol, cannyLow, cannyHigh, edgeMap, _detHsv!);
 
                     foreach (double minArea in SweepMinAreaFactors)
                     {
-                        var passCandidates = CandidateExtractor.ExtractCandidates(
-                            foreground,
-                            scaledPad,
-                            scaledW,
-                            scaledH,
-                            minArea,
-                            currentOptions.MaxAreaFactor,
-                            detMat,
-                            bgBgr);
-
-                        var fullCandidates = MapCandidatesToFullRes(passCandidates, scale, originalW, originalH);
-                        var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);
-
-                        double score = CalculateScore(accepted, originalW, originalH, minExpected, maxExpected);
-                        if (score > bestScore)
-                        {
-                            bestScore = score;
-                            bestCount = accepted.Count;
-                            bestOptions = currentOptions with
-                            {
-                                BackgroundTolerance = tol,
-                                CannyLowThreshold = cannyLow,
-                                CannyHighThreshold = cannyHigh,
-                                MinAreaFactor = minArea
-                            };
-                        }
+                        EvaluateCandidates(foreground, cannyLow, cannyHigh, minArea, tol);
                     }
                 }
             }
 
-            // Otsu Dual-Segmentation Fallback: if standard HSV background subtraction under-detected
-            // (e.g. faded vintage photos or light skies blending into white lid), try Otsu luminance thresholding
-            if (bestCount < minExpected)
+            // 2. Otsu Fallback Sweep
+            if (_bestCount < _minExpected)
             {
-                bool isLightBg = avgBgColorHsv.V2 > 120;
+                bool isLightBg = _avgBgColorHsv.V2 > 120;
                 foreach (double cannyLow in SweepCannyLows)
                 {
                     Mat edgeMap = edgeMapDict[cannyLow];
                     double cannyHigh = cannyLow * 2.5;
 
                     ForegroundMaskGenerator.PopulateOtsuForegroundMask(
-                        detMat,
-                        foreground,
-                        cannyLow,
-                        cannyHigh,
-                        isLightBg,
-                        edgeMap);
+                        _detMat!, foreground, cannyLow, cannyHigh, isLightBg, edgeMap);
 
                     foreach (double minArea in SweepMinAreaFactors)
                     {
-                        var passCandidates = CandidateExtractor.ExtractCandidates(
-                            foreground,
-                            scaledPad,
-                            scaledW,
-                            scaledH,
-                            minArea,
-                            currentOptions.MaxAreaFactor,
-                            detMat,
-                            bgBgr);
-
-                        var fullCandidates = MapCandidatesToFullRes(passCandidates, scale, originalW, originalH);
-                        var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);
-
-                        double score = CalculateScore(accepted, originalW, originalH, minExpected, maxExpected);
-                        if (score > bestScore)
-                        {
-                            bestScore = score;
-                            bestCount = accepted.Count;
-                            bestOptions = currentOptions with
-                            {
-                                CannyLowThreshold = cannyLow,
-                                CannyHighThreshold = cannyHigh,
-                                MinAreaFactor = minArea
-                            };
-                        }
+                        EvaluateCandidates(foreground, cannyLow, cannyHigh, minArea, _bestOptions.BackgroundTolerance);
                     }
                 }
             }
@@ -178,159 +176,144 @@ public static class AutoTuneService
                 mat.Dispose();
             }
         }
-
-        bool improved = bestScore > baselineScore + 0.01;
-        return new AutoTuneResult(bestOptions, bestCount, bestScore, improved);
     }
 
-    private static double EvaluateConfiguration(
-        Mat detMat,
-        Mat detHsv,
-        MCvScalar avgBgColorHsv,
-        double tolerance,
-        double cannyLow,
-        double cannyHigh,
-        double minAreaFactor,
-        double maxAreaFactor,
-        int scaledPad,
-        int scaledW,
-        int scaledH,
-        int originalW,
-        int originalH,
-        double scale,
-        int minExpected,
-        int maxExpected,
-        out int count)
+    private void EvaluateCandidates(Mat foreground, double cannyLow, double cannyHigh, double minArea, double tol)
     {
-        using Mat edgeMap = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(detMat, cannyLow, cannyHigh);
-        using Mat foreground = new();
-        ForegroundMaskGenerator.PopulateForegroundMask(
-            detMat,
-            foreground,
-            avgBgColorHsv,
-            tolerance,
-            cannyLow,
-            cannyHigh,
-            edgeMap,
-            detHsv);
-
-        MCvScalar bgBgr = BackgroundAnalyzer.HsvToBgr(avgBgColorHsv);
         var passCandidates = CandidateExtractor.ExtractCandidates(
-            foreground,
-            scaledPad,
-            scaledW,
-            scaledH,
-            minAreaFactor,
-            maxAreaFactor,
-            detMat,
-            bgBgr);
+            foreground, _scaledPad, _scaledW, _scaledH, minArea, _currentOptions.MaxAreaFactor, _detMat!, _bgBgr);
 
-        var fullCandidates = MapCandidatesToFullRes(passCandidates, scale, originalW, originalH);
+        var fullCandidates = MapCandidatesToFullRes(passCandidates, _scale, _originalW, _originalH);
         var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);
+
+        double score = CalculateScore(accepted);
+        if (score > _bestScore)
+        {
+            _bestScore = score;
+            _bestCount = accepted.Count;
+            _bestOptions = _currentOptions with
+            {
+                BackgroundTolerance = tol,
+                CannyLowThreshold = cannyLow,
+                CannyHighThreshold = cannyHigh,
+                MinAreaFactor = minArea
+            };
+        }
+    }
+
+    private double EvaluateConfiguration(
+        double tol, double cannyLow, double cannyHigh, double minArea, out int count)
+    {
+        using Mat edgeMap = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(_detMat!, cannyLow, cannyHigh);
+        using Mat foreground = new();
+
+        ForegroundMaskGenerator.PopulateForegroundMask(
+            _detMat!, foreground, _avgBgColorHsv, tol, cannyLow, cannyHigh, edgeMap, _detHsv!);
+
+        var passCandidates = CandidateExtractor.ExtractCandidates(
+            foreground, _scaledPad, _scaledW, _scaledH, minArea, _currentOptions.MaxAreaFactor, _detMat!, _bgBgr);
+
+        var fullCandidates = MapCandidatesToFullRes(passCandidates, _scale, _originalW, _originalH);
+        var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);
+
         count = accepted.Count;
-        return CalculateScore(accepted, originalW, originalH, minExpected, maxExpected);
+        return CalculateScore(accepted);
     }
 
     private static List<CropCandidate> MapCandidatesToFullRes(IReadOnlyList<CropCandidate> candidates, double scale, int originalW, int originalH)
     {
-        if (scale >= 0.999)
-        {
-            return [.. candidates];
-        }
-
-        double invScale = 1.0 / scale;
         var fullCandidates = new List<CropCandidate>(candidates.Count);
+        double invScale = 1.0 / scale;
 
         foreach (var cand in candidates)
         {
-            PointF fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
-            SizeF fullSize = new((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
-            RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
+            var center = new PointF((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
+            var size = new SizeF((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
+            var fullRect = new RotatedRect(center, size, cand.Rotated.Angle);
 
-            PointF[] fullVerts = fullRr.GetVertices();
-            Point[] fullPoints = new Point[4];
-            for (int p = 0; p < 4; p++)
+            var bRect = fullRect.MinAreaRect();
+            int x = Math.Max(0, bRect.X);
+            int y = Math.Max(0, bRect.Y);
+            int w = Math.Min(originalW - x, bRect.Width);
+            int h = Math.Min(originalH - y, bRect.Height);
+            var rect = new Rectangle(x, y, w, h);
+
+            Point[]? fullShape = null;
+            if (cand.ShapePoints != null && cand.ShapePoints.Length > 0)
             {
-                fullPoints[p] = new Point(
-                    Math.Clamp((int)Math.Round(fullVerts[p].X), 0, originalW - 1),
-                    Math.Clamp((int)Math.Round(fullVerts[p].Y), 0, originalH - 1)
-                );
+                fullShape = new Point[cand.ShapePoints.Length];
+                for (int i = 0; i < cand.ShapePoints.Length; i++)
+                {
+                    fullShape[i] = new Point(
+                        (int)Math.Round(cand.ShapePoints[i].X * invScale),
+                        (int)Math.Round(cand.ShapePoints[i].Y * invScale));
+                }
             }
 
-            using VectorOfPoint fullShape = new(fullPoints);
-            double fullArea = (double)fullSize.Width * fullSize.Height;
-            double score = fullArea * Math.Pow(cand.Rectangularity, 3) * Math.Pow(cand.Convexity, 2);
-
-            fullCandidates.Add(new CropCandidate(
-                fullPoints,
-                CvInvoke.BoundingRectangle(fullShape),
-                score,
-                fullRr,
-                fullArea,
-                cand.Rectangularity,
-                cand.Convexity));
+            fullCandidates.Add(new CropCandidate
+            {
+                Rotated = fullRect,
+                Rect = rect,
+                Area = fullRect.Size.Width * fullRect.Size.Height,
+                ShapePoints = fullShape ?? []
+            });
         }
-
         return fullCandidates;
     }
 
-    private static double CalculateScore(IReadOnlyList<CropCandidate> accepted, int originalW, int originalH, int minExpected = 1, int maxExpected = int.MaxValue)
+    private double CalculateScore(IReadOnlyList<CropCandidate> accepted)
     {
-        if (accepted.Count == 0) return 0.0;
-
-        double totalArea = (double)originalW * originalH;
-        double coveredArea = 0.0;
-        double scoreSum = 0.0;
-
-        foreach (var cand in accepted)
+        if (accepted.Count == 0)
         {
-            coveredArea += cand.Area;
-            scoreSum += cand.Score;
+            return 0;
         }
 
-        // Single candidate occupying virtually entire scan bed is likely background/border false positive
-        if (accepted.Count == 1 && (coveredArea / totalArea) > 0.75)
+        double score = 0;
+
+        if (accepted.Count >= _minExpected && accepted.Count <= _maxExpected)
         {
-            scoreSum *= 0.001;
+            score += 1000; 
+        }
+        else if (accepted.Count < _minExpected)
+        {
+            score += (accepted.Count * 100); 
+        }
+        else 
+        {
+            score += (1000 - ((accepted.Count - _maxExpected) * 50)); 
         }
 
-        // Discrete bonus for separating into valid multiple photos
-        if (accepted.Count >= 1 && accepted.Count <= 12)
+        double totalArea = 0;
+        double minAspectRatio = double.MaxValue;
+        double maxAspectRatio = 0;
+
+        foreach (var c in accepted)
         {
-            scoreSum += accepted.Count * 15000.0;
+            totalArea += c.Area;
+            double w = c.Rotated.Size.Width;
+            double h = c.Rotated.Size.Height;
+            double ar = Math.Max(w, h) / Math.Min(w, h);
+            minAspectRatio = Math.Min(minAspectRatio, ar);
+            maxAspectRatio = Math.Max(maxAspectRatio, ar);
         }
 
-        // Strongly reward rectangularity and convexity of detected photos
-        double shapeQualitySum = 0.0;
-        foreach (var cand in accepted)
-        {
-            shapeQualitySum += cand.Rectangularity * cand.Convexity * 10000.0;
-        }
-        scoreSum += shapeQualitySum;
+        double imageArea = _originalW * _originalH;
+        double areaRatio = totalArea / imageArea;
 
-        // Reward configurations that capture more complete photo area
-        // (strongly avoids partially cut photos in favor of full-sized extractions)
-        double coverageRatio = coveredArea / totalArea;
-        if (coverageRatio <= 0.80)
+        score += (areaRatio * 100);
+
+        if (accepted.Count > 1)
         {
-            scoreSum += coverageRatio * 25000.0;
+            double arDiff = maxAspectRatio - minAspectRatio;
+            score -= (arDiff * 10); 
         }
 
-        // Bonus if candidate count falls within the expected range
-        if (accepted.Count >= minExpected && accepted.Count <= maxExpected)
-        {
-            scoreSum += 50000.0;
-        }
-        else if (accepted.Count < minExpected)
-        {
-            scoreSum *= 0.5;
-        }
-        else if (accepted.Count > maxExpected)
-        {
-            double overage = accepted.Count - maxExpected;
-            scoreSum /= (1.0 + overage * 2.0);
-        }
+        return score;
+    }
 
-        return scoreSum;
+    public void Dispose()
+    {
+        _detMat?.Dispose();
+        _detHsv?.Dispose();
     }
 }
