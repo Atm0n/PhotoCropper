@@ -4,8 +4,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:gui="using:PhotoCropper.Gui"
 		WindowState="Maximized"
-		MinWidth="850"
-		MinHeight="550"
+		MinWidth="1200"
+		MinHeight="650"
         x:Class="PhotoCropper.Gui.MainWindow"
 		Background="{DynamicResource AppBackgroundBrush}"
 		Foreground="{DynamicResource AppTextPrimaryBrush}"
@@ -23,15 +23,9 @@
 						<MenuItem Header="{DynamicResource BtnScan}" InputGesture="F5" Click="BtnScan_Click"/>
 						<MenuItem Header="{DynamicResource TitleScannerConfig}" Click="BtnScannerConfig_Click"/>
 						<Separator/>
-
-						<MenuItem Header="{DynamicResource BtnSaveResults}" InputGesture="Ctrl+S" Click="BtnSaveImages_Click"/>
-						<MenuItem Header="{DynamicResource TitleExportSettings}" InputGesture="Ctrl+Shift+S" Click="BtnSaveSettings_Click"/>
-						<Separator/>
 						<MenuItem Header="{DynamicResource BtnWorkDir}" Click="BtnWorkDir_Click"/>
-
 						<Separator/>
-						<MenuItem Header="{DynamicResource BtnDeleteScan}" InputGesture="Shift+Delete" Click="BtnDeleteScan_Click"/>
-						<MenuItem Header="{DynamicResource BtnReset}" Click="BtnReset_Click"/>
+						<MenuItem Header="{DynamicResource BtnSaveResults}" InputGesture="Ctrl+S" Click="BtnSaveImages_Click"/>
 						<Separator/>
 						<MenuItem Header="Exit" InputGesture="Alt+F4" Click="MenuExit_Click"/>
 					</MenuItem>
@@ -44,13 +38,11 @@
 						<MenuItem Header="{DynamicResource BtnSelectAll}" InputGesture="Ctrl+A" Click="BtnSelectAll_Click"/>
 						<MenuItem Header="{DynamicResource BtnClearSelection}" InputGesture="Escape" Click="BtnClearSelection_Click"/>
 						<Separator/>
-						<MenuItem Header="{DynamicResource BtnRotate}" InputGesture="R" Click="BtnRotate_Click"/>
+						<MenuItem Header="{DynamicResource BtnDeleteScan}" InputGesture="Shift+Delete" Click="BtnDeleteScan_Click"/>
 						<MenuItem Header="{DynamicResource BtnDelete}" InputGesture="Delete" Click="BtnDelete_Click"/>
-						<MenuItem Header="{DynamicResource BtnRefine}" Click="BtnRefine_Click"/>
 						<Separator/>
-						<MenuItem Header="{DynamicResource BtnResetBackground}" Click="BtnResetBackground_Click"/>
-						<MenuItem Header="{DynamicResource BtnAutoTune}" Click="BtnAutoTune_Click"/>
-						<MenuItem Header="{DynamicResource LblAutoTuneOnPass}" Click="MenuAutoTuneOnPass_Click"/>
+						<MenuItem Header="{DynamicResource BtnRotate}" InputGesture="R" Click="BtnRotate_Click"/>
+						<MenuItem Header="{DynamicResource BtnRefine}" Click="BtnRefine_Click"/>
 					</MenuItem>
 
 					<!-- View Menu -->
@@ -62,19 +54,25 @@
 						<MenuItem Header="{DynamicResource BtnNextScan}" InputGesture="Down" Click="BtnNextScan_Click"/>
 						<MenuItem Header="{DynamicResource BtnPreviousCroppedImage}" InputGesture="Left" Click="BtnPreviousCroppedImage_Click"/>
 						<MenuItem Header="{DynamicResource BtnNextCroppedImage}" InputGesture="Right" Click="BtnNextCroppedImage_Click"/>
-						<Separator/>
-						<MenuItem Header="{DynamicResource TitleExportSettings}" Click="BtnSaveSettings_Click"/>
-
 					</MenuItem>
 
-					<!-- Theme Menu -->
-					<MenuItem Header="{DynamicResource MenuTheme}" x:Name="menuAltTheme"/>
+					<!-- Tools Menu -->
+					<MenuItem Header="_Tools">
+						<MenuItem Header="{DynamicResource BtnAutoTune}" Click="BtnAutoTune_Click"/>
+						<MenuItem Header="{DynamicResource LblAutoTuneOnPass}" Click="MenuAutoTuneOnPass_Click"/>
+						<Separator/>
+						<MenuItem Header="{DynamicResource BtnResetBackground}" Click="BtnResetBackground_Click"/>
+						<MenuItem Header="{DynamicResource BtnReset}" Click="BtnReset_Click"/>
+					</MenuItem>
 
-					<!-- Detection Box Color Menu -->
-					<MenuItem Header="{DynamicResource MenuDetectionColor}" x:Name="menuAltDetectionColor"/>
-
-					<!-- Language Menu -->
-					<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuAltLanguage"/>
+					<!-- Settings Menu -->
+					<MenuItem Header="_Settings">
+						<MenuItem Header="{DynamicResource TitleExportSettings}" Click="BtnSaveSettings_Click"/>
+						<Separator/>
+						<MenuItem Header="{DynamicResource MenuTheme}" x:Name="menuAltTheme"/>
+						<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuAltLanguage"/>
+						<MenuItem Header="{DynamicResource MenuDetectionColor}" x:Name="menuAltDetectionColor"/>
+					</MenuItem>
 
 					<!-- Help Menu -->
 					<MenuItem Header="_Help">
@@ -133,50 +131,15 @@
 						</StackPanel>
 					</Border>
 
-					<!-- Group 3: Detection Tuning -->
-					<Border Grid.Column="1" HorizontalAlignment="Center" Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="6,3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="3,2">
-						<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-							<TextBlock Text="{DynamicResource LblDetectionSensitivity}" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-							<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="50" Width="60" 
-									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
-							<TextBlock Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" VerticalAlignment="Center" Width="26" FontSize="11" FontWeight="Bold"/>
 
-							<Rectangle Width="1" Height="18" Fill="{DynamicResource AppSeparatorBrush}" Margin="2,0"/>
-
-							<TextBlock Text="{DynamicResource LblMinPhotoSize}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-							<Slider x:Name="sldMinArea" Minimum="5" Maximum="50" Value="25" Width="50" 
-									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
-							<TextBlock Text="{Binding #sldMinArea.Value, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Width="26"/>
-							
-							<TextBlock Text="{DynamicResource LblMaxPhotoSize}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-							<Slider x:Name="sldMaxArea" Minimum="20" Maximum="100" Value="90" Width="50" 
-									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
-							<TextBlock Text="{Binding #sldMaxArea.Value, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Width="26"/>
-							
-							<TextBlock Text="{DynamicResource LblEdgeThreshold}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-							<Slider x:Name="sldEdge" Minimum="1" Maximum="100" Value="20" Width="40" 
-									PointerCaptureLost="SldSensitivity_PointerCaptureLost" VerticalAlignment="Center" Focusable="False"/>
-							<TextBlock Text="{Binding #sldEdge.Value, StringFormat='{}{0:0}'}" FontSize="11" VerticalAlignment="Center" Width="20"/>
-						</StackPanel>
-					</Border>
-					
-					<!-- Group 4: Processing Filters -->
+					<!-- Group 5: Reset Defaults -->
 					<Border Grid.Column="2" HorizontalAlignment="Right" Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="6,3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="3,2">
-						<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-							<CheckBox x:Name="chkAutoOrient" Content="{DynamicResource LblAutoOrient}" ToolTip.Tip="{DynamicResource TipAutoOrient}" IsCheckedChanged="ChkAutoOrient_IsCheckedChanged" VerticalAlignment="Center" FontSize="11" Focusable="False"/>
-							<CheckBox x:Name="chkRestoreColors" Content="{DynamicResource LblRestoreColors}" ToolTip.Tip="{DynamicResource TipRestoreColors}" IsCheckedChanged="ChkRestoreColors_IsCheckedChanged" VerticalAlignment="Center" FontSize="11" Focusable="False"/>
-							<CheckBox x:Name="chkRemoveDust" Content="{DynamicResource LblRemoveDust}" ToolTip.Tip="{DynamicResource TipRemoveDust}" IsCheckedChanged="ChkRemoveDust_IsCheckedChanged" VerticalAlignment="Center" FontSize="11" Focusable="False"/>
-							<CheckBox x:Name="chkAutoTuneOnPass" Content="{DynamicResource LblAutoTuneOnPass}" ToolTip.Tip="{DynamicResource TipAutoTuneOnPass}" IsCheckedChanged="ChkAutoTuneOnPass_IsCheckedChanged" VerticalAlignment="Center" FontSize="11" Focusable="False"/>
-							<CheckBox x:Name="chkAutoAdjustOnLowCoverage" Content="{DynamicResource LblAutoAdjustOnLowCoverage}" ToolTip.Tip="{DynamicResource TipAutoAdjustOnLowCoverage}" IsCheckedChanged="ChkAutoAdjustOnLowCoverage_IsCheckedChanged" VerticalAlignment="Center" FontSize="11" Focusable="False"/>
-
-							<Rectangle Width="1" Height="16" Fill="{DynamicResource AppSeparatorBrush}" Margin="2,0"/>
-							<Button x:Name="btnResetDefaults" Click="BtnResetDefaults_Click" Padding="8,5" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" VerticalAlignment="Center" Focusable="False" CornerRadius="4">
-								<StackPanel Orientation="Horizontal" Spacing="4">
-									<TextBlock Text="↺" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
-									<TextBlock Text="{DynamicResource BtnReset}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
-								</StackPanel>
-							</Button>
-						</StackPanel>
+						<Button x:Name="btnResetDefaults" Click="BtnResetDefaults_Click" Padding="8,5" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" VerticalAlignment="Center" Focusable="False" CornerRadius="4">
+							<StackPanel Orientation="Horizontal" Spacing="4">
+								<TextBlock Text="↺" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+								<TextBlock Text="{DynamicResource BtnReset}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
 					</Border>
 				</Grid>
 			</StackPanel>
@@ -201,7 +164,6 @@
 				</StackPanel>
 
 				<StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0" Spacing="8" VerticalAlignment="Center">
-					<TextBlock x:Name="lblPhotoInfo" Text="" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AppAccentBrush}"/>
 
 					<Border Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="4" Padding="2,0" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 						<Menu Background="Transparent" VerticalAlignment="Center" Margin="0" Focusable="False" IsTabStop="False" KeyboardNavigation.TabNavigation="None">
@@ -226,37 +188,52 @@
 		</Border>
 
 		<!-- Main Workspace -->
-		<Grid ColumnDefinitions="*, Auto, *">
+		<Grid>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*" MinWidth="640"/>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="*" MinWidth="550"/>
+			</Grid.ColumnDefinitions>
 			<!-- Left: Original Scan & Empty State Dropzone -->
-			<Border Grid.Column="0" Margin="10,10,4,10" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="8" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-				<Grid RowDefinitions="Auto, *">
-					<DockPanel Grid.Row="0" Margin="10,5">
-						<Border DockPanel.Dock="Right" Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+			<Grid Grid.Column="0" RowDefinitions="Auto, *">
+				<DockPanel Grid.Row="0" Margin="15,0,10,5" VerticalAlignment="Center">
+					<StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+						<Border x:Name="bdrLookaheadStatus" IsVisible="False" Background="{DynamicResource AppSubtleCardBrush}" BorderBrush="#3db85a" BorderThickness="1" CornerRadius="4" Padding="5,2" VerticalAlignment="Center" ToolTip.Tip="Pre-processed in background thread for 0ms navigation">
+							<TextBlock x:Name="txtLookaheadBadge" Text="{DynamicResource LblLookaheadPreloaded}" FontSize="10" FontWeight="Bold" Foreground="#3db85a" VerticalAlignment="Center"/>
+						</Border>
+						<Border Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
 							<StackPanel Orientation="Horizontal" Spacing="4">
 								<TextBlock Text="🎯" FontSize="10" VerticalAlignment="Center"/>
 								<TextBlock x:Name="lblDetectionCoverage" Text="" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
 							</StackPanel>
 						</Border>
-						<StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="8">
-							<TextBlock Text="{DynamicResource HeaderOriginal}" VerticalAlignment="Center" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AppTextMutedBrush}"/>
-							<Border Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="3,2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-								<StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
-									<Button x:Name="btnPrevScan" Click="BtnPrevScan_Click" Padding="6,4" Background="Transparent" BorderThickness="0" Focusable="False" ToolTip.Tip="Previous Scan (PageUp / ↑)">
-										<TextBlock Text="◀" FontSize="10"/>
-									</Button>
-									<TextBlock x:Name="txtFileCounter" Text="{DynamicResource TxtNoFiles}" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center" Margin="4,0" FontSize="11"/>
-									<Border x:Name="bdrLookaheadStatus" IsVisible="False" Background="{DynamicResource AppSubtleCardBrush}" BorderBrush="#3db85a" BorderThickness="1" CornerRadius="4" Padding="5,2" Margin="3,0" ToolTip.Tip="Pre-processed in background thread for 0ms navigation">
-										<TextBlock x:Name="txtLookaheadBadge" Text="{DynamicResource LblLookaheadPreloaded}" FontSize="10" FontWeight="Bold" Foreground="#3db85a" VerticalAlignment="Center"/>
-									</Border>
-									<Button x:Name="btnNextScan" Click="BtnNextScan_Click" Padding="6,4" Background="Transparent" BorderThickness="0" Focusable="False" ToolTip.Tip="Next Scan (PageDown / ↓)">
-										<TextBlock Text="▶" FontSize="10"/>
-									</Button>
-									<Rectangle Width="1" Height="16" Fill="{DynamicResource AppSeparatorBrush}" Margin="2,0"/>
-									<Button x:Name="btnDeleteScan" Click="BtnDeleteScan_Click" Padding="6,4" Background="Transparent" BorderThickness="0" Focusable="False" ToolTip.Tip="{DynamicResource TipDeleteScan}">
-										<TextBlock Text="🗑️" FontSize="11"/>
-									</Button>
+					</StackPanel>
+					<StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+						<TextBlock Text="{DynamicResource HeaderOriginal}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
+						<TextBlock x:Name="txtFileCounter" Text="{DynamicResource TxtNoFiles}" FontSize="11" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+					</StackPanel>
+				</DockPanel>
+				<Border Grid.Row="1" Margin="10,0,4,10" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="8" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+					<Grid RowDefinitions="Auto, *, Auto">
+						<DockPanel Grid.Row="0" Margin="10,5">
+							<!-- Auto Tune Button (Prominent) -->
+							<Button DockPanel.Dock="Right" x:Name="btnAutoTune" Click="BtnAutoTune_Click" Padding="16,8" Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}" ToolTip.Tip="{DynamicResource TipAutoTune}" Focusable="False" CornerRadius="8" VerticalAlignment="Center" Margin="10,0,0,0">
+								<StackPanel Orientation="Horizontal" Spacing="6">
+									<TextBlock Text="⚡" FontSize="14" VerticalAlignment="Center"/>
+									<TextBlock Text="{DynamicResource BtnAutoTune}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
 								</StackPanel>
-							</Border>
+							</Button>
+
+							<ScrollViewer DockPanel.Dock="Left" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+								<StackPanel Orientation="Horizontal" Spacing="8">
+								<Border Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="3,2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+									<Button x:Name="btnDeleteScan" Click="BtnDeleteScan_Click" Padding="8,4" Background="{DynamicResource AppButtonDangerBrush}" Foreground="{DynamicResource AppButtonDangerTextBrush}" CornerRadius="4" Focusable="False" ToolTip.Tip="{DynamicResource TipDeleteScan}">
+										<StackPanel Orientation="Horizontal" Spacing="4">
+											<TextBlock Text="✖" FontSize="11" VerticalAlignment="Center"/>
+											<TextBlock Text="{DynamicResource BtnDelete}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+										</StackPanel>
+									</Button>
+								</Border>
 							<Border Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="6,2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 								<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
 									<TextBlock Text="{DynamicResource LblZoom}" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
@@ -266,21 +243,20 @@
 											   VerticalAlignment="Center" Width="26" FontSize="11" FontWeight="Bold"/>
 								</StackPanel>
 							</Border>
-							
-							<Button x:Name="btnAutoTune" Click="BtnAutoTune_Click" Padding="6,2" Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}" ToolTip.Tip="{DynamicResource TipAutoTune}" Focusable="False" CornerRadius="6">
-								<StackPanel Orientation="Horizontal" Spacing="4">
-									<TextBlock Text="⚡" FontSize="11" VerticalAlignment="Center"/>
-									<TextBlock Text="{DynamicResource BtnAutoTune}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
-								</StackPanel>
-							</Button>
-
 							<Border Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="4,2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-								<StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-									<ToggleButton x:Name="tglColorPicker" Click="TglColorPicker_Click" Padding="6,2" Focusable="False" ToolTip.Tip="{DynamicResource BtnSampleBackground}" CornerRadius="4">
-										<TextBlock Text="🎨" FontSize="11"/>
+								<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="2,0">
+									<TextBlock Text="Background:" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,2,0"/>
+									<ToggleButton x:Name="tglColorPicker" Click="TglColorPicker_Click" Padding="6,3" Focusable="False" ToolTip.Tip="{DynamicResource BtnSampleBackground}" CornerRadius="4">
+										<StackPanel Orientation="Horizontal" Spacing="4">
+											<TextBlock Text="🎨" FontSize="11" VerticalAlignment="Center"/>
+											<TextBlock Text="Pick Color" FontSize="10" VerticalAlignment="Center"/>
+										</StackPanel>
 									</ToggleButton>
-									<Button x:Name="btnResetBackground" Click="BtnResetBackground_Click" Padding="6,2" Focusable="False" IsEnabled="False" ToolTip.Tip="{DynamicResource BtnResetBackground}" CornerRadius="4">
-										<TextBlock Text="🔄" FontSize="11"/>
+									<Button x:Name="btnResetBackground" Click="BtnResetBackground_Click" Padding="6,3" Focusable="False" IsEnabled="False" ToolTip.Tip="{DynamicResource BtnResetBackground}" CornerRadius="4">
+										<StackPanel Orientation="Horizontal" Spacing="4">
+											<TextBlock Text="↺" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+											<TextBlock Text="Reset" FontSize="10" VerticalAlignment="Center"/>
+										</StackPanel>
 									</Button>
 								</StackPanel>
 							</Border>
@@ -288,11 +264,12 @@
 								<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
 									<Rectangle x:Name="rectCurrentDetectionColor" Width="12" Height="12" RadiusX="2" RadiusY="2" Stroke="{DynamicResource AppBorderBrush}" StrokeThickness="1"/>
 									<Menu Background="Transparent" VerticalAlignment="Center" Margin="0" Focusable="False" IsTabStop="False" KeyboardNavigation.TabNavigation="None">
-										<MenuItem Header="{DynamicResource MenuDetectionColor}" x:Name="menuDetectionColor" Focusable="False" IsTabStop="False" FontSize="11"/>
+										<MenuItem Header="Box Color" x:Name="menuDetectionColor" Focusable="False" IsTabStop="False" FontSize="11" FontWeight="SemiBold"/>
 									</Menu>
 								</StackPanel>
 							</Border>
-						</StackPanel>
+							</StackPanel>
+							</ScrollViewer>
 					</DockPanel>
 
 					<!-- Empty State Dropzone -->
@@ -306,8 +283,15 @@
 					</Border>
 
 					<!-- Active Scan View -->
-					<ScrollViewer Grid.Row="1" x:Name="scrollOriginal" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" 
-								  SizeChanged="ScrollOriginal_SizeChanged">
+					<Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+						<Button Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0" ZIndex="10"
+								x:Name="btnPrevScan" Click="BtnPrevScan_Click"
+								Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="40" Height="80" CornerRadius="4" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ToolTip.Tip="Previous Scan (PageUp / ↑)">
+							<TextBlock Text="◀" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						</Button>
+
+						<ScrollViewer Grid.Column="1" x:Name="scrollOriginal" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" 
+									  SizeChanged="ScrollOriginal_SizeChanged">
 						<Panel x:Name="pnlOriginal" Background="Transparent" 
 							   PointerPressed="PnlOriginal_PointerPressed" 
 							   PointerMoved="PnlOriginal_PointerMoved" 
@@ -325,8 +309,71 @@
 							</Canvas>
 						</Panel>
 					</ScrollViewer>
+						
+						<Button Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="10,0" ZIndex="10"
+								x:Name="btnNextScan" Click="BtnNextScan_Click"
+								Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="40" Height="80" CornerRadius="4" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ToolTip.Tip="Next Scan (PageDown / ↓)">
+							<TextBlock Text="▶" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						</Button>
+					</Grid>
+					<!-- Detection Tuning Sliders (Bottom of Left Panel) -->
+					<Border Grid.Row="2" HorizontalAlignment="Center" Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="6,3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="10,0,10,10" MaxWidth="{Binding $parent.Bounds.Width}">
+						<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+							<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="4,2">
+							<!-- Sensitivity -->
+							<StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+								<Grid ColumnDefinitions="*, Auto">
+									<TextBlock Grid.Column="0" Text="{DynamicResource LblDetectionSensitivity}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+								</Grid>
+								<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="50" Width="100" Margin="0,-4,0,-4"
+										PropertyChanged="SldSensitivity_PropertyChanged" Focusable="False"/>
+							</StackPanel>
+
+							<Rectangle Width="1" Height="24" Fill="{DynamicResource AppSeparatorBrush}" Margin="2,0"/>
+
+							<!-- Min Area -->
+							<StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+								<Grid ColumnDefinitions="*, Auto">
+									<TextBlock Grid.Column="0" Text="{DynamicResource LblMinPhotoSize}" FontSize="10" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{Binding #sldMinArea.Value, StringFormat='{}{0:0}%'}" FontSize="10" FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Center"/>
+								</Grid>
+								<Slider x:Name="sldMinArea" Minimum="5" Maximum="50" Value="25" Width="80" Margin="0,-4,0,-4"
+										PropertyChanged="SldSensitivity_PropertyChanged" Focusable="False"/>
+							</StackPanel>
+							
+							<!-- Max Area -->
+							<StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+								<Grid ColumnDefinitions="*, Auto">
+									<TextBlock Grid.Column="0" Text="{DynamicResource LblMaxPhotoSize}" FontSize="10" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{Binding #sldMaxArea.Value, StringFormat='{}{0:0}%'}" FontSize="10" FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Center"/>
+								</Grid>
+								<Slider x:Name="sldMaxArea" Minimum="20" Maximum="100" Value="90" Width="80" Margin="0,-4,0,-4"
+										PropertyChanged="SldSensitivity_PropertyChanged" Focusable="False"/>
+							</StackPanel>
+							
+							<!-- Edge -->
+							<StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+								<Grid ColumnDefinitions="*, Auto">
+									<TextBlock Grid.Column="0" Text="{DynamicResource LblEdgeThreshold}" FontSize="10" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{Binding #sldEdge.Value, StringFormat='{}{0:0}'}" FontSize="10" FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Center"/>
+								</Grid>
+								<Slider x:Name="sldEdge" Minimum="1" Maximum="100" Value="20" Width="80" Margin="0,-4,0,-4"
+										PropertyChanged="SldSensitivity_PropertyChanged" Focusable="False"/>
+							</StackPanel>
+
+							<Rectangle Width="1" Height="24" Fill="{DynamicResource AppSeparatorBrush}" Margin="2,0"/>
+							
+							<StackPanel Orientation="Vertical" Spacing="4" VerticalAlignment="Center" Margin="4,0">
+								<CheckBox x:Name="chkAutoTuneOnPass" Content="{DynamicResource LblAutoTuneOnPass}" ToolTip.Tip="{DynamicResource TipAutoTuneOnPass}" IsCheckedChanged="ChkAutoTuneOnPass_IsCheckedChanged" FontSize="9" Focusable="False" Margin="0,-3,0,-3"/>
+								<CheckBox x:Name="chkAutoAdjustOnLowCoverage" Content="{DynamicResource LblAutoAdjustOnLowCoverage}" ToolTip.Tip="{DynamicResource TipAutoAdjustOnLowCoverage}" IsCheckedChanged="ChkAutoAdjustOnLowCoverage_IsCheckedChanged" FontSize="9" Focusable="False" Margin="0,-3,0,-3"/>
+							</StackPanel>
+							</StackPanel>
+						</ScrollViewer>
+					</Border>
 				</Grid>
 			</Border>
+			</Grid>
 
 			<!-- Resizable Splitter without white bar artifact -->
 			<GridSplitter Grid.Column="1" Width="8" Background="Transparent" ResizeDirection="Columns" Focusable="False">
@@ -352,26 +399,34 @@
 			</GridSplitter>
 
 			<!-- Right: Cropped Results -->
-			<Border Grid.Column="2" Margin="4,10,10,10" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="8" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-				<Grid RowDefinitions="Auto, *, Auto">
-					<!-- Header with View Toggle & Selection Status -->
-					<Grid Grid.Row="0" Margin="10,5" ColumnDefinitions="*, Auto">
-						<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-							<TextBlock Text="{DynamicResource HeaderDetected}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AppTextMutedBrush}" VerticalAlignment="Center"/>
-							<TextBlock x:Name="txtGallerySelection" FontSize="10" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="False"/>
-							<StackPanel x:Name="pnlBatchSelectionActions" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="False">
-								<Button x:Name="btnSelectAll" Click="BtnSelectAll_Click" Padding="6,2" CornerRadius="4" 
-										Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
-										ToolTip.Tip="{DynamicResource TipSelectAll}" Focusable="False" FontSize="10">
-									<TextBlock Text="{DynamicResource BtnSelectAll}"/>
-								</Button>
-								<Button x:Name="btnClearSelection" Click="BtnClearSelection_Click" Padding="6,2" CornerRadius="4" 
-										Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
-										ToolTip.Tip="{DynamicResource TipClearSelection}" Focusable="False" FontSize="10">
-									<TextBlock Text="{DynamicResource BtnClearSelection}"/>
-								</Button>
-							</StackPanel>
-						</StackPanel>
+			<Grid Grid.Column="2" RowDefinitions="Auto, *">
+				<DockPanel Grid.Row="0" Margin="15,0,10,5" VerticalAlignment="Center">
+					<TextBlock x:Name="txtGallerySelection" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="False"/>
+					<StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+						<TextBlock Text="{DynamicResource HeaderDetected}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
+						<TextBlock x:Name="lblPhotoInfo" Text="" FontSize="11" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+					</StackPanel>
+				</DockPanel>
+				<Border Grid.Row="1" Margin="4,0,10,10" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="8" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+					<Grid RowDefinitions="Auto, *, Auto">
+						<!-- Header with View Toggle & Selection Status -->
+						<Grid Grid.Row="0" Margin="10,5" ColumnDefinitions="*, Auto">
+							<ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+								<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+									<StackPanel x:Name="pnlBatchSelectionActions" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="False">
+										<Button x:Name="btnSelectAll" Click="BtnSelectAll_Click" Padding="6,2" CornerRadius="4" 
+												Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+												ToolTip.Tip="{DynamicResource TipSelectAll}" Focusable="False" FontSize="10">
+											<TextBlock Text="{DynamicResource BtnSelectAll}"/>
+										</Button>
+										<Button x:Name="btnClearSelection" Click="BtnClearSelection_Click" Padding="6,2" CornerRadius="4" 
+												Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+												ToolTip.Tip="{DynamicResource TipClearSelection}" Focusable="False" FontSize="10">
+											<TextBlock Text="{DynamicResource BtnClearSelection}"/>
+										</Button>
+									</StackPanel>
+								</StackPanel>
+							</ScrollViewer>
 						
 						<!-- Toggle Mode: Single vs Grid -->
 						<Border Grid.Column="1" Background="{DynamicResource AppToggleGroupBrush}" CornerRadius="6" Padding="2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
@@ -492,10 +547,25 @@
 						</ScrollViewer>
 					</Panel>
 
-					<StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15" Spacing="10">
-						<Button x:Name="btnDelete" Click="BtnDelete_Click" Padding="15,10" CornerRadius="20" Background="{DynamicResource AppButtonDangerBrush}" Focusable="False">
-							<StackPanel Orientation="Horizontal" Spacing="5">
-								<TextBlock Text="✖" FontSize="16" VerticalAlignment="Center" Foreground="{DynamicResource AppButtonDangerTextBrush}"/>
+					<!-- Processing Filters and Actions (Bottom of Right Panel) -->
+					<ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+						<StackPanel Orientation="Vertical" Spacing="10" Margin="10">
+						<!-- Group 4: Processing Filters -->
+						<Border HorizontalAlignment="Center" Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="6,3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+							<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="4,2">
+								<StackPanel Orientation="Horizontal" Spacing="15" Margin="4,0">
+									<CheckBox x:Name="chkAutoOrient" Content="{DynamicResource LblAutoOrient}" ToolTip.Tip="{DynamicResource TipAutoOrient}" IsCheckedChanged="ChkAutoOrient_IsCheckedChanged" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
+									<CheckBox x:Name="chkRestoreColors" Content="{DynamicResource LblRestoreColors}" ToolTip.Tip="{DynamicResource TipRestoreColors}" IsCheckedChanged="ChkRestoreColors_IsCheckedChanged" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
+									<CheckBox x:Name="chkRemoveDust" Content="{DynamicResource LblRemoveDust}" ToolTip.Tip="{DynamicResource TipRemoveDust}" IsCheckedChanged="ChkRemoveDust_IsCheckedChanged" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
+								</StackPanel>
+							</StackPanel>
+						</Border>
+
+						<!-- Actions -->
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+							<Button x:Name="btnDelete" Click="BtnDelete_Click" Padding="15,10" CornerRadius="20" Background="{DynamicResource AppButtonDangerBrush}" Focusable="False">
+								<StackPanel Orientation="Horizontal" Spacing="5">
+									<TextBlock Text="✖" FontSize="16" VerticalAlignment="Center" Foreground="{DynamicResource AppButtonDangerTextBrush}"/>
 								<TextBlock x:Name="txtBtnDelete" Text="{DynamicResource BtnDelete}" Foreground="{DynamicResource AppButtonDangerTextBrush}" VerticalAlignment="Center"/>
 							</StackPanel>
 						</Button>
@@ -512,8 +582,11 @@
 							</StackPanel>
 						</Button>
 					</StackPanel>
+					</StackPanel>
+					</ScrollViewer>
 				</Grid>
 			</Border>
+			</Grid>
 		</Grid>
 		</DockPanel>
 

@@ -356,17 +356,24 @@ internal sealed partial class MainWindow
         }
     }
 
-    private async void SldSensitivity_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    private CancellationTokenSource? _sliderDebounceCts;
+
+    private async void SldSensitivity_PropertyChanged(object? sender, Avalonia.AvaloniaPropertyChangedEventArgs e)
     {
+        if (e.Property.Name != "Value") return;
         if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
+
+        _sliderDebounceCts?.Cancel();
+        _sliderDebounceCts?.Dispose();
+        _sliderDebounceCts = new CancellationTokenSource();
+        var ct = _sliderDebounceCts.Token;
 
         var settings = SettingsManager.Instance.Settings;
         settings.BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
         settings.MinAreaFactor = sldMinArea.Value;
         settings.MaxAreaFactor = sldMaxArea.Value;
         settings.CannyLowThreshold = sldEdge.Value;
-        SettingsManager.Instance.Save();
-
+        
         var session = ScanSessions[CurrentIndex];
         session.Options.BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
         session.Options.MinAreaFactor = sldMinArea.Value / 100.0;
@@ -374,7 +381,19 @@ internal sealed partial class MainWindow
         session.Options.CannyLowThreshold = sldEdge.Value;
         session.Options.CannyHighThreshold = sldEdge.Value * AppConstants.DefaultCannyHighRatio;
 
-        await ReprocessCurrentScanAsync();
+        try
+        {
+            await Task.Delay(150, ct);
+
+            // Only save to disk once the user pauses dragging
+            SettingsManager.Instance.Save();
+            
+            await ReprocessCurrentScanAsync();
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignored - user is still dragging
+        }
     }
 
     private async void BtnAutoTune_Click(object? sender, RoutedEventArgs e)
