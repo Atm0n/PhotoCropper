@@ -304,14 +304,18 @@ public class PhotoCropperEngine : IDisposable
             CvInvoke.Line(OriginalWithDetected, new Point(tr.X - 15, tr.Y - 15), new Point(tr.X + 15, tr.Y + 15), whiteText, 8);
             CvInvoke.Line(OriginalWithDetected, new Point(tr.X + 15, tr.Y - 15), new Point(tr.X - 15, tr.Y + 15), whiteText, 8);
 
-            // Find bottom right corner (max X + Y)
-            var brSorted = (PointF[])vertices.Clone();
-            Array.Sort(brSorted, (a, b) => (b.X + b.Y).CompareTo(a.X + a.Y));
-            var br = Point.Round(brSorted[0]);
+            // Draw standard rotation handle at top-middle of box
+            PointF[] ordered = PhotoExtractionEngine.OrderBoxPoints(vertices);
+            Point topMid = Point.Round(new PointF((ordered[0].X + ordered[1].X) / 2f, (ordered[0].Y + ordered[1].Y) / 2f));
+            Point rotHandle = Point.Round(cand.GetRotationHandlePoint(60f));
 
+            // Stem connecting top edge to rotation handle
+            CvInvoke.Line(OriginalWithDetected, topMid, rotHandle, boxColor, 6);
+
+            // Blue rotation handle badge
             MCvScalar blueBadge = new(255, 0, 0); // Blue in BGR
-            CvInvoke.Circle(OriginalWithDetected, br, radius, blueBadge, -1);
-
+            CvInvoke.Circle(OriginalWithDetected, rotHandle, radius, blueBadge, -1);
+            CvInvoke.Circle(OriginalWithDetected, rotHandle, radius, whiteText, 3);
         }
     }
 

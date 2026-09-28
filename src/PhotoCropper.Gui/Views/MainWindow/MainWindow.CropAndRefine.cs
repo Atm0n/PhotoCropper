@@ -134,11 +134,9 @@ internal sealed partial class MainWindow
 
 
 
-                var brSorted = (System.Drawing.PointF[])vertices.Clone();
-                System.Array.Sort(brSorted, (a, b) => (b.X + b.Y).CompareTo(a.X + a.Y));
-                var br = brSorted[0];
-                double rotateDist = Math.Sqrt(Math.Pow(br.X - pt.X, 2) + Math.Pow(br.Y - pt.Y, 2));
-                if (rotateDist <= 45)
+                var rotHandlePt = cand.GetRotationHandlePoint(60f);
+                double rotateDist = Math.Sqrt(Math.Pow(rotHandlePt.X - pt.X, 2) + Math.Pow(rotHandlePt.Y - pt.Y, 2));
+                if (rotateDist <= 55)
                 {
                     isRotatingHandle = true;
                     dragCandIndex = i;
