@@ -206,7 +206,7 @@
 		</Border>
 
 		<!-- Main Workspace -->
-		<Grid>
+		<Grid x:Name="grdMainWorkspace">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="*" MinWidth="640"/>
 				<ColumnDefinition Width="Auto"/>
@@ -449,14 +449,22 @@
 
 			<!-- Right: Cropped Results -->
 			<Grid Grid.Column="2" RowDefinitions="Auto, *">
-				<DockPanel Grid.Row="0" Margin="15,0,10,5" VerticalAlignment="Center">
-					<TextBlock x:Name="txtGallerySelection" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="False"/>
-					<StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-						<TextBlock Text="{DynamicResource HeaderDetected}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
-						<TextBlock x:Name="lblPhotoInfo" Text="" FontSize="11" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-					</StackPanel>
-				</DockPanel>
-				<Border Grid.Row="1" Margin="4,0,10,10" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="8" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+			<DockPanel Grid.Row="0" Margin="10,0,10,5" VerticalAlignment="Center">
+				<Button DockPanel.Dock="Left" x:Name="btnToggleRightPanel" Click="BtnToggleRightPanel_Click"
+						Width="24" Height="24" Padding="0" CornerRadius="4" Focusable="False"
+						Background="{DynamicResource AppSubtleCardBrush}"
+						BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+						ToolTip.Tip="Toggle Photo Panel" Margin="0,0,8,0" VerticalAlignment="Center">
+					<TextBlock x:Name="txtToggleRightPanelIcon" Text="&#x25C4;" FontSize="9" FontWeight="Bold"
+							   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+				</Button>
+				<TextBlock x:Name="txtGallerySelection" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center" IsVisible="False"/>
+				<StackPanel x:Name="pnlRightPanelHeader" DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+					<TextBlock Text="{DynamicResource HeaderDetected}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
+					<TextBlock x:Name="lblPhotoInfo" Text="" FontSize="11" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+				</StackPanel>
+			</DockPanel>
+				<Border x:Name="brdRightPanelContent" Grid.Row="1" Margin="4,0,10,10" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="8" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 					<Grid RowDefinitions="Auto, *, Auto">
 						<!-- Header with View Toggle, Processing Filters, & Selection Status -->
 						<Grid Grid.Row="0" Margin="10,5" ColumnDefinitions="Auto, *, Auto">
@@ -665,12 +673,20 @@
 						<TextBlock x:Name="txtReviewCounter" Text="PHOTO 1 OF 1" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
 					</Border>
 
-					<Button Grid.Column="2" x:Name="btnReviewClose" Click="BtnReviewClose_Click" Padding="12,6" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Focusable="False" ToolTip.Tip="Close Review (Esc)">
-						<StackPanel Orientation="Horizontal" Spacing="6">
-							<TextBlock Text="✕" FontSize="12" VerticalAlignment="Center"/>
-							<TextBlock Text="Close" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
-						</StackPanel>
-					</Button>
+					<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+						<Button x:Name="btnReviewEdit" Click="BtnReviewClose_Click" Padding="12,6" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Focusable="False" ToolTip.Tip="Edit in Scanner (E)">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="&#x270F;&#xFE0F;" FontSize="12" VerticalAlignment="Center"/>
+								<TextBlock Text="Edit in Scanner" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
+						<Button x:Name="btnReviewClose" Click="BtnReviewClose_Click" Padding="12,6" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Focusable="False" ToolTip.Tip="Close Review (Esc)">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="✕" FontSize="12" VerticalAlignment="Center"/>
+								<TextBlock Text="Close" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
+					</StackPanel>
 				</Grid>
 
 				<!-- Center Photo Preview with Nav Arrows -->

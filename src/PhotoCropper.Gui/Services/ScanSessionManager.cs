@@ -56,10 +56,10 @@ internal sealed class ScanSessionManager : IDisposable
 
     public bool MoveNext()
     {
-        if (!HasScans) return false;
+        if (!HasScans || CurrentIndex >= _sessions.Count - 1) return false;
         int prevIndex = CurrentIndex;
         bool deactivated = CurrentSession?.TryDeactivateIfUnmodified() ?? false;
-        CurrentIndex = (CurrentIndex + 1) % _sessions.Count;
+        CurrentIndex++;
         if (deactivated)
         {
             SessionDeactivated?.Invoke(prevIndex);
@@ -69,10 +69,10 @@ internal sealed class ScanSessionManager : IDisposable
 
     public bool MovePrevious()
     {
-        if (!HasScans) return false;
+        if (!HasScans || CurrentIndex <= 0) return false;
         int prevIndex = CurrentIndex;
         bool deactivated = CurrentSession?.TryDeactivateIfUnmodified() ?? false;
-        CurrentIndex = (CurrentIndex - 1 + _sessions.Count) % _sessions.Count;
+        CurrentIndex--;
         if (deactivated)
         {
             SessionDeactivated?.Invoke(prevIndex);

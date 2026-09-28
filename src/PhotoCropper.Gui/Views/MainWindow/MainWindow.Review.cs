@@ -367,6 +367,7 @@ internal sealed partial class MainWindow
         switch (e.Key)
         {
             case Key.Escape:
+            case Key.E:
                 CloseReviewMode();
                 e.Handled = true;
                 return true;

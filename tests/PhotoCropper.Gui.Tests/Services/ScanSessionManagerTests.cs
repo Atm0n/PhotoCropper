@@ -61,7 +61,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_MoveNextAndPrevious_ShouldWrapAround()
+    public void ScanSessionManager_MoveNextAndPrevious_ShouldClamp()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -80,14 +80,17 @@ public sealed class ScanSessionManagerTests : IDisposable
         manager.MoveNext().ShouldBeTrue();
         manager.CurrentIndex.ShouldBe(2);
 
-        manager.MoveNext().ShouldBeTrue();
-        manager.CurrentIndex.ShouldBe(0); // Wrap around to first
-
-        manager.MovePrevious().ShouldBeTrue();
-        manager.CurrentIndex.ShouldBe(2); // Wrap around to last
+        manager.MoveNext().ShouldBeFalse();
+        manager.CurrentIndex.ShouldBe(2); // Clamped at last
 
         manager.MovePrevious().ShouldBeTrue();
         manager.CurrentIndex.ShouldBe(1);
+        
+        manager.MovePrevious().ShouldBeTrue();
+        manager.CurrentIndex.ShouldBe(0);
+
+        manager.MovePrevious().ShouldBeFalse();
+        manager.CurrentIndex.ShouldBe(0); // Clamped at first
     }
 
     [Fact]
