@@ -39,6 +39,10 @@
 	<sys:String x:Key="TipReviewPhotos">Abrir visor para revisar y rotar rápidamente todas las fotos (V)</sys:String>
 	<sys:String x:Key="TitleReviewMode">Revisión y Rotación Rápida de Fotos</sys:String>
 	<sys:String x:Key="MsgReviewEmpty">No hay fotos detectadas para revisar en ningún escaneo.</sys:String>
+	<sys:String x:Key="ReviewSentinelTitle">¡Has dado la vuelta completa!</sys:String>
+	<sys:String x:Key="ReviewSentinelSubtitle">Todas las fotos revisadas — sigue o cierra la revisión.</sys:String>
+	<sys:String x:Key="ReviewSentinelStats">{0} fotos · {1} escaneos · {2} rotadas · {3} eliminadas</sys:String>
+	<sys:String x:Key="BtnReviewGoToStart">↩ Volver a la Primera Foto</sys:String>
 	<sys:String x:Key="BtnAccept">Aceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rechazar (Retroceso)</sys:String>
 	<sys:String x:Key="StatusReady">Listo</sys:String>

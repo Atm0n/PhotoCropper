@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -680,9 +680,41 @@
 						<TextBlock Text="◀" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 					</Button>
 
-					<Border Grid.Column="1" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource AppWorkspaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-						<Image x:Name="imgReview" Stretch="Uniform" Margin="15" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-					</Border>
+					<Panel Grid.Column="1">
+						<!-- Normal photo view -->
+						<Border x:Name="brdReviewPhoto" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource AppWorkspaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+							<Image x:Name="imgReview" Stretch="Uniform" Margin="15" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+						</Border>
+
+						<!-- Sentinel: end-of-loop marker — shown when navigating past the last photo -->
+						<Border x:Name="pnlReviewSentinel" IsVisible="False" CornerRadius="8"
+								Background="{DynamicResource AppWorkspaceBrush}"
+								BorderBrush="{DynamicResource AppAccentBrush}" BorderThickness="2">
+							<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="18">
+								<Border Background="{DynamicResource AppAccentBrush}" CornerRadius="60" Width="80" Height="80" HorizontalAlignment="Center">
+									<TextBlock Text="&#x21BB;" FontSize="40" FontWeight="Bold" Foreground="White"
+											   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+								</Border>
+								<TextBlock x:Name="txtSentinelTitle" Text="{DynamicResource ReviewSentinelTitle}"
+										   FontSize="22" FontWeight="Bold"
+										   Foreground="{DynamicResource AppTextPrimaryBrush}"
+										   HorizontalAlignment="Center" TextAlignment="Center"/>
+								<TextBlock x:Name="txtSentinelSubtitle" Text="{DynamicResource ReviewSentinelSubtitle}"
+										   FontSize="14" Foreground="{DynamicResource AppTextSecondaryBrush}"
+										   HorizontalAlignment="Center" TextAlignment="Center"/>
+								<Border Background="{DynamicResource AppCardBackgroundBrush}"
+										BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+										CornerRadius="20" Padding="18,8" HorizontalAlignment="Center">
+									<TextBlock x:Name="txtSentinelStats" Text=""
+											   FontSize="13" Foreground="{DynamicResource AppAccentBrush}"
+											   FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center"/>
+								</Border>
+								<TextBlock Text="[&#x2190;] Last Photo  |  [&#x2192;] Back to First"
+										   FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}"
+										   HorizontalAlignment="Center" TextAlignment="Center"/>
+							</StackPanel>
+						</Border>
+					</Panel>
 
 					<Button Grid.Column="2" x:Name="btnReviewNext" Click="BtnReviewNext_Click" VerticalAlignment="Center" Margin="15,0,0,0"
 							Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="48" Height="96" CornerRadius="8" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ToolTip.Tip="Next Photo (→ / Right / Space)">

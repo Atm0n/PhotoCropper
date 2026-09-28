@@ -15,8 +15,11 @@ internal sealed partial class MainWindow
     private readonly List<ReviewPhotoItem> _reviewItems = [];
     private int _reviewCurrentIndex = -1;
     private Bitmap? _reviewCurrentBitmap;
+    private int _reviewSessionRotations;
+    private int _reviewSessionDeletions;
 
     internal bool IsInReviewMode => pnlReviewOverlay?.IsVisible == true;
+    private bool IsAtSentinel => _reviewCurrentIndex == _reviewItems.Count;
 
     internal static IReadOnlyList<ReviewPhotoItem> FlattenReviewItems(IReadOnlyList<ScanSessionItem> sessions, int currentIndex, out int initialReviewIndex, int selectedPhotoIndex = 0)
     {
@@ -48,6 +51,10 @@ internal sealed partial class MainWindow
     private async Task OpenReviewModeAsync()
     {
         if (isLoading || _isNavigating || ScanSessions.Count == 0) return;
+
+        // Reset per-session tracking counters
+        _reviewSessionRotations = 0;
+        _reviewSessionDeletions = 0;
 
         // Ensure current scan is activated and build flat list of all photos
         _reviewItems.Clear();
@@ -92,6 +99,10 @@ internal sealed partial class MainWindow
         if (pnlReviewOverlay == null) return;
         pnlReviewOverlay.IsVisible = false;
 
+        // Reset sentinel panel visibility for next open
+        if (pnlReviewSentinel != null) pnlReviewSentinel.IsVisible = false;
+        if (brdReviewPhoto != null) brdReviewPhoto.IsVisible = true;
+
         if (_reviewCurrentBitmap != null)
         {
             var bmp = _reviewCurrentBitmap;
@@ -100,10 +111,13 @@ internal sealed partial class MainWindow
             DeferDispose(bmp);
         }
 
+        // Resolve effective index: if at sentinel, sync to the last real photo
+        int effectiveIndex = Math.Min(_reviewCurrentIndex, _reviewItems.Count - 1);
+
         // Synchronize main window view with the current scan
-        if (_reviewItems.Count > 0 && _reviewCurrentIndex >= 0 && _reviewCurrentIndex < _reviewItems.Count)
+        if (_reviewItems.Count > 0 && effectiveIndex >= 0)
         {
-            var item = _reviewItems[_reviewCurrentIndex];
+            var item = _reviewItems[effectiveIndex];
             if (item.ScanIndex != CurrentIndex)
             {
                 _ = NavigateToScanIndexAsync(item.ScanIndex);
@@ -130,13 +144,24 @@ internal sealed partial class MainWindow
 
     private async Task LoadReviewPhotoAtCurrentIndexAsync()
     {
-        if (_reviewItems.Count == 0 || _reviewCurrentIndex < 0 || _reviewCurrentIndex >= _reviewItems.Count)
+        if (_reviewItems.Count == 0 || _reviewCurrentIndex < 0)
         {
             if (imgReview != null) imgReview.Source = null;
             if (txtReviewCounter != null) txtReviewCounter.Text = "";
             if (txtReviewScanInfo != null) txtReviewScanInfo.Text = "";
             return;
         }
+
+        // Sentinel position: index == Count means "end of loop" slide
+        if (IsAtSentinel)
+        {
+            ShowReviewSentinel();
+            return;
+        }
+
+        // Clear sentinel if going back to a real photo
+        if (pnlReviewSentinel != null) pnlReviewSentinel.IsVisible = false;
+        if (brdReviewPhoto != null) brdReviewPhoto.IsVisible = true;
 
         var item = _reviewItems[_reviewCurrentIndex];
         var session = ScanSessions[item.ScanIndex];
@@ -183,23 +208,72 @@ internal sealed partial class MainWindow
         }
     }
 
+    private void ShowReviewSentinel()
+    {
+        if (brdReviewPhoto != null) brdReviewPhoto.IsVisible = false;
+        if (pnlReviewSentinel != null) pnlReviewSentinel.IsVisible = true;
+
+        // Release current bitmap
+        if (_reviewCurrentBitmap != null)
+        {
+            var old = _reviewCurrentBitmap;
+            _reviewCurrentBitmap = null;
+            if (imgReview != null) imgReview.Source = null;
+            DeferDispose(old);
+        }
+
+        int totalPhotos = _reviewItems.Count;
+        int totalScans = 0;
+        if (totalPhotos > 0)
+        {
+            var seen = new System.Collections.Generic.HashSet<int>();
+            foreach (var ri in _reviewItems) seen.Add(ri.ScanIndex);
+            totalScans = seen.Count;
+        }
+
+        if (txtSentinelStats != null)
+        {
+            var statsText = LocalizationService.Format(
+                ResourceKeys.ReviewSentinelStats,
+                "{0} photos · {1} scans · {2} rotated · {3} deleted",
+                totalPhotos, totalScans, _reviewSessionRotations, _reviewSessionDeletions);
+            txtSentinelStats.Text = statsText;
+        }
+
+        if (txtReviewCounter != null)
+        {
+            txtReviewCounter.Text = LocalizationService.Format(
+                ResourceKeys.PhotoCounter,
+                "PHOTO {0} OF {1}",
+                _reviewItems.Count,
+                _reviewItems.Count);
+        }
+
+        if (txtReviewScanInfo != null)
+        {
+            txtReviewScanInfo.Text = LocalizationService.GetString(
+                ResourceKeys.ReviewSentinelSubtitle, "All photos reviewed");
+        }
+    }
+
+    // Navigation uses Count+1 total slots: positions 0..Count-1 are real photos, Count is the sentinel
     private async Task ReviewNextPhotoAsync()
     {
         if (_reviewItems.Count == 0) return;
-        _reviewCurrentIndex = (_reviewCurrentIndex + 1) % _reviewItems.Count;
+        _reviewCurrentIndex = (_reviewCurrentIndex + 1) % (_reviewItems.Count + 1);
         await LoadReviewPhotoAtCurrentIndexAsync();
     }
 
     private async Task ReviewPrevPhotoAsync()
     {
         if (_reviewItems.Count == 0) return;
-        _reviewCurrentIndex = (_reviewCurrentIndex - 1 + _reviewItems.Count) % _reviewItems.Count;
+        _reviewCurrentIndex = (_reviewCurrentIndex - 1 + _reviewItems.Count + 1) % (_reviewItems.Count + 1);
         await LoadReviewPhotoAtCurrentIndexAsync();
     }
 
     private async Task ReviewRotateClockwiseAsync()
     {
-        if (_reviewItems.Count == 0 || _reviewCurrentIndex < 0 || _reviewCurrentIndex >= _reviewItems.Count) return;
+        if (_reviewItems.Count == 0 || _reviewCurrentIndex < 0 || IsAtSentinel) return;
 
         var item = _reviewItems[_reviewCurrentIndex];
         var session = ScanSessions[item.ScanIndex];
@@ -209,6 +283,7 @@ internal sealed partial class MainWindow
         if (item.PhotoIndex < engine.DetectedPhotos.Count)
         {
             engine.RotatePhoto(item.PhotoIndex);
+            _reviewSessionRotations++;
             if (item.ScanIndex == CurrentIndex)
             {
                 undoHistory.PushRotate(CurrentIndex, item.PhotoIndex);
@@ -219,7 +294,7 @@ internal sealed partial class MainWindow
 
     private async Task ReviewRotateCounterClockwiseAsync()
     {
-        if (_reviewItems.Count == 0 || _reviewCurrentIndex < 0 || _reviewCurrentIndex >= _reviewItems.Count) return;
+        if (_reviewItems.Count == 0 || _reviewCurrentIndex < 0 || IsAtSentinel) return;
 
         var item = _reviewItems[_reviewCurrentIndex];
         var session = ScanSessions[item.ScanIndex];
@@ -229,13 +304,14 @@ internal sealed partial class MainWindow
         if (item.PhotoIndex < engine.DetectedPhotos.Count)
         {
             engine.RotatePhotoCounterClockwise(item.PhotoIndex);
+            _reviewSessionRotations++;
             await LoadReviewPhotoAtCurrentIndexAsync();
         }
     }
 
     private async Task ReviewDeleteCurrentPhotoAsync()
     {
-        if (_reviewItems.Count == 0 || _reviewCurrentIndex < 0 || _reviewCurrentIndex >= _reviewItems.Count) return;
+        if (_reviewItems.Count == 0 || _reviewCurrentIndex < 0 || IsAtSentinel) return;
 
         var item = _reviewItems[_reviewCurrentIndex];
         var session = ScanSessions[item.ScanIndex];
@@ -255,6 +331,7 @@ internal sealed partial class MainWindow
             }
 
             engine.DeletePhoto(item.PhotoIndex);
+            _reviewSessionDeletions++;
 
             // Remove from _reviewItems and shift subsequent indices in the same scan
             _reviewItems.RemoveAt(_reviewCurrentIndex);
@@ -273,7 +350,8 @@ internal sealed partial class MainWindow
                 return;
             }
 
-            if (_reviewCurrentIndex >= _reviewItems.Count)
+            // Clamp: deletion shrinks Count by 1, so an index that was valid may now be at/past end
+            if (_reviewCurrentIndex > _reviewItems.Count)
             {
                 _reviewCurrentIndex = _reviewItems.Count - 1;
             }

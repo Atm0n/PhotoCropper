@@ -39,6 +39,10 @@
 	<sys:String x:Key="TipReviewPhotos">Open continuous full-screen photo review and fast-rotate slider (V)</sys:String>
 	<sys:String x:Key="TitleReviewMode">Photo Review &amp; Fast-Rotate</sys:String>
 	<sys:String x:Key="MsgReviewEmpty">No detected photos to review across any scans.</sys:String>
+	<sys:String x:Key="ReviewSentinelTitle">You've gone full circle!</sys:String>
+	<sys:String x:Key="ReviewSentinelSubtitle">All photos reviewed — keep going or close the review.</sys:String>
+	<sys:String x:Key="ReviewSentinelStats">{0} photos · {1} scans · {2} rotated · {3} deleted</sys:String>
+	<sys:String x:Key="BtnReviewGoToStart">↩ Back to First Photo</sys:String>
 	<sys:String x:Key="BtnAccept">Accept (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Reject (Backspace)</sys:String>
 	<sys:String x:Key="StatusReady">Ready</sys:String>
