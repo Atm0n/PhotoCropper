@@ -495,7 +495,14 @@ internal sealed partial class MainWindow : Window
         _isNavigating = true;
         FocusManager?.Focus(null);
         await DrainLookaheadAsync();
-        if (forward) _sessionManager.MoveNext(); else _sessionManager.MovePrevious();
+        
+        bool moved = forward ? _sessionManager.MoveNext() : _sessionManager.MovePrevious();
+        if (!moved)
+        {
+            _isNavigating = false;
+            return;
+        }
+
         try
         {
             await LoadPhotosToGuiAsync();
