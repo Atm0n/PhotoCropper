@@ -454,7 +454,7 @@
 						Width="24" Height="24" Padding="0" CornerRadius="4" Focusable="False"
 						Background="{DynamicResource AppSubtleCardBrush}"
 						BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
-						ToolTip.Tip="Toggle Photo Panel" Margin="0,0,8,0" VerticalAlignment="Center">
+						ToolTip.Tip="{DynamicResource TipToggleRightPanel}" Margin="0,0,8,0" VerticalAlignment="Center">
 					<TextBlock x:Name="txtToggleRightPanelIcon" Text="&#x25C4;" FontSize="9" FontWeight="Bold"
 							   HorizontalAlignment="Center" VerticalAlignment="Center"/>
 				</Button>
@@ -674,10 +674,10 @@
 					</Border>
 
 					<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-						<Button x:Name="btnReviewEdit" Click="BtnReviewClose_Click" Padding="12,6" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Focusable="False" ToolTip.Tip="Edit in Scanner (E)">
+						<Button x:Name="btnReviewEdit" Click="BtnReviewClose_Click" Padding="12,6" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Focusable="False" ToolTip.Tip="{DynamicResource TipReviewEdit}">
 							<StackPanel Orientation="Horizontal" Spacing="6">
 								<TextBlock Text="&#x270F;&#xFE0F;" FontSize="12" VerticalAlignment="Center"/>
-								<TextBlock Text="Edit in Scanner" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+								<TextBlock Text="{DynamicResource BtnReviewEdit}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
 							</StackPanel>
 						</Button>
 						<Button x:Name="btnReviewClose" Click="BtnReviewClose_Click" Padding="12,6" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Focusable="False" ToolTip.Tip="Close Review (Esc)">

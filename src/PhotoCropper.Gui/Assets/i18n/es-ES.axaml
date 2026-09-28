@@ -1,4 +1,4 @@
-<ResourceDictionary xmlns="https://github.com/avaloniaui"
+﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 	<sys:String x:Key="BtnOpenScans">Abrir</sys:String>
@@ -43,6 +43,9 @@
 	<sys:String x:Key="ReviewSentinelSubtitle">Todas las fotos revisadas — sigue o cierra la revisión.</sys:String>
 	<sys:String x:Key="ReviewSentinelStats">{0} fotos · {1} escaneos · {2} rotadas · {3} eliminadas</sys:String>
 	<sys:String x:Key="BtnReviewGoToStart">↩ Volver a la Primera Foto</sys:String>
+	<sys:String x:Key="BtnReviewEdit">Editar en Escáner</sys:String>
+	<sys:String x:Key="TipReviewEdit">Editar en Escáner (E)</sys:String>
+	<sys:String x:Key="TipToggleRightPanel">Alternar Panel de Fotos</sys:String>
 	<sys:String x:Key="BtnAccept">Aceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rechazar (Retroceso)</sys:String>
 	<sys:String x:Key="StatusReady">Listo</sys:String>
