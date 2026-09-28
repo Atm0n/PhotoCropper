@@ -1,4 +1,4 @@
-<ResourceDictionary xmlns="https://github.com/avaloniaui"
+﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 	<sys:String x:Key="BtnOpenScans">Open</sys:String>
@@ -35,10 +35,21 @@
 	<sys:String x:Key="BtnDelete">Delete</sys:String>
 	<sys:String x:Key="BtnRotate">Rotate 90°</sys:String>
 	<sys:String x:Key="BtnRefine">Refine Edges</sys:String>
+	<sys:String x:Key="BtnReviewPhotos">Review Photos</sys:String>
+	<sys:String x:Key="TipReviewPhotos">Open continuous full-screen photo review and fast-rotate slider (V)</sys:String>
+	<sys:String x:Key="TitleReviewMode">Photo Review &amp; Fast-Rotate</sys:String>
+	<sys:String x:Key="MsgReviewEmpty">No detected photos to review across any scans.</sys:String>
+	<sys:String x:Key="ReviewSentinelTitle">You've gone full circle!</sys:String>
+	<sys:String x:Key="ReviewSentinelSubtitle">All photos reviewed — keep going or close the review.</sys:String>
+	<sys:String x:Key="ReviewSentinelStats">{0} photos · {1} scans · {2} rotated · {3} deleted</sys:String>
+	<sys:String x:Key="BtnReviewGoToStart">↩ Back to First Photo</sys:String>
+	<sys:String x:Key="BtnReviewEdit">Edit in Scanner</sys:String>
+	<sys:String x:Key="TipReviewEdit">Edit in Scanner (E)</sys:String>
+	<sys:String x:Key="TipToggleRightPanel">Toggle Photo Panel</sys:String>
 	<sys:String x:Key="BtnAccept">Accept (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Reject (Backspace)</sys:String>
 	<sys:String x:Key="StatusReady">Ready</sys:String>
-	<sys:String x:Key="StatusShortcuts">Shortcuts: [↑/↓] Switch Scan | [←/→] Navigate Photos | [T] Auto-Tune | [R] Rotate | [Space] Compare Original | [Ctrl+Z/Y] Undo/Redo</sys:String>
+	<sys:String x:Key="StatusShortcuts">Shortcuts: [↑/↓] Switch Scan | [←/→] Navigate Photos | [V] Review All | [R] Rotate | [T] Auto-Tune | [Space] Compare Original | [Ctrl+Z/Y] Undo/Redo</sys:String>
 	<sys:String x:Key="MsgUndo">Undid {0}.</sys:String>
 	<sys:String x:Key="MsgRedo">Redid {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">PHOTO {0} OF {1}</sys:String>

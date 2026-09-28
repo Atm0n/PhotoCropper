@@ -31,14 +31,15 @@ public class PhotoCropperEngine : IDisposable
     public double CannyHighThreshold { get; set; } = Common.AppConstants.DefaultCannyHigh;
     public MCvScalar? CustomBackgroundColorHsv { get; set; }
     public bool AutoOrientPhotos { get; set; } = true;
-    public bool RestoreVintageColors { get; set; } = true;
-    public bool RemoveDustAndScratches { get; set; } = true;
+    public bool RestoreVintageColors { get; set; }
+    public bool RemoveDustAndScratches { get; set; }
     public string BoundingBoxColor { get; set; } = Common.AppConstants.DefaultBoundingBoxColor;
 
     public Mat Original { get; set; }
     public Mat OriginalWithDetected { get; set; }
     public Collection<Mat> DetectedPhotos { get; } = [];
     public Collection<Mat> RawDetectedPhotos { get; } = [];
+    public Dictionary<int, int> PhotoRotations { get; } = [];
     public IReadOnlyList<CropCandidate> AcceptedCandidates { get; private set; } = [];
 
     public PhotoCropperEngine(string originalFilePath)
@@ -199,8 +200,10 @@ public class PhotoCropperEngine : IDisposable
             return;
         }
 
+        var savedList = savedCrops as IReadOnlyList<WorkspaceCropData> ?? [.. savedCrops];
+
         var candidates = new List<CropCandidate>();
-        foreach (var crop in savedCrops)
+        foreach (var crop in savedList)
         {
             var center = new PointF(crop.CenterX, crop.CenterY);
             var size = new SizeF(crop.Width, crop.Height);
@@ -213,6 +216,20 @@ public class PhotoCropperEngine : IDisposable
         DrawBoundingBoxes(AcceptedCandidates);
 
         ExtractAndProcessCandidates(candidates);
+
+        int cropIdx = 0;
+        foreach (var crop in savedList)
+        {
+            if (cropIdx < DetectedPhotos.Count && crop.RotationDegrees > 0)
+            {
+                int rotCount = (crop.RotationDegrees % 360) / 90;
+                for (int r = 0; r < rotCount; r++)
+                {
+                    RotatePhoto(cropIdx);
+                }
+            }
+            cropIdx++;
+        }
     }
 
 
@@ -542,6 +559,10 @@ public class PhotoCropperEngine : IDisposable
             RawDetectedPhotos[index].Dispose();
             RawDetectedPhotos[index] = rawRotated;
         }
+
+        int delta = flags == RotateFlags.Rotate90Clockwise ? 90 : (flags == RotateFlags.Rotate90CounterClockwise ? 270 : 180);
+        int currentRot = PhotoRotations.TryGetValue(index, out int r) ? r : 0;
+        PhotoRotations[index] = (currentRot + delta) % 360;
     }
 
     public void RotatePhoto(int index) => RotatePhotoInternal(index, RotateFlags.Rotate90Clockwise);
@@ -638,6 +659,19 @@ public class PhotoCropperEngine : IDisposable
             RawDetectedPhotos.RemoveAt(index);
         }
 
+        // Shift photo rotations
+        PhotoRotations.Remove(index);
+        var shiftedRotations = new Dictionary<int, int>();
+        foreach (var (k, v) in PhotoRotations)
+        {
+            shiftedRotations[k > index ? k - 1 : k] = v;
+        }
+        PhotoRotations.Clear();
+        foreach (var (k, v) in shiftedRotations)
+        {
+            PhotoRotations[k] = v;
+        }
+
         if (AcceptedCandidates is List<CropCandidate> list && index < list.Count)
         {
             list.RemoveAt(index);
@@ -661,6 +695,17 @@ public class PhotoCropperEngine : IDisposable
 
         int rawTargetIndex = Math.Clamp(index, 0, RawDetectedPhotos.Count);
         RawDetectedPhotos.Insert(rawTargetIndex, photo.Clone());
+
+        var shiftedRotations = new Dictionary<int, int>();
+        foreach (var (k, v) in PhotoRotations)
+        {
+            shiftedRotations[k >= targetIndex ? k + 1 : k] = v;
+        }
+        PhotoRotations.Clear();
+        foreach (var (k, v) in shiftedRotations)
+        {
+            PhotoRotations[k] = v;
+        }
 
         if (candidate.HasValue && AcceptedCandidates != null)
         {

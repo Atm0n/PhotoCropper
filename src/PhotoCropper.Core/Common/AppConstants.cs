@@ -32,7 +32,7 @@ public static class AppConstants
     public const string DefaultScannerPageSize = "Auto";
     public const int DefaultJpegQuality = 100;
     public const int DefaultLookaheadAhead = 4;
-    public const int DefaultLookaheadBehind = 1;
+    public const int DefaultLookaheadBehind = 4;
 
     /// <summary>
     /// Multiplier applied to the low Canny threshold to derive the high threshold (Canny ratio).

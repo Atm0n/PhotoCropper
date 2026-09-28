@@ -145,7 +145,20 @@ internal sealed partial class MainWindow
             });
         }
 
+        UpdateScanNavigationButtons();
         TriggerBackgroundLookahead(CurrentIndex);
+    }
+
+    private void UpdateScanNavigationButtons()
+    {
+        if (btnPrevScan != null)
+        {
+            btnPrevScan.IsEnabled = ScanSessions.Count > 1 && CurrentIndex > 0;
+        }
+        if (btnNextScan != null)
+        {
+            btnNextScan.IsEnabled = ScanSessions.Count > 1 && CurrentIndex < ScanSessions.Count - 1;
+        }
     }
 
     private void UpdateDetectionCoverageLabel()
@@ -288,6 +301,7 @@ internal sealed partial class MainWindow
         {
             scrollOriginal.IsVisible = hasScans;
         }
+        UpdateScanNavigationButtons();
     }
 
     private async void BtnPrevScan_Click(object? sender, RoutedEventArgs e)

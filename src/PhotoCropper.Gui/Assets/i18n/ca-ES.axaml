@@ -1,4 +1,4 @@
-<ResourceDictionary xmlns="https://github.com/avaloniaui"
+﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 	<sys:String x:Key="BtnOpenScans">Obrir</sys:String>
@@ -35,10 +35,21 @@
 	<sys:String x:Key="BtnDelete">Eliminar</sys:String>
 	<sys:String x:Key="BtnRotate">Girar 90°</sys:String>
 	<sys:String x:Key="BtnRefine">Ajustar Vores</sys:String>
+	<sys:String x:Key="BtnReviewPhotos">Revisar Fotos</sys:String>
+	<sys:String x:Key="TipReviewPhotos">Obrir visor per revisar i girar ràpidament totes les fotos (V)</sys:String>
+	<sys:String x:Key="TitleReviewMode">Revisió i Gir Ràpid de Fotos</sys:String>
+	<sys:String x:Key="MsgReviewEmpty">No hi ha fotos detectades per revisar a cap escaneig.</sys:String>
+	<sys:String x:Key="ReviewSentinelTitle">Has donat la volta completa!</sys:String>
+	<sys:String x:Key="ReviewSentinelSubtitle">Totes les fotos revisades — continua o tanca la revisió.</sys:String>
+	<sys:String x:Key="ReviewSentinelStats">{0} fotos · {1} escaneigs · {2} girades · {3} eliminades</sys:String>
+	<sys:String x:Key="BtnReviewGoToStart">↩ Torna a la Primera Foto</sys:String>
+	<sys:String x:Key="BtnReviewEdit">Editar a l'Escàner</sys:String>
+	<sys:String x:Key="TipReviewEdit">Editar a l'Escàner (E)</sys:String>
+	<sys:String x:Key="TipToggleRightPanel">Alternar Panell de Fotos</sys:String>
 	<sys:String x:Key="BtnAccept">Acceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rebutjar (Retrocés)</sys:String>
 	<sys:String x:Key="StatusReady">Llest</sys:String>
-	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [T] Auto-Ajustar | [R] Girar | [Espai] Comparar Original | [Ctrl+Z/Y] Desfer/Refer</sys:String>
+	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [V] Revisar Tot | [R] Girar | [T] Auto-Ajustar | [Espai] Comparar Original | [Ctrl+Z/Y] Desfer/Refer</sys:String>
 	<sys:String x:Key="MsgUndo">Desfet: {0}.</sys:String>
 	<sys:String x:Key="MsgRedo">Refet: {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>

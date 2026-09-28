@@ -166,6 +166,23 @@ public sealed class ScanSessionItemTests : IDisposable
         item.Engine.ShouldNotBeNull();
     }
 
+    [Fact]
+    public void ScanSessionItem_WithSavedCrops_ShouldRestoreRotations()
+    {
+        var options = new DetectionOptions();
+        var savedCrops = new List<PhotoCropper.Core.Workspace.WorkspaceCropData>
+        {
+            new() { CenterX = 100, CenterY = 100, Width = 80, Height = 60, Angle = 0, RotationDegrees = 90 }
+        };
+
+        using var item = new ScanSessionItem(_scanPath, options, isSaved: true, isModified: false, savedCrops: savedCrops);
+        var engine = item.Activate();
+
+        engine.DetectedPhotos.Count.ShouldBe(1);
+        engine.PhotoRotations.TryGetValue(0, out int rot).ShouldBeTrue();
+        rot.ShouldBe(90);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

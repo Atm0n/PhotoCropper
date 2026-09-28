@@ -12,6 +12,7 @@ public sealed class WorkspaceCropData
     public float Width { get; set; }
     public float Height { get; set; }
     public float Angle { get; set; }
+    public int RotationDegrees { get; set; }
 }
 
 public sealed class WorkspaceScanEntry
