@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Emgu.CV;
 using Emgu.CV.Structure;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Gui.Services;
 
@@ -23,6 +24,10 @@ internal sealed partial class MainWindow
     private System.Drawing.Rectangle currentRefineRect;
     private Point startRefinePoint;
     private bool isRefineDragging;
+
+    // Pre-drag snapshots used to record a ResizeCandidateAction when the drag ends.
+    private Mat? _dragBeforeMat;
+    private IReadOnlyList<CropCandidate>? _dragBeforeCandidates;
 
     private void ScrollOriginal_SizeChanged(object? sender, SizeChangedEventArgs e) => UpdateCropCanvasSize();
 
@@ -107,7 +112,7 @@ internal sealed partial class MainWindow
         if (tglColorPicker?.IsChecked == true)
         {
             e.Handled = true;
-            _ = SampleBackgroundColorAtPointerAsync(e.GetPosition(pnlOriginal));
+            _ = SampleBackgroundColorAtPointerAsync(e.GetPosition(pnlOriginal)).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
             return;
         }
 
@@ -129,16 +134,18 @@ internal sealed partial class MainWindow
 
 
 
-                var brSorted = (System.Drawing.PointF[])vertices.Clone();
-                System.Array.Sort(brSorted, (a, b) => (b.X + b.Y).CompareTo(a.X + a.Y));
-                var br = brSorted[0];
-                double rotateDist = Math.Sqrt(Math.Pow(br.X - pt.X, 2) + Math.Pow(br.Y - pt.Y, 2));
-                if (rotateDist <= 45)
+                var imageBounds = new System.Drawing.Rectangle(0, 0, photo.OriginalWithDetected.Width, photo.OriginalWithDetected.Height);
+                var rotHandlePt = cand.GetRotationHandlePoint(60f, imageBounds);
+                double rotateDist = Math.Sqrt(Math.Pow(rotHandlePt.X - pt.X, 2) + Math.Pow(rotHandlePt.Y - pt.Y, 2));
+                if (rotateDist <= 55)
                 {
                     isRotatingHandle = true;
                     dragCandIndex = i;
                     initialMouseAngle = Math.Atan2(pt.Y - cand.Rotated.Center.Y, pt.X - cand.Rotated.Center.X) * 180.0 / Math.PI;
                     initialRotatedAngle = cand.Rotated.Angle;
+                    // Snapshot the state before the drag so we can record an undo action on release.
+                    _dragBeforeMat = i < photo.DetectedPhotos.Count ? photo.DetectedPhotos[i].Clone() : null;
+                    _dragBeforeCandidates = [.. photo.AcceptedCandidates];
                     e.Handled = true;
                     return;
                 }
@@ -151,6 +158,9 @@ internal sealed partial class MainWindow
                         isDraggingHandle = true;
                         dragCandIndex = i;
                         dragVertexIndex = j;
+                        // Snapshot the state before the drag so we can record an undo action on release.
+                        _dragBeforeMat = i < photo.DetectedPhotos.Count ? photo.DetectedPhotos[i].Clone() : null;
+                        _dragBeforeCandidates = [.. photo.AcceptedCandidates];
                         e.Handled = true;
                         return;
                     }
@@ -181,8 +191,10 @@ internal sealed partial class MainWindow
             var newRotated = new Emgu.CV.Structure.RotatedRect(cand.Rotated.Center, cand.Rotated.Size, (float)newAngle);
             var updatedCand = cand with { Rotated = newRotated };
 
-            var newList = new System.Collections.Generic.List<PhotoCropper.Core.Models.CropCandidate>(photo.AcceptedCandidates);
-            newList[dragCandIndex] = updatedCand;
+            var newList = new System.Collections.Generic.List<PhotoCropper.Core.Models.CropCandidate>(photo.AcceptedCandidates)
+            {
+                [dragCandIndex] = updatedCand
+            };
 
             photo.UpdateCandidates(newList);
             SetMainImage(photo.OriginalWithDetected);
@@ -214,8 +226,10 @@ internal sealed partial class MainWindow
             var newRotated = new Emgu.CV.Structure.RotatedRect(newCenter, new System.Drawing.SizeF(newW, newH), cand.Rotated.Angle);
             var updatedCand = cand with { Rotated = newRotated };
 
-            var newList = new System.Collections.Generic.List<PhotoCropper.Core.Models.CropCandidate>(photo.AcceptedCandidates);
-            newList[dragCandIndex] = updatedCand;
+            var newList = new System.Collections.Generic.List<PhotoCropper.Core.Models.CropCandidate>(photo.AcceptedCandidates)
+            {
+                [dragCandIndex] = updatedCand
+            };
 
             photo.UpdateCandidates(newList);
             SetMainImage(photo.OriginalWithDetected);
@@ -232,113 +246,168 @@ internal sealed partial class MainWindow
 
     private void PnlOriginal_PointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-
         if (isRotatingHandle)
         {
-            isRotatingHandle = false;
-            if (dragCandIndex >= 0)
-            {
-                var photo = ScanSessions[CurrentIndex].Activate();
-                photo.ApplyGrabHandleResize(dragCandIndex);
-                ScanSessions[CurrentIndex].IsModified = true;
-                LoadCroppedPhotosToSlider();
-                UpdateDetectionCoverageLabel();
-            }
-            dragCandIndex = -1;
+            HandleEndHandleRotation();
             return;
         }
 
         if (isDraggingHandle)
         {
-            isDraggingHandle = false;
-            if (dragCandIndex >= 0)
-            {
-                var ptRelease = e.GetPosition(pnlOriginal);
-                var rectRelease = CoordinateMapper.ComputeNormalizedRect(startPoint, ptRelease);
-                var photo = ScanSessions[CurrentIndex].Activate();
-
-                if (rectRelease.Width < 5 && rectRelease.Height < 5 && dragVertexIndex >= 0)
-                {
-                    var cand = photo.AcceptedCandidates[dragCandIndex];
-                    var vertices = cand.Rotated.GetVertices();
-                    var sortedVertices = (System.Drawing.PointF[])vertices.Clone();
-                    System.Array.Sort(sortedVertices, (a, b) => (b.X - b.Y).CompareTo(a.X - a.Y));
-                    var tr = sortedVertices[0];
-                    int trIndex = System.Array.IndexOf(vertices, tr);
-
-                    if (dragVertexIndex == trIndex)
-                    {
-                        photo.DeletePhoto(dragCandIndex);
-                        ScanSessions[CurrentIndex].IsModified = true;
-                        SetMainImage(photo.OriginalWithDetected);
-                        LoadCroppedPhotosToSlider();
-                        UpdatePhotoCounterLabel();
-                        UpdateDetectionCoverageLabel();
-                        dragCandIndex = -1;
-                        return;
-                    }
-                }
-
-                photo.ApplyGrabHandleResize(dragCandIndex);
-                ScanSessions[CurrentIndex].IsModified = true;
-                LoadCroppedPhotosToSlider();
-                UpdateDetectionCoverageLabel();
-            }
-            dragCandIndex = -1;
+            HandleEndHandleDragging(e);
             return;
         }
 
         if (!isDragging) return;
         isDragging = false;
         rectCrop.IsVisible = false;
-        var rect = CoordinateMapper.ComputeNormalizedRect(startPoint, e.GetPosition(pnlOriginal));
 
+        var rect = CoordinateMapper.ComputeNormalizedRect(startPoint, e.GetPosition(pnlOriginal));
         if (rect.Width < 5 || rect.Height < 5)
         {
-            // Click-to-Select / Delete
+            HandleClickSelectionOrDeletion(rect);
+            return;
+        }
+
+        _ = ApplyManualCropAsync(rect).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+    }
+
+    private void HandleEndHandleRotation()
+    {
+        isRotatingHandle = false;
+        if (dragCandIndex >= 0)
+        {
             var photo = ScanSessions[CurrentIndex].Activate();
-            var imageRect = GetImageRectInsideControl();
-            var originalSize = new System.Drawing.Size(photo.OriginalWithDetected.Width, photo.OriginalWithDetected.Height);
+            photo.ApplyGrabHandleResize(dragCandIndex);
+            ScanSessions[CurrentIndex].IsModified = true;
 
-            var clickRectImg = CoordinateMapper.MapUiRectToImageRect(rect, imageRect, originalSize);
-            var pt = new System.Drawing.PointF(clickRectImg.X, clickRectImg.Y);
-
-            // Iterate candidates backwards to hit the top ones first
-            for (int i = photo.AcceptedCandidates.Count - 1; i >= 0; i--)
+            if (_dragBeforeMat != null && _dragBeforeCandidates != null)
             {
-                var cand = photo.AcceptedCandidates[i];
-                var vertices = cand.Rotated.GetVertices();
-                System.Array.Sort(vertices, (a, b) => (b.X - b.Y).CompareTo(a.X - a.Y));
-                var tr = vertices[0];
+                undoHistory.PushResizeCandidate(
+                    CurrentIndex, dragCandIndex,
+                    _dragBeforeMat, photo.DetectedPhotos[dragCandIndex],
+                    _dragBeforeCandidates, photo.AcceptedCandidates,
+                    "Rotate Crop Box");
+            }
 
-                // Check if click is on the Red X
-                double dist = Math.Sqrt(Math.Pow(tr.X - pt.X, 2) + Math.Pow(tr.Y - pt.Y, 2));
-                if (dist <= 60) // Slightly larger hit box for usability
+            _dragBeforeMat?.Dispose();
+            _dragBeforeMat = null;
+            _dragBeforeCandidates = null;
+
+            SetMainImage(photo.OriginalWithDetected);
+            LoadCroppedPhotosToSlider();
+            UpdateDetectionCoverageLabel();
+        }
+        dragCandIndex = -1;
+    }
+
+    private void HandleEndHandleDragging(PointerReleasedEventArgs e)
+    {
+        isDraggingHandle = false;
+        if (dragCandIndex >= 0)
+        {
+            var ptRelease = e.GetPosition(pnlOriginal);
+            var rectRelease = CoordinateMapper.ComputeNormalizedRect(startPoint, ptRelease);
+            var photo = ScanSessions[CurrentIndex].Activate();
+
+            if (rectRelease.Width < 5 && rectRelease.Height < 5 && dragVertexIndex >= 0)
+            {
+                var cand = photo.AcceptedCandidates[dragCandIndex];
+                var vertices = cand.Rotated.GetVertices();
+                var sortedVertices = (System.Drawing.PointF[])vertices.Clone();
+                System.Array.Sort(sortedVertices, (a, b) => (b.X - b.Y).CompareTo(a.X - a.Y));
+                var tr = sortedVertices[0];
+                int trIndex = System.Array.IndexOf(vertices, tr);
+
+                if (dragVertexIndex == trIndex)
                 {
-                    photo.DeletePhoto(i);
+                    // Vertex tap-to-delete: record a DeletePhotoAction for this.
+                    if (dragCandIndex < photo.DetectedPhotos.Count)
+                    {
+                        var candToDelete = dragCandIndex < (photo.AcceptedCandidates?.Count ?? 0)
+                            ? photo.AcceptedCandidates?[dragCandIndex]
+                            : null;
+                        undoHistory.PushDelete(CurrentIndex, dragCandIndex, photo.DetectedPhotos[dragCandIndex], candToDelete);
+                    }
+                    photo.DeletePhoto(dragCandIndex);
                     ScanSessions[CurrentIndex].IsModified = true;
-                    // Force refresh image by recreating it
                     SetMainImage(photo.OriginalWithDetected);
                     LoadCroppedPhotosToSlider();
                     UpdatePhotoCounterLabel();
                     UpdateDetectionCoverageLabel();
+                    _dragBeforeMat?.Dispose();
+                    _dragBeforeMat = null;
+                    _dragBeforeCandidates = null;
+                    dragCandIndex = -1;
                     return;
                 }
-
-                // Check if click is inside bounding box
-                using (var vec = new Emgu.CV.Util.VectorOfPointF(cand.Rotated.GetVertices()))
-                {
-                    if (Emgu.CV.CvInvoke.PointPolygonTest(vec, pt, false) >= 0)
-                    {
-                        if (slides != null) slides.SelectedIndex = i;
-                        return;
-                    }
-                }
             }
-            return;
-        }
 
-        _ = ApplyManualCropAsync(rect);
+            photo.ApplyGrabHandleResize(dragCandIndex);
+            ScanSessions[CurrentIndex].IsModified = true;
+
+            if (_dragBeforeMat != null && _dragBeforeCandidates != null)
+            {
+                undoHistory.PushResizeCandidate(
+                    CurrentIndex, dragCandIndex,
+                    _dragBeforeMat, photo.DetectedPhotos[dragCandIndex],
+                    _dragBeforeCandidates, photo.AcceptedCandidates,
+                    "Resize Crop Box");
+            }
+
+            _dragBeforeMat?.Dispose();
+            _dragBeforeMat = null;
+            _dragBeforeCandidates = null;
+
+            SetMainImage(photo.OriginalWithDetected);
+            LoadCroppedPhotosToSlider();
+            UpdateDetectionCoverageLabel();
+        }
+        dragCandIndex = -1;
+    }
+
+    private void HandleClickSelectionOrDeletion(Rect rect)
+    {
+        var photo = ScanSessions[CurrentIndex].Activate();
+        var imageRect = GetImageRectInsideControl();
+        var originalSize = new System.Drawing.Size(photo.OriginalWithDetected.Width, photo.OriginalWithDetected.Height);
+
+        var clickRectImg = CoordinateMapper.MapUiRectToImageRect(rect, imageRect, originalSize);
+        var pt = new System.Drawing.PointF(clickRectImg.X, clickRectImg.Y);
+
+        for (int i = photo.AcceptedCandidates.Count - 1; i >= 0; i--)
+        {
+            var cand = photo.AcceptedCandidates[i];
+            var vertices = cand.Rotated.GetVertices();
+            System.Array.Sort(vertices, (a, b) => (b.X - b.Y).CompareTo(a.X - a.Y));
+            var tr = vertices[0];
+
+            double dist = Math.Sqrt(Math.Pow(tr.X - pt.X, 2) + Math.Pow(tr.Y - pt.Y, 2));
+            if (dist <= 60)
+            {
+                if (i < photo.DetectedPhotos.Count)
+                {
+                    var candToDelete = i < (photo.AcceptedCandidates?.Count ?? 0)
+                        ? photo.AcceptedCandidates?[i]
+                        : null;
+                    undoHistory.PushDelete(CurrentIndex, i, photo.DetectedPhotos[i], candToDelete);
+                }
+                photo.DeletePhoto(i);
+                ScanSessions[CurrentIndex].IsModified = true;
+                SetMainImage(photo.OriginalWithDetected);
+                LoadCroppedPhotosToSlider();
+                UpdatePhotoCounterLabel();
+                UpdateDetectionCoverageLabel();
+                return;
+            }
+
+            using var vec = new Emgu.CV.Util.VectorOfPointF(cand.Rotated.GetVertices());
+            if (Emgu.CV.CvInvoke.PointPolygonTest(vec, pt, false) >= 0)
+            {
+                slides?.SelectedIndex = i;
+                return;
+            }
+        }
     }
 
     private async Task ApplyManualCropAsync(Rect uiRect)
@@ -361,7 +430,10 @@ internal sealed partial class MainWindow
             if (photo.DetectedPhotos.Count > prevCount)
             {
                 int newIndex = photo.DetectedPhotos.Count - 1;
-                undoHistory.PushAdd(CurrentIndex, newIndex, photo.DetectedPhotos[newIndex]);
+                var addedCand = newIndex < (photo.AcceptedCandidates?.Count ?? 0)
+                    ? photo.AcceptedCandidates?[newIndex]
+                    : null;
+                undoHistory.PushAdd(CurrentIndex, newIndex, photo.DetectedPhotos[newIndex], addedCand);
             }
             SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
@@ -531,7 +603,7 @@ internal sealed partial class MainWindow
             MinAreaFactor = settings.MinAreaFactor / 100.0,
             MaxAreaFactor = settings.MaxAreaFactor / 100.0,
             CannyLowThreshold = settings.CannyLowThreshold,
-            CannyHighThreshold = settings.CannyLowThreshold * 2.5,
+            CannyHighThreshold = settings.CannyLowThreshold * AppConstants.DefaultCannyHighRatio,
             AutoOrientPhotos = settings.AutoOrientPhotos,
             RestoreVintageColors = settings.RestoreVintageColors,
             RemoveDustAndScratches = settings.RemoveDustAndScratches

@@ -43,7 +43,8 @@ internal static class InteractiveWizard
         ConfigureDetection(console, options);
 
         // 6. Filename Pattern & EXIF Metadata
-        ConfigureNamingAndMetadata(console, options);
+        ConfigureVintageExifMetadata(console, options);
+        ConfigureOutputFilenamePattern(console, options);
 
         // 7. Performance / Threads
         ConfigurePerformance(console, options);
@@ -112,7 +113,7 @@ internal static class InteractiveWizard
                     });
             }
 
-            List<string> collected = FileCollector.CollectFiles(options.Inputs, options.Recursive);
+            List<string> collected = [.. PhotoCropper.Core.IO.ImageFileCollector.CollectFiles(options.Inputs, options.Recursive)];
             if (collected.Count == 0)
             {
                 console.MarkupLine($"[bold yellow]Warning:[/] No supported image files (.jpg, .png, .bmp, .tiff, .webp) found in '{cleanedPath}'.");
@@ -280,21 +281,26 @@ internal static class InteractiveWizard
             : int.Parse(maxPromptInput.Trim(), CultureInfo.InvariantCulture);
 
         string autoTunePromptText = options.MaxExpectedPhotos == int.MaxValue
-            ? $"  Enable ⚡ Auto-Tune sweep on scans where fewer than {options.MinExpectedPhotos} photo(s) are detected?"
-            : $"  Enable ⚡ Auto-Tune sweep on scans outside expected range ({options.MinExpectedPhotos}-{options.MaxExpectedPhotos} photos)?";
+            ? $"  ⚡ Auto-Tune Strategy (when fewer than {options.MinExpectedPhotos} photo(s) are detected):"
+            : $"  ⚡ Auto-Tune Strategy (expected range {options.MinExpectedPhotos}-{options.MaxExpectedPhotos} photos):";
 
-        options.AutoTune = console.Prompt(
-            new ConfirmationPrompt(autoTunePromptText)
-            {
-                DefaultValue = options.AutoTune
-            });
+        var autoTuneChoice = console.Prompt(
+            new SelectionPrompt<string>()
+                .Title(autoTunePromptText)
+                .AddChoices(
+                    "Disabled",
+                    "On Mismatch (Only when photo count is outside expected bounds)",
+                    "Always (Run on every scan)"
+                ));
+
+        options.AutoTune = autoTuneChoice.StartsWith("On Mismatch", StringComparison.Ordinal);
+        options.AlwaysAutoTune = autoTuneChoice.StartsWith("Always", StringComparison.Ordinal);
 
         console.WriteLine();
     }
 
-    private static void ConfigureNamingAndMetadata(IAnsiConsole console, CliOptions options)
+    private static void ConfigureVintageExifMetadata(IAnsiConsole console, CliOptions options)
     {
-        // 1. Vintage EXIF Metadata
         console.MarkupLine("[bold cyan]Vintage EXIF Metadata[/]");
         bool addExif = console.Prompt(
             new ConfirmationPrompt("  Embed vintage EXIF capture metadata (Year / Date / Description)?")
@@ -346,8 +352,10 @@ internal static class InteractiveWizard
         }
 
         console.WriteLine();
+    }
 
-        // 2. Output Filename Pattern (incorporates Year & EXIF values)
+    private static void ConfigureOutputFilenamePattern(IAnsiConsole console, CliOptions options)
+    {
         console.MarkupLine("[bold cyan]Output File Naming Pattern[/]");
 
         DateTime? parsedDate = null;
@@ -439,7 +447,7 @@ internal static class InteractiveWizard
         table.AddRow("Detection Profile", $"Tolerance: {options.Tolerance:0}, MinSize: {options.MinAreaFactor * 100:0}%, MaxSize: {options.MaxAreaFactor * 100:0}%");
         table.AddRow("Min Expected Photos", $"{options.MinExpectedPhotos} photo(s) per scan");
         table.AddRow("Max Expected Photos", options.MaxExpectedPhotos == int.MaxValue ? "[grey]Unlimited[/]" : $"{options.MaxExpectedPhotos} photo(s) per scan");
-        table.AddRow("⚡ Auto-Tune Sweep", options.AutoTune ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
+        table.AddRow("⚡ Auto-Tune Sweep", options.AlwaysAutoTune ? "[bold green]Always[/]" : options.AutoTune ? "[bold yellow]On Mismatch[/]" : "[grey]Disabled[/]");
         table.AddRow("AI Auto-Orientation", options.AutoOrient ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
         table.AddRow("Color Restoration", options.RestoreColors ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
         table.AddRow("Dust/Scratch Removal", options.RemoveDust ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
@@ -477,6 +485,7 @@ internal static class InteractiveWizard
             Recursive = source.Recursive,
             Verbose = source.Verbose,
             AutoTune = source.AutoTune,
+            AlwaysAutoTune = source.AlwaysAutoTune,
             CopyUndetectedDirectory = source.CopyUndetectedDirectory,
             NonInteractive = source.NonInteractive,
             Interactive = source.Interactive,

@@ -33,4 +33,21 @@ public static class AppConstants
     public const int DefaultJpegQuality = 100;
     public const int DefaultLookaheadAhead = 4;
     public const int DefaultLookaheadBehind = 1;
+
+    /// <summary>
+    /// Multiplier applied to the low Canny threshold to derive the high threshold (Canny ratio).
+    /// This value is standardized here to avoid silent divergence across the pipeline.
+    /// </summary>
+    public const double DefaultCannyHighRatio = 2.5;
+
+    /// <summary>
+    /// Milliseconds to wait between file-write retries when a transient I/O lock is detected.
+    /// </summary>
+    public const int ExportFileRetryDelayMs = 30;
+
+    /// <summary>
+    /// Maximum number of unique filename collision retries before throwing an IOException.
+    /// Guards against an infinite loop on a full or locked disk.
+    /// </summary>
+    public const int MaxExportPathRetries = 10_000;
 }

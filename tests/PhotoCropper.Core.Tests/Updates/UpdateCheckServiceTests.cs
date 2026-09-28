@@ -124,16 +124,10 @@ public sealed class UpdateCheckServiceTests
         result.ErrorMessage.ShouldContain("Connection refused");
     }
 
-    private sealed class MockRedirectHandler : HttpMessageHandler
+    private sealed class MockRedirectHandler(HttpStatusCode statusCode, Uri location) : HttpMessageHandler
     {
-        private readonly HttpStatusCode _statusCode;
-        private readonly Uri _location;
-
-        public MockRedirectHandler(HttpStatusCode statusCode, Uri location)
-        {
-            _statusCode = statusCode;
-            _location = location;
-        }
+        private readonly HttpStatusCode _statusCode = statusCode;
+        private readonly Uri _location = location;
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -143,14 +137,9 @@ public sealed class UpdateCheckServiceTests
         }
     }
 
-    private sealed class ThrowingHandler : HttpMessageHandler
+    private sealed class ThrowingHandler(Exception exception) : HttpMessageHandler
     {
-        private readonly Exception _exception;
-
-        public ThrowingHandler(Exception exception)
-        {
-            _exception = exception;
-        }
+        private readonly Exception _exception = exception;
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {

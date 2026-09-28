@@ -212,52 +212,7 @@ public class PhotoCropperEngine : IDisposable
 
         DrawBoundingBoxes(AcceptedCandidates);
 
-        Mat?[] results = new Mat[candidates.Count];
-        Mat?[] rawResults = new Mat[candidates.Count];
-
-        Parallel.For(0, candidates.Count, i =>
-        {
-            Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(candidates[i].Rotated, Original);
-
-            if (AutoOrientPhotos && !extracted.IsEmpty)
-            {
-                Mat oriented = AutoOrientationService.OrientPhoto(extracted);
-                if (!ReferenceEquals(oriented, extracted))
-                {
-                    extracted.Dispose();
-                    extracted = oriented;
-                }
-            }
-
-            rawResults[i] = extracted.Clone();
-
-            if (RestoreVintageColors && !extracted.IsEmpty)
-            {
-                Mat restored = PhotoRestorationService.RestoreColors(extracted, removeDust: RemoveDustAndScratches);
-                if (!ReferenceEquals(restored, extracted))
-                {
-                    extracted.Dispose();
-                    extracted = restored;
-                }
-            }
-            results[i] = extracted;
-        });
-
-        for (int i = 0; i < results.Length; i++)
-        {
-            var mat = results[i];
-            var raw = rawResults[i];
-            if (mat != null && !mat.IsEmpty && raw != null && !raw.IsEmpty)
-            {
-                DetectedPhotos.Add(mat);
-                RawDetectedPhotos.Add(raw);
-            }
-            else
-            {
-                mat?.Dispose();
-                raw?.Dispose();
-            }
-        }
+        ExtractAndProcessCandidates(candidates);
     }
 
 
@@ -317,8 +272,8 @@ public class PhotoCropperEngine : IDisposable
     private void DrawBoundingBoxes(IEnumerable<CropCandidate> candidates)
     {
         MCvScalar boxColor = CurrentOptions.GetBoundingBoxColorBgr();
-        MCvScalar redBadge = new MCvScalar(0, 0, 255); // BGR for Red
-        MCvScalar whiteText = new MCvScalar(255, 255, 255);
+        MCvScalar redBadge = new(0, 0, 255); // BGR for Red
+        MCvScalar whiteText = new(255, 255, 255);
         int radius = 45;
 
         foreach (var cand in candidates)
@@ -330,9 +285,14 @@ public class PhotoCropperEngine : IDisposable
 
                 // Draw white square for grab handles
                 Rectangle handleRect = new((int)vertices[j].X - 25, (int)vertices[j].Y - 25, 50, 50);
-                CvInvoke.Rectangle(OriginalWithDetected, handleRect, whiteText, -1);
-                // Draw border around the handle
-                CvInvoke.Rectangle(OriginalWithDetected, handleRect, boxColor, 4);
+                handleRect.Intersect(new Rectangle(0, 0, OriginalWithDetected.Width, OriginalWithDetected.Height));
+
+                if (handleRect.Width > 0 && handleRect.Height > 0)
+                {
+                    CvInvoke.Rectangle(OriginalWithDetected, handleRect, whiteText, -1);
+                    // Draw border around the handle
+                    CvInvoke.Rectangle(OriginalWithDetected, handleRect, boxColor, 4);
+                }
             }
 
             // Find top right corner (max X - Y)
@@ -344,14 +304,49 @@ public class PhotoCropperEngine : IDisposable
             CvInvoke.Line(OriginalWithDetected, new Point(tr.X - 15, tr.Y - 15), new Point(tr.X + 15, tr.Y + 15), whiteText, 8);
             CvInvoke.Line(OriginalWithDetected, new Point(tr.X + 15, tr.Y - 15), new Point(tr.X - 15, tr.Y + 15), whiteText, 8);
 
-            // Find bottom right corner (max X + Y)
-            var brSorted = (PointF[])vertices.Clone();
-            Array.Sort(brSorted, (a, b) => (b.X + b.Y).CompareTo(a.X + a.Y));
-            var br = Point.Round(brSorted[0]);
+            // Draw standard rotation handle at top-middle of box
+            Rectangle imageBounds = new(0, 0, OriginalWithDetected.Width, OriginalWithDetected.Height);
+            PointF[] ordered = PhotoExtractionEngine.OrderBoxPoints(vertices);
+            Point topMid = Point.Round(new PointF((ordered[0].X + ordered[1].X) / 2f, (ordered[0].Y + ordered[1].Y) / 2f));
+            Point rotHandle = Point.Round(cand.GetRotationHandlePoint(60f, imageBounds));
 
+            // Stem connecting top edge to rotation handle
+            CvInvoke.Line(OriginalWithDetected, topMid, rotHandle, boxColor, 6);
+
+            // Blue rotation handle badge
             MCvScalar blueBadge = new(255, 0, 0); // Blue in BGR
-            CvInvoke.Circle(OriginalWithDetected, br, radius, blueBadge, -1);
+            CvInvoke.Circle(OriginalWithDetected, rotHandle, radius, blueBadge, -1);
+            CvInvoke.Circle(OriginalWithDetected, rotHandle, radius, whiteText, 3);
 
+            // Draw spinning rotation arrow icon inside the badge
+            int arrowRadius = 22;
+            CvInvoke.Ellipse(OriginalWithDetected, rotHandle, new Size(arrowRadius, arrowRadius), 0, 45, 315, whiteText, 5);
+
+            // Arrow head at arc termination (angle 315°)
+            double arrowAngleRad = 315.0 * Math.PI / 180.0;
+            Point tip = new(
+                rotHandle.X + (int)(arrowRadius * Math.Cos(arrowAngleRad)),
+                rotHandle.Y + (int)(arrowRadius * Math.Sin(arrowAngleRad)));
+
+            // Tangent direction at 315° is (-sin(315°), cos(315°))
+            double tx = -Math.Sin(arrowAngleRad);
+            double ty = Math.Cos(arrowAngleRad);
+            double nx = -ty;
+            double ny = tx;
+
+            const double headLen = 12.0;
+            const double headWidth = 8.0;
+
+            Point wing1 = new(
+                (int)(tip.X - headLen * tx + headWidth * nx),
+                (int)(tip.Y - headLen * ty + headWidth * ny));
+            Point wing2 = new(
+                (int)(tip.X - headLen * tx - headWidth * nx),
+                (int)(tip.Y - headLen * ty - headWidth * ny));
+
+            Point[] arrowPoly = [tip, wing1, wing2];
+            using var polyVec = new VectorOfPoint(arrowPoly);
+            CvInvoke.FillConvexPoly(OriginalWithDetected, polyVec, whiteText);
         }
     }
 
@@ -371,37 +366,11 @@ public class PhotoCropperEngine : IDisposable
             oldOriginal.Dispose();
         }
 
-        // Sample background color before padding
-        using Mat hsv = new();
-        CvInvoke.CvtColor(Original, hsv, ColorConversion.Bgr2Hsv);
-        MCvScalar avgBackgroundColorHsv = CustomBackgroundColorHsv ?? BackgroundAnalyzer.SampleBackgroundColor(hsv);
-
-        // Convert HSV background color to BGR for border padding
-        MCvScalar bgBgr = BackgroundAnalyzer.HsvToBgr(avgBackgroundColorHsv);
-
-        // Pad the full image with a synthetic margin so photos touching or extending to the scan boundary form complete closed contours
-        int pad = Math.Max(20, Math.Min(Original.Width, Original.Height) / 50);
-        using Mat padded = new();
-        CvInvoke.CopyMakeBorder(Original, padded, pad, pad, pad, pad, BorderType.Constant, bgBgr);
-
-        // Neutralize scanner bezel / platen border margins in padded detection image
-        var bezel = BackgroundAnalyzer.DetectBezelMargins(Original, avgBackgroundColorHsv, BackgroundTolerance);
-        if (bezel.Top > 0)
-        {
-            CvInvoke.Rectangle(padded, new Rectangle(0, 0, padded.Width, pad + bezel.Top), bgBgr, -1);
-        }
-        if (bezel.Bottom > 0)
-        {
-            CvInvoke.Rectangle(padded, new Rectangle(0, padded.Height - pad - bezel.Bottom, padded.Width, pad + bezel.Bottom), bgBgr, -1);
-        }
-        if (bezel.Left > 0)
-        {
-            CvInvoke.Rectangle(padded, new Rectangle(0, 0, pad + bezel.Left, padded.Height), bgBgr, -1);
-        }
-        if (bezel.Right > 0)
-        {
-            CvInvoke.Rectangle(padded, new Rectangle(padded.Width - pad - bezel.Right, 0, pad + bezel.Right, padded.Height), bgBgr, -1);
-        }
+        var preparation = PreparePaddedDetectionImage();
+        MCvScalar avgBackgroundColorHsv = preparation.AvgBackgroundColorHsv;
+        MCvScalar bgBgr = preparation.BgBgr;
+        int pad = preparation.Pad;
+        using Mat padded = preparation.Padded;
 
         // Determine downscale factor for ultra-fast contour detection on high-DPI scans
         int maxDim = Math.Max(padded.Width, padded.Height);
@@ -511,54 +480,45 @@ public class PhotoCropperEngine : IDisposable
         // Draw bounding boxes on OriginalWithDetected
         DrawBoundingBoxes(acceptedCandidates);
 
-        // Parallel extraction: Rotate and crop each photo on different CPU cores using the padded source at FULL scan resolution
-        Mat?[] results = new Mat[acceptedCandidates.Count];
-        Mat?[] rawResults = new Mat[acceptedCandidates.Count];
+        ExtractAndProcessCandidates(acceptedCandidates, padded, pad);
+    }
 
-        Parallel.For(0, acceptedCandidates.Count, i =>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Mat is returned to caller")]
+    private (Mat Padded, MCvScalar AvgBackgroundColorHsv, MCvScalar BgBgr, int Pad) PreparePaddedDetectionImage()
+    {
+        // Sample background color before padding
+        using Mat hsv = new();
+        CvInvoke.CvtColor(Original, hsv, ColorConversion.Bgr2Hsv);
+        MCvScalar avgBackgroundColorHsv = CustomBackgroundColorHsv ?? BackgroundAnalyzer.SampleBackgroundColor(hsv);
+
+        // Convert HSV background color to BGR for border padding
+        MCvScalar bgBgr = BackgroundAnalyzer.HsvToBgr(avgBackgroundColorHsv);
+
+        // Pad the full image with a synthetic margin so photos touching or extending to the scan boundary form complete closed contours
+        int pad = Math.Max(20, Math.Min(Original.Width, Original.Height) / 50);
+        Mat padded = new();
+        CvInvoke.CopyMakeBorder(Original, padded, pad, pad, pad, pad, BorderType.Constant, bgBgr);
+
+        // Neutralize scanner bezel / platen border margins in padded detection image
+        var (Top, Bottom, Left, Right) = BackgroundAnalyzer.DetectBezelMargins(Original, avgBackgroundColorHsv, BackgroundTolerance);
+        if (Top > 0)
         {
-            Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(acceptedCandidates[i].Rotated, Original, padded, pad);
-
-            // Orient photo if enabled (applies to raw as well so comparison geometry is identical)
-            if (AutoOrientPhotos && !extracted.IsEmpty)
-            {
-                Mat oriented = AutoOrientationService.OrientPhoto(extracted);
-                if (!ReferenceEquals(oriented, extracted))
-                {
-                    extracted.Dispose();
-                    extracted = oriented;
-                }
-            }
-
-            rawResults[i] = extracted.Clone();
-
-            if (RestoreVintageColors && !extracted.IsEmpty)
-            {
-                Mat restored = PhotoRestorationService.RestoreColors(extracted, removeDust: RemoveDustAndScratches);
-                if (!ReferenceEquals(restored, extracted))
-                {
-                    extracted.Dispose();
-                    extracted = restored;
-                }
-            }
-            results[i] = extracted;
-        });
-
-        for (int i = 0; i < results.Length; i++)
-        {
-            var mat = results[i];
-            var raw = rawResults[i];
-            if (mat != null && !mat.IsEmpty && raw != null && !raw.IsEmpty)
-            {
-                DetectedPhotos.Add(mat);
-                RawDetectedPhotos.Add(raw);
-            }
-            else
-            {
-                mat?.Dispose();
-                raw?.Dispose();
-            }
+            CvInvoke.Rectangle(padded, new Rectangle(0, 0, padded.Width, pad + Top), bgBgr, -1);
         }
+        if (Bottom > 0)
+        {
+            CvInvoke.Rectangle(padded, new Rectangle(0, padded.Height - pad - Bottom, padded.Width, pad + Bottom), bgBgr, -1);
+        }
+        if (Left > 0)
+        {
+            CvInvoke.Rectangle(padded, new Rectangle(0, 0, pad + Left, padded.Height), bgBgr, -1);
+        }
+        if (Right > 0)
+        {
+            CvInvoke.Rectangle(padded, new Rectangle(padded.Width - pad - Right, 0, pad + Right, padded.Height), bgBgr, -1);
+        }
+
+        return (padded, avgBackgroundColorHsv, bgBgr, pad);
     }
 
     public void SetCustomBackgroundFromPixel(int x, int y)
@@ -635,8 +595,15 @@ public class PhotoCropperEngine : IDisposable
         DetectedPhotos[candIndex].Dispose();
         DetectedPhotos[candIndex] = extracted;
 
-        RawDetectedPhotos[candIndex].Dispose();
-        RawDetectedPhotos[candIndex] = extracted.Clone();
+        if (candIndex < RawDetectedPhotos.Count)
+        {
+            RawDetectedPhotos[candIndex].Dispose();
+            RawDetectedPhotos[candIndex] = extracted.Clone();
+        }
+        else
+        {
+            RawDetectedPhotos.Add(extracted.Clone());
+        }
 
         var vertices = cand.Rotated.GetVertices();
         var pts = new Point[4];
@@ -685,6 +652,26 @@ public class PhotoCropperEngine : IDisposable
         }
     }
 
+    public void InsertPhoto(int index, Mat photo, CropCandidate? candidate = null)
+    {
+        ArgumentNullException.ThrowIfNull(photo);
+
+        int targetIndex = Math.Clamp(index, 0, DetectedPhotos.Count);
+        DetectedPhotos.Insert(targetIndex, photo);
+
+        int rawTargetIndex = Math.Clamp(index, 0, RawDetectedPhotos.Count);
+        RawDetectedPhotos.Insert(rawTargetIndex, photo.Clone());
+
+        if (candidate.HasValue && AcceptedCandidates != null)
+        {
+            int candTargetIndex = Math.Clamp(index, 0, AcceptedCandidates.Count);
+            var newList = new List<CropCandidate>(AcceptedCandidates);
+            newList.Insert(candTargetIndex, candidate.Value);
+            AcceptedCandidates = newList;
+            RedrawBoundingBoxes();
+        }
+    }
+
     public Rectangle GetRefinedCropRect(int index)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return Rectangle.Empty;
@@ -702,7 +689,7 @@ public class PhotoCropperEngine : IDisposable
 
     public void AddManualCrop(Rectangle rect)
     {
-        var result = PhotoExtractionEngine.ExtractManualCrop(
+        var (Extracted, Candidate) = PhotoExtractionEngine.ExtractManualCrop(
             Original,
             rect,
             CustomBackgroundColorHsv,
@@ -710,12 +697,13 @@ public class PhotoCropperEngine : IDisposable
             CannyLowThreshold,
             CannyHighThreshold);
 
-        if (!result.Extracted.IsEmpty)
+        if (!Extracted.IsEmpty)
         {
-            DetectedPhotos.Add(result.Extracted);
-            if (result.Candidate.HasValue)
+            DetectedPhotos.Add(Extracted);
+            RawDetectedPhotos.Add(Extracted.Clone());
+            if (Candidate.HasValue)
             {
-                var cand = result.Candidate.Value;
+                var cand = Candidate.Value;
                 var newList = new List<CropCandidate>(AcceptedCandidates ?? [])
                 {
                     cand
@@ -726,7 +714,7 @@ public class PhotoCropperEngine : IDisposable
         }
         else
         {
-            result.Extracted.Dispose();
+            Extracted.Dispose();
         }
     }
 

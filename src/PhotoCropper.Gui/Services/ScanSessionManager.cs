@@ -1,4 +1,4 @@
-using PhotoCropper.Gui.Models;
+using PhotoCropper.Core.Workspace;
 
 namespace PhotoCropper.Gui.Services;
 
@@ -20,6 +20,13 @@ internal sealed class ScanSessionManager : IDisposable
             ? _sessions[CurrentIndex]
             : null;
 
+    /// <summary>
+    /// Raised when a session's engine is deactivated during navigation (i.e., the engine is
+    /// disposed to free memory). The argument is the scan index of the deactivated session.
+    /// Subscribers should invalidate any undo/redo entries for that index.
+    /// </summary>
+    public event Action<int>? SessionDeactivated;
+
     public bool MoveTo(int index)
     {
         if (!HasScans)
@@ -35,8 +42,13 @@ internal sealed class ScanSessionManager : IDisposable
 
         if (index != CurrentIndex)
         {
-            CurrentSession?.TryDeactivateIfUnmodified();
+            int prevIndex = CurrentIndex;
+            bool deactivated = CurrentSession?.TryDeactivateIfUnmodified() ?? false;
             CurrentIndex = index;
+            if (deactivated)
+            {
+                SessionDeactivated?.Invoke(prevIndex);
+            }
         }
 
         return true;
@@ -45,16 +57,26 @@ internal sealed class ScanSessionManager : IDisposable
     public bool MoveNext()
     {
         if (!HasScans) return false;
-        CurrentSession?.TryDeactivateIfUnmodified();
+        int prevIndex = CurrentIndex;
+        bool deactivated = CurrentSession?.TryDeactivateIfUnmodified() ?? false;
         CurrentIndex = (CurrentIndex + 1) % _sessions.Count;
+        if (deactivated)
+        {
+            SessionDeactivated?.Invoke(prevIndex);
+        }
         return true;
     }
 
     public bool MovePrevious()
     {
         if (!HasScans) return false;
-        CurrentSession?.TryDeactivateIfUnmodified();
+        int prevIndex = CurrentIndex;
+        bool deactivated = CurrentSession?.TryDeactivateIfUnmodified() ?? false;
         CurrentIndex = (CurrentIndex - 1 + _sessions.Count) % _sessions.Count;
+        if (deactivated)
+        {
+            SessionDeactivated?.Invoke(prevIndex);
+        }
         return true;
     }
 

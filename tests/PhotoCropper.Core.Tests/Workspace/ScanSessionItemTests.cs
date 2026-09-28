@@ -1,8 +1,8 @@
 using PhotoCropper.Core.Models;
-using PhotoCropper.Gui.Models;
+using PhotoCropper.Core.Workspace;
 using PhotoCropper.TestHelpers;
 
-namespace PhotoCropper.Gui.Tests.Models;
+namespace PhotoCropper.Core.Tests.Workspace;
 
 public sealed class ScanSessionItemTests : IDisposable
 {
@@ -35,7 +35,7 @@ public sealed class ScanSessionItemTests : IDisposable
         var options = new DetectionOptions();
         var savedCrops = new List<PhotoCropper.Core.Workspace.WorkspaceCropData>
         {
-            new PhotoCropper.Core.Workspace.WorkspaceCropData { CenterX = 50, CenterY = 50, Width = 20, Height = 20, Angle = 0 }
+            new() { CenterX = 50, CenterY = 50, Width = 20, Height = 20, Angle = 0 }
         };
 
         // Needs to be IsSaved = true and IsModified = false to bypass detection

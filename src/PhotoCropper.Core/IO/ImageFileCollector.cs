@@ -5,10 +5,10 @@ namespace PhotoCropper.Core.IO;
 /// </summary>
 public static class ImageFileCollector
 {
-    private static readonly HashSet<string> Extensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"
-    };
+    private static readonly HashSet<string> Extensions =
+    [
+with(StringComparer.OrdinalIgnoreCase),         ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"
+    ];
 
     /// <summary>
     /// Gets the set of supported image file extensions (with leading dot, case-insensitive).

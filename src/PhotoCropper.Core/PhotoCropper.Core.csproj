@@ -22,4 +22,8 @@
 		<EmbeddedResource Include="Models\face_detection_yunet_2023mar.onnx" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="PhotoCropper.Core.Tests" />
+	</ItemGroup>
+
 </Project>

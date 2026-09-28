@@ -4,7 +4,7 @@ namespace PhotoCropper.Gui.Tests;
 
 internal static class TestAppBuilder
 {
-    private static readonly object _syncLock = new();
+    private static readonly Lock _syncLock = new();
     private static bool _isInitialized;
 
     public static void EnsureInitialized()

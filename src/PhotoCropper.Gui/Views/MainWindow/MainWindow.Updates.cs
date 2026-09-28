@@ -28,7 +28,7 @@ internal sealed partial class MainWindow
                         var releaseUri = result.ReleaseUri;
                         Dispatcher.UIThread.Post(() =>
                         {
-                            string template = LocalizationManager.GetString("TxtUpdateAvailable") ?? "PhotoCropper {0} is available!";
+                            string template = LocalizationService.GetString("TxtUpdateAvailable", "PhotoCropper {0} is available!");
                             string msg = string.Format(System.Globalization.CultureInfo.CurrentCulture, template, result.Tag);
                             _notificationService.ShowInformation(
                                 "PhotoCropper",
@@ -42,13 +42,13 @@ internal sealed partial class MainWindow
                 {
                     // Ignore background update check failures
                 }
-            }, CancellationToken.None);
+            }, CancellationToken.None).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
         }
     }
 
     private async void MenuCheckUpdates_Click(object? sender, RoutedEventArgs e)
     {
-        string checkingMsg = LocalizationManager.GetString("TxtCheckingUpdates") ?? "Checking for updates...";
+        string checkingMsg = LocalizationService.GetString("TxtCheckingUpdates", "Checking for updates...");
         _notificationService.ShowInformation("PhotoCropper", checkingMsg, TimeSpan.FromSeconds(2));
 
         var curVersion = UpdateCheckService.GetCurrentVersion();
@@ -60,7 +60,7 @@ internal sealed partial class MainWindow
         if (result.IsUpdateAvailable && result.Tag != null && result.ReleaseUri != null)
         {
             var releaseUri = result.ReleaseUri;
-            string template = LocalizationManager.GetString("TxtUpdateAvailable") ?? "PhotoCropper {0} is available!";
+            string template = LocalizationService.GetString("TxtUpdateAvailable", "PhotoCropper {0} is available!");
             string msg = string.Format(System.Globalization.CultureInfo.CurrentCulture, template, result.Tag);
             _notificationService.ShowInformation(
                 "PhotoCropper",
@@ -70,13 +70,13 @@ internal sealed partial class MainWindow
         }
         else if (result.ErrorMessage != null)
         {
-            string template = LocalizationManager.GetString("TxtUpdateError") ?? "Unable to check for updates: {0}";
+            string template = LocalizationService.GetString("TxtUpdateError", "Unable to check for updates: {0}");
             string msg = string.Format(System.Globalization.CultureInfo.CurrentCulture, template, result.ErrorMessage);
             _notificationService.ShowWarning("PhotoCropper", msg, TimeSpan.FromSeconds(5));
         }
         else
         {
-            string template = LocalizationManager.GetString("TxtUpToDate") ?? "You are using the latest version ({0}).";
+            string template = LocalizationService.GetString("TxtUpToDate", "You are using the latest version ({0}).");
             string verStr = $"v{curVersion.Major}.{curVersion.Minor}.{Math.Max(0, curVersion.Build)}";
             string msg = string.Format(System.Globalization.CultureInfo.CurrentCulture, template, verStr);
             _notificationService.ShowSuccess("PhotoCropper", msg, TimeSpan.FromSeconds(4));

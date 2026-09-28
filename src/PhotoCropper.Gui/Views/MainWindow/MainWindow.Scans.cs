@@ -1,14 +1,12 @@
-using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.IO;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
-using PhotoCropper.Gui.Models;
 using PhotoCropper.Gui.Services;
+using System.Diagnostics;
 
 namespace PhotoCropper.Gui;
 
@@ -71,23 +69,6 @@ internal sealed partial class MainWindow
         await LoadPhotosToGuiAsync();
     }
 
-    private async void BtnOpenFiles_Click(object? sender, RoutedEventArgs e)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider == null) return;
-
-        var fileResult = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = LocalizationService.GetString(ResourceKeys.BtnOpenScans, "Select Files"),
-            FileTypeFilter = [FilePickerFileTypes.ImageAll],
-            AllowMultiple = true
-        });
-
-        if (fileResult.Count > 0)
-        {
-            await LoadScansFromPathsAsync(fileResult.Select(f => f.Path.LocalPath));
-        }
-    }
 
     private async Task LoadPhotosToGuiAsync()
     {
@@ -281,6 +262,7 @@ internal sealed partial class MainWindow
                     }
                     catch (Exception ex) when (ex is IOException or InvalidOperationException)
                     {
+                        Trace.TraceWarning($"[PhotoCropper] Background lookahead failed for session: {ex.GetType().Name}: {ex.Message}");
                     }
                     finally
                     {
@@ -292,7 +274,7 @@ internal sealed partial class MainWindow
             {
                 _lookaheadSemaphore.Release();
             }
-        }, ct);
+        }, ct).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
     }
 
     private void UpdateEmptyStateVisibility()
@@ -310,16 +292,14 @@ internal sealed partial class MainWindow
 
     private async void BtnPrevScan_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || !_sessionManager.HasScans) return;
-        _sessionManager.MovePrevious();
-        await LoadPhotosToGuiAsync();
+        if (isLoading || _isNavigating || !_sessionManager.HasScans) return;
+        await NavigateScanAsync(forward: false);
     }
 
     private async void BtnNextScan_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || !_sessionManager.HasScans) return;
-        _sessionManager.MoveNext();
-        await LoadPhotosToGuiAsync();
+        if (isLoading || _isNavigating || !_sessionManager.HasScans) return;
+        await NavigateScanAsync(forward: true);
     }
 
     private async void BtnDeleteScan_Click(object? sender, RoutedEventArgs e)
@@ -329,7 +309,7 @@ internal sealed partial class MainWindow
 
     private async Task DeleteCurrentScanAsync()
     {
-        if (isLoading || !_sessionManager.HasScans) return;
+        if (isLoading || _isNavigating || !_sessionManager.HasScans) return;
 
         var sessionItem = _sessionManager.CurrentSession;
         if (sessionItem == null) return;
@@ -374,30 +354,58 @@ internal sealed partial class MainWindow
         }
     }
 
-    private async void SldSensitivity_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    private CancellationTokenSource? _sliderDebounceCts;
+
+    private async void SldSensitivity_PropertyChanged(object? sender, Avalonia.AvaloniaPropertyChangedEventArgs e)
     {
-        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
+        if (e.Property.Name != "Value") return;
+        if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
+
+        _sliderDebounceCts?.Cancel();
+        _sliderDebounceCts?.Dispose();
+        _sliderDebounceCts = new CancellationTokenSource();
+        var ct = _sliderDebounceCts.Token;
 
         var settings = SettingsManager.Instance.Settings;
         settings.BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
         settings.MinAreaFactor = sldMinArea.Value;
         settings.MaxAreaFactor = sldMaxArea.Value;
         settings.CannyLowThreshold = sldEdge.Value;
-        SettingsManager.Instance.Save();
 
         var session = ScanSessions[CurrentIndex];
         session.Options.BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
         session.Options.MinAreaFactor = sldMinArea.Value / 100.0;
         session.Options.MaxAreaFactor = sldMaxArea.Value / 100.0;
         session.Options.CannyLowThreshold = sldEdge.Value;
-        session.Options.CannyHighThreshold = sldEdge.Value * 2.5;
+        session.Options.CannyHighThreshold = sldEdge.Value * AppConstants.DefaultCannyHighRatio;
 
-        await ReprocessCurrentScanAsync();
+        try
+        {
+            if (pnlLocalLoading != null) pnlLocalLoading.IsVisible = true;
+            await Task.Delay(150, ct);
+
+            // Only save to disk once the user pauses dragging
+            SettingsManager.Instance.Save();
+
+            await ReprocessCurrentScanAsync();
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignored - user is still dragging
+        }
+        finally
+        {
+            // Only hide the indicator if THIS specific task was the final one to run
+            if (pnlLocalLoading != null && !ct.IsCancellationRequested)
+            {
+                pnlLocalLoading.IsVisible = false;
+            }
+        }
     }
 
     private async void BtnAutoTune_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || ScanSessions.Count == 0) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0) return;
 
         var photo = ScanSessions[CurrentIndex].Activate();
         string tuningMsg = LocalizationService.GetString(ResourceKeys.MsgAutoTuning, "Auto-tuning detection parameters...");
@@ -430,7 +438,7 @@ internal sealed partial class MainWindow
 
     private async void ChkAutoOrient_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
+        if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
         SettingsManager.Instance.Save();
         var session = ScanSessions[CurrentIndex];
@@ -440,7 +448,7 @@ internal sealed partial class MainWindow
 
     private async void ChkRestoreColors_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
+        if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
         SettingsManager.Instance.Save();
         var session = ScanSessions[CurrentIndex];
@@ -450,7 +458,7 @@ internal sealed partial class MainWindow
 
     private async void ChkRemoveDust_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (isUpdatingUiFromScan || isLoading || ScanSessions.Count == 0) return;
+        if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
         SettingsManager.Instance.Settings.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
         SettingsManager.Instance.Save();
         var session = ScanSessions[CurrentIndex];
@@ -503,7 +511,7 @@ internal sealed partial class MainWindow
 
     private async Task ReprocessCurrentScanAsync()
     {
-        if (isLoading || ScanSessions.Count == 0) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0) return;
 
         var session = ScanSessions[CurrentIndex];
         session.IsModified = true;
@@ -551,7 +559,7 @@ internal sealed partial class MainWindow
             MinAreaFactor = sldMinArea.Value / 100.0,
             MaxAreaFactor = sldMaxArea.Value / 100.0,
             CannyLowThreshold = sldEdge.Value,
-            CannyHighThreshold = sldEdge.Value * 2.5,
+            CannyHighThreshold = sldEdge.Value * AppConstants.DefaultCannyHighRatio,
             AutoOrientPhotos = chkAutoOrient?.IsChecked == true,
             RestoreVintageColors = chkRestoreColors?.IsChecked == true,
             RemoveDustAndScratches = chkRemoveDust?.IsChecked == true,

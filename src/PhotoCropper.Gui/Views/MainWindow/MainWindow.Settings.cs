@@ -15,27 +15,12 @@ internal sealed partial class MainWindow
         sldMinArea.Value = settings.MinAreaFactor;
         sldMaxArea.Value = settings.MaxAreaFactor;
         sldEdge.Value = settings.CannyLowThreshold;
-        tglAdvanced.IsChecked = settings.AdvancedVisible;
-        if (chkAutoOrient != null)
-        {
-            chkAutoOrient.IsChecked = settings.AutoOrientPhotos;
-        }
-        if (chkRestoreColors != null)
-        {
-            chkRestoreColors.IsChecked = settings.RestoreVintageColors;
-        }
-        if (chkRemoveDust != null)
-        {
-            chkRemoveDust.IsChecked = settings.RemoveDustAndScratches;
-        }
-        if (chkAutoTuneOnPass != null)
-        {
-            chkAutoTuneOnPass.IsChecked = settings.AutoTuneOnScanChange;
-        }
-        if (chkAutoAdjustOnLowCoverage != null)
-        {
-            chkAutoAdjustOnLowCoverage.IsChecked = settings.AutoAdjustOnLowCoverage;
-        }
+
+        chkAutoOrient?.IsChecked = settings.AutoOrientPhotos;
+        chkRestoreColors?.IsChecked = settings.RestoreVintageColors;
+        chkRemoveDust?.IsChecked = settings.RemoveDustAndScratches;
+        chkAutoTuneOnPass?.IsChecked = settings.AutoTuneOnScanChange;
+        chkAutoAdjustOnLowCoverage?.IsChecked = settings.AutoAdjustOnLowCoverage;
 
         UpdateWorkspaceUi(settings.WorkDirectory);
         UpdateCropStrokeColor(settings.DetectionBoxColor);
@@ -46,7 +31,7 @@ internal sealed partial class MainWindow
     private void PopulateLanguageMenu()
     {
         var menus = new[] { menuLanguage, menuAltLanguage };
-        var languages = LocalizationManager.GetAvailableLanguages();
+        var languages = LocalizationService.GetAvailableLanguages();
 
         foreach (var menu in menus)
         {
@@ -66,7 +51,7 @@ internal sealed partial class MainWindow
                 {
                     if (s is MenuItem mi && mi.Tag is string code)
                     {
-                        LocalizationManager.SetLanguage(code);
+                        LocalizationService.SetLanguage(code);
                         UpdateWorkspaceUi(SettingsManager.Instance.Settings.WorkDirectory);
                         UpdateSelectionUi();
                         PopulateThemeMenu();
@@ -293,6 +278,11 @@ internal sealed partial class MainWindow
         {
             rectRefineCrop.Stroke = new SolidColorBrush(stroke);
             rectRefineCrop.Fill = new SolidColorBrush(fill);
+        }
+
+        if (rectCurrentDetectionColor != null)
+        {
+            rectCurrentDetectionColor.Fill = new SolidColorBrush(stroke);
         }
     }
 }
