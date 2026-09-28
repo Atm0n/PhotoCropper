@@ -25,6 +25,10 @@ internal static class ResourceKeys
     public const string BtnDiscardAndExit = nameof(BtnDiscardAndExit);
     public const string BtnCancel = nameof(BtnCancel);
     public const string BtnOk = nameof(BtnOk);
+    public const string BtnReviewPhotos = nameof(BtnReviewPhotos);
+    public const string TipReviewPhotos = nameof(TipReviewPhotos);
+    public const string TitleReviewMode = nameof(TitleReviewMode);
+    public const string MsgReviewEmpty = nameof(MsgReviewEmpty);
 
     public const string LblDetectionSensitivity = nameof(LblDetectionSensitivity);
     public const string LblAutoTuneOnPass = nameof(LblAutoTuneOnPass);

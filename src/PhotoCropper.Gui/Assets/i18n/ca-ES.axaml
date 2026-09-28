@@ -35,10 +35,14 @@
 	<sys:String x:Key="BtnDelete">Eliminar</sys:String>
 	<sys:String x:Key="BtnRotate">Girar 90°</sys:String>
 	<sys:String x:Key="BtnRefine">Ajustar Vores</sys:String>
+	<sys:String x:Key="BtnReviewPhotos">Revisar Fotos</sys:String>
+	<sys:String x:Key="TipReviewPhotos">Obrir visor per revisar i girar ràpidament totes les fotos (V)</sys:String>
+	<sys:String x:Key="TitleReviewMode">Revisió i Gir Ràpid de Fotos</sys:String>
+	<sys:String x:Key="MsgReviewEmpty">No hi ha fotos detectades per revisar a cap escaneig.</sys:String>
 	<sys:String x:Key="BtnAccept">Acceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rebutjar (Retrocés)</sys:String>
 	<sys:String x:Key="StatusReady">Llest</sys:String>
-	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [T] Auto-Ajustar | [R] Girar | [Espai] Comparar Original | [Ctrl+Z/Y] Desfer/Refer</sys:String>
+	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [V] Revisar Tot | [R] Girar | [T] Auto-Ajustar | [Espai] Comparar Original | [Ctrl+Z/Y] Desfer/Refer</sys:String>
 	<sys:String x:Key="MsgUndo">Desfet: {0}.</sys:String>
 	<sys:String x:Key="MsgRedo">Refet: {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>

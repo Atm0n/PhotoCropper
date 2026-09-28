@@ -35,10 +35,14 @@
 	<sys:String x:Key="BtnDelete">Eliminar</sys:String>
 	<sys:String x:Key="BtnRotate">Rotar 90°</sys:String>
 	<sys:String x:Key="BtnRefine">Ajustar Bordes</sys:String>
+	<sys:String x:Key="BtnReviewPhotos">Revisar Fotos</sys:String>
+	<sys:String x:Key="TipReviewPhotos">Abrir visor para revisar y rotar rápidamente todas las fotos (V)</sys:String>
+	<sys:String x:Key="TitleReviewMode">Revisión y Rotación Rápida de Fotos</sys:String>
+	<sys:String x:Key="MsgReviewEmpty">No hay fotos detectadas para revisar en ningún escaneo.</sys:String>
 	<sys:String x:Key="BtnAccept">Aceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rechazar (Retroceso)</sys:String>
 	<sys:String x:Key="StatusReady">Listo</sys:String>
-	<sys:String x:Key="StatusShortcuts">Atajos: [↑/↓] Cambiar Escaneo | [←/→] Navegar Fotos | [T] Auto-Ajustar | [R] Rotar | [Espacio] Comparar Original | [Ctrl+Z/Y] Deshacer/Rehacer</sys:String>
+	<sys:String x:Key="StatusShortcuts">Atajos: [↑/↓] Cambiar Escaneo | [←/→] Navegar Fotos | [V] Revisar Todo | [R] Rotar | [T] Auto-Ajustar | [Espacio] Comparar Original | [Ctrl+Z/Y] Deshacer/Rehacer</sys:String>
 	<sys:String x:Key="MsgUndo">Deshecho: {0}.</sys:String>
 	<sys:String x:Key="MsgRedo">Rehecho: {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>

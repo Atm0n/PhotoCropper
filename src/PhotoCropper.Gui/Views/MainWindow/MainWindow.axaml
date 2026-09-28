@@ -626,6 +626,12 @@
 									<TextBlock x:Name="txtBtnRotate" Text="{DynamicResource BtnRotate}" FontWeight="Bold" VerticalAlignment="Center"/>
 								</StackPanel>
 							</Button>
+							<Button x:Name="btnReviewPhotos" Click="BtnReviewPhotos_Click" Padding="15,10" CornerRadius="20" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Focusable="False" ToolTip.Tip="{DynamicResource TipReviewPhotos}">
+								<StackPanel Orientation="Horizontal" Spacing="6">
+									<TextBlock Text="🔍" FontSize="14" VerticalAlignment="Center"/>
+									<TextBlock Text="{DynamicResource BtnReviewPhotos}" FontWeight="Bold" VerticalAlignment="Center"/>
+								</StackPanel>
+							</Button>
 							<Button x:Name="btnRefine" Click="BtnRefine_Click" Padding="15,10" CornerRadius="20" Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}" ToolTip.Tip="{DynamicResource TipRefine}" Focusable="False">
 								<StackPanel Orientation="Horizontal" Spacing="6">
 									<TextBlock Text="✨" FontSize="15" VerticalAlignment="Center"/>
@@ -639,6 +645,82 @@
 			</Grid>
 		</Grid>
 		</DockPanel>
+
+		<!-- Review & Fast-Rotate Overlay -->
+		<Panel x:Name="pnlReviewOverlay" Background="{DynamicResource AppOverlayScrimBrush}" IsVisible="False" ZIndex="150">
+			<Grid RowDefinitions="Auto, *, Auto" Margin="30,20">
+				<!-- Header Bar -->
+				<Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="10,0,10,10">
+					<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+						<Border Background="{DynamicResource AppAccentBrush}" CornerRadius="6" Padding="8,4">
+							<TextBlock Text="🔍" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
+						</Border>
+						<StackPanel VerticalAlignment="Center" Spacing="2">
+							<TextBlock Text="{DynamicResource TitleReviewMode}" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+							<TextBlock x:Name="txtReviewScanInfo" Text="" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+						</StackPanel>
+					</StackPanel>
+
+					<Border Grid.Column="1" HorizontalAlignment="Center" Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,4">
+						<TextBlock x:Name="txtReviewCounter" Text="PHOTO 1 OF 1" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
+					</Border>
+
+					<Button Grid.Column="2" x:Name="btnReviewClose" Click="BtnReviewClose_Click" Padding="12,6" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Focusable="False" ToolTip.Tip="Close Review (Esc)">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<TextBlock Text="✕" FontSize="12" VerticalAlignment="Center"/>
+							<TextBlock Text="Close" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+						</StackPanel>
+					</Button>
+				</Grid>
+
+				<!-- Center Photo Preview with Nav Arrows -->
+				<Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto">
+					<Button Grid.Column="0" x:Name="btnReviewPrev" Click="BtnReviewPrev_Click" VerticalAlignment="Center" Margin="0,0,15,0"
+							Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="48" Height="96" CornerRadius="8" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ToolTip.Tip="Previous Photo (← / Left)">
+						<TextBlock Text="◀" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+					</Button>
+
+					<Border Grid.Column="1" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource AppWorkspaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+						<Image x:Name="imgReview" Stretch="Uniform" Margin="15" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+					</Border>
+
+					<Button Grid.Column="2" x:Name="btnReviewNext" Click="BtnReviewNext_Click" VerticalAlignment="Center" Margin="15,0,0,0"
+							Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="48" Height="96" CornerRadius="8" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ToolTip.Tip="Next Photo (→ / Right / Space)">
+						<TextBlock Text="▶" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+					</Button>
+				</Grid>
+
+				<!-- Bottom Action Controls -->
+				<Grid Grid.Row="2" ColumnDefinitions="Auto, *, Auto" Margin="10,15,10,0">
+					<Button Grid.Column="0" x:Name="btnReviewDelete" Click="BtnReviewDelete_Click" Padding="16,10" CornerRadius="8" Background="{DynamicResource AppButtonDangerBrush}" Foreground="{DynamicResource AppButtonDangerTextBrush}" Focusable="False" ToolTip.Tip="Delete Photo (Del / X)">
+						<StackPanel Orientation="Horizontal" Spacing="8">
+							<TextBlock Text="🗑️" FontSize="15" VerticalAlignment="Center"/>
+							<TextBlock Text="{DynamicResource BtnDelete}" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+						</StackPanel>
+					</Button>
+
+					<!-- Shortcut Tips -->
+					<StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+						<TextBlock Text="Shortcuts: [R] Rotate 90° CW | [L] Rotate 90° CCW | [←/→/Space] Navigate | [Del/X] Delete | [Esc] Exit" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
+					</StackPanel>
+
+					<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12">
+						<Button x:Name="btnReviewRotateCcw" Click="BtnReviewRotateCcw_Click" Padding="16,10" CornerRadius="8" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Focusable="False" ToolTip.Tip="Rotate 90° Counter-Clockwise (L)">
+							<StackPanel Orientation="Horizontal" Spacing="8">
+								<TextBlock Text="↺" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+								<TextBlock Text="90° CCW" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
+						<Button x:Name="btnReviewRotateCw" Click="BtnReviewRotateCw_Click" Padding="18,10" CornerRadius="8" Background="{DynamicResource AppButtonActionBrush}" Foreground="{DynamicResource AppButtonActionTextBrush}" Focusable="False" ToolTip.Tip="Rotate 90° Clockwise (R)">
+							<StackPanel Orientation="Horizontal" Spacing="8">
+								<TextBlock Text="↻" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+								<TextBlock Text="{DynamicResource BtnRotate}" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
+					</StackPanel>
+				</Grid>
+			</Grid>
+		</Panel>
 
 		<!-- Refine Overlay -->
 		<Panel x:Name="pnlRefineOverlay" Background="{DynamicResource AppOverlayScrimBrush}" IsVisible="False" ZIndex="100">

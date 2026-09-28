@@ -223,6 +223,7 @@ internal sealed partial class MainWindow : Window
 
         if (HandleTextInputGuard(e)) return;
 
+        if (await HandleReviewKey(e)) return;
         if (await HandleRefinementKey(e)) return;
         if (await HandleEditingKey(e)) return;
         if (HandleViewKey(e)) return;
@@ -311,6 +312,11 @@ internal sealed partial class MainWindow : Window
                 case Key.R:
                     FocusManager?.Focus(null);
                     await RotateSelectedPhotosAsync();
+                    e.Handled = true;
+                    return true;
+                case Key.V:
+                    FocusManager?.Focus(null);
+                    await OpenReviewModeAsync();
                     e.Handled = true;
                     return true;
                 case Key.X:
@@ -490,6 +496,23 @@ internal sealed partial class MainWindow : Window
         FocusManager?.Focus(null);
         await DrainLookaheadAsync();
         if (forward) _sessionManager.MoveNext(); else _sessionManager.MovePrevious();
+        try
+        {
+            await LoadPhotosToGuiAsync();
+        }
+        finally
+        {
+            _isNavigating = false;
+        }
+    }
+
+    private async Task NavigateToScanIndexAsync(int targetIndex)
+    {
+        if (targetIndex < 0 || targetIndex >= ScanSessions.Count || targetIndex == CurrentIndex) return;
+        _isNavigating = true;
+        FocusManager?.Focus(null);
+        await DrainLookaheadAsync();
+        _sessionManager.MoveTo(targetIndex);
         try
         {
             await LoadPhotosToGuiAsync();

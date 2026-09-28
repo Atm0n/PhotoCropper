@@ -128,15 +128,18 @@ internal sealed partial class MainWindow
                                     entry.Metadata = scanMetadata;
 
                                     entry.FinalCrops.Clear();
-                                    foreach (var cand in engine.AcceptedCandidates)
+                                    for (int cIdx = 0; cIdx < engine.AcceptedCandidates.Count; cIdx++)
                                     {
+                                        var cand = engine.AcceptedCandidates[cIdx];
+                                        int rot = engine.PhotoRotations.TryGetValue(cIdx, out int r) ? r : 0;
                                         entry.FinalCrops.Add(new WorkspaceCropData
                                         {
                                             CenterX = cand.Rotated.Center.X,
                                             CenterY = cand.Rotated.Center.Y,
                                             Width = cand.Rotated.Size.Width,
                                             Height = cand.Rotated.Size.Height,
-                                            Angle = cand.Rotated.Angle
+                                            Angle = cand.Rotated.Angle,
+                                            RotationDegrees = rot
                                         });
                                     }
                                 }
