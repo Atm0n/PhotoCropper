@@ -132,6 +132,24 @@
 					</Border>
 
 
+					<!-- Group 2: Edit Actions (Undo/Redo) -->
+					<Border Grid.Column="1" HorizontalAlignment="Left" Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="4,3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="10,2,3,2">
+						<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+							<Button x:Name="btnUndo" Click="MenuUndo_Click" Padding="10,5" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Focusable="False" ToolTip.Tip="Undo (Ctrl+Z)" CornerRadius="4">
+								<StackPanel Orientation="Horizontal" Spacing="6">
+									<TextBlock Text="↩️" FontSize="12" VerticalAlignment="Center"/>
+									<TextBlock Text="Undo" FontWeight="SemiBold" VerticalAlignment="Center"/>
+								</StackPanel>
+							</Button>
+							<Button x:Name="btnRedo" Click="MenuRedo_Click" Padding="10,5" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Focusable="False" ToolTip.Tip="Redo (Ctrl+Y)" CornerRadius="4">
+								<StackPanel Orientation="Horizontal" Spacing="6">
+									<TextBlock Text="↪️" FontSize="12" VerticalAlignment="Center"/>
+									<TextBlock Text="Redo" FontWeight="SemiBold" VerticalAlignment="Center"/>
+								</StackPanel>
+							</Button>
+						</StackPanel>
+					</Border>
+
 					<!-- Group 5: Reset Defaults -->
 					<Border Grid.Column="2" HorizontalAlignment="Right" Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="6,3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="3,2">
 						<Button x:Name="btnResetDefaults" Click="BtnResetDefaults_Click" Padding="8,5" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" VerticalAlignment="Center" Focusable="False" CornerRadius="4">
@@ -709,3 +727,4 @@
 
 	</Grid>
 </Window>
+
