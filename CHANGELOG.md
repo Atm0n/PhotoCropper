@@ -7,19 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-09-28
+
 ### Added
+- **Batch Review Mode**: A new full-screen overlay for rapidly reviewing, rotating, and curating detected photos across multiple scans (shortcut: `V`).
+- **Collapsible Right Panel**: You can now hide the right-side configuration panel to maximize the workspace area while scanning.
+- **Edit in Scanner**: Press `E` or double-click a photo in Review Mode to instantly jump to the editor for manual edge refinement.
+- **Review Mode Mouse Support**: Use the mouse scroll wheel to quickly navigate through the batch review carousel.
+- **Live Undo/Redo Sync**: Pressing `Ctrl+Z` or `Ctrl+Y` while in Review Mode now seamlessly syncs and updates the carousel live.
 - `--always-auto-tune` CLI flag and interactive wizard option to unconditionally auto-tune all scans.
 - Unit tests for `AutoTuneService` detection logic, sweep combinations, and scoring boundaries.
 - Unit tests for `PhotoCropperEngine` including `ApplyGrabHandleResize` behavior and edge cases.
 - Unit tests for `AutoOrientationService` covering landscape analysis heuristics (sky, water, vegetation).
 
+### Changed
+- **Default AI Behaviors**: Destructive AI enhancements (Restore Colors and Remove Dust & Scratches) are now disabled by default to prevent unwanted artifacts. Auto-Orientation remains enabled.
+- **Scan Navigation**: Scan cycling now clamps at the first and last scans rather than looping infinitely, preventing users from losing track of newly added scans.
+- Split the monolithic GitHub Actions pipeline into dedicated `ci.yml` (for testing PRs/pushes) and `release.yml` (for CD tagging) to adhere to security best practices.
+
 ### Fixed
 - Replaced magic floating array indexes in `FaceOrientationService` with explicitly defined ONNX YuNet constants.
 - Resolved orphaned exceptions caused by unawaited fire-and-forget background tasks by properly attaching fault continuations.
 - Removed hardcoded fallback version (`2.7.1`) in the CI release workflow to prevent silent publication of incorrect versions on tag parse failure.
-
-### Changed
-- Split the monolithic GitHub Actions pipeline into dedicated `ci.yml` (for testing PRs/pushes) and `release.yml` (for CD tagging) to adhere to security best practices.
 
 ## [2.7.1] - 2026-09-26
 
