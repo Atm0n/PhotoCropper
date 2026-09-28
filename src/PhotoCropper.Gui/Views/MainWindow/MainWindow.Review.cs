@@ -409,4 +409,26 @@ internal sealed partial class MainWindow
     private async void BtnReviewRotateCw_Click(object? sender, RoutedEventArgs e) => await ReviewRotateClockwiseAsync();
     private async void BtnReviewRotateCcw_Click(object? sender, RoutedEventArgs e) => await ReviewRotateCounterClockwiseAsync();
     private async void BtnReviewDelete_Click(object? sender, RoutedEventArgs e) => await ReviewDeleteCurrentPhotoAsync();
+
+    private async void PnlReviewOverlay_PointerWheelChanged(object? sender, Avalonia.Input.PointerWheelEventArgs e)
+    {
+        if (!IsInReviewMode) return;
+        if (e.Delta.Y > 0)
+        {
+            await ReviewPrevPhotoAsync();
+        }
+        else if (e.Delta.Y < 0)
+        {
+            await ReviewNextPhotoAsync();
+        }
+        e.Handled = true;
+    }
+
+    private void PnlReviewOverlay_DoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (!IsInReviewMode) return;
+        // Double tapping functions exactly like "Edit in Scanner (E)"
+        CloseReviewMode();
+        e.Handled = true;
+    }
 }

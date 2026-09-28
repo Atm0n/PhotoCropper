@@ -495,7 +495,7 @@ internal sealed partial class MainWindow : Window
         _isNavigating = true;
         FocusManager?.Focus(null);
         await DrainLookaheadAsync();
-        
+
         bool moved = forward ? _sessionManager.MoveNext() : _sessionManager.MovePrevious();
         if (!moved)
         {

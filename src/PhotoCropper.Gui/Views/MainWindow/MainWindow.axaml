@@ -655,7 +655,7 @@
 		</DockPanel>
 
 		<!-- Review & Fast-Rotate Overlay -->
-		<Panel x:Name="pnlReviewOverlay" Background="{DynamicResource AppOverlayScrimBrush}" IsVisible="False" ZIndex="150">
+		<Panel x:Name="pnlReviewOverlay" Background="{DynamicResource AppOverlayScrimBrush}" IsVisible="False" ZIndex="150" PointerWheelChanged="PnlReviewOverlay_PointerWheelChanged" DoubleTapped="PnlReviewOverlay_DoubleTapped">
 			<Grid RowDefinitions="Auto, *, Auto" Margin="30,20">
 				<!-- Header Bar -->
 				<Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="10,0,10,10">

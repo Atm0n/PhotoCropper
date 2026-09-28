@@ -560,6 +560,12 @@ internal sealed partial class MainWindow
         }
 
         lblStatus.Text = LocalizationService.Format(statusMessageKey, statusDefaultFormat, action.Description);
+
+        if (IsInReviewMode)
+        {
+            CloseReviewMode();
+            _ = OpenReviewModeAsync();
+        }
     }
 
     private Task PerformUndoAsync()
