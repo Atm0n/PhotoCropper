@@ -2,6 +2,7 @@ using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using PhotoCropper.Core;
+using PhotoCropper.Core.Models;
 using PhotoCropper.Gui.Services;
 using PhotoCropper.TestHelpers;
 
@@ -34,14 +35,17 @@ public sealed class UndoRedoHistoryTests : IDisposable
         using var engine = new PhotoCropperEngine(_scanPath);
         engine.DetectPhotos();
         int initialCount = engine.DetectedPhotos.Count;
+        int initialCandCount = engine.AcceptedCandidates.Count;
         initialCount.ShouldBeGreaterThanOrEqualTo(2);
 
         // Delete photo at index 0
         using var photoToDelete = engine.DetectedPhotos[0].Clone();
+        var candToDelete = engine.AcceptedCandidates.Count > 0 ? engine.AcceptedCandidates[0] : (CropCandidate?)null;
         engine.DeletePhoto(0);
-        history.PushDelete(0, 0, photoToDelete);
+        history.PushDelete(0, 0, photoToDelete, candToDelete);
 
         engine.DetectedPhotos.Count.ShouldBe(initialCount - 1);
+        engine.AcceptedCandidates.Count.ShouldBe(initialCandCount - 1);
         history.CanUndo.ShouldBeTrue();
         history.CanRedo.ShouldBeFalse();
 
@@ -50,6 +54,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
         undoAction.ShouldNotBeNull();
         undoAction.Description.ShouldBe("Delete Photo");
         engine.DetectedPhotos.Count.ShouldBe(initialCount);
+        engine.AcceptedCandidates.Count.ShouldBe(initialCandCount);
         history.CanUndo.ShouldBeFalse();
         history.CanRedo.ShouldBeTrue();
 
@@ -57,6 +62,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
         var redoAction = history.Redo([engine]);
         redoAction.ShouldNotBeNull();
         engine.DetectedPhotos.Count.ShouldBe(initialCount - 1);
+        engine.AcceptedCandidates.Count.ShouldBe(initialCandCount - 1);
         history.CanUndo.ShouldBeTrue();
         history.CanRedo.ShouldBeFalse();
     }
@@ -213,23 +219,27 @@ public sealed class UndoRedoHistoryTests : IDisposable
         engine.DetectPhotos();
         engine.DetectedPhotos.Count.ShouldBeGreaterThanOrEqualTo(2);
         int initialCount = engine.DetectedPhotos.Count;
+        int initialCandCount = engine.AcceptedCandidates.Count;
 
         int origWidth0 = engine.DetectedPhotos[0].Width;
         int origWidth1 = engine.DetectedPhotos[1].Width;
 
         var mat1 = engine.DetectedPhotos[1];
         var mat0 = engine.DetectedPhotos[0];
+        var cand1 = engine.AcceptedCandidates.Count > 1 ? engine.AcceptedCandidates[1] : (CropCandidate?)null;
+        var cand0 = engine.AcceptedCandidates.Count > 0 ? engine.AcceptedCandidates[0] : (CropCandidate?)null;
 
         var actions = new List<IUndoableAction>
         {
-            new DeletePhotoAction(0, 1, mat1),
-            new DeletePhotoAction(0, 0, mat0)
+            new DeletePhotoAction(0, 1, mat1, cand1),
+            new DeletePhotoAction(0, 0, mat0, cand0)
         };
 
         // Execute deletes in descending order
         engine.DeletePhoto(1);
         engine.DeletePhoto(0);
         engine.DetectedPhotos.Count.ShouldBe(initialCount - 2);
+        engine.AcceptedCandidates.Count.ShouldBe(initialCandCount - 2);
 
         history.PushBatch(0, actions, "Delete 2 Photos");
 
@@ -238,6 +248,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
         undoAction.ShouldNotBeNull();
         undoAction.Description.ShouldBe("Delete 2 Photos");
         engine.DetectedPhotos.Count.ShouldBe(initialCount);
+        engine.AcceptedCandidates.Count.ShouldBe(initialCandCount);
         engine.DetectedPhotos[0].Width.ShouldBe(origWidth0);
         engine.DetectedPhotos[1].Width.ShouldBe(origWidth1);
 
@@ -245,6 +256,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
         var redoAction = history.Redo([engine]);
         redoAction.ShouldNotBeNull();
         engine.DetectedPhotos.Count.ShouldBe(initialCount - 2);
+        engine.AcceptedCandidates.Count.ShouldBe(initialCandCount - 2);
     }
 
     [Fact]
@@ -275,6 +287,62 @@ public sealed class UndoRedoHistoryTests : IDisposable
 
         // No more undo actions available
         history.CanUndo.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void UndoRedoHistory_InvalidateScan_ShouldRemoveUndoEntriesForThatScan()
+    {
+        using var history = new UndoRedoHistory();
+
+        // Push actions for scan 0 and scan 1
+        history.PushRotate(0, 0);
+        history.PushRotate(1, 0);
+        history.PushRotate(0, 1);
+        history.UndoCount.ShouldBe(3);
+
+        // Invalidate scan 1 — only its action should be removed
+        history.InvalidateScan(1);
+
+        history.UndoCount.ShouldBe(2);
+        history.CanUndo.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void UndoRedoHistory_InvalidateScan_ShouldAlsoClearRedoEntriesForThatScan()
+    {
+        using var history = new UndoRedoHistory();
+        using var engine = new PhotoCropperEngine(_scanPath);
+        engine.DetectPhotos();
+
+        // Undo pops the LAST pushed entry. Push scan 0 first, then scan 1 last.
+        // Undo() will pop the scan 1 action (last in) and place it on the redo stack.
+        history.PushRotate(0, 0);  // scan 0 action pushed first — stays on undo stack
+        history.PushRotate(1, 0);  // scan 1 action pushed last  — will be moved to redo
+        history.Undo([engine]);    // pops scan 1 rotate → redo stack; scan 0 remains on undo
+
+        history.CanRedo.ShouldBeTrue();
+        history.UndoCount.ShouldBe(1); // scan 0 action remains on undo
+
+        // Invalidate scan 1 — its redo entry should be purged
+        history.InvalidateScan(1);
+
+        history.CanRedo.ShouldBeFalse();
+        history.UndoCount.ShouldBe(1); // scan 0 undo entry untouched
+    }
+
+    [Fact]
+    public void UndoRedoHistory_InvalidateScan_WhenNoEntriesForScan_ShouldLeaveOtherEntriesIntact()
+    {
+        using var history = new UndoRedoHistory();
+        history.PushRotate(0, 0);
+        history.PushRotate(0, 1);
+        history.UndoCount.ShouldBe(2);
+
+        // Invalidating a scan that has no entries should be a no-op
+        history.InvalidateScan(99);
+
+        history.UndoCount.ShouldBe(2);
+        history.CanUndo.ShouldBeTrue();
     }
 
     public void Dispose()

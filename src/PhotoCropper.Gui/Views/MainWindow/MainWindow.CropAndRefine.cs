@@ -25,6 +25,10 @@ internal sealed partial class MainWindow
     private Point startRefinePoint;
     private bool isRefineDragging;
 
+    // Pre-drag snapshots used to record a ResizeCandidateAction when the drag ends.
+    private Mat? _dragBeforeMat;
+    private IReadOnlyList<CropCandidate>? _dragBeforeCandidates;
+
     private void ScrollOriginal_SizeChanged(object? sender, SizeChangedEventArgs e) => UpdateCropCanvasSize();
 
     private void SldZoom_PropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
@@ -140,6 +144,9 @@ internal sealed partial class MainWindow
                     dragCandIndex = i;
                     initialMouseAngle = Math.Atan2(pt.Y - cand.Rotated.Center.Y, pt.X - cand.Rotated.Center.X) * 180.0 / Math.PI;
                     initialRotatedAngle = cand.Rotated.Angle;
+                    // Snapshot the state before the drag so we can record an undo action on release.
+                    _dragBeforeMat = i < photo.DetectedPhotos.Count ? photo.DetectedPhotos[i].Clone() : null;
+                    _dragBeforeCandidates = [.. photo.AcceptedCandidates];
                     e.Handled = true;
                     return;
                 }
@@ -152,6 +159,9 @@ internal sealed partial class MainWindow
                         isDraggingHandle = true;
                         dragCandIndex = i;
                         dragVertexIndex = j;
+                        // Snapshot the state before the drag so we can record an undo action on release.
+                        _dragBeforeMat = i < photo.DetectedPhotos.Count ? photo.DetectedPhotos[i].Clone() : null;
+                        _dragBeforeCandidates = [.. photo.AcceptedCandidates];
                         e.Handled = true;
                         return;
                     }
@@ -271,6 +281,21 @@ internal sealed partial class MainWindow
             var photo = ScanSessions[CurrentIndex].Activate();
             photo.ApplyGrabHandleResize(dragCandIndex);
             ScanSessions[CurrentIndex].IsModified = true;
+
+            if (_dragBeforeMat != null && _dragBeforeCandidates != null)
+            {
+                undoHistory.PushResizeCandidate(
+                    CurrentIndex, dragCandIndex,
+                    _dragBeforeMat, photo.DetectedPhotos[dragCandIndex],
+                    _dragBeforeCandidates, photo.AcceptedCandidates,
+                    "Rotate Crop Box");
+            }
+
+            _dragBeforeMat?.Dispose();
+            _dragBeforeMat = null;
+            _dragBeforeCandidates = null;
+
+            SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
             UpdateDetectionCoverageLabel();
         }
@@ -297,12 +322,23 @@ internal sealed partial class MainWindow
 
                 if (dragVertexIndex == trIndex)
                 {
+                    // Vertex tap-to-delete: record a DeletePhotoAction for this.
+                    if (dragCandIndex < photo.DetectedPhotos.Count)
+                    {
+                        var candToDelete = dragCandIndex < (photo.AcceptedCandidates?.Count ?? 0)
+                            ? photo.AcceptedCandidates?[dragCandIndex]
+                            : null;
+                        undoHistory.PushDelete(CurrentIndex, dragCandIndex, photo.DetectedPhotos[dragCandIndex], candToDelete);
+                    }
                     photo.DeletePhoto(dragCandIndex);
                     ScanSessions[CurrentIndex].IsModified = true;
                     SetMainImage(photo.OriginalWithDetected);
                     LoadCroppedPhotosToSlider();
                     UpdatePhotoCounterLabel();
                     UpdateDetectionCoverageLabel();
+                    _dragBeforeMat?.Dispose();
+                    _dragBeforeMat = null;
+                    _dragBeforeCandidates = null;
                     dragCandIndex = -1;
                     return;
                 }
@@ -310,6 +346,21 @@ internal sealed partial class MainWindow
 
             photo.ApplyGrabHandleResize(dragCandIndex);
             ScanSessions[CurrentIndex].IsModified = true;
+
+            if (_dragBeforeMat != null && _dragBeforeCandidates != null)
+            {
+                undoHistory.PushResizeCandidate(
+                    CurrentIndex, dragCandIndex,
+                    _dragBeforeMat, photo.DetectedPhotos[dragCandIndex],
+                    _dragBeforeCandidates, photo.AcceptedCandidates,
+                    "Resize Crop Box");
+            }
+
+            _dragBeforeMat?.Dispose();
+            _dragBeforeMat = null;
+            _dragBeforeCandidates = null;
+
+            SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
             UpdateDetectionCoverageLabel();
         }
@@ -335,6 +386,13 @@ internal sealed partial class MainWindow
             double dist = Math.Sqrt(Math.Pow(tr.X - pt.X, 2) + Math.Pow(tr.Y - pt.Y, 2));
             if (dist <= 60)
             {
+                if (i < photo.DetectedPhotos.Count)
+                {
+                    var candToDelete = i < (photo.AcceptedCandidates?.Count ?? 0)
+                        ? photo.AcceptedCandidates?[i]
+                        : null;
+                    undoHistory.PushDelete(CurrentIndex, i, photo.DetectedPhotos[i], candToDelete);
+                }
                 photo.DeletePhoto(i);
                 ScanSessions[CurrentIndex].IsModified = true;
                 SetMainImage(photo.OriginalWithDetected);
@@ -373,7 +431,10 @@ internal sealed partial class MainWindow
             if (photo.DetectedPhotos.Count > prevCount)
             {
                 int newIndex = photo.DetectedPhotos.Count - 1;
-                undoHistory.PushAdd(CurrentIndex, newIndex, photo.DetectedPhotos[newIndex]);
+                var addedCand = newIndex < (photo.AcceptedCandidates?.Count ?? 0)
+                    ? photo.AcceptedCandidates?[newIndex]
+                    : null;
+                undoHistory.PushAdd(CurrentIndex, newIndex, photo.DetectedPhotos[newIndex], addedCand);
             }
             SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();

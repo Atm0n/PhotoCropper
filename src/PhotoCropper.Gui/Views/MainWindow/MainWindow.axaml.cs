@@ -47,6 +47,11 @@ internal sealed partial class MainWindow : Window
         InitializeComponent();
         _notificationService.Initialize(this);
 
+        // Invalidate undo/redo entries for a scan when its engine is deactivated.
+        // Re-activating the engine recreates it from scratch (DetectPhotos), so any
+        // previously recorded actions targeting that scan would apply to stale state.
+        _sessionManager.SessionDeactivated += scanIndex => undoHistory.InvalidateScan(scanIndex);
+
         // Register key handlers in Tunnel phase
         AddHandler(KeyDownEvent, Window_KeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyUpEvent, Window_KeyUp, RoutingStrategies.Tunnel);

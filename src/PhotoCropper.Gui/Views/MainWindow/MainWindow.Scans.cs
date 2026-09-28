@@ -1,7 +1,5 @@
-using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.IO;
@@ -373,7 +371,7 @@ internal sealed partial class MainWindow
         settings.MinAreaFactor = sldMinArea.Value;
         settings.MaxAreaFactor = sldMaxArea.Value;
         settings.CannyLowThreshold = sldEdge.Value;
-        
+
         var session = ScanSessions[CurrentIndex];
         session.Options.BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
         session.Options.MinAreaFactor = sldMinArea.Value / 100.0;
@@ -388,7 +386,7 @@ internal sealed partial class MainWindow
 
             // Only save to disk once the user pauses dragging
             SettingsManager.Instance.Save();
-            
+
             await ReprocessCurrentScanAsync();
         }
         catch (TaskCanceledException)

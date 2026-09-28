@@ -135,6 +135,51 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
+    public void ScanSessionManager_SessionDeactivated_ShouldFireWithCorrectIndexWhenUnmodifiedSessionDeactivated()
+    {
+        using var manager = new ScanSessionManager();
+        var options = new DetectionOptions();
+
+        var item1 = new ScanSessionItem(_scan1, options, isSaved: true, isModified: false);
+        var item2 = new ScanSessionItem(_scan2, options);
+
+        manager.AddRange([item1, item2]);
+        item1.Activate();
+
+        var firedIndices = new List<int>();
+        manager.SessionDeactivated += idx => firedIndices.Add(idx);
+
+        // Navigate away from session 0 (unmodified) → event should fire for index 0
+        manager.MoveNext();
+
+        firedIndices.Count.ShouldBe(1);
+        firedIndices[0].ShouldBe(0);
+    }
+
+    [Fact]
+    public void ScanSessionManager_SessionDeactivated_ShouldNotFireForModifiedSession()
+    {
+        using var manager = new ScanSessionManager();
+        var options = new DetectionOptions();
+
+        // item1 is modified — TryDeactivateIfUnmodified will skip it
+        var item1 = new ScanSessionItem(_scan1, options, isSaved: false, isModified: true);
+        var item2 = new ScanSessionItem(_scan2, options);
+
+        manager.AddRange([item1, item2]);
+        item1.Activate();
+
+        var firedIndices = new List<int>();
+        manager.SessionDeactivated += idx => firedIndices.Add(idx);
+
+        manager.MoveNext();
+
+        // Modified session stays active, event must not fire
+        firedIndices.ShouldBeEmpty();
+        item1.IsActive.ShouldBeTrue();
+    }
+
+    [Fact]
     public void ScanSessionManager_RemoveCurrent_ShouldAdjustIndexCorrectly()
     {
         using var manager = new ScanSessionManager();

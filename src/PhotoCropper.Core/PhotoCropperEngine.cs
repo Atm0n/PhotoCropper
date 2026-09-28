@@ -617,6 +617,26 @@ public class PhotoCropperEngine : IDisposable
         }
     }
 
+    public void InsertPhoto(int index, Mat photo, CropCandidate? candidate = null)
+    {
+        ArgumentNullException.ThrowIfNull(photo);
+
+        int targetIndex = Math.Clamp(index, 0, DetectedPhotos.Count);
+        DetectedPhotos.Insert(targetIndex, photo);
+
+        int rawTargetIndex = Math.Clamp(index, 0, RawDetectedPhotos.Count);
+        RawDetectedPhotos.Insert(rawTargetIndex, photo.Clone());
+
+        if (candidate.HasValue && AcceptedCandidates != null)
+        {
+            int candTargetIndex = Math.Clamp(index, 0, AcceptedCandidates.Count);
+            var newList = new List<CropCandidate>(AcceptedCandidates);
+            newList.Insert(candTargetIndex, candidate.Value);
+            AcceptedCandidates = newList;
+            RedrawBoundingBoxes();
+        }
+    }
+
     public Rectangle GetRefinedCropRect(int index)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return Rectangle.Empty;

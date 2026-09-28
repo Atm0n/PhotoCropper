@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;
@@ -106,7 +105,10 @@ internal sealed partial class MainWindow
         if (photoIndex >= currentEngine.DetectedPhotos.Count) return;
 
         var matToDelete = currentEngine.DetectedPhotos[photoIndex];
-        undoHistory.PushDelete(CurrentIndex, photoIndex, matToDelete);
+        var candToDelete = photoIndex < (currentEngine.AcceptedCandidates?.Count ?? 0)
+            ? currentEngine.AcceptedCandidates?[photoIndex]
+            : null;
+        undoHistory.PushDelete(CurrentIndex, photoIndex, matToDelete, candToDelete);
 
         currentEngine.DeletePhoto(photoIndex);
 
@@ -144,7 +146,10 @@ internal sealed partial class MainWindow
         foreach (var idx in sortedIndices)
         {
             var mat = currentEngine.DetectedPhotos[idx];
-            actions.Add(new DeletePhotoAction(CurrentIndex, idx, mat));
+            var cand = idx < (currentEngine.AcceptedCandidates?.Count ?? 0)
+                ? currentEngine.AcceptedCandidates?[idx]
+                : null;
+            actions.Add(new DeletePhotoAction(CurrentIndex, idx, mat, cand));
             currentEngine.DeletePhoto(idx);
         }
 
@@ -196,7 +201,6 @@ internal sealed partial class MainWindow
         if (isLoading || _isNavigating || ScanSessions.Count == 0 || photoIndex < 0) return;
 
         ScanSessions[CurrentIndex].IsModified = true;
-        undoHistory.PushRotate(CurrentIndex, photoIndex);
 
         string rotatingMsg = LocalizationService.GetString(ResourceKeys.MsgRotating, "Rotating...");
         string rotatedMsg = LocalizationService.GetString(ResourceKeys.MsgPhotoRotated, "Photo rotated.");
@@ -204,6 +208,7 @@ internal sealed partial class MainWindow
         await ExecuteWithLoadingAsync(rotatingMsg, async ct =>
         {
             await Task.Run(() => ScanSessions[CurrentIndex].Activate().RotatePhoto(photoIndex), ct);
+            undoHistory.PushRotate(CurrentIndex, photoIndex);
             LoadCroppedPhotosToSlider();
             slides?.SelectedIndex = photoIndex;
             if (lstGallery != null && photoIndex < lstGallery.Items.Count)
@@ -251,16 +256,9 @@ internal sealed partial class MainWindow
 
         ScanSessions[CurrentIndex].IsModified = true;
 
-        var actions = new List<IUndoableAction>();
-        foreach (var idx in validIndices)
-        {
-            actions.Add(new RotatePhotoAction(CurrentIndex, idx));
-        }
-
         string desc = validIndices.Count == 1
             ? (clockwise ? "Rotate 90° CW" : "Rotate 90° CCW")
             : (clockwise ? $"Batch Rotate ({validIndices.Count} photos)" : $"Batch Rotate CCW ({validIndices.Count} photos)");
-        undoHistory.PushBatch(CurrentIndex, actions, desc);
 
         await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgBatchRotating, "Rotating {0} photos...", validIndices.Count), async ct =>
         {
@@ -279,6 +277,13 @@ internal sealed partial class MainWindow
                     }
                 }
             }, ct);
+
+            var actions = new List<IUndoableAction>();
+            foreach (var idx in validIndices)
+            {
+                actions.Add(new RotatePhotoAction(CurrentIndex, idx));
+            }
+            undoHistory.PushBatch(CurrentIndex, actions, desc);
 
             LoadCroppedPhotosToSlider();
             RestoreGallerySelection(validIndices);
@@ -510,7 +515,7 @@ internal sealed partial class MainWindow
         if (!isLoading && slides != null) slides.Next();
     }
 
-    private async Task ApplyUndoRedoActionAsync(IUndoableAction? action, string statusMessageKey, string statusDefaultFormat)
+    private void ApplyUndoRedoAction(IUndoableAction? action, string statusMessageKey, string statusDefaultFormat)
     {
         if (action == null) return;
 
@@ -521,37 +526,58 @@ internal sealed partial class MainWindow
 
         if (action.ScanIndex != CurrentIndex && action.ScanIndex >= 0 && action.ScanIndex < ScanSessions.Count)
         {
-            ScanSessions[CurrentIndex].Deactivate();
-            CurrentIndex = action.ScanIndex;
-            await LoadPhotosToGuiAsync();
+            // Navigate to the scan the action belongs to.
+            // The undo/redo was already applied to that scan's engine by the engineAccessor callback
+            // inside undoHistory.Undo/Redo. We must NOT call LoadPhotosToGuiAsync here because
+            // it would re-activate the engine (DetectPhotos) and overwrite the undo state.
+            ScanSessions[CurrentIndex].TryDeactivateIfUnmodified();
+            _sessionManager.MoveTo(action.ScanIndex);
+
+            // Mark the session as already processed so LoadPhotosToGuiAsync takes the fast path
+            // (just refresh gallery) without re-running AutoTune or DetectPhotos.
+            ScanSessions[action.ScanIndex].IsAutoTuned = true;
+
+            var targetSession = ScanSessions[action.ScanIndex];
+            var targetEngine = targetSession.Activate();
+            SyncUiWithScanOptions(targetEngine.CurrentOptions);
+            SetMainImage(targetEngine.OriginalWithDetected);
+            txtFileCounter.Text = LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", action.ScanIndex + 1, ScanSessions.Count);
+            LoadCroppedPhotosToSlider();
+            UpdatePhotoCounterLabel();
+            UpdateDetectionCoverageLabel();
         }
         else
         {
             var engine = ScanSessions[CurrentIndex].Activate();
             int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, engine.DetectedPhotos.Count - 1)) : 0;
+            // Refresh the main scan overlay (bounding boxes) as well as the gallery thumbnails.
+            SetMainImage(engine.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
             if (slides != null && engine.DetectedPhotos.Count > 0)
             {
                 slides.SelectedIndex = selected;
             }
         }
+
         lblStatus.Text = LocalizationService.Format(statusMessageKey, statusDefaultFormat, action.Description);
     }
 
-    private async Task PerformUndoAsync()
+    private Task PerformUndoAsync()
     {
-        if (isLoading || _isNavigating || ScanSessions.Count == 0 || !undoHistory.CanUndo) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0 || !undoHistory.CanUndo) return Task.CompletedTask;
 
         var action = undoHistory.Undo(idx => idx >= 0 && idx < ScanSessions.Count ? ScanSessions[idx].Activate() : null);
-        await ApplyUndoRedoActionAsync(action, ResourceKeys.MsgUndo, "Undid {0}.");
+        ApplyUndoRedoAction(action, ResourceKeys.MsgUndo, "Undid {0}.");
+        return Task.CompletedTask;
     }
 
-    private async Task PerformRedoAsync()
+    private Task PerformRedoAsync()
     {
-        if (isLoading || _isNavigating || ScanSessions.Count == 0 || !undoHistory.CanRedo) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0 || !undoHistory.CanRedo) return Task.CompletedTask;
 
         var action = undoHistory.Redo(idx => idx >= 0 && idx < ScanSessions.Count ? ScanSessions[idx].Activate() : null);
-        await ApplyUndoRedoActionAsync(action, ResourceKeys.MsgRedo, "Redid {0}.");
+        ApplyUndoRedoAction(action, ResourceKeys.MsgRedo, "Redid {0}.");
+        return Task.CompletedTask;
     }
 
     private Task RotateSelectedPhotosCcwAsync() => RotatePhotosCoreAsync(GetSelectedPhotoIndices(), clockwise: false);
