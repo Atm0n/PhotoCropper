@@ -134,7 +134,8 @@ internal sealed partial class MainWindow
 
 
 
-                var rotHandlePt = cand.GetRotationHandlePoint(60f);
+                var imageBounds = new System.Drawing.Rectangle(0, 0, photo.OriginalWithDetected.Width, photo.OriginalWithDetected.Height);
+                var rotHandlePt = cand.GetRotationHandlePoint(60f, imageBounds);
                 double rotateDist = Math.Sqrt(Math.Pow(rotHandlePt.X - pt.X, 2) + Math.Pow(rotHandlePt.Y - pt.Y, 2));
                 if (rotateDist <= 55)
                 {

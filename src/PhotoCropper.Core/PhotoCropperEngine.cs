@@ -305,9 +305,10 @@ public class PhotoCropperEngine : IDisposable
             CvInvoke.Line(OriginalWithDetected, new Point(tr.X + 15, tr.Y - 15), new Point(tr.X - 15, tr.Y + 15), whiteText, 8);
 
             // Draw standard rotation handle at top-middle of box
+            Rectangle imageBounds = new(0, 0, OriginalWithDetected.Width, OriginalWithDetected.Height);
             PointF[] ordered = PhotoExtractionEngine.OrderBoxPoints(vertices);
             Point topMid = Point.Round(new PointF((ordered[0].X + ordered[1].X) / 2f, (ordered[0].Y + ordered[1].Y) / 2f));
-            Point rotHandle = Point.Round(cand.GetRotationHandlePoint(60f));
+            Point rotHandle = Point.Round(cand.GetRotationHandlePoint(60f, imageBounds));
 
             // Stem connecting top edge to rotation handle
             CvInvoke.Line(OriginalWithDetected, topMid, rotHandle, boxColor, 6);
@@ -316,6 +317,36 @@ public class PhotoCropperEngine : IDisposable
             MCvScalar blueBadge = new(255, 0, 0); // Blue in BGR
             CvInvoke.Circle(OriginalWithDetected, rotHandle, radius, blueBadge, -1);
             CvInvoke.Circle(OriginalWithDetected, rotHandle, radius, whiteText, 3);
+
+            // Draw spinning rotation arrow icon inside the badge
+            int arrowRadius = 22;
+            CvInvoke.Ellipse(OriginalWithDetected, rotHandle, new Size(arrowRadius, arrowRadius), 0, 45, 315, whiteText, 5);
+
+            // Arrow head at arc termination (angle 315°)
+            double arrowAngleRad = 315.0 * Math.PI / 180.0;
+            Point tip = new(
+                rotHandle.X + (int)(arrowRadius * Math.Cos(arrowAngleRad)),
+                rotHandle.Y + (int)(arrowRadius * Math.Sin(arrowAngleRad)));
+
+            // Tangent direction at 315° is (-sin(315°), cos(315°))
+            double tx = -Math.Sin(arrowAngleRad);
+            double ty = Math.Cos(arrowAngleRad);
+            double nx = -ty;
+            double ny = tx;
+
+            const double headLen = 12.0;
+            const double headWidth = 8.0;
+
+            Point wing1 = new(
+                (int)(tip.X - headLen * tx + headWidth * nx),
+                (int)(tip.Y - headLen * ty + headWidth * ny));
+            Point wing2 = new(
+                (int)(tip.X - headLen * tx - headWidth * nx),
+                (int)(tip.Y - headLen * ty - headWidth * ny));
+
+            Point[] arrowPoly = [tip, wing1, wing2];
+            using var polyVec = new VectorOfPoint(arrowPoly);
+            CvInvoke.FillConvexPoly(OriginalWithDetected, polyVec, whiteText);
         }
     }
 
