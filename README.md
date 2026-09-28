@@ -1,4 +1,4 @@
-# PhotoCropper
+﻿# PhotoCropper
 
 An intelligent, cross-platform .NET 10 desktop application designed to automatically detect, straighten, and extract multiple photos from a single scanner bed image. Built with Avalonia UI and Emgu.CV (OpenCV).
 
@@ -133,6 +133,9 @@ The codebase strictly enforces the highest standard of static analysis and memor
 | `F1` | 📖 Open Help & Keyboard Shortcuts window |
 | `F5` | 🖨️ Acquire scan from flatbed scanner |
 | `T` | ⚡ Auto-Tune detection parameters on active scan |
+| `V` | 🎞️ Toggle Batch Review Mode (Full-screen carousel curation) |
+| `E` / `Double Click` | Edit in Scanner (jumps from Review Mode directly to the active photo) |
+| `Mouse Wheel` | Scroll through photos (Review Mode) |
 | `Left / Right` | Navigate between cropped photos |
 | `Up / Down` / `PageUp / PageDown` | Switch between original loaded scans |
 | `R` | Rotate the current cropped photo 90° clockwise |
