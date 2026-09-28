@@ -226,14 +226,12 @@
 
 							<ScrollViewer DockPanel.Dock="Left" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
 								<StackPanel Orientation="Horizontal" Spacing="8">
-								<Border Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="3,2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-									<Button x:Name="btnDeleteScan" Click="BtnDeleteScan_Click" Padding="8,4" Background="{DynamicResource AppButtonDangerBrush}" Foreground="{DynamicResource AppButtonDangerTextBrush}" CornerRadius="4" Focusable="False" ToolTip.Tip="{DynamicResource TipDeleteScan}">
-										<StackPanel Orientation="Horizontal" Spacing="4">
-											<TextBlock Text="✖" FontSize="11" VerticalAlignment="Center"/>
-											<TextBlock Text="{DynamicResource BtnDelete}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
-										</StackPanel>
-									</Button>
-								</Border>
+								<Button x:Name="btnDeleteScan" Click="BtnDeleteScan_Click" Padding="12,6" Background="{DynamicResource AppButtonDangerBrush}" Foreground="{DynamicResource AppButtonDangerTextBrush}" CornerRadius="6" Focusable="False" ToolTip.Tip="{DynamicResource TipDeleteScan}" VerticalAlignment="Center">
+									<StackPanel Orientation="Horizontal" Spacing="6">
+										<TextBlock Text="🗑️" FontSize="13" VerticalAlignment="Center"/>
+										<TextBlock Text="{DynamicResource BtnDelete}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+									</StackPanel>
+								</Button>
 							<Border Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="6,2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 								<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
 									<TextBlock Text="{DynamicResource LblZoom}" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
@@ -309,6 +307,14 @@
 							</Canvas>
 						</Panel>
 					</ScrollViewer>
+						
+						<!-- Localized "Thinking" indicator for Live Preview -->
+						<Border Grid.Column="1" x:Name="pnlLocalLoading" Background="{DynamicResource AppModalBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="20" Padding="15,8" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" ZIndex="20">
+							<StackPanel Orientation="Horizontal" Spacing="8">
+								<TextBlock Text="⏳" FontSize="16" VerticalAlignment="Center"/>
+								<TextBlock Text="Calculating..." FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Border>
 						
 						<Button Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="10,0" ZIndex="10"
 								x:Name="btnNextScan" Click="BtnNextScan_Click"
@@ -447,10 +453,18 @@
 					
 					<!-- Content Area: Single Carousel vs Gallery Grid -->
 					<Panel Grid.Row="1">
+						<!-- Empty State: No Detections -->
+						<Border x:Name="pnlNoDetectionsState" Background="{DynamicResource AppEmptyStateBrush}" CornerRadius="6" Margin="10" IsVisible="False">
+							<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Margin="20">
+								<TextBlock Text="🔍" FontSize="44" HorizontalAlignment="Center" Opacity="0.8"/>
+								<TextBlock Text="No Photos Detected" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}" HorizontalAlignment="Center"/>
+								<TextBlock Text="Try lowering the Minimum Size slider or clicking Auto-Tune to find photos." FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}" TextWrapping="Wrap" MaxWidth="320" TextAlignment="Center"/>
+							</StackPanel>
+						</Border>
 						<!-- 1. Single Photo Carousel View -->
 						<Grid x:Name="pnlCarouselView" ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
 							<Button Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0"
-									Click="BtnPreviousCroppedImage_Click"
+									Click="BtnPreviousCroppedImage_Click" ToolTip.Tip="Previous Crop (Left Arrow / ←)"
 									Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="40" Height="80" CornerRadius="4" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 								<TextBlock Text="◀" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 							</Button>
@@ -479,7 +493,7 @@
 							</Carousel>
 							
 							<Button Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="10,0"
-									Click="BtnNextCroppedImage_Click"
+									Click="BtnNextCroppedImage_Click" ToolTip.Tip="Next Crop (Right Arrow / →)"
 									Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="40" Height="80" CornerRadius="4" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 								<TextBlock Text="▶" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 							</Button>
@@ -562,26 +576,29 @@
 						</Border>
 
 						<!-- Actions -->
-						<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-							<Button x:Name="btnDelete" Click="BtnDelete_Click" Padding="15,10" CornerRadius="20" Background="{DynamicResource AppButtonDangerBrush}" Focusable="False">
-								<StackPanel Orientation="Horizontal" Spacing="5">
-									<TextBlock Text="✖" FontSize="16" VerticalAlignment="Center" Foreground="{DynamicResource AppButtonDangerTextBrush}"/>
-								<TextBlock x:Name="txtBtnDelete" Text="{DynamicResource BtnDelete}" Foreground="{DynamicResource AppButtonDangerTextBrush}" VerticalAlignment="Center"/>
+						<Grid ColumnDefinitions="Auto, *, Auto">
+							<Button Grid.Column="0" x:Name="btnDelete" Click="BtnDelete_Click" Padding="12,8" CornerRadius="6" Background="{DynamicResource AppButtonDangerBrush}" Foreground="{DynamicResource AppButtonDangerTextBrush}" BorderThickness="0" Focusable="False" VerticalAlignment="Center" ToolTip.Tip="Delete crop (Del)">
+								<StackPanel Orientation="Horizontal" Spacing="6">
+									<TextBlock Text="🗑️" FontSize="13" VerticalAlignment="Center"/>
+									<TextBlock x:Name="txtBtnDelete" Text="{DynamicResource BtnDelete}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+								</StackPanel>
+							</Button>
+							
+							<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+								<Button x:Name="btnRotate" Click="BtnRotate_Click" Padding="15,10" CornerRadius="20" Background="{DynamicResource AppButtonActionBrush}" Foreground="{DynamicResource AppButtonActionTextBrush}" Focusable="False" ToolTip.Tip="Rotate (R)">
+									<StackPanel Orientation="Horizontal" Spacing="6">
+										<TextBlock Text="↻" FontSize="15" VerticalAlignment="Center"/>
+										<TextBlock x:Name="txtBtnRotate" Text="{DynamicResource BtnRotate}" FontWeight="Bold" VerticalAlignment="Center"/>
+									</StackPanel>
+								</Button>
+								<Button x:Name="btnRefine" Click="BtnRefine_Click" Padding="15,10" CornerRadius="20" Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}" ToolTip.Tip="{DynamicResource TipRefine}" Focusable="False">
+									<StackPanel Orientation="Horizontal" Spacing="6">
+										<TextBlock Text="✨" FontSize="15" VerticalAlignment="Center"/>
+										<TextBlock Text="{DynamicResource BtnRefine}" FontWeight="Bold" VerticalAlignment="Center"/>
+									</StackPanel>
+								</Button>
 							</StackPanel>
-						</Button>
-						<Button x:Name="btnRotate" Click="BtnRotate_Click" Padding="15,10" CornerRadius="20" Background="{DynamicResource AppButtonActionBrush}" Foreground="{DynamicResource AppButtonActionTextBrush}" Focusable="False">
-							<StackPanel Orientation="Horizontal" Spacing="5">
-								<TextBlock Text="↻" FontSize="16" VerticalAlignment="Center"/>
-								<TextBlock x:Name="txtBtnRotate" Text="{DynamicResource BtnRotate}" VerticalAlignment="Center"/>
-							</StackPanel>
-						</Button>
-						<Button x:Name="btnRefine" Click="BtnRefine_Click" Padding="15,10" CornerRadius="20" Background="{DynamicResource AppButtonActionBrush}" Foreground="{DynamicResource AppButtonActionTextBrush}" ToolTip.Tip="{DynamicResource TipRefine}" Focusable="False">
-							<StackPanel Orientation="Horizontal" Spacing="5">
-								<TextBlock Text="✨" FontSize="16" VerticalAlignment="Center"/>
-								<TextBlock Text="{DynamicResource BtnRefine}" VerticalAlignment="Center"/>
-							</StackPanel>
-						</Button>
-					</StackPanel>
+						</Grid>
 					</StackPanel>
 					</ScrollViewer>
 				</Grid>
@@ -606,10 +623,10 @@
 					</Panel>
 				</Border>
 				<StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="30" Margin="20">
-					<Button x:Name="btnAcceptRefine" Click="BtnAcceptRefine_Click" Padding="40,15" CornerRadius="8" Background="#2d882d" Foreground="White" Focusable="False">
+					<Button x:Name="btnAcceptRefine" Click="BtnAcceptRefine_Click" Padding="40,15" CornerRadius="8" Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}" Focusable="False">
 						<TextBlock Text="{DynamicResource BtnAccept}" FontSize="18" FontWeight="Bold"/>
 					</Button>
-					<Button x:Name="btnRejectRefine" Click="BtnRejectRefine_Click" Padding="40,15" CornerRadius="8" Background="#882d2d" Foreground="White" Focusable="False">
+					<Button x:Name="btnRejectRefine" Click="BtnRejectRefine_Click" Padding="40,15" CornerRadius="8" Background="{DynamicResource AppButtonDangerBrush}" Foreground="{DynamicResource AppButtonDangerTextBrush}" Focusable="False">
 						<TextBlock Text="{DynamicResource BtnReject}" FontSize="18" FontWeight="Bold"/>
 					</Button>
 				</StackPanel>

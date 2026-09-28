@@ -331,8 +331,6 @@ internal sealed partial class MainWindow
     {
         if (pnlCarouselView == null || scrollGalleryView == null) return;
         bool isGrid = rbViewGrid?.IsChecked == true;
-        pnlCarouselView.IsVisible = !isGrid;
-        scrollGalleryView.IsVisible = isGrid;
 
         if (isGrid && lstGallery != null && slides != null && slides.SelectedIndex >= 0)
         {
@@ -439,6 +437,22 @@ internal sealed partial class MainWindow
         bool isGrid = rbViewGrid?.IsChecked == true;
         int selectedCount = isGrid && lstGallery?.SelectedItems != null ? lstGallery.SelectedItems.Count : (slides?.SelectedIndex >= 0 ? 1 : 0);
         int totalCount = lstGallery?.Items.Count ?? slides?.Items.Count ?? 0;
+
+        if (pnlNoDetectionsState != null && pnlCarouselView != null && scrollGalleryView != null)
+        {
+            if (totalCount == 0)
+            {
+                pnlNoDetectionsState.IsVisible = true;
+                pnlCarouselView.IsVisible = false;
+                scrollGalleryView.IsVisible = false;
+            }
+            else
+            {
+                pnlNoDetectionsState.IsVisible = false;
+                pnlCarouselView.IsVisible = !isGrid;
+                scrollGalleryView.IsVisible = isGrid;
+            }
+        }
 
         if (isGrid && selectedCount > 1)
         {

@@ -383,6 +383,7 @@ internal sealed partial class MainWindow
 
         try
         {
+            if (pnlLocalLoading != null) pnlLocalLoading.IsVisible = true;
             await Task.Delay(150, ct);
 
             // Only save to disk once the user pauses dragging
@@ -393,6 +394,14 @@ internal sealed partial class MainWindow
         catch (TaskCanceledException)
         {
             // Ignored - user is still dragging
+        }
+        finally
+        {
+            // Only hide the indicator if THIS specific task was the final one to run
+            if (pnlLocalLoading != null && !ct.IsCancellationRequested)
+            {
+                pnlLocalLoading.IsVisible = false;
+            }
         }
     }
 
