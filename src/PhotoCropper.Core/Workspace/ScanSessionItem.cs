@@ -1,11 +1,10 @@
-using PhotoCropper.Core;
 using PhotoCropper.Core.Models;
 using System.Diagnostics.CodeAnalysis;
 
-namespace PhotoCropper.Gui.Models;
+namespace PhotoCropper.Core.Workspace;
 
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Engine lifecycle is managed explicitly via Activate/Deactivate/Dispose methods")]
-internal sealed class ScanSessionItem : IDisposable
+public sealed class ScanSessionItem : IDisposable
 {
     public string FilePath { get; }
     public DetectionOptions Options { get; set; }
@@ -21,7 +20,7 @@ internal sealed class ScanSessionItem : IDisposable
 
     public IReadOnlyList<PhotoCropper.Core.Workspace.WorkspaceCropData>? SavedCrops { get; }
 
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     public ScanSessionItem(string filePath, DetectionOptions defaultOptions, bool isSaved = false, bool isModified = true, IEnumerable<PhotoCropper.Core.Workspace.WorkspaceCropData>? savedCrops = null)
     {
@@ -37,27 +36,24 @@ internal sealed class ScanSessionItem : IDisposable
 
     public PhotoCropperEngine Activate()
     {
-        if (Engine == null)
+        lock (_lock)
         {
-            lock (_lock)
+            if (Engine == null)
             {
-                if (Engine == null)
+                var engine = new PhotoCropperEngine(FilePath);
+                engine.ApplyOptions(Options);
+
+                if (SavedCrops != null && SavedCrops.Count > 0 && IsSaved && !IsModified)
                 {
-                    var engine = new PhotoCropperEngine(FilePath);
-                    engine.ApplyOptions(Options);
-
-                    if (SavedCrops != null && SavedCrops.Count > 0 && IsSaved && !IsModified)
-                    {
-                        engine.RestoreFromSavedCrops(SavedCrops);
-                    }
-                    else
-                    {
-                        engine.DetectPhotos();
-                    }
-
-                    CachedPhotoCount = engine.DetectedPhotos.Count;
-                    Engine = engine;
+                    engine.RestoreFromSavedCrops(SavedCrops);
                 }
+                else
+                {
+                    engine.DetectPhotos();
+                }
+
+                CachedPhotoCount = engine.DetectedPhotos.Count;
+                Engine = engine;
             }
         }
         return Engine;

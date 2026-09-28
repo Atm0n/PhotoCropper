@@ -164,69 +164,10 @@ public static class BackgroundAnalyzer
         int maxBezelX = Math.Clamp(scaledW / 30, 4, 30);
         int maxBezelY = Math.Clamp(scaledH / 30, 4, 30);
 
-        int topBezel = 0;
-        for (int y = 0; y < maxBezelY; y++)
-        {
-            using Mat row = new(bgMask, new Rectangle(0, y, scaledW, 1));
-            int nonBg = scaledW - CvInvoke.CountNonZero(row);
-            if (nonBg >= scaledW * 0.70)
-            {
-                topBezel = y + 1;
-            }
-            else if (nonBg < scaledW * 0.40)
-            {
-                break;
-            }
-        }
-        if (topBezel >= maxBezelY) topBezel = 0; // Large object or photo touching boundary; not a thin bezel
-
-        int bottomBezel = 0;
-        for (int y = scaledH - 1; y >= scaledH - maxBezelY; y--)
-        {
-            using Mat row = new(bgMask, new Rectangle(0, y, scaledW, 1));
-            int nonBg = scaledW - CvInvoke.CountNonZero(row);
-            if (nonBg >= scaledW * 0.70)
-            {
-                bottomBezel = scaledH - y;
-            }
-            else if (nonBg < scaledW * 0.40)
-            {
-                break;
-            }
-        }
-        if (bottomBezel >= maxBezelY) bottomBezel = 0;
-
-        int leftBezel = 0;
-        for (int x = 0; x < maxBezelX; x++)
-        {
-            using Mat col = new(bgMask, new Rectangle(x, 0, 1, scaledH));
-            int nonBg = scaledH - CvInvoke.CountNonZero(col);
-            if (nonBg >= scaledH * 0.70)
-            {
-                leftBezel = x + 1;
-            }
-            else if (nonBg < scaledH * 0.40)
-            {
-                break;
-            }
-        }
-        if (leftBezel >= maxBezelX) leftBezel = 0;
-
-        int rightBezel = 0;
-        for (int x = scaledW - 1; x >= scaledW - maxBezelX; x--)
-        {
-            using Mat col = new(bgMask, new Rectangle(x, 0, 1, scaledH));
-            int nonBg = scaledH - CvInvoke.CountNonZero(col);
-            if (nonBg >= scaledH * 0.70)
-            {
-                rightBezel = scaledW - x;
-            }
-            else if (nonBg < scaledH * 0.40)
-            {
-                break;
-            }
-        }
-        if (rightBezel >= maxBezelX) rightBezel = 0;
+        int topBezel = MeasureBezelDepth(bgMask, maxBezelY, scaledW, true, true);
+        int bottomBezel = MeasureBezelDepth(bgMask, maxBezelY, scaledW, true, false);
+        int leftBezel = MeasureBezelDepth(bgMask, maxBezelX, scaledH, false, true);
+        int rightBezel = MeasureBezelDepth(bgMask, maxBezelX, scaledH, false, false);
 
         double invScale = 1.0 / scale;
         return (
@@ -235,5 +176,32 @@ public static class BackgroundAnalyzer
             (int)Math.Round(leftBezel * invScale),
             (int)Math.Round(rightBezel * invScale)
         );
+    }
+
+    private static int MeasureBezelDepth(Mat bgMask, int maxDepth, int length, bool isHorizontal, bool fromStart)
+    {
+        int bezel = 0;
+        int crossLength = isHorizontal ? bgMask.Height : bgMask.Width;
+        maxDepth = Math.Min(maxDepth, crossLength);
+
+        for (int i = 0; i < maxDepth; i++)
+        {
+            int idx = fromStart ? i : crossLength - 1 - i;
+            var rect = isHorizontal ? new Rectangle(0, idx, length, 1) : new Rectangle(idx, 0, 1, length);
+
+            using Mat slice = new(bgMask, rect);
+            int nonBg = length - CvInvoke.CountNonZero(slice);
+
+            if (nonBg >= length * 0.70)
+            {
+                bezel = i + 1;
+            }
+            else if (nonBg < length * 0.40)
+            {
+                break;
+            }
+        }
+
+        return bezel >= maxDepth ? 0 : bezel;
     }
 }

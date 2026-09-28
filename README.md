@@ -2,6 +2,11 @@
 
 An intelligent, cross-platform .NET 10 desktop application designed to automatically detect, straighten, and extract multiple photos from a single scanner bed image. Built with Avalonia UI and Emgu.CV (OpenCV).
 
+## Documentation
+
+- **[Architecture & Design Details](docs/ARCHITECTURE.md)**: Explore high-level system components, auto-tuning pipelines, AI auto-orientation heuristics, and memory management strategies via Mermaid diagrams.
+- **[Changelog](CHANGELOG.md)**: Detailed history of releases and changes (Semantic Versioning).
+
 ## Project Structure
 
 The solution consists of four main projects organized under `src/` and `tests/`:
@@ -73,7 +78,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - Visual color indicator squares next to every option in the menu.
   - Dedicated **Custom Color...** modal dialog featuring a real-time photo simulation preview, 16 accessible quick swatches, RGB sliders, and direct hex input (`#RRGGBB`).
 - **Dual-View Inspection & Gallery Grid (`1` / `2`):** Instantly toggle between a focused single-photo carousel and an interactive thumbnail gallery overview displaying indices and pixel dimensions.
-- **Drag & Drop Queuing:** Drag image files or whole folders anywhere onto the application window to automatically queue and batch-process scans via the centralized `ImageFileCollector`.
+- **Interactive Bounding Boxes:** Click a green box to instantly select it in the gallery. Click the top-right Red 'X' to delete bad detections. Drag corners to manually resize the crop area, and drag the bottom-right Blue circle to rotate the photo by hand.
 - **Safe Exit & Data Loss Prevention:** PhotoCropper detects unsaved photo edits or unexported scans on close, presenting a confirmation dialog with **Save & Exit**, **Discard & Exit**, or **Cancel** choices (closes silently when all work is saved).
 - **Dedicated Multi-Window Dialog Architecture:** Replaced embedded overlay clutter with dedicated, modular Avalonia windows:
   - `HelpWindow`: Non-modal documentation and shortcut reference (<kbd>F1</kbd>) that can be placed side-by-side or on secondary monitors.
@@ -202,7 +207,8 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `--min-photos <num>` | Minimum expected photos per scan to flag for review | `1` |
 | `--max-photos <num>` | Maximum expected photos per scan to flag for review | *Unlimited* |
 | `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
-| `--auto-tune` | Automatically search optimal detection parameters on difficult scans | `false` |
+| `--auto-tune` | Automatically search optimal detection parameters on difficult scans (outside expected bounds) | `false` |
+| `--always-auto-tune` | Always run auto-tune sweep on every scan | `false` |
 | `--auto-adjust-low-coverage` | Auto-tune only scans where detected area coverage is lower than threshold | `false` |
 | `--min-coverage <percent>` | Set low coverage threshold percentage for auto-adjust | `50` |
 | `--copy-undetected <dir>` | Copy scans with 0 detected photos to a designated review directory | `null` |

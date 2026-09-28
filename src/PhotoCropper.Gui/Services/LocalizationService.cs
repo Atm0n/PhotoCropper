@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Markup.Xaml.Styling;
 using System.Globalization;
 
 namespace PhotoCropper.Gui.Services;
@@ -24,6 +25,17 @@ internal static class ResourceKeys
     public const string BtnDiscardAndExit = nameof(BtnDiscardAndExit);
     public const string BtnCancel = nameof(BtnCancel);
     public const string BtnOk = nameof(BtnOk);
+    public const string BtnReviewPhotos = nameof(BtnReviewPhotos);
+    public const string TipReviewPhotos = nameof(TipReviewPhotos);
+    public const string TitleReviewMode = nameof(TitleReviewMode);
+    public const string MsgReviewEmpty = nameof(MsgReviewEmpty);
+    public const string ReviewSentinelTitle = nameof(ReviewSentinelTitle);
+    public const string ReviewSentinelSubtitle = nameof(ReviewSentinelSubtitle);
+    public const string ReviewSentinelStats = nameof(ReviewSentinelStats);
+    public const string BtnReviewGoToStart = nameof(BtnReviewGoToStart);
+    public const string BtnReviewEdit = nameof(BtnReviewEdit);
+    public const string TipReviewEdit = nameof(TipReviewEdit);
+    public const string TipToggleRightPanel = nameof(TipToggleRightPanel);
 
     public const string LblDetectionSensitivity = nameof(LblDetectionSensitivity);
     public const string LblAutoTuneOnPass = nameof(LblAutoTuneOnPass);
@@ -111,6 +123,65 @@ internal static class ResourceKeys
 
 internal static class LocalizationService
 {
+    private static readonly Dictionary<string, string> AvailableLanguages = new()
+    {
+        { "en-US", "English" },
+        { "es-ES", "Español" },
+        { "ca-ES", "Català" }
+    };
+
+    public static string CurrentLanguage { get; private set; } = "en-US";
+
+    public static void SetLanguage(string languageCode)
+    {
+        if (!AvailableLanguages.ContainsKey(languageCode))
+        {
+            languageCode = "en-US";
+        }
+
+        var translations = Application.Current?.Resources.MergedDictionaries
+            .OfType<ResourceInclude>()
+            .FirstOrDefault(d => d.Source?.ToString().Contains("i18n", StringComparison.Ordinal) == true);
+
+        if (translations != null)
+        {
+            Application.Current?.Resources.MergedDictionaries.Remove(translations);
+        }
+
+        Application.Current?.Resources.MergedDictionaries.Add(new ResourceInclude(new Uri($"avares://PhotoCropper.Gui/Assets/i18n/{languageCode}.axaml"))
+        {
+            Source = new Uri($"avares://PhotoCropper.Gui/Assets/i18n/{languageCode}.axaml")
+        });
+
+        CurrentLanguage = languageCode;
+
+        if (SettingsManager.Instance.Settings.Language != languageCode)
+        {
+            SettingsManager.Instance.Settings.Language = languageCode;
+            SettingsManager.Instance.Save();
+        }
+    }
+
+    public static void Initialize(string? preferredLanguage = null)
+    {
+        if (!string.IsNullOrEmpty(preferredLanguage) && AvailableLanguages.ContainsKey(preferredLanguage))
+        {
+            SetLanguage(preferredLanguage);
+            return;
+        }
+
+        string localCulture = CultureInfo.CurrentCulture.Name;
+        var match = AvailableLanguages.Keys.FirstOrDefault(k => k.Equals(localCulture, StringComparison.OrdinalIgnoreCase))
+                 ?? AvailableLanguages.Keys.FirstOrDefault(k => k.StartsWith(localCulture.Split('-')[0], StringComparison.OrdinalIgnoreCase));
+
+        SetLanguage(match ?? "en-US");
+    }
+
+    public static IReadOnlyList<(string Code, string Name)> GetAvailableLanguages()
+    {
+        return AvailableLanguages.Select(kv => (kv.Key, kv.Value)).ToList();
+    }
+
     public static string GetString(string key, string fallback = "")
     {
         ArgumentNullException.ThrowIfNull(key);

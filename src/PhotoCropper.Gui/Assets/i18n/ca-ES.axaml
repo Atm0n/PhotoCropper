@@ -1,4 +1,4 @@
-<ResourceDictionary xmlns="https://github.com/avaloniaui"
+﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 	<sys:String x:Key="BtnOpenScans">Obrir</sys:String>
@@ -35,10 +35,21 @@
 	<sys:String x:Key="BtnDelete">Eliminar</sys:String>
 	<sys:String x:Key="BtnRotate">Girar 90°</sys:String>
 	<sys:String x:Key="BtnRefine">Ajustar Vores</sys:String>
+	<sys:String x:Key="BtnReviewPhotos">Revisar Fotos</sys:String>
+	<sys:String x:Key="TipReviewPhotos">Obrir visor per revisar i girar ràpidament totes les fotos (V)</sys:String>
+	<sys:String x:Key="TitleReviewMode">Revisió i Gir Ràpid de Fotos</sys:String>
+	<sys:String x:Key="MsgReviewEmpty">No hi ha fotos detectades per revisar a cap escaneig.</sys:String>
+	<sys:String x:Key="ReviewSentinelTitle">Has donat la volta completa!</sys:String>
+	<sys:String x:Key="ReviewSentinelSubtitle">Totes les fotos revisades — continua o tanca la revisió.</sys:String>
+	<sys:String x:Key="ReviewSentinelStats">{0} fotos · {1} escaneigs · {2} girades · {3} eliminades</sys:String>
+	<sys:String x:Key="BtnReviewGoToStart">↩ Torna a la Primera Foto</sys:String>
+	<sys:String x:Key="BtnReviewEdit">Editar a l'Escàner</sys:String>
+	<sys:String x:Key="TipReviewEdit">Editar a l'Escàner (E)</sys:String>
+	<sys:String x:Key="TipToggleRightPanel">Alternar Panell de Fotos</sys:String>
 	<sys:String x:Key="BtnAccept">Acceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rebutjar (Retrocés)</sys:String>
 	<sys:String x:Key="StatusReady">Llest</sys:String>
-	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [T] Auto-Ajustar | [R] Girar | [Espai] Comparar Original | [Ctrl+Z/Y] Desfer/Refer</sys:String>
+	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [V] Revisar Tot | [R] Girar | [T] Auto-Ajustar | [Espai] Comparar Original | [Ctrl+Z/Y] Desfer/Refer</sys:String>
 	<sys:String x:Key="MsgUndo">Desfet: {0}.</sys:String>
 	<sys:String x:Key="MsgRedo">Refet: {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
@@ -68,8 +79,8 @@
 	<sys:String x:Key="HelpSensitivity">Ajusta l'agressivitat amb què el motor busca les vores de les fotos. Valors alts troben vores tènues però poden incloure soroll.</sys:String>
 	<sys:String x:Key="HelpManualCrop">Fes clic i arrossega sobre l'escaneig original (esquerra) per definir manualment l'àrea d'una foto si no ha estat detectada.</sys:String>
 	<sys:String x:Key="HelpRefine">Entra en un mode especialitzat per ajustar les vores d'una foto. Ideal per eliminar marges blancs de l'escàner.</sys:String>
-	<sys:String x:Key="HelpDragDropTitle">Arrossegar i Deixar anar</sys:String>
-	<sys:String x:Key="HelpDragDrop">Arrossega fitxers d'imatge o carpetes senceres a la finestra per posar a la cua i processar escanejos automàticament.</sys:String>
+	<sys:String x:Key="HelpInteractiveBoxesTitle">Caixes Interactives</sys:String>
+	<sys:String x:Key="HelpInteractiveBoxes">Feu clic a una caixa verda per seleccionar-la. Feu clic a la 'X' vermella per esborrar. Arrossegueu les cantonades per canviar la mida i el cercle blau per girar.</sys:String>
 	<sys:String x:Key="HelpDpiTitle">Preservació de DPI</sys:String>
 	<sys:String x:Key="HelpDpi">La resolució original de l'escàner (ex. 300/600 DPI) es detecta i preserva en exportar per mantenir l'escala física d'impressió 1:1.</sys:String>
 	<sys:String x:Key="HelpAutoOrientTitle">Orientació IA i Paisatges</sys:String>
@@ -206,8 +217,8 @@
 	<sys:String x:Key="MenuRotateCcw">Girar 90° Antihorari</sys:String>
 	<sys:String x:Key="MenuRefineCrop">Ajustar Vores del Retall</sys:String>
 	<sys:String x:Key="MenuExportSingle">Exportar Aquesta Foto...</sys:String>
-	<sys:String x:Key="EmptyStateTitle">Arrossegueu i Deixeu Anar Escanejos Aquí</sys:String>
-	<sys:String x:Key="EmptyStateDesc">Deixeu anar fitxers d'imatge o carpetes d'escaneig completes aquí, o feu clic a Obrir / Escanejar a dalt.</sys:String>
+	<sys:String x:Key="EmptyStateTitle">Obre o Escaneja Fotos</sys:String>
+	<sys:String x:Key="EmptyStateDesc">Feu clic a Obrir per seleccionar fitxers d'imatge escanejats, o a Escanejar per capturar directament des d'un escàner.</sys:String>
 	<sys:String x:Key="LblFileNamePattern">Patró de Noms:</sys:String>
 	<sys:String x:Key="LblNamingPreview">Vista Prèvia: {0}</sys:String>
 	<sys:String x:Key="LblMetadata">Metadades de Foto Antiga (EXIF):</sys:String>

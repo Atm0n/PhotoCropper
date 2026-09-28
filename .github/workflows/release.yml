@@ -1,0 +1,181 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build_package_publish:
+    name: Build & Package (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+        include:
+          - os: ubuntu-24.04
+            runtime: linux-x64
+            platform: Linux
+          - os: windows-latest
+            runtime: win-x64
+            platform: Windows
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Native Dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update --fix-missing
+          sudo apt-get install -y \
+            libgomp1 libgl1 libtbb12 libglib2.0-0 libicu-dev libatlas-base-dev libjpeg-dev libx11-6 \
+            libgeotiff-dev libhdf5-dev libvtk9-dev \
+            libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libsane1 sane-utils
+
+      - name: Restore Dependencies
+        run: dotnet restore PhotoCropper.slnx
+
+      - name: Build Solution
+        run: dotnet build PhotoCropper.slnx -c Release --no-restore
+
+      - name: Publish GUI & CLI Binaries
+        shell: pwsh
+        env:
+          TARGET_RUNTIME: ${{ matrix.runtime }}
+          TARGET_PLATFORM: ${{ matrix.platform }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          # Publish GUI
+          dotnet publish src/PhotoCropper.Gui/PhotoCropper.Gui.csproj `
+            -c Release `
+            -r $env:TARGET_RUNTIME `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:PublishReadyToRun=true `
+            -o ./publish/gui/$env:TARGET_RUNTIME
+
+          # Publish CLI
+          dotnet publish src/PhotoCropper.Cli/PhotoCropper.Cli.csproj `
+            -c Release `
+            -r $env:TARGET_RUNTIME `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:PublishReadyToRun=true `
+            -o ./publish/cli/$env:TARGET_RUNTIME
+
+          # Remove any loose PDB symbols, Linux dbg symbols, or XML files from publish directories
+          Get-ChildItem -Path ./publish -Include *.pdb,*.dbg,*.xml -Recurse -File | Remove-Item -Force
+
+          # Extract version from tag (e.g. v2.5.2 -> 2.5.2)
+          $rawTag = $env:REF_NAME
+          $appVersion = if ($rawTag -and $rawTag.StartsWith('v')) { $rawTag.Substring(1) } else { $rawTag }
+          if (-not $appVersion) { exit 1 }
+
+          # Package separate zip archives (preserving Unix execution permissions on Linux)
+          if ($env:TARGET_PLATFORM -eq 'Linux') {
+            chmod +x ./publish/gui/$env:TARGET_RUNTIME/PhotoCropper.Gui
+            chmod +x ./publish/cli/$env:TARGET_RUNTIME/PhotoCropper.Cli
+            $repoRoot = (Get-Location).Path
+            Push-Location "./publish/gui/$env:TARGET_RUNTIME"
+            zip -q -r "$repoRoot/PhotoCropper-${appVersion}-GUI-${env:TARGET_PLATFORM}.zip" .
+            Pop-Location
+            Push-Location "./publish/cli/$env:TARGET_RUNTIME"
+            zip -q -r "$repoRoot/PhotoCropper-${appVersion}-CLI-${env:TARGET_PLATFORM}.zip" .
+            Pop-Location
+          } else {
+            Compress-Archive -Path ./publish/gui/$env:TARGET_RUNTIME/* -DestinationPath ./PhotoCropper-${appVersion}-GUI-${env:TARGET_PLATFORM}.zip
+            Compress-Archive -Path ./publish/cli/$env:TARGET_RUNTIME/* -DestinationPath ./PhotoCropper-${appVersion}-CLI-${env:TARGET_PLATFORM}.zip
+          }
+
+          # Build Windows Inno Setup Installer
+          if ($env:TARGET_PLATFORM -eq 'Windows') {
+            $iscc = if (Get-Command iscc -ErrorAction SilentlyContinue) {
+              "iscc"
+            } elseif (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
+              "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+            } else {
+              choco install innosetup --no-progress
+              "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+            }
+
+            Write-Host "Compiling Windows installer with version $appVersion..."
+            & $iscc "/DMyAppVersion=$appVersion" packaging/windows/PhotoCropper.iss
+          }
+
+          # Build Linux Packages (.deb and .AppImage)
+          if ($env:TARGET_PLATFORM -eq 'Linux') {
+            Write-Host "Building Linux .deb package with version $appVersion..."
+            bash packaging/linux/build-deb.sh $appVersion
+
+            Write-Host "Building Linux AppImage with version $appVersion..."
+            bash packaging/linux/build-appimage.sh $appVersion
+          }
+
+      - name: Upload Windows Installer Artifact
+        if: matrix.platform == 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: PhotoCropper-Windows-Installer
+          path: ./publish/installer/*.exe
+
+      - name: Upload Linux Installer Artifacts (.deb and .AppImage)
+        if: matrix.platform == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: PhotoCropper-Linux-Packages
+          path: |
+            ./publish/installer/*.deb
+            ./publish/installer/*.AppImage
+
+      - name: Upload GUI Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: PhotoCropper-GUI-${{ matrix.platform }}
+          path: ./*-GUI-${{ matrix.platform }}.zip
+
+      - name: Upload CLI Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: PhotoCropper-CLI-${{ matrix.platform }}
+          path: ./*-CLI-${{ matrix.platform }}.zip
+
+  release:
+    name: Create GitHub Release
+    needs: build_package_publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: ./release-artifacts
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s globstar nullglob
+          files=(release-artifacts/**/*.{zip,exe,deb,AppImage})
+          gh release create "$GITHUB_REF_NAME" "${files[@]}" --generate-notes

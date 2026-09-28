@@ -8,6 +8,7 @@ using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
+using System.Diagnostics;
 
 namespace PhotoCropper.Gui;
 
@@ -20,7 +21,7 @@ internal sealed partial class MainWindow
 
     private async void BtnSaveImages_Click(object? sender, RoutedEventArgs e)
     {
-        if (isLoading || !_sessionManager.HasScans) return;
+        if (isLoading || _isNavigating || !_sessionManager.HasScans) return;
 
         var settings = SettingsManager.Instance.Settings;
         if (settings.PromptBeforeExport)
@@ -35,7 +36,7 @@ internal sealed partial class MainWindow
 
     private async Task<bool> SavePendingScansAsync(bool closeAfterSave)
     {
-        if (isLoading || !_sessionManager.HasScans) return false;
+        if (isLoading || _isNavigating || !_sessionManager.HasScans) return false;
 
         var pendingSessions = _sessionManager.GetPendingExportSessions();
         if (pendingSessions.Count == 0)
@@ -70,6 +71,19 @@ internal sealed partial class MainWindow
             await Task.Run(() =>
             {
                 PhotoExporter.ClearClaimedExportPaths();
+
+                // Build a filename-keyed lookup before entering the parallel loop so that
+                // each thread can resolve its own WorkspaceScanEntry without traversing
+                // _workspaceSession.Scans concurrently (which would be a data race).
+                Dictionary<string, WorkspaceScanEntry>? workspaceLookup = null;
+                if (_workspaceSession != null)
+                {
+                    workspaceLookup = _workspaceSession.Scans
+                        .Where(s => s != null)
+                        .GroupBy(s => Path.GetFileName(s.RelativePath), StringComparer.OrdinalIgnoreCase)
+                        .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+                }
+
                 Parallel.ForEach(pendingSessions, new ParallelOptions { MaxDegreeOfParallelism = maxConcurrency, CancellationToken = ct }, (session) =>
                 {
                     try
@@ -102,27 +116,30 @@ internal sealed partial class MainWindow
                             session.IsSaved = true;
                             session.IsModified = false;
 
-                            if (_workspaceSession != null)
+                            // Each session maps to exactly one WorkspaceScanEntry — resolved via the
+                            // pre-built dict so no concurrent list traversal occurs inside the parallel body.
+                            if (workspaceLookup != null)
                             {
-                                var entry = _workspaceSession.Scans.FirstOrDefault(s =>
-                                    string.Equals(s.RelativePath, session.FilePath, StringComparison.OrdinalIgnoreCase) ||
-                                    string.Equals(Path.GetFileName(s.RelativePath), Path.GetFileName(session.FilePath), StringComparison.OrdinalIgnoreCase));
-                                if (entry != null)
+                                string sessionFileName = Path.GetFileName(session.FilePath);
+                                if (workspaceLookup.TryGetValue(sessionFileName, out var entry))
                                 {
                                     entry.IsProcessed = true;
                                     entry.ExtractedPhotoCount = savedCount;
                                     entry.Metadata = scanMetadata;
 
                                     entry.FinalCrops.Clear();
-                                    foreach (var cand in engine.AcceptedCandidates)
+                                    for (int cIdx = 0; cIdx < engine.AcceptedCandidates.Count; cIdx++)
                                     {
+                                        var cand = engine.AcceptedCandidates[cIdx];
+                                        int rot = engine.PhotoRotations.TryGetValue(cIdx, out int r) ? r : 0;
                                         entry.FinalCrops.Add(new WorkspaceCropData
                                         {
                                             CenterX = cand.Rotated.Center.X,
                                             CenterY = cand.Rotated.Center.Y,
                                             Width = cand.Rotated.Size.Width,
                                             Height = cand.Rotated.Size.Height,
-                                            Angle = cand.Rotated.Angle
+                                            Angle = cand.Rotated.Angle,
+                                            RotationDegrees = rot
                                         });
                                     }
                                 }
@@ -138,7 +155,7 @@ internal sealed partial class MainWindow
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Failed to export scan '{session.FilePath}': {ex.Message}");
+                        Trace.TraceError($"[PhotoCropper] Failed to export scan '{session.FilePath}': {ex.GetType().Name}: {ex.Message}");
                     }
 
                     int done = Interlocked.Increment(ref completedScans);
@@ -157,6 +174,7 @@ internal sealed partial class MainWindow
                 {
                     ProjectWorkspaceService.SaveSession(settings.WorkDirectory, _workspaceSession);
                 }
+
             }, ct);
 
             if (totalSavedPhotos > 0)
@@ -176,7 +194,7 @@ internal sealed partial class MainWindow
 
     private async Task ExportSinglePhotoAsync(int photoIndex, CancellationToken cancellationToken = default)
     {
-        if (isLoading || ScanSessions.Count == 0 || photoIndex < 0) return;
+        if (isLoading || _isNavigating || ScanSessions.Count == 0 || photoIndex < 0) return;
 
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.StorageProvider == null) return;

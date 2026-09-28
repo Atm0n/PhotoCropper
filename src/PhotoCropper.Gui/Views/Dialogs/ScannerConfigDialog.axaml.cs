@@ -60,20 +60,14 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
         {
             var settings = SettingsManager.Instance.Settings;
 
-            if (chkNetworkScanners != null)
-            {
-                chkNetworkScanners.IsChecked = settings.IncludeNetworkScanners;
-            }
+            chkNetworkScanners?.IsChecked = settings.IncludeNetworkScanners;
 
-            if (cbScannerDpi != null)
+            cbScannerDpi?.SelectedIndex = settings.ScannerDpi switch
             {
-                cbScannerDpi.SelectedIndex = settings.ScannerDpi switch
-                {
-                    150 => 0,
-                    600 => 2,
-                    _ => 1
-                };
-            }
+                150 => 0,
+                600 => 2,
+                _ => 1
+            };
 
             if (cbScannerPageSize != null)
             {
@@ -106,8 +100,8 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
 
         await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
         {
-            if (btnRefreshScanners != null) btnRefreshScanners.IsEnabled = false;
-            if (btnSaveAndScan != null) btnSaveAndScan.IsEnabled = false;
+            btnRefreshScanners?.IsEnabled = false;
+            btnSaveAndScan?.IsEnabled = false;
             if (txtScannerStatus != null)
             {
                 txtScannerStatus.Text = LocalizationService.GetString(ResourceKeys.TxtScanningSearching, "Searching for connected scanners...");
@@ -176,7 +170,7 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
             {
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    if (btnRefreshScanners != null) btnRefreshScanners.IsEnabled = true;
+                    btnRefreshScanners?.IsEnabled = true;
                 });
                 _refreshLock.Release();
             }
@@ -191,10 +185,7 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
         {
             txtScannerStatus.Text = LocalizationService.GetString(ResourceKeys.MsgNoScannerFound, "No scanner detected. Click 🔄 to refresh.");
             txtScannerStatus.Foreground = LocalizationService.TryGetResource<IBrush>(ResourceKeys.AppDangerTextBrush, out var dangerBrush) && dangerBrush != null ? dangerBrush : Brush.Parse("#ffaa44");
-            if (cbScanner != null)
-            {
-                cbScanner.SelectedIndex = -1;
-            }
+            cbScanner?.SelectedIndex = -1;
         }
         else
         {
@@ -202,10 +193,7 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
             txtScannerStatus.Foreground = LocalizationService.TryGetResource<IBrush>(ResourceKeys.AppSuccessTextBrush, out var successBrush) && successBrush != null ? successBrush : Brush.Parse("#44cc66");
         }
 
-        if (btnSaveAndScan != null)
-        {
-            btnSaveAndScan.IsEnabled = _availableScanners.Count > 0;
-        }
+        btnSaveAndScan?.IsEnabled = _availableScanners.Count > 0;
     }
 
     private async void CbScanner_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -238,10 +226,7 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
             {
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    if (cbiPageSizeAuto != null)
-                    {
-                        cbiPageSizeAuto.Content = $"Auto / Full Bed (Detected: {dims})";
-                    }
+                    cbiPageSizeAuto?.Content = $"Auto / Full Bed (Detected: {dims})";
                 });
             }
         }

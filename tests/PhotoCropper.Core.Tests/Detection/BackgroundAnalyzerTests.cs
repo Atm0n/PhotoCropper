@@ -105,12 +105,12 @@ public sealed class BackgroundAnalyzerTests
         CvInvoke.Rectangle(bgr, new Rectangle(0, 0, 12, 1000), bezel, -1);
 
         MCvScalar whiteHsv = new(0, 0, 255);
-        var margins = BackgroundAnalyzer.DetectBezelMargins(bgr, whiteHsv, 30);
+        var (Top, Bottom, Left, Right) = BackgroundAnalyzer.DetectBezelMargins(bgr, whiteHsv, 30);
 
-        margins.Top.ShouldBeInRange(10, 20);
-        margins.Left.ShouldBeInRange(10, 20);
-        margins.Bottom.ShouldBe(0);
-        margins.Right.ShouldBe(0);
+        Top.ShouldBeInRange(10, 20);
+        Left.ShouldBeInRange(10, 20);
+        Bottom.ShouldBe(0);
+        Right.ShouldBe(0);
     }
 
     [Fact]
@@ -120,11 +120,11 @@ public sealed class BackgroundAnalyzerTests
         bgr.SetTo(new MCvScalar(255, 255, 255)); // White bed
 
         MCvScalar whiteHsv = new(0, 0, 255);
-        var margins = BackgroundAnalyzer.DetectBezelMargins(bgr, whiteHsv, 30);
+        var (Top, Bottom, Left, Right) = BackgroundAnalyzer.DetectBezelMargins(bgr, whiteHsv, 30);
 
-        margins.Top.ShouldBe(0);
-        margins.Bottom.ShouldBe(0);
-        margins.Left.ShouldBe(0);
-        margins.Right.ShouldBe(0);
+        Top.ShouldBe(0);
+        Bottom.ShouldBe(0);
+        Left.ShouldBe(0);
+        Right.ShouldBe(0);
     }
 }

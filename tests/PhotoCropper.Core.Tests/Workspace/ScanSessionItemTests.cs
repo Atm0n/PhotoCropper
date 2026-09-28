@@ -1,8 +1,8 @@
 using PhotoCropper.Core.Models;
-using PhotoCropper.Gui.Models;
+using PhotoCropper.Core.Workspace;
 using PhotoCropper.TestHelpers;
 
-namespace PhotoCropper.Gui.Tests.Models;
+namespace PhotoCropper.Core.Tests.Workspace;
 
 public sealed class ScanSessionItemTests : IDisposable
 {
@@ -35,7 +35,7 @@ public sealed class ScanSessionItemTests : IDisposable
         var options = new DetectionOptions();
         var savedCrops = new List<PhotoCropper.Core.Workspace.WorkspaceCropData>
         {
-            new PhotoCropper.Core.Workspace.WorkspaceCropData { CenterX = 50, CenterY = 50, Width = 20, Height = 20, Angle = 0 }
+            new() { CenterX = 50, CenterY = 50, Width = 20, Height = 20, Angle = 0 }
         };
 
         // Needs to be IsSaved = true and IsModified = false to bypass detection
@@ -164,6 +164,23 @@ public sealed class ScanSessionItemTests : IDisposable
 
         item.IsActive.ShouldBeTrue();
         item.Engine.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void ScanSessionItem_WithSavedCrops_ShouldRestoreRotations()
+    {
+        var options = new DetectionOptions();
+        var savedCrops = new List<PhotoCropper.Core.Workspace.WorkspaceCropData>
+        {
+            new() { CenterX = 100, CenterY = 100, Width = 80, Height = 60, Angle = 0, RotationDegrees = 90 }
+        };
+
+        using var item = new ScanSessionItem(_scanPath, options, isSaved: true, isModified: false, savedCrops: savedCrops);
+        var engine = item.Activate();
+
+        engine.DetectedPhotos.Count.ShouldBe(1);
+        engine.PhotoRotations.TryGetValue(0, out int rot).ShouldBeTrue();
+        rot.ShouldBe(90);
     }
 
     public void Dispose()

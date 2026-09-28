@@ -122,6 +122,10 @@ internal static class CommandLineParser
             {
                 options.AutoTune = true;
             }
+            else if (arg == "--always-auto-tune")
+            {
+                options.AlwaysAutoTune = true;
+            }
             else if (arg == "--auto-adjust-low-coverage")
             {
                 options.AutoAdjustLowCoverage = true;
@@ -206,6 +210,7 @@ internal static class CommandLineParser
               --max-photos <num>      Maximum expected photos per scan to flag for review (default: unlimited)
               --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)
               --auto-tune             Automatically search optimal detection parameters on difficult scans
+              --always-auto-tune      Always run auto-tune sweep on every scan
               --auto-adjust-low-coverage Auto-tune only scans with low detected area coverage (default: <50%)
               --min-coverage <percent>   Set low coverage threshold percentage for auto-adjust (default: 50)
               --copy-undetected <dir> Copy undetected scans with 0 photos to a designated review directory

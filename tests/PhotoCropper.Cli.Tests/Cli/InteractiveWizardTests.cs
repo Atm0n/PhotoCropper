@@ -158,8 +158,9 @@ public sealed class InteractiveWizardTests : IDisposable
         console.Input.PushTextWithEnter("2");
         // Max expected photos: 4
         console.Input.PushTextWithEnter("4");
-        // Enable AutoTune ('y')
-        console.Input.PushTextWithEnter("y");
+        // Enable AutoTune (select 'On Mismatch')
+        console.Input.PushKey(ConsoleKey.DownArrow);
+        console.Input.PushKey(ConsoleKey.Enter);
 
         // 6a. Embed EXIF ('y')
         console.Input.PushTextWithEnter("y");

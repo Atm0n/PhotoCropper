@@ -1,5 +1,5 @@
 using PhotoCropper.Core.Models;
-using PhotoCropper.Gui.Models;
+using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
 using PhotoCropper.TestHelpers;
 using System.Diagnostics.CodeAnalysis;
@@ -61,7 +61,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_MoveNextAndPrevious_ShouldWrapAround()
+    public void ScanSessionManager_MoveNextAndPrevious_ShouldClamp()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -80,14 +80,17 @@ public sealed class ScanSessionManagerTests : IDisposable
         manager.MoveNext().ShouldBeTrue();
         manager.CurrentIndex.ShouldBe(2);
 
-        manager.MoveNext().ShouldBeTrue();
-        manager.CurrentIndex.ShouldBe(0); // Wrap around to first
-
-        manager.MovePrevious().ShouldBeTrue();
-        manager.CurrentIndex.ShouldBe(2); // Wrap around to last
+        manager.MoveNext().ShouldBeFalse();
+        manager.CurrentIndex.ShouldBe(2); // Clamped at last
 
         manager.MovePrevious().ShouldBeTrue();
         manager.CurrentIndex.ShouldBe(1);
+
+        manager.MovePrevious().ShouldBeTrue();
+        manager.CurrentIndex.ShouldBe(0);
+
+        manager.MovePrevious().ShouldBeFalse();
+        manager.CurrentIndex.ShouldBe(0); // Clamped at first
     }
 
     [Fact]
@@ -132,6 +135,51 @@ public sealed class ScanSessionManagerTests : IDisposable
         // Session 1 was unmodified, so it should be deactivated to free RAM
         item1.IsActive.ShouldBeFalse();
         item1.CachedPhotoCount.ShouldBeGreaterThanOrEqualTo(0);
+    }
+
+    [Fact]
+    public void ScanSessionManager_SessionDeactivated_ShouldFireWithCorrectIndexWhenUnmodifiedSessionDeactivated()
+    {
+        using var manager = new ScanSessionManager();
+        var options = new DetectionOptions();
+
+        var item1 = new ScanSessionItem(_scan1, options, isSaved: true, isModified: false);
+        var item2 = new ScanSessionItem(_scan2, options);
+
+        manager.AddRange([item1, item2]);
+        item1.Activate();
+
+        var firedIndices = new List<int>();
+        manager.SessionDeactivated += idx => firedIndices.Add(idx);
+
+        // Navigate away from session 0 (unmodified) → event should fire for index 0
+        manager.MoveNext();
+
+        firedIndices.Count.ShouldBe(1);
+        firedIndices[0].ShouldBe(0);
+    }
+
+    [Fact]
+    public void ScanSessionManager_SessionDeactivated_ShouldNotFireForModifiedSession()
+    {
+        using var manager = new ScanSessionManager();
+        var options = new DetectionOptions();
+
+        // item1 is modified — TryDeactivateIfUnmodified will skip it
+        var item1 = new ScanSessionItem(_scan1, options, isSaved: false, isModified: true);
+        var item2 = new ScanSessionItem(_scan2, options);
+
+        manager.AddRange([item1, item2]);
+        item1.Activate();
+
+        var firedIndices = new List<int>();
+        manager.SessionDeactivated += idx => firedIndices.Add(idx);
+
+        manager.MoveNext();
+
+        // Modified session stays active, event must not fire
+        firedIndices.ShouldBeEmpty();
+        item1.IsActive.ShouldBeTrue();
     }
 
     [Fact]

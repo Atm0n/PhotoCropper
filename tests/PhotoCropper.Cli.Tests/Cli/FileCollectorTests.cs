@@ -1,4 +1,3 @@
-using PhotoCropper.Cli.Services;
 using PhotoCropper.TestHelpers;
 
 namespace PhotoCropper.Cli.Tests.Cli;
@@ -25,7 +24,7 @@ public sealed class FileCollectorTests : IDisposable
         File.WriteAllText(validWebp, "fake image");
         File.WriteAllText(invalidTxt, "fake notes");
 
-        var collected = FileCollector.CollectFiles([validJpg, validPng, validWebp, invalidTxt], recursive: false);
+        var collected = PhotoCropper.Core.IO.ImageFileCollector.CollectFiles([validJpg, validPng, validWebp, invalidTxt], recursive: false);
 
         collected.Count.ShouldBe(3);
         collected.ShouldContain(Path.GetFullPath(validJpg));
@@ -46,7 +45,7 @@ public sealed class FileCollectorTests : IDisposable
         File.WriteAllText(rootPhoto, "fake image");
         File.WriteAllText(nestedPhoto, "fake image");
 
-        var collected = FileCollector.CollectFiles([_tempDir], recursive: false);
+        var collected = PhotoCropper.Core.IO.ImageFileCollector.CollectFiles([_tempDir], recursive: false);
 
         collected.Count.ShouldBe(1);
         collected[0].ShouldBe(Path.GetFullPath(rootPhoto));
@@ -64,7 +63,7 @@ public sealed class FileCollectorTests : IDisposable
         File.WriteAllText(rootPhoto, "fake image");
         File.WriteAllText(nestedPhoto, "fake image");
 
-        var collected = FileCollector.CollectFiles([_tempDir], recursive: true);
+        var collected = PhotoCropper.Core.IO.ImageFileCollector.CollectFiles([_tempDir], recursive: true);
 
         collected.Count.ShouldBe(2);
         collected.ShouldContain(Path.GetFullPath(rootPhoto));
@@ -77,7 +76,7 @@ public sealed class FileCollectorTests : IDisposable
         string photo = Path.Combine(_tempDir, "duplicate.jpeg");
         File.WriteAllText(photo, "fake image");
 
-        var collected = FileCollector.CollectFiles([photo, photo, _tempDir], recursive: false);
+        var collected = PhotoCropper.Core.IO.ImageFileCollector.CollectFiles([photo, photo, _tempDir], recursive: false);
 
         collected.Count.ShouldBe(1);
         collected[0].ShouldBe(Path.GetFullPath(photo));
@@ -87,7 +86,7 @@ public sealed class FileCollectorTests : IDisposable
     public void CollectFiles_NonExistentPaths_ShouldReturnEmptyList()
     {
         string nonExistent = Path.Combine(_tempDir, "does_not_exist.jpg");
-        var collected = FileCollector.CollectFiles([nonExistent], recursive: false);
+        var collected = PhotoCropper.Core.IO.ImageFileCollector.CollectFiles([nonExistent], recursive: false);
 
         collected.ShouldBeEmpty();
     }

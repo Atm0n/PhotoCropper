@@ -26,7 +26,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
 
         var savedCrops = new List<PhotoCropper.Core.Workspace.WorkspaceCropData>
         {
-            new PhotoCropper.Core.Workspace.WorkspaceCropData { CenterX = 100, CenterY = 100, Width = 50, Height = 50, Angle = 0 }
+            new() { CenterX = 100, CenterY = 100, Width = 50, Height = 50, Angle = 0 }
         };
 
         cropper.RestoreFromSavedCrops(savedCrops);
@@ -371,7 +371,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
             // Photo tilted by ~3 degrees: center at (600, 600), size (400, 500), angle = 3.0
             RotatedRect targetRect = new(new PointF(600, 600), new SizeF(400, 500), 3.0f);
             PointF[] vertices = targetRect.GetVertices();
-            Point[] polyPoints = vertices.Select(v => Point.Round(v)).ToArray();
+            Point[] polyPoints = [.. vertices.Select(v => Point.Round(v))];
             using var vp = new VectorOfPoint(polyPoints);
             CvInvoke.FillConvexPoly(scan, vp, new MCvScalar(20, 20, 20));
             scan.Save(tiltedScanPath);
@@ -424,6 +424,55 @@ public sealed class PhotoCropperEngineTests : IDisposable
         cropper.Original.NumberOfChannels.ShouldBe(3);
         cropper.DetectPhotos();
         cropper.DetectedPhotos.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void ApplyGrabHandleResize_ShouldExtractPhotoAndReplaceInList()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        cropper.DetectPhotos();
+
+        int initialPhotosCount = cropper.DetectedPhotos.Count;
+        int candIndex = 0;
+
+        // Modify the candidate's RotatedRect directly to simulate a user resize
+        var cand = cropper.AcceptedCandidates[candIndex];
+        var newRect = new RotatedRect(cand.Rotated.Center, new SizeF(50, 50), cand.Rotated.Angle);
+        var list = cropper.AcceptedCandidates.ToList();
+        list[candIndex] = cand with { Rotated = newRect };
+        cropper.UpdateCandidates(list);
+
+        // Apply the resize
+        cropper.ApplyGrabHandleResize(candIndex);
+
+        cropper.DetectedPhotos.Count.ShouldBe(initialPhotosCount);
+
+        var newlyExtracted = cropper.DetectedPhotos[candIndex];
+        // After extraction, the width and height should be roughly the RotatedRect's size.
+        // It might be slightly off depending on rotation interpolation, but for 0-angle it's exact.
+        newlyExtracted.Width.ShouldBeInRange(45, 55);
+        newlyExtracted.Height.ShouldBeInRange(45, 55);
+    }
+
+    [Fact]
+    public void RestoreFromSavedCrops_EmptyList_ShouldNotCrash()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+
+        cropper.RestoreFromSavedCrops([]);
+
+        cropper.DetectedPhotos.ShouldBeEmpty();
+        cropper.AcceptedCandidates.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void SetCustomBackgroundFromPixel_OutsideBounds_ShouldNotThrow()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+
+        // Sampling outside the image bounds should gracefully ignore or clamp
+        Should.NotThrow(() => cropper.SetCustomBackgroundFromPixel(-1, -1));
+        Should.NotThrow(() => cropper.SetCustomBackgroundFromPixel(9999, 9999));
     }
 
     public void Dispose()

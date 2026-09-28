@@ -62,7 +62,7 @@ internal static class Program
             return 1;
         }
 
-        List<string> scanFiles = FileCollector.CollectFiles(options.Inputs, options.Recursive);
+        List<string> scanFiles = [.. PhotoCropper.Core.IO.ImageFileCollector.CollectFiles(options.Inputs, options.Recursive)];
         if (scanFiles.Count == 0)
         {
             Spectre.Console.AnsiConsole.MarkupLine("[bold yellow]Warning:[/] No supported image files found in specified inputs.");
