@@ -85,7 +85,7 @@ public sealed class ScanSessionManagerTests : IDisposable
 
         manager.MovePrevious().ShouldBeTrue();
         manager.CurrentIndex.ShouldBe(1);
-        
+
         manager.MovePrevious().ShouldBeTrue();
         manager.CurrentIndex.ShouldBe(0);
 

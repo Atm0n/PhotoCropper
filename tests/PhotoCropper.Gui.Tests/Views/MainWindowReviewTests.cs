@@ -1,6 +1,4 @@
-using Avalonia.Input;
 using PhotoCropper.Core.Models;
-using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.TestHelpers;
 using System.Diagnostics.CodeAnalysis;

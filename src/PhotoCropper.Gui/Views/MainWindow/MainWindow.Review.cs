@@ -1,8 +1,6 @@
-using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
-using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
 
