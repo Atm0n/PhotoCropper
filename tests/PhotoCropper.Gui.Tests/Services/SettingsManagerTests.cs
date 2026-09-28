@@ -1,4 +1,4 @@
-using PhotoCropper.Gui.Services;
+﻿using PhotoCropper.Gui.Services;
 using PhotoCropper.TestHelpers;
 
 namespace PhotoCropper.Gui.Tests.Services;
@@ -29,8 +29,8 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.ZoomLevel.ShouldBe(1);
         manager.Settings.AdvancedVisible.ShouldBeFalse();
         manager.Settings.AutoOrientPhotos.ShouldBeTrue();
-        manager.Settings.RestoreVintageColors.ShouldBeTrue();
-        manager.Settings.RemoveDustAndScratches.ShouldBeTrue();
+        manager.Settings.RestoreVintageColors.ShouldBeFalse();
+        manager.Settings.RemoveDustAndScratches.ShouldBeFalse();
         manager.Settings.AutoTuneOnScanChange.ShouldBeFalse();
         manager.Settings.AutoAdjustOnLowCoverage.ShouldBeTrue();
         manager.Settings.Theme.ShouldBe("Dark");
@@ -67,7 +67,8 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.WorkDirectory = "C:\\ScannerWorkspace";
         manager.Settings.SelectedScannerId = "canon-lide-400";
         manager.Settings.ScannerPageSize = "A4";
-        manager.Settings.RemoveDustAndScratches = false;
+        manager.Settings.RemoveDustAndScratches = true;
+        manager.Settings.RestoreVintageColors = true;
         manager.Settings.AutoTuneOnScanChange = true;
         manager.Settings.Theme = "Light";
         manager.Settings.DetectionBoxColor = "Amber";
@@ -97,7 +98,7 @@ public sealed class SettingsManagerTests : IDisposable
         secondManager.Settings.AdvancedVisible.ShouldBeTrue();
         secondManager.Settings.AutoOrientPhotos.ShouldBeTrue();
         secondManager.Settings.RestoreVintageColors.ShouldBeTrue();
-        secondManager.Settings.RemoveDustAndScratches.ShouldBeFalse();
+        secondManager.Settings.RemoveDustAndScratches.ShouldBeTrue();
         secondManager.Settings.AutoTuneOnScanChange.ShouldBeTrue();
         secondManager.Settings.ScannerPageSize.ShouldBe("A4");
         secondManager.Settings.Theme.ShouldBe("Light");
@@ -164,8 +165,9 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.MaxAreaFactor = 75;
         manager.Settings.CannyLowThreshold = 40;
         manager.Settings.AutoOrientPhotos = false;
-        manager.Settings.RestoreVintageColors = false;
-        manager.Settings.RemoveDustAndScratches = false;
+        manager.Settings.RestoreVintageColors = true;
+        manager.Settings.RemoveDustAndScratches = true;
+        manager.Settings.RestoreVintageColors = true;
         manager.Settings.AutoTuneOnScanChange = true;
 
         manager.Save();
@@ -176,8 +178,8 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.MaxAreaFactor.ShouldBe(90);
         manager.Settings.CannyLowThreshold.ShouldBe(20);
         manager.Settings.AutoOrientPhotos.ShouldBeTrue();
-        manager.Settings.RestoreVintageColors.ShouldBeTrue();
-        manager.Settings.RemoveDustAndScratches.ShouldBeTrue();
+        manager.Settings.RestoreVintageColors.ShouldBeFalse();
+        manager.Settings.RemoveDustAndScratches.ShouldBeFalse();
         manager.Settings.AutoTuneOnScanChange.ShouldBeFalse();
 
         // Non-detection / export settings should remain untouched

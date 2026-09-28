@@ -19,8 +19,8 @@ internal sealed class UserSettings
     public string PreferredFormat { get; set; } = AppConstants.FormatJpeg; // JPEG or PNG
     public int JpegQuality { get; set; } = AppConstants.DefaultJpegQuality; // 1-100 (default: 100 maximum quality)
     public bool AutoOrientPhotos { get; set; } = true;
-    public bool RestoreVintageColors { get; set; } = true;
-    public bool RemoveDustAndScratches { get; set; } = true;
+    public bool RestoreVintageColors { get; set; }
+    public bool RemoveDustAndScratches { get; set; }
     public bool AutoTuneOnScanChange { get; set; }
     public bool AutoAdjustOnLowCoverage { get; set; } = true;
     public string? WorkDirectory { get; set; }

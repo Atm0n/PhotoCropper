@@ -31,8 +31,8 @@ public class PhotoCropperEngine : IDisposable
     public double CannyHighThreshold { get; set; } = Common.AppConstants.DefaultCannyHigh;
     public MCvScalar? CustomBackgroundColorHsv { get; set; }
     public bool AutoOrientPhotos { get; set; } = true;
-    public bool RestoreVintageColors { get; set; } = true;
-    public bool RemoveDustAndScratches { get; set; } = true;
+    public bool RestoreVintageColors { get; set; }
+    public bool RemoveDustAndScratches { get; set; }
     public string BoundingBoxColor { get; set; } = Common.AppConstants.DefaultBoundingBoxColor;
 
     public Mat Original { get; set; }
