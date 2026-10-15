@@ -1,4 +1,4 @@
-﻿# PhotoCropper
+# PhotoCropper
 
 An intelligent, cross-platform .NET 10 desktop application designed to automatically detect, straighten, and extract multiple photos from a single scanner bed image. Built with Avalonia UI and Emgu.CV (OpenCV).
 
@@ -199,27 +199,28 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `-o, --output <dir>` | Output destination directory for extracted photos | `<scan_dir>/cropped` |
 | `-f, --format <fmt>` | Output file format: `JPEG` or `PNG` | `JPEG` |
 | `-q, --quality <1-100>` | JPEG compression quality | `100` |
-| `-p, --pattern <pat>` | Output naming template (`{original}`, `{index:02}`, `{year}`, `{date}`, `{total}`) | `{original}_{index}` |
+| `-p, --pattern, --naming-pattern <pat>` | Output naming template (`{original}`, `{index:02}`, `{year}`, `{date}`, `{total}`) | `{original}_{index}` |
 | `--year <YYYY>` | Vintage photo year taken to embed in EXIF and use in `{year}` | `null` |
 | `--date <YYYY-MM-DD>` | Approximate or exact photo date to embed in EXIF and use in `{date}` | `null` |
-| `--desc <text>` | Photo description/comment embedded into EXIF metadata | `null` |
-| `-t, --tolerance <num>` | Background color detection tolerance | `25` |
-| `-j, --threads <num>` | Number of concurrent CPU worker threads for batch processing | *CPU Cores* |
-| `--min-size <percent>` | Minimum photo size as % of total scan area | `25` |
-| `--max-size <percent>` | Maximum photo size as % of total scan area | `90` |
-| `--min-photos <num>` | Minimum expected photos per scan to flag for review | `1` |
-| `--max-photos <num>` | Maximum expected photos per scan to flag for review | *Unlimited* |
+| `--desc, --description, --comment <text>` | Photo description/comment embedded into EXIF metadata | `null` |
+| `-s, --sensitivity <0-100>` | Detection sensitivity percentage (maps inversely to tolerance) | `50%` |
+| `-t, --tolerance <num>` | Background color detection tolerance | `25` (CLI) / `30` (Core) |
+| `-j, --threads <num>` | Number of concurrent CPU worker threads for batch processing | *CPU Cores / 2* (1-4) |
+| `--min-size <percent>` | Minimum photo size as % of total scan area | `25%` (CLI) / `1%` (Core) |
+| `--max-size <percent>` | Maximum photo size as % of total scan area | `90%` |
+| `--min-photos, --expected-photos <num>` | Minimum expected photos per scan to flag for review | `1` |
+| `--max-photos, --max-expected-photos <num>` | Maximum expected photos per scan to flag for review | *Unlimited* |
 | `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
 | `--auto-tune` | Automatically search optimal detection parameters on difficult scans (outside expected bounds) | `false` |
 | `--always-auto-tune` | Always run auto-tune sweep on every scan | `false` |
 | `--auto-adjust-low-coverage` | Auto-tune only scans where detected area coverage is lower than threshold | `false` |
 | `--min-coverage <percent>` | Set low coverage threshold percentage for auto-adjust | `50` |
-| `--copy-undetected <dir>` | Copy scans with 0 detected photos to a designated review directory | `null` |
-| `-w, --wizard` | Launch step-by-step interactive CLI setup wizard | `false` |
-| `-y, --non-interactive` | Disable interactive prompts (e.g. post-batch auto-tune review prompt) | `false` |
+| `--copy-undetected, --isolate-undetected <dir>` | Copy scans with 0 detected photos to a designated review directory | `null` |
+| `-w, --wizard, --interactive` | Launch step-by-step interactive CLI setup wizard | `false` |
+| `-y, --yes, --non-interactive` | Disable interactive prompts (e.g. post-batch auto-tune review prompt) | `false` |
 | `--auto-orient` / `--no-auto-orient` | Enable or disable AI face & landscape orientation detection | `true` |
-| `--restore-colors` / `--no-restore-colors` | Enable or disable vintage photo color & contrast restoration | `true` |
-| `--remove-dust` / `--no-remove-dust` | Enable or disable automated dust and hairline scratch inpainting | `true` |
+| `--restore-colors` / `--no-restore-colors` | Enable or disable vintage photo color & contrast restoration | `true` (CLI) / `false` (GUI) |
+| `--remove-dust` / `--no-remove-dust` | Enable or disable automated dust and hairline scratch inpainting | `true` (CLI) / `false` (GUI) |
 | `-r, --recursive` | Recursively process subdirectories when input is a folder | `false` |
 | `-v, --verbose` | Display individual photo dimensions and debug details | `false` |
 | `-h, --help` | Display usage instructions and examples | — |
