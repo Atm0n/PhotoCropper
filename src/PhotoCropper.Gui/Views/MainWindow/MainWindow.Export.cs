@@ -228,39 +228,48 @@ internal sealed partial class MainWindow
         if (fileResult != null)
         {
             string targetPath = fileResult.Path.LocalPath;
-            var photoMat = engine.DetectedPhotos[photoIndex];
-            var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(ScanSessions[CurrentIndex].FilePath);
-
-            if (targetPath.EndsWith(AppConstants.ExtensionPng, StringComparison.OrdinalIgnoreCase))
+            try
             {
-                using var buf = new Emgu.CV.Util.VectorOfByte();
-                Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionPng, photoMat, buf);
-                await File.WriteAllBytesAsync(targetPath, buf.ToArray(), cancellationToken);
-                PhotoExporter.EmbedPngDpi(targetPath, xDpi, yDpi);
-                if (scanMetadata.HasMetadata)
-                {
-                    PhotoExporter.EmbedPngMetadata(targetPath, scanMetadata);
-                }
-            }
-            else
-            {
-                var parameters = new[] {
-                    new KeyValuePair<ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegQuality, settings.JpegQuality),
-                    new KeyValuePair<Emgu.CV.CvEnum.ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegOptimize, 1)
-                };
-                using var buf = new VectorOfByte();
-                Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionJpg, photoMat, buf, parameters);
-                await File.WriteAllBytesAsync(targetPath, buf.ToArray(), cancellationToken);
-                PhotoExporter.EmbedJpegDpi(targetPath, xDpi, yDpi);
-                if (scanMetadata.HasMetadata)
-                {
-                    PhotoExporter.EmbedJpegMetadata(targetPath, scanMetadata);
-                }
-            }
+                var photoMat = engine.DetectedPhotos[photoIndex];
+                var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(ScanSessions[CurrentIndex].FilePath);
 
-            string exportMsg = $"Exported photo to {Path.GetFileName(targetPath)}";
-            lblStatus.Text = exportMsg;
-            _notificationService.ShowSuccess("PhotoCropper", exportMsg);
+                if (targetPath.EndsWith(AppConstants.ExtensionPng, StringComparison.OrdinalIgnoreCase))
+                {
+                    using var buf = new Emgu.CV.Util.VectorOfByte();
+                    Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionPng, photoMat, buf);
+                    await File.WriteAllBytesAsync(targetPath, buf.ToArray(), cancellationToken);
+                    PhotoExporter.EmbedPngDpi(targetPath, xDpi, yDpi);
+                    if (scanMetadata.HasMetadata)
+                    {
+                        PhotoExporter.EmbedPngMetadata(targetPath, scanMetadata);
+                    }
+                }
+                else
+                {
+                    var parameters = new[] {
+                        new KeyValuePair<ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegQuality, settings.JpegQuality),
+                        new KeyValuePair<Emgu.CV.CvEnum.ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegOptimize, 1)
+                    };
+                    using var buf = new VectorOfByte();
+                    Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionJpg, photoMat, buf, parameters);
+                    await File.WriteAllBytesAsync(targetPath, buf.ToArray(), cancellationToken);
+                    PhotoExporter.EmbedJpegDpi(targetPath, xDpi, yDpi);
+                    if (scanMetadata.HasMetadata)
+                    {
+                        PhotoExporter.EmbedJpegMetadata(targetPath, scanMetadata);
+                    }
+                }
+
+                string exportMsg = $"Exported photo to {Path.GetFileName(targetPath)}";
+                lblStatus.Text = exportMsg;
+                _notificationService.ShowSuccess("PhotoCropper", exportMsg);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                string errorMsg = $"Failed to export photo: {ex.Message}";
+                lblStatus.Text = errorMsg;
+                _notificationService.ShowError("PhotoCropper", errorMsg);
+            }
         }
     }
 

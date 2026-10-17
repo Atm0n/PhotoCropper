@@ -309,6 +309,12 @@ internal sealed partial class MainWindow : Window
 
             switch (e.Key)
             {
+                case Key.N:
+                case Key.Oem3:
+                    FocusManager?.Focus(null);
+                    StartRefineMode();
+                    e.Handled = true;
+                    return true;
                 case Key.R:
                     FocusManager?.Focus(null);
                     await RotateSelectedPhotosAsync();
