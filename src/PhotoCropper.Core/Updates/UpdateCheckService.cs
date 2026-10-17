@@ -5,7 +5,8 @@ namespace PhotoCropper.Core.Updates;
 
 public static class UpdateCheckService
 {
-    private static readonly Uri DefaultReleaseUri = new("https://github.com/Atm0n/PhotoCropper/releases/latest");
+    private static readonly Uri DefaultReleaseUri = new("https://api.github.com/repos/Atm0n/PhotoCropper/releases/latest");
+    private static readonly Uri DefaultFallbackDownloadUri = new("https://github.com/Atm0n/PhotoCropper/releases/latest");
 
     public static Uri DefaultLatestReleaseUri => DefaultReleaseUri;
 
@@ -61,38 +62,53 @@ public static class UpdateCheckService
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Head, requestUri);
+            using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
             request.Headers.Add("User-Agent", "PhotoCropper");
+            request.Headers.Add("Accept", "application/vnd.github.v3+json");
 
-            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using var response = await client.SendAsync(request, cancellationToken);
 
-            Uri? location = response.Headers.Location;
-            if (location == null && response.RequestMessage?.RequestUri != null)
+            string? tag = null;
+            Uri? downloadUri = null;
+
+            if (response.IsSuccessStatusCode)
             {
-                location = response.RequestMessage.RequestUri;
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await System.Text.Json.JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("tag_name", out var tagElem))
+                {
+                    tag = tagElem.GetString();
+                }
+
+                if (root.TryGetProperty("html_url", out var urlElem) && Uri.TryCreate(urlElem.GetString(), UriKind.Absolute, out var parsedUrl))
+                {
+                    downloadUri = parsedUrl;
+                }
+            }
+            else if (response.Headers.Location != null)
+            {
+                Uri loc = response.Headers.Location;
+                downloadUri = loc.IsAbsoluteUri ? loc : new Uri(requestUri, loc);
+                tag = Path.GetFileName(downloadUri.AbsolutePath.TrimEnd('/'));
             }
 
-            if (location == null)
-            {
-                return UpdateCheckResult.UpToDate(activeVersion);
-            }
-
-            Uri absoluteUri = location.IsAbsoluteUri ? location : new Uri(requestUri, location);
-            string tag = Path.GetFileName(absoluteUri.AbsolutePath.TrimEnd('/'));
+            downloadUri ??= DefaultFallbackDownloadUri;
 
             if (TryParseTagVersion(tag, out Version? latestVersion) && latestVersion != null)
             {
                 if (latestVersion > activeVersion)
                 {
-                    return UpdateCheckResult.Available(activeVersion, latestVersion, tag, absoluteUri);
+                    return UpdateCheckResult.Available(activeVersion, latestVersion, tag!, downloadUri);
                 }
 
-                return UpdateCheckResult.UpToDate(activeVersion, latestVersion, tag, absoluteUri);
+                return UpdateCheckResult.UpToDate(activeVersion, latestVersion, tag, downloadUri);
             }
 
             return UpdateCheckResult.UpToDate(activeVersion);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException or System.Text.Json.JsonException)
         {
             return UpdateCheckResult.Failed(activeVersion, ex.Message);
         }
@@ -107,7 +123,7 @@ public static class UpdateCheckService
     {
         var handler = new HttpClientHandler
         {
-            AllowAutoRedirect = false,
+            AllowAutoRedirect = true,
             CheckCertificateRevocationList = true
         };
 
