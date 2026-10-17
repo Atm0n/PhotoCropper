@@ -398,12 +398,13 @@ internal static class BatchProcessor
         {
             grid.AddRow("[bold cyan]Naming Pattern:[/]", $"[bold yellow]{options.FileNamePattern}[/]");
         }
-        if (options.Year.HasValue || !string.IsNullOrWhiteSpace(options.Date) || !string.IsNullOrWhiteSpace(options.Description))
+        if (options.Year.HasValue || !string.IsNullOrWhiteSpace(options.Date) || !string.IsNullOrWhiteSpace(options.Description) || !string.IsNullOrWhiteSpace(options.Photographer))
         {
             string metaSummary = "";
             if (options.Year.HasValue) metaSummary += $"Year: {options.Year.Value} ";
             if (!string.IsNullOrWhiteSpace(options.Date)) metaSummary += $"Date: {options.Date} ";
-            if (!string.IsNullOrWhiteSpace(options.Description)) metaSummary += $"Desc: '{options.Description}'";
+            if (!string.IsNullOrWhiteSpace(options.Description)) metaSummary += $"Desc: '{options.Description}' ";
+            if (!string.IsNullOrWhiteSpace(options.Photographer)) metaSummary += $"Photographer: '{options.Photographer}'";
             grid.AddRow("[bold cyan]EXIF Metadata:[/]", $"[bold green]{metaSummary.Trim()}[/]");
         }
         if (options.CopyUndetectedDirectory != null)
@@ -441,13 +442,14 @@ internal static class BatchProcessor
             parsedDate = d;
         }
 
-        if (options.Year.HasValue || parsedDate.HasValue || !string.IsNullOrWhiteSpace(options.Description))
+        if (options.Year.HasValue || parsedDate.HasValue || !string.IsNullOrWhiteSpace(options.Description) || !string.IsNullOrWhiteSpace(options.Photographer))
         {
             return new PhotoExportMetadata
             {
                 Year = options.Year,
                 DateTaken = parsedDate,
-                Description = options.Description
+                Description = options.Description,
+                Photographer = options.Photographer
             };
         }
         return null;

@@ -203,6 +203,7 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `--year <YYYY>` | Vintage photo year taken to embed in EXIF and use in `{year}` | `null` |
 | `--date <YYYY-MM-DD>` | Approximate or exact photo date to embed in EXIF and use in `{date}` | `null` |
 | `--desc, --description, --comment <text>` | Photo description/comment embedded into EXIF metadata | `null` |
+| `--photographer, --artist, --author <name>` | Photographer or studio name embedded into EXIF Artist & PNG Author | `null` |
 | `-s, --sensitivity <0-100>` | Detection sensitivity percentage (maps inversely to tolerance) | `50%` |
 | `-t, --tolerance <num>` | Background color detection tolerance | `25` (CLI) / `30` (Core) |
 | `-j, --threads <num>` | Number of concurrent CPU worker threads for batch processing | *CPU Cores / 2* (1-4) |

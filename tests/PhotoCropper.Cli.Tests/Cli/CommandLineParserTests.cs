@@ -128,7 +128,8 @@ public sealed class CommandLineParserTests
             "-p", "{year}_{original}_{index:02}",
             "--year", "1985",
             "--date", "1985-06-15",
-            "--desc", "Family vacation"
+            "--desc", "Family vacation",
+            "--photographer", "Ansel Adams"
         ];
 
         var options = CommandLineParser.Parse(args);
@@ -137,6 +138,7 @@ public sealed class CommandLineParserTests
         options.Year.ShouldBe(1985);
         options.Date.ShouldBe("1985-06-15");
         options.Description.ShouldBe("Family vacation");
+        options.Photographer.ShouldBe("Ansel Adams");
     }
 
     [Theory]

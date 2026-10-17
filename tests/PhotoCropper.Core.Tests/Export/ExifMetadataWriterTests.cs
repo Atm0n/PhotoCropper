@@ -12,7 +12,8 @@ public class ExifMetadataWriterTests
         var metadata = new PhotoExportMetadata
         {
             Year = 1982,
-            Description = "Vintage holiday photo"
+            Description = "Vintage holiday photo",
+            Photographer = "Ansel Adams"
         };
 
         byte[] app1 = ExifMetadataWriter.BuildExifApp1Segment(metadata);
@@ -35,11 +36,12 @@ public class ExifMetadataWriterTests
         app1[12].ShouldBe((byte)0x2A);
         app1[13].ShouldBe((byte)0x00);
 
-        // Check that date and description strings are embedded
+        // Check that date, description, and artist strings are embedded
         string app1String = Encoding.ASCII.GetString(app1);
         app1String.ShouldContain("1982:01:01 00:00:00");
         app1String.ShouldContain("PhotoCropper");
         app1String.ShouldContain("Vintage holiday photo");
+        app1String.ShouldContain("Ansel Adams");
     }
 
     [Fact]
@@ -97,7 +99,8 @@ public class ExifMetadataWriterTests
         var metadata = new PhotoExportMetadata
         {
             Year = 1999,
-            Description = "Graduation"
+            Description = "Graduation",
+            Photographer = "John Doe"
         };
 
         byte[] result = ExifMetadataWriter.InjectPngMetadata(fakePng, metadata);
@@ -110,5 +113,7 @@ public class ExifMetadataWriterTests
         resultText.ShouldContain("Creation Time");
         resultText.ShouldContain("1999-01-01");
         resultText.ShouldContain("Graduation");
+        resultText.ShouldContain("Author");
+        resultText.ShouldContain("John Doe");
     }
 }

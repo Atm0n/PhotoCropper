@@ -10,6 +10,7 @@ public static class ExifMetadataWriter
     private const ushort TagImageDescription = 0x010E;
     private const ushort TagSoftware = 0x0131;
     private const ushort TagDateTime = 0x0132;
+    private const ushort TagArtist = 0x013B;
     private const ushort TagExifIfdPointer = 0x8769;
     private const ushort TagDateTimeOriginal = 0x9003;
     private const ushort TagDateTimeDigitized = 0x9004;
@@ -72,6 +73,12 @@ public static class ExifMetadataWriter
         {
             string descNullTerm = description + "\0";
             ifd0Entries.Add((TagImageDescription, TypeAscii, (uint)descNullTerm.Length, Encoding.ASCII.GetBytes(descNullTerm)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.Photographer))
+        {
+            string artistNullTerm = metadata.Photographer + "\0";
+            ifd0Entries.Add((TagArtist, TypeAscii, (uint)artistNullTerm.Length, Encoding.ASCII.GetBytes(artistNullTerm)));
         }
 
         // Exif IFD Pointer entry (we will calculate offset after IFD0)
@@ -266,6 +273,11 @@ public static class ExifMetadataWriter
         {
             chunksToInject.Add(BuildPngTextChunk("Description", metadata.Description));
             chunksToInject.Add(BuildPngTextChunk("Comment", metadata.Description));
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.Photographer))
+        {
+            chunksToInject.Add(BuildPngTextChunk("Author", metadata.Photographer));
         }
 
         if (chunksToInject.Count == 0)

@@ -169,6 +169,10 @@ internal static class CommandLineParser
             {
                 options.Description = args[++i];
             }
+            else if (arg is "--photographer" or "--artist" or "--author" && i + 1 < args.Length)
+            {
+                options.Photographer = args[++i];
+            }
             else if (arg is "-i" or "--input" && i + 1 < args.Length)
             {
                 options.Inputs.Add(args[++i]);
@@ -201,6 +205,7 @@ internal static class CommandLineParser
               --year <YYYY>           Vintage photo year taken to embed in EXIF and use in {year}
               --date <YYYY-MM-DD>     Approximate or exact photo date to embed in EXIF and {date}
               --desc <text>           Photo description/comment embedded into EXIF metadata
+              --photographer <name>   Photographer/artist name embedded into EXIF metadata and PNG Author
               -s, --sensitivity <0-100> Detection sensitivity percentage (default: 50%)
               -t, --tolerance <num>   Background color detection tolerance (default: 25)
               -j, --threads <num>     Number of parallel CPU worker threads (default: CPU core count)
