@@ -55,6 +55,76 @@ public sealed class RepairBrushTests : IDisposable
         Math.Abs(MeanAt(photo, new Rectangle(40, 49, 120, 3)) - 128).ShouldBeGreaterThan(40, "the original is untouched");
     }
 
+    /// <summary>A photo with film-like grain and a long scratch.</summary>
+    private static Mat GrainyScratchedPhoto(out Mat clean)
+    {
+        clean = new Mat(300, 400, DepthType.Cv8U, 3);
+        clean.SetTo(new MCvScalar(120, 130, 140));
+        using (var plus = new Mat(300, 400, DepthType.Cv8U, 3))
+        using (var minus = new Mat(300, 400, DepthType.Cv8U, 3))
+        {
+            CvInvoke.Randn(plus, new MCvScalar(0, 0, 0), new MCvScalar(14, 14, 14));
+            CvInvoke.Randn(minus, new MCvScalar(0, 0, 0), new MCvScalar(14, 14, 14));
+            CvInvoke.Add(clean, plus, clean);
+            CvInvoke.Subtract(clean, minus, clean);
+        }
+        var damaged = clean.Clone();
+        CvInvoke.Line(damaged, new Point(40, 150), new Point(360, 150), new MCvScalar(20, 20, 20), 6);
+        return damaged;
+    }
+
+    private static RepairStroke HorizontalStroke(float y, float radius)
+    {
+        var stroke = new RepairStroke { Radius = radius };
+        foreach (float v in new[] { 0.1f, y, 0.9f, y }) stroke.Points.Add(v);
+        return stroke;
+    }
+
+    [Fact]
+    public void ApplyRepairs_OnAGrainyPhoto_ShouldMatchTheSurroundingGrainInsteadOfLookingBlurred()
+    {
+        using var damaged = GrainyScratchedPhoto(out var clean);
+        using (clean)
+        {
+            using var repaired = PhotoRepairService.ApplyRepairs(damaged, [HorizontalStroke(0.5f, 0.0125f)]);
+
+            var fillMean = new MCvScalar(); var fillStd = new MCvScalar();
+            var refMean = new MCvScalar(); var refStd = new MCvScalar();
+            using (var fill = new Mat(repaired, new Rectangle(60, 147, 280, 6))) CvInvoke.MeanStdDev(fill, ref fillMean, ref fillStd);
+            using (var reference = new Mat(clean, new Rectangle(60, 100, 280, 6))) CvInvoke.MeanStdDev(reference, ref refMean, ref refStd);
+
+            // A plain blend keeps only ~15% of the texture; the grain should be close to the surroundings.
+            (fillStd.V0 / refStd.V0).ShouldBeInRange(0.7, 1.3);
+            Math.Abs(fillMean.V0 - refMean.V0).ShouldBeLessThan(5);
+        }
+    }
+
+    [Fact]
+    public void ApplyRepairs_OnASmoothPhoto_ShouldNotAddGrain()
+    {
+        using var photo = ScratchedPhoto(); // flat grey: no grain around the scratch
+
+        using var repaired = PhotoRepairService.ApplyRepairs(photo, [StrokeAlongScratch()]);
+
+        var mean = new MCvScalar(); var std = new MCvScalar();
+        using var fill = new Mat(repaired, new Rectangle(40, 47, 120, 6));
+        CvInvoke.MeanStdDev(fill, ref mean, ref std);
+        std.V0.ShouldBeLessThan(2);
+    }
+
+    [Fact]
+    public void ApplyRepairs_ShouldGiveTheSameResultEveryTime()
+    {
+        using var damaged = GrainyScratchedPhoto(out var clean);
+        using (clean)
+        {
+            using var first = PhotoRepairService.ApplyRepairs(damaged, [HorizontalStroke(0.5f, 0.0125f)]);
+            using var second = PhotoRepairService.ApplyRepairs(damaged, [HorizontalStroke(0.5f, 0.0125f)]);
+
+            CvInvoke.Norm(first, second, NormType.L1).ShouldBe(0);
+        }
+    }
+
     [Fact]
     public void ApplyRepairs_ShouldKeepTransparency()
     {
