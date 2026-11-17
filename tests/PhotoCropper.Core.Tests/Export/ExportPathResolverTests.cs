@@ -25,7 +25,7 @@ public sealed class ExportPathResolverTests : IDisposable
     }
 
     [Fact]
-    public void ResolveOutputDirectory_WithWorkspaceDirectory_ShouldReturnWorkspaceCropped()
+    public void ResolveOutputDirectory_WithWorkspaceDirectory_ShouldReturnWorkspaceFinal()
     {
         string workDir = Path.Combine(_tempDir, "ProjectWorkDir");
         Directory.CreateDirectory(workDir);
@@ -33,11 +33,11 @@ public sealed class ExportPathResolverTests : IDisposable
 
         string resolved = ExportPathResolver.ResolveOutputDirectory(scanPath, workDirectory: workDir);
 
-        resolved.ShouldBe(Path.Combine(workDir, ProjectWorkspaceService.CroppedFolderName));
+        resolved.ShouldBe(Path.Combine(workDir, ProjectWorkspaceService.FinalFolderName));
     }
 
     [Fact]
-    public void ResolveOutputDirectory_InRawScansFolder_ShouldReturnSiblingCropped()
+    public void ResolveOutputDirectory_InRawScansFolder_ShouldReturnSiblingFinal()
     {
         string projectDir = Path.Combine(_tempDir, "MyScanProject");
         string rawDir = Path.Combine(projectDir, ProjectWorkspaceService.RawScansFolderName);
@@ -46,7 +46,7 @@ public sealed class ExportPathResolverTests : IDisposable
 
         string resolved = ExportPathResolver.ResolveOutputDirectory(scanPath);
 
-        resolved.ShouldBe(Path.Combine(projectDir, ProjectWorkspaceService.CroppedFolderName));
+        resolved.ShouldBe(Path.Combine(projectDir, ProjectWorkspaceService.FinalFolderName));
     }
 
     [Fact]

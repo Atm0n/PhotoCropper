@@ -15,7 +15,7 @@ public static class ExportPathResolver
 
         if (!string.IsNullOrWhiteSpace(workDirectory) && Directory.Exists(workDirectory))
         {
-            return ProjectWorkspaceService.GetCroppedDirectory(workDirectory);
+            return ProjectWorkspaceService.GetFinalDirectory(workDirectory);
         }
 
         string? directory = Path.GetDirectoryName(scanFilePath);
@@ -29,8 +29,8 @@ public static class ExportPathResolver
         {
             string? parentDir = Path.GetDirectoryName(directory);
             return !string.IsNullOrEmpty(parentDir)
-                ? Path.Combine(parentDir, ProjectWorkspaceService.CroppedFolderName)
-                : Path.Combine(directory, ProjectWorkspaceService.CroppedFolderName);
+                ? Path.Combine(parentDir, ProjectWorkspaceService.FinalFolderName)
+                : Path.Combine(directory, ProjectWorkspaceService.FinalFolderName);
         }
 
         return Path.Combine(directory, "cropped");

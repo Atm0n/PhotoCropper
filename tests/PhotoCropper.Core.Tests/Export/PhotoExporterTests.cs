@@ -134,7 +134,7 @@ public sealed class PhotoExporterTests : IDisposable
     }
 
     [Fact]
-    public void SavePhotos_WhenSourceIsInRawScansDirectory_ShouldExportToCroppedSiblingDirectory()
+    public void SavePhotos_WhenSourceIsInRawScansDirectory_ShouldExportToFinalSiblingDirectory()
     {
         string workspaceDir = Path.Combine(_tempDir, "workspace");
         string rawScansDir = Path.Combine(workspaceDir, "RawScans");
@@ -150,10 +150,10 @@ public sealed class PhotoExporterTests : IDisposable
         using Mat photo = new(50, 50, DepthType.Cv8U, 3);
         photo.SetTo(new MCvScalar(100, 100, 100));
 
-        // When customOutputFolder is null, it should detect RawScans and export to workspace/Cropped
+        // When customOutputFolder is null, it should detect RawScans and export to workspace/Final
         PhotoExporter.SavePhotos([photo], scanFile, customOutputFolder: null, "JPEG", 90);
 
-        string expectedCroppedDir = Path.Combine(workspaceDir, "Cropped");
+        string expectedCroppedDir = Path.Combine(workspaceDir, "Final");
         Directory.Exists(expectedCroppedDir).ShouldBeTrue();
         string[] files = Directory.GetFiles(expectedCroppedDir, "*.jpg");
         files.Length.ShouldBe(1);
