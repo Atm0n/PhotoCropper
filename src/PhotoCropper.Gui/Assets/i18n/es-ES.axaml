@@ -60,6 +60,8 @@
 	<sys:String x:Key="TitleExportFailed">No se han podido exportar algunos escaneos</sys:String>
 	<sys:String x:Key="MsgExportFailedStatus">Se han guardado {0} fotos; {1} escaneo(s) no se han podido exportar.</sys:String>
 	<sys:String x:Key="MsgExportFailedDetails">No se han podido exportar {0} de {1} escaneos. PhotoCropper sigue abierto para que no se pierda ningún trabajo.&#x0a;&#x0a;{2}</sys:String>
+	<sys:String x:Key="TitleUnexpectedError">Error inesperado</sys:String>
+	<sys:String x:Key="MsgUnexpectedError">Algo ha fallado: {0}&#x0a;&#x0a;Tu trabajo sigue abierto; te recomendamos guardarlo ahora.&#x0a;Se ha guardado un informe del error en:&#x0a;{1}</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">Todos los {0} escaneos ya están guardados en 'Cropped'. No hay cambios por exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocesando escaneo con nuevos ajustes...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detectando fotos...</sys:String>
