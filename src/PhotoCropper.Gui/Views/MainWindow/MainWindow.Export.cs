@@ -58,6 +58,8 @@ internal sealed partial class MainWindow
         int totalScans = pendingSessions.Count;
         int completedScans = 0;
         int totalSavedPhotos = 0;
+        var failedScans = new System.Collections.Concurrent.ConcurrentQueue<(string FilePath, string Error)>();
+        bool exportRanToCompletion = false;
 
         string targetOutputFolder = ExportPathResolver.ResolveOutputDirectory(
             pendingSessions[0].FilePath,
@@ -160,6 +162,7 @@ internal sealed partial class MainWindow
                     catch (Exception ex)
                     {
                         Trace.TraceError($"[PhotoCropper] Failed to export scan '{session.FilePath}': {ex.GetType().Name}: {ex.Message}");
+                        failedScans.Enqueue((session.FilePath, ex.Message));
                     }
 
                     int done = Interlocked.Increment(ref completedScans);
@@ -181,15 +184,40 @@ internal sealed partial class MainWindow
 
             }, ct);
 
+            exportRanToCompletion = true;
+
             // Format the completion message only now that the export has finished; building it as an
             // argument to ExecuteWithLoadingAsync would capture totalSavedPhotos while it is still 0.
-            lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgSaved, "Successfully saved {0} photos to 'cropped' folders.", totalSavedPhotos);
+            lblStatus.Text = failedScans.IsEmpty
+                ? LocalizationService.Format(ResourceKeys.MsgSaved, "Successfully saved {0} photos to 'cropped' folders.", totalSavedPhotos)
+                : LocalizationService.Format(ResourceKeys.MsgExportFailedStatus, "Saved {0} photos; {1} scan(s) failed to export.", totalSavedPhotos, failedScans.Count);
 
             if (totalSavedPhotos > 0)
             {
                 _notificationService.NotifyExportCompleted(totalSavedPhotos, targetOutputFolder);
             }
         });
+
+        if (!failedScans.IsEmpty)
+        {
+            ShowAppError(
+                LocalizationService.GetString(ResourceKeys.TitleExportFailed, "Some Scans Could Not Be Exported"),
+                LocalizationService.Format(
+                    ResourceKeys.MsgExportFailedDetails,
+                    "{0} of {1} scans could not be exported. PhotoCropper stayed open so no work is lost.\n\n{2}",
+                    failedScans.Count,
+                    totalScans,
+                    FormatFailedScanList([.. failedScans])));
+        }
+
+        // Only exit when every pending scan was exported. A failed scan, a cancelled run, or an error
+        // reported by ExecuteWithLoadingAsync (e.g. the session file could not be written) keeps the
+        // window open so the user can see what went wrong instead of losing unexported work.
+        bool exportSucceeded = exportRanToCompletion && failedScans.IsEmpty;
+        if (!exportSucceeded)
+        {
+            return false;
+        }
 
         if (closeAfterSave)
         {
@@ -198,6 +226,27 @@ internal sealed partial class MainWindow
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Builds a bullet list of failed scans for the error dialog, capped so a large batch of
+    /// failures (e.g. an unwritable output folder) doesn't overflow the dialog.
+    /// </summary>
+    internal static string FormatFailedScanList(IReadOnlyList<(string FilePath, string Error)> failures, int maxShown = 10)
+    {
+        ArgumentNullException.ThrowIfNull(failures);
+
+        var lines = failures
+            .Take(maxShown)
+            .Select(f => $"• {Path.GetFileName(f.FilePath)}: {f.Error}")
+            .ToList();
+
+        if (failures.Count > maxShown)
+        {
+            lines.Add($"… (+{failures.Count - maxShown})");
+        }
+
+        return string.Join('\n', lines);
     }
 
     private async Task ExportSinglePhotoAsync(int photoIndex, CancellationToken cancellationToken = default)

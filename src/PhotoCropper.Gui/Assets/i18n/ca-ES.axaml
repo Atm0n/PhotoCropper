@@ -57,6 +57,9 @@
 	<sys:String x:Key="ProcessingScan">Processant...</sys:String>
 	<sys:String x:Key="MsgSavingProgress">Exportant foto {0} de {1}...</sys:String>
 	<sys:String x:Key="MsgSaved">S'han guardat {0} fotos correctament.</sys:String>
+	<sys:String x:Key="TitleExportFailed">No s'han pogut exportar alguns escanejos</sys:String>
+	<sys:String x:Key="MsgExportFailedStatus">S'han guardat {0} fotos; {1} escaneig(s) no s'han pogut exportar.</sys:String>
+	<sys:String x:Key="MsgExportFailedDetails">No s'han pogut exportar {0} de {1} escanejos. PhotoCropper continua obert perquè no es perdi cap feina.&#x0a;&#x0a;{2}</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">Tots els {0} escanejos ja estan guardats a 'Cropped'. No hi ha canvis per exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessant amb nous ajustos...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detectant fotos...</sys:String>

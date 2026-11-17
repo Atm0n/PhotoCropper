@@ -57,6 +57,9 @@
 	<sys:String x:Key="ProcessingScan">Processing Scan...</sys:String>
 	<sys:String x:Key="MsgSavingProgress">Exporting photo {0} of {1}...</sys:String>
 	<sys:String x:Key="MsgSaved">Successfully saved {0} photos to 'cropped' folders.</sys:String>
+	<sys:String x:Key="TitleExportFailed">Some Scans Could Not Be Exported</sys:String>
+	<sys:String x:Key="MsgExportFailedStatus">Saved {0} photos; {1} scan(s) failed to export.</sys:String>
+	<sys:String x:Key="MsgExportFailedDetails">{0} of {1} scans could not be exported. PhotoCropper stayed open so no work is lost.&#x0a;&#x0a;{2}</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">All {0} scans are already saved to 'Cropped'. No changes to export.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessing scan with new settings...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detecting photos...</sys:String>

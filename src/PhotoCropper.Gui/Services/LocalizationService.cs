@@ -86,6 +86,9 @@ internal static class ResourceKeys
     public const string MsgReprocessing = nameof(MsgReprocessing);
     public const string MsgSavingProgress = nameof(MsgSavingProgress);
     public const string MsgSaved = nameof(MsgSaved);
+    public const string TitleExportFailed = nameof(TitleExportFailed);
+    public const string MsgExportFailedStatus = nameof(MsgExportFailedStatus);
+    public const string MsgExportFailedDetails = nameof(MsgExportFailedDetails);
     public const string MsgAllScansAlreadySaved = nameof(MsgAllScansAlreadySaved);
     public const string MsgScannerNotFoundDetails = nameof(MsgScannerNotFoundDetails);
     public const string MsgScannerErrorDetails = nameof(MsgScannerErrorDetails);
