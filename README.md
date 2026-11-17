@@ -111,7 +111,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - `{year}` / `{date}`: Vintage year or date from metadata.
   - `{total}`: Total photo count detected in the scan.
 - **Dynamic Live Preview:** Real-time preview of the resulting filename as you type or pick presets.
-- **Safe Re-Export:** Re-exporting a scan replaces its previous exports instead of piling up duplicates. Only files that scan wrote are removed: those recorded by its last export (if unchanged and still in the output folder) and files named exactly as the current pattern produces. Unrelated files, and the source scan itself, are never deleted. Patterns without `{original}`/`{filename}` only use the recorded files, since their names can't be tied to one scan.
+- **Safe Re-Export:** Re-exporting a scan replaces its previous exports instead of piling up duplicates. Only files that scan wrote are removed: the files recorded by its last export (if unchanged and still in the output folder). For scans exported before such records existed, files named exactly as the current pattern produces are removed instead, except when the pattern lacks `{original}`/`{filename}` or another scan with the same base name exports to the same folder. Unrelated files, other scans' exports and the source scan itself are never deleted.
 - **EXIF Vintage Metadata Tagging:** Embeds standard EXIF `DateTimeOriginal`, `DateTimeDigitized`, and `UserComment` into exported JPEGs (APP1) and PNGs (`tEXt` chunks). Scanned vintage prints are automatically indexed chronologically by their capture decade in photo managers (Google Photos, Apple Photos, Immich, Lightroom) rather than the scanner ingestion date.
 
 ---

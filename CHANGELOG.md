@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session crops now record each photo's auto-orientation (`AutoRotationDegrees`) and each scan's exported files (`ExportedFiles`) in `session.json`. Older sessions still load.
 
 ### Changed
-- **Re-export cleanup** only removes files this scan previously exported: files recorded by its last export (if unchanged on disk and still in the output folder) and files named exactly as the current pattern produces. Unrelated files sharing the scan's name prefix are no longer deleted, the source scan is never deleted, and patterns without `{original}`/`{filename}` skip name-based cleanup.
+- **Re-export cleanup** only removes files this scan previously exported: the files recorded by its last export (if unchanged on disk and still in the output folder). Without a record it falls back to files named exactly as the current pattern produces, except for patterns without `{original}`/`{filename}` and scans sharing a base name and output folder with another scan. Unrelated files and other scans' exports are no longer deleted, and the source scan is never deleted.
 - **Crop refinement** now also moves the photo's box on the scan, so refinements are shown on the overlay and kept with the session.
 - **Manual crops** go through the same auto-orientation and colour restoration as detected photos.
 - **Box overlays** (lines, handles, badges) and their click areas scale with scan resolution instead of using fixed pixel sizes.
@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bulk export kept every exported scan loaded in memory.
 - Export completion message always reported 0 saved photos.
 - "Apply year to all scans" dropped the photographer and exact date from exported metadata.
+- Non-ASCII characters in the EXIF photographer and description were written as `?` (e.g. "Josep Mart?").
+- A write failure partway through a re-export left the files already written unrecorded.
+- Undoing a delete lost the photo's manual rotation and hold-to-compare copy; dragging a box too small left it mismatched with its photo.
 - "Save & Exit" closed the app even when some scans failed to export.
 - Scanner errors ("scanner not found", timeouts) showed a generic error and skipped the scanner reset.
 - Re-detecting a scan kept stale manual rotations; dropped extractions misaligned photos and boxes; resizing a box lost its manual rotation; refinement and resize desynchronised the hold-to-compare copy.
