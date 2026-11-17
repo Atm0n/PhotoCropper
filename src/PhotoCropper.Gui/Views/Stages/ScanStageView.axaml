@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PhotoCropper.Gui.ViewModels"
+             x:Class="PhotoCropper.Gui.Views.Stages.ScanStageView"
+             x:DataType="vm:ScanStageViewModel">
+	<Border Margin="10,0,10,10" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="8"
+			BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+		<Grid RowDefinitions="Auto, *" Margin="16">
+			<!-- Actions -->
+			<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,12">
+				<Button Command="{Binding ScanCommand}" Padding="16,8" CornerRadius="6"
+						Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}">
+					<TextBlock Text="{DynamicResource BtnScanStage}" FontWeight="SemiBold"/>
+				</Button>
+				<Button Command="{Binding ImportScansCommand}" Padding="16,8" CornerRadius="6"
+						Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}">
+					<TextBlock Text="{DynamicResource BtnImportScans}"/>
+				</Button>
+				<TextBlock Text="{Binding Summary}" VerticalAlignment="Center" Margin="10,0,0,0"
+						   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+			</StackPanel>
+
+			<!-- Empty state -->
+			<Border Grid.Row="1" IsVisible="{Binding IsEmpty}" Background="{DynamicResource AppEmptyStateBrush}" CornerRadius="6">
+				<TextBlock Text="{DynamicResource ScanStageEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center"
+						   TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+			</Border>
+
+			<!-- Scan list: double-click (or Open) to adjust its crops -->
+			<ListBox Grid.Row="1" x:Name="lstScans" IsVisible="{Binding !IsEmpty}" ItemsSource="{Binding Scans}"
+					 Background="Transparent" DoubleTapped="LstScans_DoubleTapped">
+				<ListBox.ItemTemplate>
+					<DataTemplate x:DataType="vm:ScanRowViewModel">
+						<Grid ColumnDefinitions="*, Auto, Auto" Margin="4,2">
+							<TextBlock Grid.Column="0" Text="{Binding FileName}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+							<TextBlock Grid.Column="1" Text="⚠" Margin="0,0,6,0" VerticalAlignment="Center"
+									   IsVisible="{Binding IsFlagged}" Foreground="{DynamicResource AppDangerTextBrush}"/>
+							<TextBlock Grid.Column="2" Text="{Binding PhotosText}" VerticalAlignment="Center" MinWidth="140" TextAlignment="Right"
+									   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+						</Grid>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+			</ListBox>
+		</Grid>
+	</Border>
+</UserControl>

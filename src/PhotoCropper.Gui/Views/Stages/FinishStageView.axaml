@@ -1,0 +1,81 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PhotoCropper.Gui.ViewModels"
+             x:Class="PhotoCropper.Gui.Views.Stages.FinishStageView"
+             x:DataType="vm:FinishStageViewModel">
+	<Border Margin="10,0,10,10" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="8"
+			BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+		<Grid RowDefinitions="Auto, *" Margin="16">
+			<!-- Actions -->
+			<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,12" IsVisible="{Binding HasProject}">
+				<Button Command="{Binding ExportCommand}" Padding="16,8" CornerRadius="6"
+						Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}">
+					<TextBlock Text="{DynamicResource BtnExportFinal}" FontWeight="SemiBold"/>
+				</Button>
+				<Button Command="{Binding ImportPhotosCommand}" Padding="12,8" CornerRadius="6"
+						Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}">
+					<TextBlock Text="{DynamicResource BtnImportPhotos}"/>
+				</Button>
+				<Button Command="{Binding RestoreAllCommand}" Padding="12,8" CornerRadius="6"
+						Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}">
+					<TextBlock Text="{DynamicResource BtnRestoreAll}"/>
+				</Button>
+				<Button Command="{Binding RestoreNoneCommand}" Padding="12,8" CornerRadius="6"
+						Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}">
+					<TextBlock Text="{DynamicResource BtnRestoreNone}"/>
+				</Button>
+				<Button Command="{Binding OpenFinalFolderCommand}" Padding="12,8" CornerRadius="6"
+						Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}">
+					<TextBlock Text="{DynamicResource BtnOpenFinalFolder}"/>
+				</Button>
+				<TextBlock Text="{Binding Summary}" VerticalAlignment="Center" Margin="10,0,0,0"
+						   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+			</StackPanel>
+
+			<!-- No project: the pipeline folders only exist inside a project -->
+			<Border Grid.Row="1" IsVisible="{Binding !HasProject}" Background="{DynamicResource AppEmptyStateBrush}" CornerRadius="6">
+				<TextBlock Text="{DynamicResource FinishNoProject}" HorizontalAlignment="Center" VerticalAlignment="Center"
+						   TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+			</Border>
+
+			<!-- Project, but nothing cropped yet -->
+			<Border Grid.Row="1" Background="{DynamicResource AppEmptyStateBrush}" CornerRadius="6">
+				<Border.IsVisible>
+					<MultiBinding Converter="{x:Static BoolConverters.And}">
+						<Binding Path="HasProject"/>
+						<Binding Path="IsEmpty"/>
+					</MultiBinding>
+				</Border.IsVisible>
+				<TextBlock Text="{DynamicResource FinishEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center"
+						   TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+			</Border>
+
+			<!-- Photo grid -->
+			<ScrollViewer Grid.Row="1" IsVisible="{Binding !IsEmpty}" HorizontalScrollBarVisibility="Disabled">
+				<ItemsControl ItemsSource="{Binding Photos}">
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<WrapPanel Orientation="Horizontal"/>
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
+					<ItemsControl.ItemTemplate>
+						<DataTemplate x:DataType="vm:FinishPhotoViewModel">
+							<Border Width="260" Margin="6" Padding="10" CornerRadius="8"
+									Background="{DynamicResource AppPhotoCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+								<StackPanel Spacing="6">
+									<Image Source="{Binding Thumbnail}" Height="170" Stretch="Uniform"/>
+									<TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+									<TextBlock Text="{Binding SourceText}" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}" TextTrimming="CharacterEllipsis"/>
+									<CheckBox IsChecked="{Binding RestoreColors}" Content="{DynamicResource LblRestoreColors}"/>
+									<CheckBox IsChecked="{Binding RemoveDust}" IsEnabled="{Binding RestoreColors}" Content="{DynamicResource LblRemoveDust}"/>
+									<TextBlock Text="{Binding StatusText}" FontSize="11"
+											   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+								</StackPanel>
+							</Border>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</ScrollViewer>
+		</Grid>
+	</Border>
+</UserControl>

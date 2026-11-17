@@ -306,7 +306,8 @@ internal sealed partial class MainWindow
             inputs.Add(new CroppedPhotoInput(engine.RawDetectedPhotos[i], crops[i]));
         }
 
-        // Restoration is still a per-scan setting in this screen, so it applies to all of the scan's photos.
+        // New photos start with the scan's restoration setting; photos that already exist keep their own
+        // (chosen per photo in the Finish stage).
         var restoration = new RestorationSettings
         {
             RestoreColors = engine.RestoreVintageColors,
@@ -338,7 +339,6 @@ internal sealed partial class MainWindow
         var written = new List<ExportedFile>(photos.Count);
         foreach (var photo in photos)
         {
-            photo.Restoration = restoration;
             PhotoPipelineService.RenderFinal(workDirectory, workspace, photo, options);
             written.Add(ExportedFile.FromDisk(photo.Final!.GetFullPath(workDirectory)));
         }

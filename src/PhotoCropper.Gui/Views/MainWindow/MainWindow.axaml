@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:gui="using:PhotoCropper.Gui"
+        xmlns:stages="using:PhotoCropper.Gui.Views.Stages"
 		WindowState="Maximized"
 		MinWidth="1200"
 		MinHeight="650"
@@ -12,6 +13,22 @@
         Title="PhotoCropper - Intelligent Photo Extractor"
         Icon="avares://PhotoCropper.Gui/Assets/app_icon.png"
         DragDrop.AllowDrop="True">
+
+	<Window.Styles>
+		<!-- Stage bar steps; the current step gets the "active" class. DynamicResource follows theme changes. -->
+		<Style Selector="Button.stageStep">
+			<Setter Property="Background" Value="{DynamicResource AppSubtleCardBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+		</Style>
+		<Style Selector="Button.stageStep.active">
+			<Setter Property="Background" Value="{DynamicResource AppButtonAccentBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AppButtonAccentTextBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
+			<Setter Property="FontWeight" Value="Bold"/>
+		</Style>
+	</Window.Styles>
 
 	<Grid>
 		<DockPanel>
@@ -205,7 +222,38 @@
 			</Grid>
 		</Border>
 
-		<!-- Main Workspace -->
+		<!-- Stage bar: 1 Scan → 2 Crops → 3 Finish (RawScans → Cropped → Final) -->
+		<Border DockPanel.Dock="Top" Margin="10,6,10,6">
+			<StackPanel Orientation="Horizontal" Spacing="8">
+				<Button x:Name="btnStageScan" Classes="stageStep" Click="BtnStageScan_Click" Padding="14,6" CornerRadius="6" Focusable="False">
+					<StackPanel Spacing="1">
+						<TextBlock Text="{DynamicResource StageScan}" FontWeight="SemiBold"/>
+						<TextBlock x:Name="lblStageScanStatus" FontSize="10" Opacity="0.8"/>
+					</StackPanel>
+				</Button>
+				<TextBlock Text="→" VerticalAlignment="Center" Foreground="{DynamicResource AppTextMutedBrush}"/>
+				<Button x:Name="btnStageCrops" Classes="stageStep" Click="BtnStageCrops_Click" Padding="14,6" CornerRadius="6" Focusable="False">
+					<StackPanel Spacing="1">
+						<TextBlock Text="{DynamicResource StageCrops}" FontWeight="SemiBold"/>
+						<TextBlock x:Name="lblStageCropsStatus" FontSize="10" Opacity="0.8"/>
+					</StackPanel>
+				</Button>
+				<TextBlock Text="→" VerticalAlignment="Center" Foreground="{DynamicResource AppTextMutedBrush}"/>
+				<Button x:Name="btnStageFinish" Classes="stageStep" Click="BtnStageFinish_Click" Padding="14,6" CornerRadius="6" Focusable="False">
+					<StackPanel Spacing="1">
+						<TextBlock Text="{DynamicResource StageFinish}" FontWeight="SemiBold"/>
+						<TextBlock x:Name="lblStageFinishStatus" FontSize="10" Opacity="0.8"/>
+					</StackPanel>
+				</Button>
+			</StackPanel>
+		</Border>
+
+		<!-- Stage content: only the active stage is visible -->
+		<Panel>
+		<stages:ScanStageView x:Name="viewScanStage" IsVisible="False"/>
+		<stages:FinishStageView x:Name="viewFinishStage" IsVisible="False"/>
+
+		<!-- Main Workspace (Crops stage) -->
 		<Grid x:Name="grdMainWorkspace">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="*" MinWidth="640"/>
@@ -486,8 +534,8 @@
 							<ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="10,0">
 								<StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center" HorizontalAlignment="Center">
 									<CheckBox x:Name="chkAutoOrient" Content="{DynamicResource LblAutoOrient}" ToolTip.Tip="{DynamicResource TipAutoOrient}" IsCheckedChanged="ChkAutoOrient_IsCheckedChanged" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
-									<CheckBox x:Name="chkRestoreColors" Content="{DynamicResource LblRestoreColors}" ToolTip.Tip="{DynamicResource TipRestoreColors}" IsCheckedChanged="ChkRestoreColors_IsCheckedChanged" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
-									<CheckBox x:Name="chkRemoveDust" Content="{DynamicResource LblRemoveDust}" ToolTip.Tip="{DynamicResource TipRemoveDust}" IsCheckedChanged="ChkRemoveDust_IsCheckedChanged" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
+									<CheckBox x:Name="chkRestoreColors" IsVisible="False" Content="{DynamicResource LblRestoreColors}" ToolTip.Tip="{DynamicResource TipRestoreColors}" IsCheckedChanged="ChkRestoreColors_IsCheckedChanged" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
+									<CheckBox x:Name="chkRemoveDust" IsVisible="False" Content="{DynamicResource LblRemoveDust}" ToolTip.Tip="{DynamicResource TipRemoveDust}" IsCheckedChanged="ChkRemoveDust_IsCheckedChanged" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
 								</StackPanel>
 							</ScrollViewer>
 						
@@ -652,6 +700,7 @@
 			</Border>
 			</Grid>
 		</Grid>
+		</Panel>
 		</DockPanel>
 
 		<!-- Review & Fast-Rotate Overlay -->

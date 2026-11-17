@@ -76,6 +76,7 @@ internal sealed partial class MainWindow
     private async Task LoadPhotosToGuiAsync()
     {
         UpdateEmptyStateVisibility();
+        RefreshStages();
         if (ScanSessions.Count == 0 || isLoading) return;
 
         var session = ScanSessions[CurrentIndex];
