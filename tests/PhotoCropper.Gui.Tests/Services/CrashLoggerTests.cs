@@ -71,7 +71,8 @@ public sealed class CrashLoggerTests : IDisposable
         }
         finally
         {
-            File.SetAttributes(locked, FileAttributes.Normal);
+            // On Linux a read-only file can still be deleted, so pruning may have removed it.
+            if (File.Exists(locked)) File.SetAttributes(locked, FileAttributes.Normal);
         }
     }
 
