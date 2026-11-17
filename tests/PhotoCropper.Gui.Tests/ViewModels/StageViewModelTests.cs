@@ -134,6 +134,66 @@ public sealed class StageViewModelTests : IDisposable
         _host.OpenedScan.ShouldBe(3);
     }
 
+    [Fact]
+    public async Task ScanStage_Discard_ShouldNeedASecondClickOnTheSameCard()
+    {
+        var vm = new ScanStageViewModel(_host);
+        var row = new ScanRowViewModel(2, "scan.png", "1 photos", false);
+        vm.Scans.Add(row);
+
+        await vm.DiscardCommand.ExecuteAsync(row);
+        row.IsConfirmingDiscard.ShouldBeTrue();
+        _host.Discarded.ShouldBeEmpty();
+
+        await vm.DiscardCommand.ExecuteAsync(row);
+        _host.Discarded.ShouldBe([2]);
+    }
+
+    [Fact]
+    public async Task ScanStage_DiscardConfirmation_ShouldMoveToTheLastClickedCard()
+    {
+        var vm = new ScanStageViewModel(_host);
+        var first = new ScanRowViewModel(0, "a.png", "", false);
+        var second = new ScanRowViewModel(1, "b.png", "", false);
+        vm.Scans.Add(first);
+        vm.Scans.Add(second);
+
+        await vm.DiscardCommand.ExecuteAsync(first);
+        await vm.DiscardCommand.ExecuteAsync(second);
+
+        first.IsConfirmingDiscard.ShouldBeFalse();
+        second.IsConfirmingDiscard.ShouldBeTrue();
+        _host.Discarded.ShouldBeEmpty("each card needs its own second click");
+    }
+
+    [Fact]
+    public async Task ScanStage_Rescan_ShouldAskTheHostToRescanThatScan()
+    {
+        var vm = new ScanStageViewModel(_host);
+        var row = new ScanRowViewModel(4, "scan.png", "", false);
+        row.IsConfirmingDiscard = true;
+        vm.Scans.Add(row);
+
+        await vm.RescanCommand.ExecuteAsync(row);
+
+        _host.Rescanned.ShouldBe([4]);
+        row.IsConfirmingDiscard.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ScanStage_Refresh_ShouldLoadScanThumbnails()
+    {
+        string scanPath = Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), "scan_0009.png");
+        using (var scan = new Mat(300, 400, DepthType.Cv8U, 3)) { scan.SetTo(new MCvScalar(200, 180, 160)); scan.Save(scanPath); }
+        _host.ScanItems.Add(new ScanSessionItem(scanPath, new DetectionOptions()));
+        var vm = new ScanStageViewModel(_host);
+
+        vm.Refresh();
+
+        SpinWait.SpinUntil(() => vm.Scans[0].Thumbnail != null, TimeSpan.FromSeconds(5)).ShouldBeTrue();
+        vm.Scans[0].Thumbnail!.PixelSize.Width.ShouldBe(ScanStageViewModel.ThumbnailWidth);
+    }
+
     public void Dispose()
     {
         foreach (var item in _host.ScanItems) item.Dispose();
@@ -156,9 +216,14 @@ public sealed class StageViewModelTests : IDisposable
         public int Saves { get; private set; }
         public int? OpenedScan { get; private set; }
 
+        public List<int> Discarded { get; } = [];
+        public List<int> Rescanned { get; } = [];
+
         public Task ScanAsync() => Task.CompletedTask;
         public Task ImportScansAsync() => Task.CompletedTask;
         public void OpenScanInCrops(int scanIndex) => OpenedScan = scanIndex;
+        public Task DiscardScanAsync(int scanIndex) { Discarded.Add(scanIndex); return Task.CompletedTask; }
+        public Task RescanAsync(int scanIndex) { Rescanned.Add(scanIndex); return Task.CompletedTask; }
         public Task<IReadOnlyList<string>> PickPhotosToImportAsync() => Task.FromResult<IReadOnlyList<string>>([]);
         public FinalRenderOptions GetRenderOptions() => new();
         public async Task<bool> RunBusyAsync(string message, Func<Task> work) { await work(); return true; }

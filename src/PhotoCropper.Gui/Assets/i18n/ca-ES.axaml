@@ -90,6 +90,13 @@
 	<sys:String x:Key="MsgExportingFinal">Exportant {0} fotos...</sys:String>
 	<sys:String x:Key="MsgFinalExported">S'han exportat {0} fotos a Final.</sys:String>
 	<sys:String x:Key="MsgImportingPhotos">Important {0} fotos...</sys:String>
+	<sys:String x:Key="BtnAdjustCrops">Ajustar retalls</sys:String>
+	<sys:String x:Key="BtnRescan">↻ Tornar a escanejar</sys:String>
+	<sys:String x:Key="TipRescan">Escanejar aquesta pàgina de nou i substituir aquest escaneig pel nou</sys:String>
+	<sys:String x:Key="BtnDiscardScan">Descartar</sys:String>
+	<sys:String x:Key="BtnConfirmDiscard">Fes clic un altre cop per descartar</sys:String>
+	<sys:String x:Key="TipDiscardScan">Eliminar aquest escaneig i les seves fotos del projecte</sys:String>
+	<sys:String x:Key="MsgScanReplaced">S'ha substituït '{0}' per un escaneig nou.</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">Tots els {0} escanejos ja estan guardats a 'Cropped'. No hi ha canvis per exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessant amb nous ajustos...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detectant fotos...</sys:String>

@@ -201,10 +201,73 @@ internal sealed partial class MainWindow : IStageHost
 
     IReadOnlyList<ScanSessionItem> IStageHost.Scans => ScanSessions;
 
-    public Task ScanAsync()
+    public async Task ScanAsync()
     {
-        BtnScan_Click(this, new RoutedEventArgs());
-        return Task.CompletedTask;
+        await ScanNewAsync();
+        RefreshStages();
+    }
+
+    public async Task DiscardScanAsync(int scanIndex)
+    {
+        await DeleteScanAtAsync(scanIndex);
+        RefreshStages();
+    }
+
+    /// <summary>
+    /// Scans a new page to replace the scan at <paramref name="scanIndex"/> (e.g. a crooked or blurry one). The old
+    /// scan is only removed once the new one has been scanned, and the new one takes its place in the list.
+    /// </summary>
+    public async Task RescanAsync(int scanIndex)
+    {
+        if (scanIndex < 0 || scanIndex >= ScanSessions.Count) return;
+
+        string oldPath = ScanSessions[scanIndex].FilePath;
+        string? workDir = WorkDirectory;
+        var workspace = Workspace;
+        int oldEntryIndex = workspace == null || workDir == null ? -1 : IndexOfEntry(workspace, workDir, oldPath);
+
+        var newPaths = await ScanNewAsync();
+        if (newPaths.Count == 0)
+        {
+            RefreshStages();
+            return; // nothing scanned (cancelled or failed): keep the original
+        }
+
+        await DeleteScanAtAsync(scanIndex);
+
+        // New scans were appended; move them (and their project entries) to where the old scan was.
+        int firstNew = ScanSessions.Count - newPaths.Count;
+        for (int k = 0; k < newPaths.Count; k++)
+        {
+            _sessionManager.Move(firstNew + k, Math.Min(scanIndex + k, ScanSessions.Count - 1));
+        }
+
+        if (workspace != null && workDir != null && oldEntryIndex >= 0)
+        {
+            for (int k = 0; k < newPaths.Count; k++)
+            {
+                int current = IndexOfEntry(workspace, workDir, newPaths[k]);
+                if (current < 0) continue;
+                var entry = workspace.Scans[current];
+                workspace.Scans.RemoveAt(current);
+                workspace.Scans.Insert(Math.Min(oldEntryIndex + k, workspace.Scans.Count), entry);
+            }
+            ProjectWorkspaceService.SaveSession(workDir, workspace);
+        }
+
+        CurrentIndex = Math.Min(scanIndex, ScanSessions.Count - 1);
+        RefreshStages();
+        ShowStatus(LocalizationService.Format(ResourceKeys.MsgScanReplaced, "Replaced '{0}' with a new scan.", Path.GetFileName(oldPath)));
+    }
+
+    private static int IndexOfEntry(WorkspaceSessionState workspace, string workDir, string scanPath)
+    {
+        string relative = Path.GetRelativePath(workDir, scanPath);
+        for (int i = 0; i < workspace.Scans.Count; i++)
+        {
+            if (string.Equals(workspace.Scans[i].RelativePath, relative, StringComparison.OrdinalIgnoreCase)) return i;
+        }
+        return -1;
     }
 
     /// <summary>

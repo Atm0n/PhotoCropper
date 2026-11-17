@@ -244,6 +244,32 @@ public static class PhotoPipelineService
         return rendered;
     }
 
+    /// <summary>
+    /// Removes a discarded scan's photos from the pipeline: their records, and their Cropped/ and Final/ files
+    /// if those are still exactly as the pipeline wrote them.
+    /// </summary>
+    /// <returns>The number of photos removed.</returns>
+    public static int RemoveScanPhotos(string workDirectory, WorkspaceSessionState session, string scanRelativePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workDirectory);
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentException.ThrowIfNullOrWhiteSpace(scanRelativePath);
+
+        List<ProjectPhoto> removed;
+        lock (session)
+        {
+            removed = [.. session.Photos.Where(p => string.Equals(p.ScanRelativePath, scanRelativePath, StringComparison.OrdinalIgnoreCase))];
+            foreach (var photo in removed) session.Photos.Remove(photo);
+        }
+
+        foreach (var photo in removed)
+        {
+            DeleteIfUnchanged(workDirectory, photo.Cropped);
+            DeleteIfUnchanged(workDirectory, photo.Final);
+        }
+        return removed.Count;
+    }
+
     /// <summary>The scan's photo records, ordered by photo number.</summary>
     public static IReadOnlyList<ProjectPhoto> GetScanPhotos(WorkspaceSessionState session, string scanRelativePath)
     {

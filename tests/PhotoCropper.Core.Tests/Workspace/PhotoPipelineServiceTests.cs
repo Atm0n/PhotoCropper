@@ -162,6 +162,37 @@ public sealed class PhotoPipelineServiceTests : IDisposable
         Path.GetFileName(Full(photo.Final!)).ShouldBe("grandma.jpg");
     }
 
+    [Fact]
+    public void RemoveScanPhotos_ShouldDropRecordsAndPipelineFiles()
+    {
+        using var a = Photo(100);
+        var photo = Save((a, Box(100, 100)))[0];
+        PhotoPipelineService.RenderFinal(_workDir, _session, photo, new FinalRenderOptions());
+        string cropped = Full(photo.Cropped!);
+        string final = Full(photo.Final!);
+
+        int removed = PhotoPipelineService.RemoveScanPhotos(_workDir, _session, _scan.RelativePath);
+
+        removed.ShouldBe(1);
+        _session.Photos.ShouldBeEmpty();
+        File.Exists(cropped).ShouldBeFalse();
+        File.Exists(final).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void RemoveScanPhotos_ShouldKeepAFinalFileChangedOutsideTheApp()
+    {
+        using var a = Photo(100);
+        var photo = Save((a, Box(100, 100)))[0];
+        PhotoPipelineService.RenderFinal(_workDir, _session, photo, new FinalRenderOptions());
+        string final = Full(photo.Final!);
+        File.WriteAllText(final, "edited by the user");
+
+        PhotoPipelineService.RemoveScanPhotos(_workDir, _session, _scan.RelativePath);
+
+        File.Exists(final).ShouldBeTrue();
+    }
+
     [Theory]
     [InlineData(100, 100, 1.0)]
     [InlineData(400, 400, 0.0)]

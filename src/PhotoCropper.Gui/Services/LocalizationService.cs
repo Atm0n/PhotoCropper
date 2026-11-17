@@ -108,6 +108,7 @@ internal static class ResourceKeys
     public const string MsgExportingFinal = nameof(MsgExportingFinal);
     public const string MsgFinalExported = nameof(MsgFinalExported);
     public const string MsgImportingPhotos = nameof(MsgImportingPhotos);
+    public const string MsgScanReplaced = nameof(MsgScanReplaced);
     public const string MsgAllScansAlreadySaved = nameof(MsgAllScansAlreadySaved);
     public const string MsgScannerNotFoundDetails = nameof(MsgScannerNotFoundDetails);
     public const string MsgScannerErrorDetails = nameof(MsgScannerErrorDetails);

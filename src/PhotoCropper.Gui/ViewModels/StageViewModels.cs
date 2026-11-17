@@ -30,6 +30,12 @@ internal interface IStageHost
     Task ImportScansAsync();
     void OpenScanInCrops(int scanIndex);
 
+    /// <summary>Deletes a scan from the project and disk, with its photos.</summary>
+    Task DiscardScanAsync(int scanIndex);
+
+    /// <summary>Scans a new page to replace a scan, keeping its place in the list.</summary>
+    Task RescanAsync(int scanIndex);
+
     /// <summary>Asks the user for photo files to import (e.g. photos cropped elsewhere).</summary>
     Task<IReadOnlyList<string>> PickPhotosToImportAsync();
 
@@ -48,14 +54,22 @@ internal interface IStageHost
 }
 
 /// <summary>One scan in the Scan stage list.</summary>
-internal sealed partial class ScanRowViewModel(int index, string fileName, string photosText, bool isFlagged) : ObservableObject
+internal sealed partial class ScanRowViewModel(int index, string fileName, string photosText, bool isFlagged, string filePath = "") : ObservableObject
 {
     public int Index { get; } = index;
     public string FileName { get; } = fileName;
+    public string FilePath { get; } = filePath;
     public string PhotosText { get; } = photosText;
 
     /// <summary>True when the scan needs attention in the Crops stage (e.g. no photos found).</summary>
     public bool IsFlagged { get; } = isFlagged;
+
+    [ObservableProperty]
+    public partial Bitmap? Thumbnail { get; set; }
+
+    /// <summary>True after a first click on Discard: the next click deletes the scan.</summary>
+    [ObservableProperty]
+    public partial bool IsConfirmingDiscard { get; set; }
 }
 
 /// <summary>Stage 1: acquire scans (scanner or import) and see how many photos each one has.</summary>
@@ -77,6 +91,12 @@ internal sealed partial class ScanStageViewModel : ObservableObject
     [ObservableProperty]
     public partial string Summary { get; set; } = string.Empty;
 
+    /// <summary>Scan thumbnail width in pixels.</summary>
+    internal const int ThumbnailWidth = 320;
+
+    /// <summary>Decoded thumbnails by file path, reused while the file is unchanged (scans are large to decode).</summary>
+    private readonly Dictionary<string, (DateTime WriteTime, Bitmap Bitmap)> _thumbnails = new(StringComparer.OrdinalIgnoreCase);
+
     public void Refresh()
     {
         Scans.Clear();
@@ -91,11 +111,48 @@ internal sealed partial class ScanStageViewModel : ObservableObject
                 0 => LocalizationService.GetString(ResourceKeys.ScanStatusNoPhotos, "No photos found"),
                 _ => LocalizationService.Format(ResourceKeys.ScanStatusPhotos, "{0} photos", count.Value)
             };
-            Scans.Add(new ScanRowViewModel(i, Path.GetFileName(scan.FilePath), text, count == 0));
+            var row = new ScanRowViewModel(i, Path.GetFileName(scan.FilePath), text, count == 0, scan.FilePath);
+            Scans.Add(row);
+            _ = LoadThumbnailAsync(row);
+        }
+
+        // Free thumbnails of scans that are gone (discarded or replaced).
+        foreach (string stale in _thumbnails.Keys.Where(k => !sessions.Any(s => string.Equals(s.FilePath, k, StringComparison.OrdinalIgnoreCase))).ToList())
+        {
+            _thumbnails[stale].Bitmap.Dispose();
+            _thumbnails.Remove(stale);
         }
 
         IsEmpty = Scans.Count == 0;
         Summary = LocalizationService.Format(ResourceKeys.StageScanStatus, "{0} scans", Scans.Count);
+    }
+
+    private async Task LoadThumbnailAsync(ScanRowViewModel row)
+    {
+        try
+        {
+            if (!File.Exists(row.FilePath)) return;
+            DateTime writeTime = File.GetLastWriteTimeUtc(row.FilePath);
+            if (_thumbnails.TryGetValue(row.FilePath, out var cached) && cached.WriteTime == writeTime)
+            {
+                row.Thumbnail = cached.Bitmap;
+                return;
+            }
+
+            var bitmap = await Task.Run(() =>
+            {
+                using var stream = File.OpenRead(row.FilePath);
+                return Bitmap.DecodeToWidth(stream, ThumbnailWidth);
+            });
+
+            if (_thumbnails.TryGetValue(row.FilePath, out var replaced)) replaced.Bitmap.Dispose();
+            _thumbnails[row.FilePath] = (writeTime, bitmap);
+            row.Thumbnail = bitmap;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not load scan thumbnail '{row.FilePath}': {ex.Message}");
+        }
     }
 
     /// <summary>Photos known for a scan: from its saved crops, or from detection if it has run; null if never checked.</summary>
@@ -122,6 +179,36 @@ internal sealed partial class ScanStageViewModel : ObservableObject
     private void OpenScan(ScanRowViewModel? row)
     {
         if (row != null) _host.OpenScanInCrops(row.Index);
+    }
+
+    /// <summary>
+    /// Deletes a scan (file and photos). Takes two clicks: the first asks for confirmation on that card only,
+    /// so a stray click can't delete a scan.
+    /// </summary>
+    [RelayCommand]
+    private async Task Discard(ScanRowViewModel? row)
+    {
+        if (row == null) return;
+
+        if (!row.IsConfirmingDiscard)
+        {
+            foreach (var other in Scans) other.IsConfirmingDiscard = false;
+            row.IsConfirmingDiscard = true;
+            return;
+        }
+
+        await _host.DiscardScanAsync(row.Index);
+        Refresh();
+    }
+
+    /// <summary>Scans a new page to replace this scan, keeping its place in the list.</summary>
+    [RelayCommand]
+    private async Task Rescan(ScanRowViewModel? row)
+    {
+        if (row == null) return;
+        foreach (var other in Scans) other.IsConfirmingDiscard = false;
+        await _host.RescanAsync(row.Index);
+        Refresh();
     }
 }
 

@@ -90,6 +90,13 @@
 	<sys:String x:Key="MsgExportingFinal">Exporting {0} photos...</sys:String>
 	<sys:String x:Key="MsgFinalExported">Exported {0} photos to Final.</sys:String>
 	<sys:String x:Key="MsgImportingPhotos">Importing {0} photos...</sys:String>
+	<sys:String x:Key="BtnAdjustCrops">Adjust crops</sys:String>
+	<sys:String x:Key="BtnRescan">↻ Rescan</sys:String>
+	<sys:String x:Key="TipRescan">Scan this page again and replace this scan with the new one</sys:String>
+	<sys:String x:Key="BtnDiscardScan">Discard</sys:String>
+	<sys:String x:Key="BtnConfirmDiscard">Click again to discard</sys:String>
+	<sys:String x:Key="TipDiscardScan">Delete this scan and its photos from the project</sys:String>
+	<sys:String x:Key="MsgScanReplaced">Replaced '{0}' with a new scan.</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">All {0} scans are already saved to 'Cropped'. No changes to export.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessing scan with new settings...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detecting photos...</sys:String>
