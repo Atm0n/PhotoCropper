@@ -88,8 +88,10 @@ internal sealed partial class MainWindow
                 {
                     try
                     {
-                        var engine = session.Activate();
+                        // Capture the state before activating: Activate() always loads the engine,
+                        // so reading IsActive afterwards would always be true and never unload it.
                         bool wasActive = session.IsActive;
+                        var engine = session.Activate();
                         try
                         {
                             string scanTargetFolder = ExportPathResolver.ResolveOutputDirectory(
