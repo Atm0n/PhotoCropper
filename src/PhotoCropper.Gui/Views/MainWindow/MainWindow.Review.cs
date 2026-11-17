@@ -322,14 +322,9 @@ internal sealed partial class MainWindow
         var engine = session.Activate();
         if (item.PhotoIndex < engine.DetectedPhotos.Count)
         {
-            var matToDelete = engine.DetectedPhotos[item.PhotoIndex];
-            var candToDelete = item.PhotoIndex < (engine.AcceptedCandidates?.Count ?? 0)
-                ? engine.AcceptedCandidates?[item.PhotoIndex]
-                : null;
-
             if (item.ScanIndex == CurrentIndex)
             {
-                undoHistory.PushDelete(CurrentIndex, item.PhotoIndex, matToDelete, candToDelete);
+                undoHistory.PushDelete(CurrentIndex, item.PhotoIndex, engine);
             }
 
             engine.DeletePhoto(item.PhotoIndex);

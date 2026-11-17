@@ -104,11 +104,7 @@ internal sealed partial class MainWindow
         var currentEngine = ScanSessions[CurrentIndex].Activate();
         if (photoIndex >= currentEngine.DetectedPhotos.Count) return;
 
-        var matToDelete = currentEngine.DetectedPhotos[photoIndex];
-        var candToDelete = photoIndex < (currentEngine.AcceptedCandidates?.Count ?? 0)
-            ? currentEngine.AcceptedCandidates?[photoIndex]
-            : null;
-        undoHistory.PushDelete(CurrentIndex, photoIndex, matToDelete, candToDelete);
+        undoHistory.PushDelete(CurrentIndex, photoIndex, currentEngine);
 
         currentEngine.DeletePhoto(photoIndex);
 
@@ -145,11 +141,7 @@ internal sealed partial class MainWindow
 
         foreach (var idx in sortedIndices)
         {
-            var mat = currentEngine.DetectedPhotos[idx];
-            var cand = idx < (currentEngine.AcceptedCandidates?.Count ?? 0)
-                ? currentEngine.AcceptedCandidates?[idx]
-                : null;
-            actions.Add(new DeletePhotoAction(CurrentIndex, idx, mat, cand));
+            actions.Add(DeletePhotoAction.Capture(CurrentIndex, idx, currentEngine));
             currentEngine.DeletePhoto(idx);
         }
 

@@ -674,10 +674,17 @@ public class PhotoCropperEngine : IDisposable
     }
 
 
+    /// <summary>
+    /// Re-extracts the photo for the (already edited) box at <paramref name="candIndex"/>.
+    /// </summary>
+    /// <returns>
+    /// False when nothing could be extracted (index out of range, or the box was dragged too small). The photo is
+    /// then left unchanged, so the caller must restore the box it edited or the two will no longer match.
+    /// </returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "ProcessExtractedPhoto takes ownership of the extracted Mat")]
-    public void ApplyGrabHandleResize(int candIndex)
+    public bool ApplyGrabHandleResize(int candIndex)
     {
-        if (candIndex < 0 || candIndex >= AcceptedCandidates.Count || candIndex >= DetectedPhotos.Count) return;
+        if (candIndex < 0 || candIndex >= AcceptedCandidates.Count || candIndex >= DetectedPhotos.Count) return false;
 
         var cand = AcceptedCandidates[candIndex];
 
@@ -686,7 +693,7 @@ public class PhotoCropperEngine : IDisposable
         {
             // Box dragged too small to extract: keep the previous photo rather than storing an empty one.
             extracted.Dispose();
-            return;
+            return false;
         }
 
         // Re-apply the user's manual 90° rotations so resizing a box doesn't silently undo them.
@@ -726,6 +733,7 @@ public class PhotoCropperEngine : IDisposable
             [candIndex] = cand
         };
         AcceptedCandidates = list;
+        return true;
     }
 
     public void DeletePhoto(int index)
@@ -764,7 +772,10 @@ public class PhotoCropperEngine : IDisposable
         }
     }
 
-    public void InsertPhoto(int index, Mat photo, CropCandidate? candidate = null)
+    /// <summary>Inserts a photo, e.g. when undoing its deletion. Takes ownership of <paramref name="photo"/>.</summary>
+    /// <param name="raw">The photo's raw (pre-restoration) compare copy; cloned. Defaults to a copy of <paramref name="photo"/>.</param>
+    /// <param name="rotation">The photo's manual rotation, restored so later resizes, refinements and saves use it.</param>
+    public void InsertPhoto(int index, Mat photo, CropCandidate? candidate = null, Mat? raw = null, int rotation = 0)
     {
         ArgumentNullException.ThrowIfNull(photo);
 
@@ -772,7 +783,7 @@ public class PhotoCropperEngine : IDisposable
         DetectedPhotos.Insert(targetIndex, photo);
 
         int rawTargetIndex = Math.Clamp(index, 0, RawDetectedPhotos.Count);
-        RawDetectedPhotos.Insert(rawTargetIndex, photo.Clone());
+        RawDetectedPhotos.Insert(rawTargetIndex, (raw ?? photo).Clone());
 
         var shiftedRotations = new Dictionary<int, int>();
         foreach (var (k, v) in PhotoRotations)
@@ -783,6 +794,12 @@ public class PhotoCropperEngine : IDisposable
         foreach (var (k, v) in shiftedRotations)
         {
             PhotoRotations[k] = v;
+        }
+
+        int normalizedRotation = NormalizeRightAngle(rotation);
+        if (normalizedRotation != 0)
+        {
+            PhotoRotations[targetIndex] = normalizedRotation;
         }
 
         if (candidate.HasValue && AcceptedCandidates != null)
@@ -918,9 +935,10 @@ public class PhotoCropperEngine : IDisposable
         PhotoExportMetadata? metadata = null,
         Action<int, int>? progressCallback = null,
         bool cleanOldExports = false,
-        IEnumerable<ExportedFile>? previousExports = null)
+        IEnumerable<ExportedFile>? previousExports = null,
+        bool matchPreviousExportsByName = true)
     {
-        return PhotoExporter.SavePhotos(DetectedPhotos, OriginalFilePath, customOutputFolder, format, jpegQuality, fileNamePattern, metadata, progressCallback, cleanOldExports, previousExports);
+        return PhotoExporter.SavePhotos(DetectedPhotos, OriginalFilePath, customOutputFolder, format, jpegQuality, fileNamePattern, metadata, progressCallback, cleanOldExports, previousExports, matchPreviousExportsByName);
     }
 
     private static void MapCandidatesToOriginalSpace(

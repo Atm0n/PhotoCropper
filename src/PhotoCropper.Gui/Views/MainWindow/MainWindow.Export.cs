@@ -68,6 +68,19 @@ internal sealed partial class MainWindow
 
         int maxConcurrency = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
 
+        // Scans that share a base name and export to the same folder (e.g. "photo.jpg" and "photo.png") produce
+        // files whose names can't be told apart, so matching previous exports by name could delete the other
+        // scan's photos. For those, only the per-scan record of written files is used for cleanup.
+        var ambiguousScanNames = ScanSessions
+            .GroupBy(s => (
+                Folder: ExportPathResolver.ResolveOutputDirectory(s.FilePath, settings.CustomOutputDirectory, settings.WorkDirectory),
+                Name: Path.GetFileNameWithoutExtension(s.FilePath)),
+                new OutputNameComparer())
+            .Where(g => g.Count() > 1)
+            .SelectMany(g => g)
+            .Select(s => s.FilePath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgSavingProgress, "Exporting scan {0} of {1} ({2} photos saved)...", 1, totalScans, 0), async ct =>
         {
             await Task.Run(() =>
@@ -105,16 +118,28 @@ internal sealed partial class MainWindow
                                 settings.DefaultYear,
                                 settings.DefaultDescription);
 
-                            var exportedFiles = engine.SaveDetectedPhotos(
-                                scanTargetFolder,
-                                settings.PreferredFormat,
-                                settings.JpegQuality,
-                                settings.FileNamePattern,
-                                scanMetadata,
-                                progressCallback: null,
-                                cleanOldExports: true,
-                                previousExports: session.ExportedFiles);
-                            session.ExportedFiles = exportedFiles;
+                            IReadOnlyList<ExportedFile> exportedFiles;
+                            try
+                            {
+                                exportedFiles = engine.SaveDetectedPhotos(
+                                    scanTargetFolder,
+                                    settings.PreferredFormat,
+                                    settings.JpegQuality,
+                                    settings.FileNamePattern,
+                                    scanMetadata,
+                                    progressCallback: null,
+                                    cleanOldExports: true,
+                                    previousExports: session.ExportedFiles,
+                                    matchPreviousExportsByName: !ambiguousScanNames.Contains(session.FilePath));
+                            }
+                            catch (PartialExportException partial)
+                            {
+                                // Record the files that did get written so the next export replaces them
+                                // instead of leaving orphans, then report the scan as failed.
+                                RecordExportedFiles(session, workspaceLookup, partial.WrittenFiles);
+                                throw;
+                            }
+                            RecordExportedFiles(session, workspaceLookup, exportedFiles);
 
                             int savedCount = engine.DetectedPhotos.Count;
                             Interlocked.Add(ref totalSavedPhotos, savedCount);
@@ -132,9 +157,6 @@ internal sealed partial class MainWindow
                                     entry.IsProcessed = true;
                                     entry.ExtractedPhotoCount = savedCount;
                                     entry.Metadata = scanMetadata;
-
-                                    entry.ExportedFiles.Clear();
-                                    foreach (var file in exportedFiles) entry.ExportedFiles.Add(file);
 
                                     entry.FinalCrops.Clear();
                                     for (int cIdx = 0; cIdx < engine.AcceptedCandidates.Count; cIdx++)
@@ -236,6 +258,35 @@ internal sealed partial class MainWindow
     /// Builds a bullet list of failed scans for the error dialog, capped so a large batch of
     /// failures (e.g. an unwritable output folder) doesn't overflow the dialog.
     /// </summary>
+    /// <summary>Stores the files an export wrote on the scan session and its workspace entry (persisted in session.json).</summary>
+    private static void RecordExportedFiles(
+        ScanSessionItem session,
+        Dictionary<string, WorkspaceScanEntry>? workspaceLookup,
+        IReadOnlyList<ExportedFile> files)
+    {
+        session.ExportedFiles = files;
+        if (workspaceLookup != null && workspaceLookup.TryGetValue(Path.GetFileName(session.FilePath), out var entry))
+        {
+            entry.ExportedFiles.Clear();
+            foreach (var file in files) entry.ExportedFiles.Add(file);
+        }
+    }
+
+    /// <summary>Groups scans by (output folder, base file name), ignoring case and trailing separators.</summary>
+    private sealed class OutputNameComparer : IEqualityComparer<(string Folder, string Name)>
+    {
+        private static string NormalizeFolder(string folder) =>
+            string.IsNullOrEmpty(folder) ? string.Empty : Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
+
+        public bool Equals((string Folder, string Name) x, (string Folder, string Name) y) =>
+            string.Equals(NormalizeFolder(x.Folder), NormalizeFolder(y.Folder), StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.Name, y.Name, StringComparison.OrdinalIgnoreCase);
+
+        public int GetHashCode((string Folder, string Name) obj) => HashCode.Combine(
+            StringComparer.OrdinalIgnoreCase.GetHashCode(NormalizeFolder(obj.Folder)),
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Name));
+    }
+
     internal static string FormatFailedScanList(IReadOnlyList<(string FilePath, string Error)> failures, int maxShown = 10)
     {
         ArgumentNullException.ThrowIfNull(failures);

@@ -103,12 +103,18 @@ public static class PhotoExporter
     }
 
     /// <param name="cleanOldExports">
-    /// Remove this scan's earlier exports from the output folder before writing: the files in
-    /// <paramref name="previousExports"/> that are unchanged on disk, plus files named exactly as the current
-    /// pattern produces for this scan.
+    /// Remove this scan's earlier exports from the output folder before writing. When
+    /// <paramref name="previousExports"/> has entries, exactly those files are removed (if unchanged on disk and
+    /// still in the output folder). Otherwise, if <paramref name="matchPreviousExportsByName"/> is set, files
+    /// named exactly as the current pattern produces for this scan are removed instead.
     /// </param>
     /// <param name="previousExports">Files recorded by this scan's previous export (see the return value).</param>
+    /// <param name="matchPreviousExportsByName">
+    /// Allow the name-based fallback. Callers should turn it off when another scan exporting to the same folder
+    /// has the same base name, since names can't tell their files apart.
+    /// </param>
     /// <returns>The files written, to pass as <paramref name="previousExports"/> on the next export.</returns>
+    /// <exception cref="PartialExportException">Writing failed after some files were written; they are listed on the exception.</exception>
     public static IReadOnlyList<ExportedFile> SavePhotos(
         IReadOnlyList<Mat> photos,
         string originalFilePath,
@@ -119,7 +125,8 @@ public static class PhotoExporter
         PhotoCropper.Core.Models.PhotoExportMetadata? metadata = null,
         Action<int, int>? progressCallback = null,
         bool cleanOldExports = false,
-        IEnumerable<ExportedFile>? previousExports = null)
+        IEnumerable<ExportedFile>? previousExports = null,
+        bool matchPreviousExportsByName = true)
     {
         ArgumentNullException.ThrowIfNull(photos);
         ArgumentNullException.ThrowIfNull(originalFilePath);
@@ -139,14 +146,12 @@ public static class PhotoExporter
             if (!photos[p].IsEmpty) totalValidPhotos++;
         }
 
-        if (cleanOldExports)
-        {
-            CleanOldExports(outputFolder, originalFilePath, fileNamePattern, metadata, totalValidPhotos, previousExports);
-        }
-
         string extension = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
         var (xDpi, yDpi) = GetDpiFromSource(originalFilePath);
 
+        // Encode everything before touching the output folder, so an encoding failure can't happen after the
+        // previous export has already been deleted.
+        var encoded = new List<(int SourceIndex, string FileName, byte[] Bytes)>(totalValidPhotos);
         int saveCounter = 1;
         for (int i = 0; i < photos.Count; i++)
         {
@@ -158,13 +163,25 @@ public static class PhotoExporter
                 totalValidPhotos,
                 metadata,
                 extension);
-            byte[] fileBytes = EncodePhoto(photos[i], format, jpegQuality, metadata, xDpi, yDpi);
+            encoded.Add((i, relativeFileName, EncodePhoto(photos[i], format, jpegQuality, metadata, xDpi, yDpi)));
+        }
 
-            string baseTargetFileName = Path.Combine(outputFolder, relativeFileName);
-            string fileName = ResolveUniqueExportPath(baseTargetFileName);
+        if (cleanOldExports)
+        {
+            CleanOldExports(outputFolder, originalFilePath, fileNamePattern, metadata, totalValidPhotos, previousExports, matchPreviousExportsByName);
+        }
+
+        foreach (var (sourceIndex, relativeFileName, fileBytes) in encoded)
+        {
+            string fileName = ResolveUniqueExportPath(Path.Combine(outputFolder, relativeFileName));
             try
             {
                 WriteBytesToFile(fileName, fileBytes);
+            }
+            catch (Exception ex) when (written.Count > 0 && ex is IOException or UnauthorizedAccessException)
+            {
+                // Report what did get written so the caller can still record (and later replace) it.
+                throw new PartialExportException(written, ex);
             }
             finally
             {
@@ -174,7 +191,7 @@ public static class PhotoExporter
             }
 
             written.Add(ExportedFile.FromDisk(fileName));
-            progressCallback?.Invoke(i + 1, photos.Count);
+            progressCallback?.Invoke(sourceIndex + 1, photos.Count);
         }
 
         return written;
@@ -236,21 +253,36 @@ public static class PhotoExporter
         string fileNamePattern,
         PhotoCropper.Core.Models.PhotoExportMetadata? metadata,
         int totalPhotos,
-        IEnumerable<ExportedFile>? previousExports)
+        IEnumerable<ExportedFile>? previousExports,
+        bool matchByName)
     {
         string sourceFullPath = Path.GetFullPath(originalFilePath);
         string outputFullPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(outputFolder));
+        var previous = previousExports?.ToList() ?? [];
 
-        // Recorded files catch exports made with an older pattern or metadata. Only those still in this
-        // output folder are replaced; exports to a folder the user has since moved away from are kept.
-        var recorded = (previousExports ?? [])
-            .Where(f => f.IsUnchangedOnDisk() &&
-                        string.Equals(Path.GetDirectoryName(Path.GetFullPath(f.Path)), outputFullPath, StringComparison.OrdinalIgnoreCase))
-            .Select(f => f.Path);
+        IEnumerable<string> candidates;
+        if (previous.Count > 0)
+        {
+            // A record of exactly what this scan wrote last time is authoritative: it also covers exports
+            // made with an older pattern or metadata, and never touches another scan's files even when both
+            // scans share a base name. Only files still in this output folder and unchanged on disk are
+            // replaced; exports to a folder the user has since moved away from are kept.
+            candidates = previous
+                .Where(f => f.IsUnchangedOnDisk() &&
+                            string.Equals(Path.GetDirectoryName(Path.GetFullPath(f.Path)), outputFullPath, StringComparison.OrdinalIgnoreCase))
+                .Select(f => f.Path);
+        }
+        else if (matchByName)
+        {
+            // No record (first export, or an export made before records were kept): fall back to names.
+            candidates = FindPreviousExports(outputFolder, Path.GetFileNameWithoutExtension(originalFilePath), fileNamePattern, metadata, totalPhotos);
+        }
+        else
+        {
+            return;
+        }
 
-        var candidates = recorded
-            .Concat(FindPreviousExports(outputFolder, Path.GetFileNameWithoutExtension(originalFilePath), fileNamePattern, metadata, totalPhotos))
-            .Distinct(StringComparer.OrdinalIgnoreCase);
+        candidates = candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
         foreach (string file in candidates)
         {

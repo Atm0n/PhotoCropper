@@ -90,6 +90,23 @@ public sealed class UndoConsistencyTests : IDisposable
     }
 
     [Fact]
+    public void UndoDeleteOfRotatedPhoto_ShouldRestoreItsRotationAndRawCopy()
+    {
+        using var history = new UndoRedoHistory();
+        using var engine = CreateEngineWithOneLandscapeCrop();
+        engine.RotatePhoto(0);
+        using var rawBefore = engine.RawDetectedPhotos[0].Clone();
+
+        history.PushDelete(0, 0, engine);
+        engine.DeletePhoto(0);
+        history.Undo([engine]);
+
+        engine.PhotoRotations[0].ShouldBe(90);
+        engine.RawDetectedPhotos[0].Size.ShouldBe(rawBefore.Size);
+        CvInvoke.Norm(engine.RawDetectedPhotos[0], rawBefore, Emgu.CV.CvEnum.NormType.L1).ShouldBe(0);
+    }
+
+    [Fact]
     public void UndoRefinement_ShouldRestoreRawCopy()
     {
         using var history = new UndoRedoHistory();

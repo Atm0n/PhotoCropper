@@ -18,19 +18,35 @@ internal sealed class DeletePhotoAction : IUndoableAction
     private readonly int _scanIndex;
     private readonly int _index;
     private readonly Mat _deletedMat;
+    private readonly Mat? _deletedRaw;
     private readonly CropCandidate? _candidate;
+    private readonly int _rotation;
     private bool _isDisposed;
 
     public string Description => "Delete Photo";
     public int ScanIndex => _scanIndex;
 
-    public DeletePhotoAction(int scanIndex, int index, Mat photoMat, CropCandidate? candidate = null)
+    /// <param name="rawMat">The photo's raw compare copy, restored on undo (defaults to the photo itself).</param>
+    /// <param name="rotation">The photo's manual rotation, restored on undo.</param>
+    public DeletePhotoAction(int scanIndex, int index, Mat photoMat, CropCandidate? candidate = null, Mat? rawMat = null, int rotation = 0)
     {
         ArgumentNullException.ThrowIfNull(photoMat);
         _scanIndex = scanIndex;
         _index = index;
         _deletedMat = photoMat.Clone();
+        _deletedRaw = rawMat?.Clone();
         _candidate = candidate;
+        _rotation = rotation;
+    }
+
+    /// <summary>Records the full state of photo <paramref name="index"/> in <paramref name="engine"/>, before it is deleted.</summary>
+    public static DeletePhotoAction Capture(int scanIndex, int index, PhotoCropperEngine engine)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        CropCandidate? candidate = index < engine.AcceptedCandidates.Count ? engine.AcceptedCandidates[index] : null;
+        Mat? raw = index < engine.RawDetectedPhotos.Count ? engine.RawDetectedPhotos[index] : null;
+        int rotation = engine.PhotoRotations.TryGetValue(index, out int r) ? r : 0;
+        return new DeletePhotoAction(scanIndex, index, engine.DetectedPhotos[index], candidate, raw, rotation);
     }
 
     public void Undo(PhotoCropperEngine engine)
@@ -38,7 +54,7 @@ internal sealed class DeletePhotoAction : IUndoableAction
         ArgumentNullException.ThrowIfNull(engine);
         if (_isDisposed) return;
 
-        engine.InsertPhoto(_index, _deletedMat.Clone(), _candidate);
+        engine.InsertPhoto(_index, _deletedMat.Clone(), _candidate, _deletedRaw, _rotation);
     }
 
     public void Redo(PhotoCropperEngine engine)
@@ -55,6 +71,7 @@ internal sealed class DeletePhotoAction : IUndoableAction
         if (!_isDisposed)
         {
             _deletedMat.Dispose();
+            _deletedRaw?.Dispose();
             _isDisposed = true;
         }
     }
@@ -393,6 +410,16 @@ internal sealed class UndoRedoHistory : IDisposable
     public void PushDelete(int scanIndex, int index, Mat photoMat, CropCandidate? candidate = null)
     {
         PushAction(new DeletePhotoAction(scanIndex, index, photoMat, candidate));
+    }
+
+    /// <summary>
+    /// Records the deletion of photo <paramref name="index"/>, capturing its photo, raw copy, box and rotation
+    /// from <paramref name="engine"/>. Call before deleting it.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
+    public void PushDelete(int scanIndex, int index, PhotoCropperEngine engine)
+    {
+        PushAction(DeletePhotoAction.Capture(scanIndex, index, engine));
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]

@@ -171,6 +171,52 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
+    public void ReExport_WithRecord_ShouldNotDeleteFilesOfAnotherScanWithTheSameBaseName()
+    {
+        // "photo.jpg" from two folders export into the same folder; B's photo lands on "photo_1 (1).jpg".
+        string scanA = CreateScan("photo.jpg", Directory.CreateDirectory(Path.Combine(_tempDir, "a")).FullName);
+        string scanB = CreateScan("photo.jpg", Directory.CreateDirectory(Path.Combine(_tempDir, "b")).FullName);
+        using var photo = Photo();
+
+        var exportA = PhotoExporter.SavePhotos([photo], scanA, customOutputFolder: _outputDir, cleanOldExports: true);
+        var exportB = PhotoExporter.SavePhotos([photo], scanB, customOutputFolder: _outputDir, cleanOldExports: true, matchPreviousExportsByName: false);
+        Path.GetFileName(exportB[0].Path).ShouldBe("photo_1 (1).jpg");
+
+        PhotoExporter.SavePhotos([photo], scanA, customOutputFolder: _outputDir, cleanOldExports: true, previousExports: exportA);
+
+        File.Exists(exportB[0].Path).ShouldBeTrue("scan B's export must survive scan A's re-export");
+    }
+
+    [Fact]
+    public void ReExport_WithoutRecordAndNameMatchingOff_ShouldDeleteNothing()
+    {
+        string scan = CreateScan("scan_0001.jpg");
+        string existing = Touch("scan_0001_1.jpg");
+        using var photo = Photo();
+
+        PhotoExporter.SavePhotos([photo], scan, customOutputFolder: _outputDir, cleanOldExports: true, matchPreviousExportsByName: false);
+
+        File.Exists(existing).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void SavePhotos_WhenAWriteFailsPartway_ShouldReportTheFilesAlreadyWritten()
+    {
+        string scan = CreateScan("scan_0001.jpg");
+        // A directory where the second photo's file would go makes that write fail.
+        Directory.CreateDirectory(Path.Combine(_outputDir, "scan_0001_2.jpg"));
+        using var photo1 = Photo();
+        using var photo2 = Photo();
+
+        var ex = Should.Throw<PartialExportException>(() =>
+            PhotoExporter.SavePhotos([photo1, photo2], scan, customOutputFolder: _outputDir));
+
+        ex.WrittenFiles.Count.ShouldBe(1);
+        Path.GetFileName(ex.WrittenFiles[0].Path).ShouldBe("scan_0001_1.jpg");
+        File.Exists(ex.WrittenFiles[0].Path).ShouldBeTrue();
+    }
+
+    [Fact]
     public void FindPreviousExports_ShouldMatchYearPatternExactly()
     {
         var metadata = new PhotoExportMetadata { Year = 1975 };

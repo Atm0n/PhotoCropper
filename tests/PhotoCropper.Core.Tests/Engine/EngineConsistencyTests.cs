@@ -117,6 +117,43 @@ public sealed class EngineConsistencyTests : IDisposable
     }
 
     [Fact]
+    public void ApplyGrabHandleResize_WhenBoxIsTooSmall_ShouldReportFailureAndKeepThePhoto()
+    {
+        using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80));
+        var sizeBefore = engine.DetectedPhotos[0].Size;
+        var tiny = engine.AcceptedCandidates[0] with
+        {
+            Rotated = new Emgu.CV.Structure.RotatedRect(new PointF(500, 500), new SizeF(6, 6), 0)
+        };
+        engine.UpdateCandidates([tiny]);
+
+        engine.ApplyGrabHandleResize(0).ShouldBeFalse();
+        engine.DetectedPhotos[0].Size.ShouldBe(sizeBefore);
+    }
+
+    [Fact]
+    public void ApplyGrabHandleResize_WhenExtracted_ShouldReportSuccess()
+    {
+        using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80));
+
+        engine.ApplyGrabHandleResize(0).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void InsertPhoto_ShouldRestoreRotationAndRawCopy()
+    {
+        using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80), Crop(900, 900, 120, 60));
+        using var photo = engine.DetectedPhotos[1].Clone();
+        using var raw = new Mat(photo.Size, photo.Depth, photo.NumberOfChannels);
+        raw.SetTo(new Emgu.CV.Structure.MCvScalar(1, 2, 3, 255));
+
+        engine.InsertPhoto(0, photo.Clone(), engine.AcceptedCandidates[1], raw, rotation: 90);
+
+        engine.PhotoRotations[0].ShouldBe(90);
+        AreIdentical(engine.RawDetectedPhotos[0], raw).ShouldBeTrue();
+    }
+
+    [Fact]
     public void ApplyCropToPhoto_ShouldCropRawCopyToo()
     {
         using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80));

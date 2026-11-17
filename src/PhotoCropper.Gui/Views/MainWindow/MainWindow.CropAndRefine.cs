@@ -48,6 +48,26 @@ internal sealed partial class MainWindow
         _dragBeforeCandidates = null;
     }
 
+    /// <summary>
+    /// Applies a finished box drag: re-extracts the photo and records undo. If the box can't be extracted (dragged
+    /// too small), the box is put back where it was before the drag so it keeps matching the unchanged photo.
+    /// </summary>
+    private void CommitDrag(PhotoCropperEngine photo, int index, string description)
+    {
+        if (!photo.ApplyGrabHandleResize(index))
+        {
+            if (_dragBeforeCandidates != null)
+            {
+                photo.UpdateCandidates(_dragBeforeCandidates);
+            }
+            ClearDragSnapshot();
+            return;
+        }
+
+        ScanSessions[CurrentIndex].IsModified = true;
+        PushDragUndo(photo, index, description);
+    }
+
     private void PushDragUndo(PhotoCropperEngine photo, int index, string description)
     {
         if (_dragBeforeMat != null && _dragBeforeCandidates != null && index < photo.DetectedPhotos.Count)
@@ -309,9 +329,7 @@ internal sealed partial class MainWindow
         if (dragCandIndex >= 0)
         {
             var photo = ScanSessions[CurrentIndex].Activate();
-            photo.ApplyGrabHandleResize(dragCandIndex);
-            ScanSessions[CurrentIndex].IsModified = true;
-            PushDragUndo(photo, dragCandIndex, "Rotate Crop Box");
+            CommitDrag(photo, dragCandIndex, "Rotate Crop Box");
 
             SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
@@ -343,10 +361,7 @@ internal sealed partial class MainWindow
                     // Vertex tap-to-delete: record a DeletePhotoAction for this.
                     if (dragCandIndex < photo.DetectedPhotos.Count)
                     {
-                        var candToDelete = dragCandIndex < (photo.AcceptedCandidates?.Count ?? 0)
-                            ? photo.AcceptedCandidates?[dragCandIndex]
-                            : null;
-                        undoHistory.PushDelete(CurrentIndex, dragCandIndex, photo.DetectedPhotos[dragCandIndex], candToDelete);
+                        undoHistory.PushDelete(CurrentIndex, dragCandIndex, photo);
                     }
                     photo.DeletePhoto(dragCandIndex);
                     ScanSessions[CurrentIndex].IsModified = true;
@@ -360,9 +375,7 @@ internal sealed partial class MainWindow
                 }
             }
 
-            photo.ApplyGrabHandleResize(dragCandIndex);
-            ScanSessions[CurrentIndex].IsModified = true;
-            PushDragUndo(photo, dragCandIndex, "Resize Crop Box");
+            CommitDrag(photo, dragCandIndex, "Resize Crop Box");
 
             SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
@@ -392,10 +405,7 @@ internal sealed partial class MainWindow
             {
                 if (i < photo.DetectedPhotos.Count)
                 {
-                    var candToDelete = i < (photo.AcceptedCandidates?.Count ?? 0)
-                        ? photo.AcceptedCandidates?[i]
-                        : null;
-                    undoHistory.PushDelete(CurrentIndex, i, photo.DetectedPhotos[i], candToDelete);
+                    undoHistory.PushDelete(CurrentIndex, i, photo);
                 }
                 photo.DeletePhoto(i);
                 ScanSessions[CurrentIndex].IsModified = true;
