@@ -107,6 +107,72 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task FinishStage_SelectingAPhoto_ShouldShowTheSameImageBeforeAndAfterWithoutRestoration()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        var vm = new FinishStageViewModel(_host);
+        vm.Refresh();
+
+        vm.SelectedPhoto = vm.Photos[0];
+        await vm.UpdatePreviewAsync();
+
+        vm.HasSelection.ShouldBeTrue();
+        vm.BeforePreview.ShouldNotBeNull();
+        vm.AfterPreview.ShouldBeSameAs(vm.BeforePreview);
+        vm.IsPreviewBusy.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task FinishStage_TurningRestorationOn_ShouldRenderASeparateAfterImage()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        var vm = new FinishStageViewModel(_host);
+        vm.Refresh();
+        vm.SelectedPhoto = vm.Photos[0];
+        await vm.UpdatePreviewAsync();
+
+        vm.Photos[0].RestoreColors = true;
+        await vm.UpdatePreviewAsync();
+
+        vm.AfterPreview.ShouldNotBeNull();
+        vm.AfterPreview.ShouldNotBeSameAs(vm.BeforePreview);
+        vm.AfterPreview!.PixelSize.ShouldBe(vm.BeforePreview!.PixelSize);
+    }
+
+    [Fact]
+    public async Task FinishStage_ClosePreview_ShouldClearTheSelectionAndImages()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        var vm = new FinishStageViewModel(_host);
+        vm.Refresh();
+        vm.SelectedPhoto = vm.Photos[0];
+        await vm.UpdatePreviewAsync();
+
+        vm.ClosePreviewCommand.Execute(null);
+        await vm.UpdatePreviewAsync();
+
+        vm.HasSelection.ShouldBeFalse();
+        vm.BeforePreview.ShouldBeNull();
+        vm.AfterPreview.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task FinishStage_Refresh_ShouldKeepThePreviewedPhotoSelected()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        AddCroppedPhoto("scan_0002.png");
+        var vm = new FinishStageViewModel(_host);
+        vm.Refresh();
+        vm.SelectedPhoto = vm.Photos[1];
+        await vm.UpdatePreviewAsync();
+
+        vm.Refresh();
+
+        vm.SelectedPhoto.ShouldNotBeNull();
+        vm.SelectedPhoto!.Title.ShouldBe("scan_0002_p01");
+    }
+
+    [Fact]
     public void ScanStage_Refresh_ShouldShowCountsFromSavedCropsAndFlagEmptyScans()
     {
         AddCroppedPhoto("scan_0001.png");

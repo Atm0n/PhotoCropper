@@ -1,4 +1,5 @@
 using Avalonia.Media.Imaging;
+using Emgu.CV;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PhotoCropper.Core.Workspace;
@@ -215,9 +216,9 @@ internal sealed partial class ScanStageViewModel : ObservableObject
 /// <summary>One photo in the Finish stage: its cropped thumbnail, restoration choices and export status.</summary>
 internal sealed partial class FinishPhotoViewModel : ObservableObject
 {
-    private readonly Action _changed;
+    private readonly Action<FinishPhotoViewModel> _changed;
 
-    public FinishPhotoViewModel(ProjectPhoto photo, Action changed)
+    public FinishPhotoViewModel(ProjectPhoto photo, Action<FinishPhotoViewModel> changed)
     {
         ArgumentNullException.ThrowIfNull(photo);
         ArgumentNullException.ThrowIfNull(changed);
@@ -278,7 +279,7 @@ internal sealed partial class FinishPhotoViewModel : ObservableObject
     private void OnRestorationChanged()
     {
         NotifyRecordChanged();
-        _changed();
+        _changed(this);
     }
 }
 
@@ -309,6 +310,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject
 
     public void Refresh()
     {
+        string? selectedId = SelectedPhoto?.Title;
         foreach (var old in Photos) old.Thumbnail?.Dispose();
         Photos.Clear();
 
@@ -334,6 +336,8 @@ internal sealed partial class FinishStageViewModel : ObservableObject
             }
         }
 
+        // Keep the previewed photo selected across refreshes (e.g. after importing).
+        SelectedPhoto = selectedId == null ? null : Photos.FirstOrDefault(p => p.Title == selectedId);
         UpdateSummary();
     }
 
@@ -354,11 +358,137 @@ internal sealed partial class FinishStageViewModel : ObservableObject
         }
     }
 
-    private void OnPhotoChanged()
+    private void OnPhotoChanged(FinishPhotoViewModel row)
     {
         // Per-photo choices are saved as they are made, not only on export.
         _host.SaveWorkspace();
         UpdateSummary();
+        if (ReferenceEquals(row, SelectedPhoto)) _ = UpdatePreviewAsync();
+    }
+
+    // ---- Before/after preview of the selected photo ----
+
+    /// <summary>Longest side of the preview images; small enough that toggling restoration feels immediate.</summary>
+    internal const int PreviewMaxSize = 1000;
+
+    private int _previewVersion;
+
+    [ObservableProperty]
+    public partial FinishPhotoViewModel? SelectedPhoto { get; set; }
+
+    /// <summary>The cropped photo, as it is before restoration.</summary>
+    [ObservableProperty]
+    public partial Bitmap? BeforePreview { get; set; }
+
+    /// <summary>The same photo with its current restoration settings, as Export would write it.</summary>
+    [ObservableProperty]
+    public partial Bitmap? AfterPreview { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsPreviewBusy { get; set; }
+
+    public bool HasSelection => SelectedPhoto != null;
+
+    partial void OnSelectedPhotoChanged(FinishPhotoViewModel? value)
+    {
+        OnPropertyChanged(nameof(HasSelection));
+        _ = UpdatePreviewAsync();
+    }
+
+    [RelayCommand]
+    private void ClosePreview() => SelectedPhoto = null;
+
+    /// <summary>
+    /// Renders the selected photo before and after restoration (at preview size). Only the latest request is
+    /// shown: a request superseded by a newer selection or setting change is discarded.
+    /// </summary>
+    internal async Task UpdatePreviewAsync()
+    {
+        int version = ++_previewVersion;
+        var row = SelectedPhoto;
+        string? workDir = _host.WorkDirectory;
+
+        if (row?.Photo.Cropped == null || workDir == null)
+        {
+            SetPreview(null, null);
+            IsPreviewBusy = false;
+            return;
+        }
+
+        string path = row.Photo.Cropped.GetFullPath(workDir);
+        var restoration = row.Photo.Restoration;
+        IsPreviewBusy = true;
+
+        (Bitmap Before, Bitmap? After)? result = null;
+        try
+        {
+            result = await Task.Run(() => RenderPreview(path, restoration));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not render preview for '{path}': {ex.Message}");
+        }
+
+        if (version != _previewVersion)
+        {
+            // A newer request is on its way; drop this one.
+            result?.Before.Dispose();
+            result?.After?.Dispose();
+            return;
+        }
+
+        SetPreview(result?.Before, result?.After);
+        IsPreviewBusy = false;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The bitmaps are returned to the caller, which owns and disposes them; 'before' is disposed if restoration fails")]
+    private static (Bitmap Before, Bitmap? After) RenderPreview(string path, RestorationSettings restoration)
+    {
+        using Mat full = Core.Export.RestoreStage.ReadImage(path);
+        using Mat small = new();
+        double scale = Math.Min(1.0, (double)PreviewMaxSize / Math.Max(full.Width, full.Height));
+        if (scale < 1.0)
+        {
+            Emgu.CV.CvInvoke.Resize(full, small, new System.Drawing.Size(
+                Math.Max(1, (int)Math.Round(full.Width * scale)),
+                Math.Max(1, (int)Math.Round(full.Height * scale))), 0, 0, Emgu.CV.CvEnum.Inter.Area);
+        }
+        else
+        {
+            full.CopyTo(small);
+        }
+
+        Bitmap before = MatBitmapConverter.ToAvaloniaBitmap(small);
+        if (!restoration.RestoreColors) return (before, null);
+
+        try
+        {
+            Mat restored = Core.Extraction.PhotoRestorationService.RestoreColors(small, removeDust: restoration.RemoveDust);
+            try
+            {
+                return (before, MatBitmapConverter.ToAvaloniaBitmap(restored));
+            }
+            finally
+            {
+                if (!ReferenceEquals(restored, small)) restored.Dispose();
+            }
+        }
+        catch
+        {
+            before.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>Shows new preview images; with no restoration, After shows the same image as Before.</summary>
+    private void SetPreview(Bitmap? before, Bitmap? after)
+    {
+        var oldBefore = BeforePreview;
+        var oldAfter = AfterPreview;
+        BeforePreview = before;
+        AfterPreview = after ?? before;
+        if (oldAfter != null && !ReferenceEquals(oldAfter, oldBefore)) oldAfter.Dispose();
+        oldBefore?.Dispose();
     }
 
     private void UpdateSummary()

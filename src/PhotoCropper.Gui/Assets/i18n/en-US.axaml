@@ -97,6 +97,10 @@
 	<sys:String x:Key="BtnConfirmDiscard">Click again to discard</sys:String>
 	<sys:String x:Key="TipDiscardScan">Delete this scan and its photos from the project</sys:String>
 	<sys:String x:Key="MsgScanReplaced">Replaced '{0}' with a new scan.</sys:String>
+	<sys:String x:Key="LblBefore">Before</sys:String>
+	<sys:String x:Key="LblAfter">After (as it will be exported)</sys:String>
+	<sys:String x:Key="LblUpdatingPreview">updating…</sys:String>
+	<sys:String x:Key="TipClosePreview">Close preview</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">All {0} scans are already saved to 'Cropped'. No changes to export.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessing scan with new settings...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detecting photos...</sys:String>

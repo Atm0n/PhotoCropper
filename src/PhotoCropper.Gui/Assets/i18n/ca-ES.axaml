@@ -97,6 +97,10 @@
 	<sys:String x:Key="BtnConfirmDiscard">Fes clic un altre cop per descartar</sys:String>
 	<sys:String x:Key="TipDiscardScan">Eliminar aquest escaneig i les seves fotos del projecte</sys:String>
 	<sys:String x:Key="MsgScanReplaced">S'ha substituït '{0}' per un escaneig nou.</sys:String>
+	<sys:String x:Key="LblBefore">Abans</sys:String>
+	<sys:String x:Key="LblAfter">Després (tal com s'exportarà)</sys:String>
+	<sys:String x:Key="LblUpdatingPreview">actualitzant…</sys:String>
+	<sys:String x:Key="TipClosePreview">Tancar la vista prèvia</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">Tots els {0} escanejos ja estan guardats a 'Cropped'. No hi ha canvis per exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessant amb nous ajustos...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detectant fotos...</sys:String>

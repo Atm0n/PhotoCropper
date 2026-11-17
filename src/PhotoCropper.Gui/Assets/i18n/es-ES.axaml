@@ -97,6 +97,10 @@
 	<sys:String x:Key="BtnConfirmDiscard">Pulsa otra vez para descartar</sys:String>
 	<sys:String x:Key="TipDiscardScan">Eliminar este escaneo y sus fotos del proyecto</sys:String>
 	<sys:String x:Key="MsgScanReplaced">Se ha sustituido '{0}' por un nuevo escaneo.</sys:String>
+	<sys:String x:Key="LblBefore">Antes</sys:String>
+	<sys:String x:Key="LblAfter">Después (tal como se exportará)</sys:String>
+	<sys:String x:Key="LblUpdatingPreview">actualizando…</sys:String>
+	<sys:String x:Key="TipClosePreview">Cerrar vista previa</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">Todos los {0} escaneos ya están guardados en 'Cropped'. No hay cambios por exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocesando escaneo con nuevos ajustes...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detectando fotos...</sys:String>
