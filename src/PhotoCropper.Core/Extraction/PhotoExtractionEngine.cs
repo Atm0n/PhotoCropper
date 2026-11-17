@@ -245,7 +245,9 @@ public static class PhotoExtractionEngine
                 Mat extracted = ExtractPhotoFromContour(globalHull, original);
                 if (!extracted.IsEmpty)
                 {
-                    var minRect = CvInvoke.MinAreaRect(globalHull);
+                    // Use the same straightened box the photo was extracted from, so re-extracting the
+                    // candidate (session restore, export) reproduces this exact photo.
+                    var minRect = RegularizeNearRightAngles(CvInvoke.MinAreaRect(globalHull));
                     var rectBound = CvInvoke.BoundingRectangle(globalHull);
                     var cand = new CropCandidate(
                         globalHull.ToArray(),

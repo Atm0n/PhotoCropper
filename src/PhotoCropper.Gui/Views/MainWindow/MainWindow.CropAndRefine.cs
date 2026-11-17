@@ -572,15 +572,22 @@ internal sealed partial class MainWindow
         var currentEngine = ScanSessions[CurrentIndex].Activate();
         var beforeMat = currentEngine.DetectedPhotos[photoIndex].Clone();
         var beforeRaw = photoIndex < currentEngine.RawDetectedPhotos.Count ? currentEngine.RawDetectedPhotos[photoIndex].Clone() : null;
+        IReadOnlyList<CropCandidate> beforeCandidates = [.. currentEngine.AcceptedCandidates];
 
         await ExecuteWithLoadingAsync(applyingMsg, async ct =>
         {
             ScanSessions[CurrentIndex].IsModified = true;
             await Task.Run(() => currentEngine.ApplyCropToPhoto(photoIndex, currentRefineRect), ct);
-            undoHistory.PushReplace(
-                CurrentIndex, photoIndex, beforeMat, currentEngine.DetectedPhotos[photoIndex],
-                previousRaw: beforeRaw,
-                newRaw: photoIndex < currentEngine.RawDetectedPhotos.Count ? currentEngine.RawDetectedPhotos[photoIndex] : null);
+
+            // Refinement also moves the photo's box on the scan, so undo must restore the box with the photo.
+            undoHistory.PushResizeCandidate(
+                CurrentIndex, photoIndex,
+                beforeMat, currentEngine.DetectedPhotos[photoIndex],
+                beforeCandidates, currentEngine.AcceptedCandidates,
+                "Crop Refinement",
+                beforeRaw,
+                photoIndex < currentEngine.RawDetectedPhotos.Count ? currentEngine.RawDetectedPhotos[photoIndex] : null);
+            SetMainImage(currentEngine.OriginalWithDetected);
             beforeMat.Dispose();
             beforeRaw?.Dispose();
             CloseRefineMode();

@@ -12,7 +12,16 @@ public sealed class WorkspaceCropData
     public float Width { get; set; }
     public float Height { get; set; }
     public float Angle { get; set; }
+
+    /// <summary>The user's manual clockwise rotation, applied after auto-orientation.</summary>
     public int RotationDegrees { get; set; }
+
+    /// <summary>
+    /// Clockwise rotation auto-orientation applied when the crop was saved. Restoring reuses it rather
+    /// than re-detecting, so a photo comes back exactly as it was. Null in sessions saved before this
+    /// was recorded, in which case orientation is detected again.
+    /// </summary>
+    public int? AutoRotationDegrees { get; set; }
 }
 
 public sealed class WorkspaceScanEntry
@@ -30,6 +39,10 @@ public sealed class WorkspaceScanEntry
 
     [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]
     public Collection<WorkspaceCropData> FinalCrops { get; } = [];
+
+    /// <summary>The files the last export of this scan wrote, replaced on re-export.</summary>
+    [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]
+    public Collection<PhotoCropper.Core.Export.ExportedFile> ExportedFiles { get; } = [];
 
     public bool IsProcessed { get; set; }
     public int ExtractedPhotoCount { get; set; }

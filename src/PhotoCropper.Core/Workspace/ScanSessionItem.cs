@@ -18,6 +18,9 @@ public sealed class ScanSessionItem : IDisposable
     public bool IsProcessing { get; set; }
     public PhotoExportMetadata Metadata { get; set; } = new();
 
+    /// <summary>Files written by this scan's last export; replaced by the next export.</summary>
+    public IReadOnlyList<PhotoCropper.Core.Export.ExportedFile> ExportedFiles { get; set; } = [];
+
     public IReadOnlyList<PhotoCropper.Core.Workspace.WorkspaceCropData>? SavedCrops { get; }
 
     private readonly Lock _lock = new();

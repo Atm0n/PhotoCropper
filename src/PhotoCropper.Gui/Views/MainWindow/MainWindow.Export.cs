@@ -107,14 +107,16 @@ internal sealed partial class MainWindow
                                 settings.DefaultYear,
                                 settings.DefaultDescription);
 
-                            engine.SaveDetectedPhotos(
+                            var exportedFiles = engine.SaveDetectedPhotos(
                                 scanTargetFolder,
                                 settings.PreferredFormat,
                                 settings.JpegQuality,
                                 settings.FileNamePattern,
                                 scanMetadata,
                                 progressCallback: null,
-                                cleanOldExports: true);
+                                cleanOldExports: true,
+                                previousExports: session.ExportedFiles);
+                            session.ExportedFiles = exportedFiles;
 
                             int savedCount = engine.DetectedPhotos.Count;
                             Interlocked.Add(ref totalSavedPhotos, savedCount);
@@ -133,6 +135,9 @@ internal sealed partial class MainWindow
                                     entry.ExtractedPhotoCount = savedCount;
                                     entry.Metadata = scanMetadata;
 
+                                    entry.ExportedFiles.Clear();
+                                    foreach (var file in exportedFiles) entry.ExportedFiles.Add(file);
+
                                     entry.FinalCrops.Clear();
                                     for (int cIdx = 0; cIdx < engine.AcceptedCandidates.Count; cIdx++)
                                     {
@@ -145,7 +150,8 @@ internal sealed partial class MainWindow
                                             Width = cand.Rotated.Size.Width,
                                             Height = cand.Rotated.Size.Height,
                                             Angle = cand.Rotated.Angle,
-                                            RotationDegrees = rot
+                                            RotationDegrees = rot,
+                                            AutoRotationDegrees = cand.OrientationDegrees
                                         });
                                     }
                                 }

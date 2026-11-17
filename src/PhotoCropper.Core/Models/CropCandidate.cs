@@ -15,6 +15,13 @@ public readonly record struct CropCandidate
     public double Rectangularity { get; init; }
     public double Convexity { get; init; }
 
+    /// <summary>
+    /// Clockwise rotation (0/90/180/270) that auto-orientation applied to the photo extracted from
+    /// <see cref="Rotated"/>. Kept on the candidate so it stays aligned with its photo through edits,
+    /// and needed to map crops of the oriented photo back into scan space.
+    /// </summary>
+    public int OrientationDegrees { get; init; }
+
     public CropCandidate(
         Point[] shapePoints,
         Rectangle rect,

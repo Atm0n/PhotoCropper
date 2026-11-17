@@ -125,6 +125,52 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
+    public void ReExport_AfterPatternChange_ShouldReplaceRecordedFiles()
+    {
+        string scan = CreateScan("scan_0001.jpg");
+        using var photo = Photo();
+        var first = PhotoExporter.SavePhotos([photo], scan, customOutputFolder: _outputDir,
+            fileNamePattern: FileNameTemplateHelper.DefaultPattern, cleanOldExports: true);
+        PhotoExporter.ClearClaimedExportPaths();
+
+        PhotoExporter.SavePhotos([photo], scan, customOutputFolder: _outputDir,
+            fileNamePattern: FileNameTemplateHelper.PhotoPrefixPattern, cleanOldExports: true, previousExports: first);
+
+        Directory.GetFiles(_outputDir).Select(Path.GetFileName).ShouldBe(["scan_0001_photo_1.jpg"]);
+    }
+
+    [Fact]
+    public void ReExport_ShouldKeepRecordedFileThatWasChangedSinceExport()
+    {
+        string scan = CreateScan("scan_0001.jpg");
+        using var photo = Photo();
+        var first = PhotoExporter.SavePhotos([photo], scan, customOutputFolder: _outputDir, cleanOldExports: true);
+        PhotoExporter.ClearClaimedExportPaths();
+
+        // Something else has since been saved under the recorded name.
+        File.WriteAllText(first[0].Path, "a different file that happens to reuse the name");
+
+        PhotoExporter.SavePhotos([photo], scan, customOutputFolder: _outputDir,
+            fileNamePattern: FileNameTemplateHelper.PhotoPrefixPattern, cleanOldExports: true, previousExports: first);
+
+        File.Exists(first[0].Path).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ReExport_ToDifferentFolder_ShouldKeepRecordedFilesInTheOldFolder()
+    {
+        string scan = CreateScan("scan_0001.jpg");
+        string newOutput = Path.Combine(_tempDir, "out2");
+        using var photo = Photo();
+        var first = PhotoExporter.SavePhotos([photo], scan, customOutputFolder: _outputDir, cleanOldExports: true);
+        PhotoExporter.ClearClaimedExportPaths();
+
+        PhotoExporter.SavePhotos([photo], scan, customOutputFolder: newOutput, cleanOldExports: true, previousExports: first);
+
+        File.Exists(first[0].Path).ShouldBeTrue();
+    }
+
+    [Fact]
     public void FindPreviousExports_ShouldMatchYearPatternExactly()
     {
         var metadata = new PhotoExportMetadata { Year = 1975 };

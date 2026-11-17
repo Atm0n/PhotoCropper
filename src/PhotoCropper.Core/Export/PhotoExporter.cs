@@ -102,7 +102,14 @@ public static class PhotoExporter
         SavePhotos(photos, originalFilePath, customOutputFolder, format, jpegQuality, FileNameTemplateHelper.DefaultPattern, null, progressCallback);
     }
 
-    public static void SavePhotos(
+    /// <param name="cleanOldExports">
+    /// Remove this scan's earlier exports from the output folder before writing: the files in
+    /// <paramref name="previousExports"/> that are unchanged on disk, plus files named exactly as the current
+    /// pattern produces for this scan.
+    /// </param>
+    /// <param name="previousExports">Files recorded by this scan's previous export (see the return value).</param>
+    /// <returns>The files written, to pass as <paramref name="previousExports"/> on the next export.</returns>
+    public static IReadOnlyList<ExportedFile> SavePhotos(
         IReadOnlyList<Mat> photos,
         string originalFilePath,
         string? customOutputFolder = null,
@@ -111,14 +118,16 @@ public static class PhotoExporter
         string fileNamePattern = FileNameTemplateHelper.DefaultPattern,
         PhotoCropper.Core.Models.PhotoExportMetadata? metadata = null,
         Action<int, int>? progressCallback = null,
-        bool cleanOldExports = false)
+        bool cleanOldExports = false,
+        IEnumerable<ExportedFile>? previousExports = null)
     {
         ArgumentNullException.ThrowIfNull(photos);
         ArgumentNullException.ThrowIfNull(originalFilePath);
         ArgumentNullException.ThrowIfNull(format);
 
+        var written = new List<ExportedFile>();
         string outputFolder = ExportPathResolver.ResolveOutputDirectory(originalFilePath, customOutputFolder);
-        if (string.IsNullOrEmpty(outputFolder)) return;
+        if (string.IsNullOrEmpty(outputFolder)) return written;
 
         Directory.CreateDirectory(outputFolder);
 
@@ -132,7 +141,7 @@ public static class PhotoExporter
 
         if (cleanOldExports)
         {
-            CleanOldExports(outputFolder, originalFilePath, fileNamePattern, metadata, totalValidPhotos);
+            CleanOldExports(outputFolder, originalFilePath, fileNamePattern, metadata, totalValidPhotos, previousExports);
         }
 
         string extension = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
@@ -181,8 +190,11 @@ public static class PhotoExporter
                 WriteBytesToFile(fileName, fileBytes);
             }
 
+            written.Add(ExportedFile.FromDisk(fileName));
             progressCallback?.Invoke(i + 1, photos.Count);
         }
+
+        return written;
     }
 
     private static readonly ConcurrentDictionary<string, byte> ClaimedExportPaths = new(StringComparer.OrdinalIgnoreCase);
@@ -194,10 +206,29 @@ public static class PhotoExporter
     /// <summary>Upper bound on photo indices probed when looking for previous exports.</summary>
     private const int MaxProbedExportIndex = 10_000;
 
-    private static void CleanOldExports(string outputFolder, string originalFilePath, string fileNamePattern, PhotoCropper.Core.Models.PhotoExportMetadata? metadata, int totalPhotos)
+    private static void CleanOldExports(
+        string outputFolder,
+        string originalFilePath,
+        string fileNamePattern,
+        PhotoCropper.Core.Models.PhotoExportMetadata? metadata,
+        int totalPhotos,
+        IEnumerable<ExportedFile>? previousExports)
     {
         string sourceFullPath = Path.GetFullPath(originalFilePath);
-        foreach (string file in FindPreviousExports(outputFolder, Path.GetFileNameWithoutExtension(originalFilePath), fileNamePattern, metadata, totalPhotos))
+        string outputFullPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(outputFolder));
+
+        // Recorded files catch exports made with an older pattern or metadata. Only those still in this
+        // output folder are replaced; exports to a folder the user has since moved away from are kept.
+        var recorded = (previousExports ?? [])
+            .Where(f => f.IsUnchangedOnDisk() &&
+                        string.Equals(Path.GetDirectoryName(Path.GetFullPath(f.Path)), outputFullPath, StringComparison.OrdinalIgnoreCase))
+            .Select(f => f.Path);
+
+        var candidates = recorded
+            .Concat(FindPreviousExports(outputFolder, Path.GetFileNameWithoutExtension(originalFilePath), fileNamePattern, metadata, totalPhotos))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (string file in candidates)
         {
             // A pattern like "{original}" exporting next to the scan generates the scan's own name.
             if (string.Equals(Path.GetFullPath(file), sourceFullPath, StringComparison.OrdinalIgnoreCase)) continue;

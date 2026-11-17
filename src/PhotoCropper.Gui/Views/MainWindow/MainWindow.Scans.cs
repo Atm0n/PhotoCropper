@@ -61,7 +61,10 @@ internal sealed partial class MainWindow
             bool treatAsSaved = isAlreadyExported && hasSavedCrops;
             bool isModified = !treatAsSaved;
 
-            newSessions.Add(new ScanSessionItem(path, options, isSaved: treatAsSaved, isModified: isModified, savedCrops: entry?.FinalCrops));
+            newSessions.Add(new ScanSessionItem(path, options, isSaved: treatAsSaved, isModified: isModified, savedCrops: entry?.FinalCrops)
+            {
+                ExportedFiles = entry != null ? [.. entry.ExportedFiles] : []
+            });
         }
 
         _sessionManager.ReplaceAll(newSessions);
