@@ -1,6 +1,6 @@
 # PhotoCropper
 
-An intelligent, cross-platform .NET 10 desktop application designed to automatically detect, straighten, and extract multiple photos from a single scanner bed image. Built with Avalonia UI and Emgu.CV (OpenCV).
+An intelligent, cross-platform .NET 11 desktop application designed to automatically detect, straighten, and extract multiple photos from a single scanner bed image. Built with Avalonia UI and Emgu.CV (OpenCV).
 
 ## Documentation
 
