@@ -73,13 +73,77 @@ public static class FaceOrientationService
             string modelPath = Path.Combine(modelsDir, "face_detection_yunet_2023mar.onnx");
             if (!File.Exists(modelPath) || new FileInfo(modelPath).Length != stream.Length)
             {
-                using FileStream fileStream = File.Create(modelPath);
-                stream.CopyTo(fileStream);
+                WriteModelAtomically(stream, modelPath);
             }
             return modelPath;
         }
         catch
         {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Writes the model to a unique temporary file and then renames it into place. The GUI and CLI can start
+    /// at the same time; writing <paramref name="modelPath"/> directly would let one process load a model the
+    /// other is still writing. A rename on the same volume is atomic, so readers see the old file or the
+    /// complete new one.
+    /// </summary>
+    internal static void WriteModelAtomically(Stream source, string modelPath)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(modelPath);
+
+        string tempPath = $"{modelPath}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            using (FileStream fileStream = new(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                source.CopyTo(fileStream);
+            }
+
+            try
+            {
+                File.Move(tempPath, modelPath, overwrite: true);
+            }
+            catch (Exception ex) when ((ex is IOException or UnauthorizedAccessException) && File.Exists(modelPath) && new FileInfo(modelPath).Length == new FileInfo(tempPath).Length)
+            {
+                // Another process put an identical model in place first and has it open; use theirs.
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(tempPath)) File.Delete(tempPath);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Leftover temp file is harmless.
+            }
+        }
+    }
+
+    /// <summary>
+    /// One detector per thread, reused across rotations and photos. Creating a FaceDetectorYN parses the ONNX
+    /// model, which previously happened four times per photo. Detectors aren't thread-safe, so they are not
+    /// shared between threads; the extraction pipeline runs photos in parallel.
+    /// </summary>
+    private static readonly ThreadLocal<FaceDetectorYN?> ThreadDetector = new(CreateDetector);
+
+    private static FaceDetectorYN? CreateDetector()
+    {
+        string? modelPath = LazyModelPath.Value;
+        if (modelPath == null || !File.Exists(modelPath)) return null;
+
+        try
+        {
+            // Input size and score threshold are set per call before detecting.
+            return new FaceDetectorYN(modelPath, string.Empty, new Size(320, 320), 0.45f, 0.3f, 5000);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not load face detection model: {ex.Message}");
             return null;
         }
     }
@@ -154,15 +218,13 @@ public static class FaceOrientationService
             CvInvoke.Rotate(bgrSmall, candidate, flag);
         }
 
+        var detector = ThreadDetector.Value;
+        if (detector == null) return 0f;
+
         try
         {
-            using var detector = new FaceDetectorYN(
-                LazyModelPath.Value,
-                string.Empty,
-                candidate.Size,
-                scoreThreshold,
-                0.3f,
-                5000);
+            detector.InputSize = candidate.Size;
+            detector.SetScoreThreshold(scoreThreshold);
 
             using Mat faces = new();
             detector.Detect(candidate, faces);
