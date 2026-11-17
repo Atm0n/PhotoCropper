@@ -30,11 +30,9 @@ public static class RestoreStage
         Mat? restored = null;
         try
         {
-            if (restoration.RestoreColors)
-            {
-                Mat result = PhotoRestorationService.RestoreColors(image, removeDust: restoration.RemoveDust);
-                if (!ReferenceEquals(result, image)) restored = result;
-            }
+            // Restore returns the image itself when the settings change nothing.
+            Mat result = PhotoRestorationService.Restore(image, restoration);
+            if (!ReferenceEquals(result, image)) restored = result;
 
             return PhotoExporter.EncodePhoto(restored ?? image, format, jpegQuality, metadata, xDpi, yDpi);
         }

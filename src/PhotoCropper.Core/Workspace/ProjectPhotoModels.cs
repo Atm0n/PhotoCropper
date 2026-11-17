@@ -46,15 +46,94 @@ public sealed class ProjectFile
         LastWriteTimeUtc == other.LastWriteTimeUtc;
 }
 
-/// <summary>Appearance fixes applied when a cropped photo is turned into its final version.</summary>
+/// <summary>How strongly the automatic restoration corrects a photo.</summary>
+public enum RestorationStrength
+{
+    Gentle,
+    Normal,
+    Strong
+}
+
+/// <summary>Whether a photo is treated as a colour or a black-and-white print.</summary>
+public enum PhotoColorMode
+{
+    /// <summary>Detect black-and-white and sepia prints and treat them as <see cref="BlackAndWhiteKeepTone"/>.</summary>
+    Auto,
+
+    Color,
+
+    /// <summary>Black and white, keeping its tone (e.g. sepia): no white balance or saturation boost.</summary>
+    BlackAndWhiteKeepTone,
+
+    /// <summary>Black and white, made neutral grey.</summary>
+    BlackAndWhiteNeutral
+}
+
+/// <summary>
+/// Appearance fixes applied when a cropped photo is turned into its final version. Every new setting defaults to
+/// "no change", so settings saved before they existed (only RestoreColors/RemoveDust) keep their meaning.
+/// </summary>
 public sealed record RestorationSettings
 {
+    /// <summary>Automatic restoration (white balance, contrast, saturation, as enabled below) at <see cref="Strength"/>.</summary>
     public bool RestoreColors { get; init; }
 
-    /// <summary>Dust and scratch removal; only applied together with <see cref="RestoreColors"/>.</summary>
+    /// <summary>Dust, hair and scratch removal; independent of the colour settings.</summary>
     public bool RemoveDust { get; init; }
 
+    public RestorationStrength Strength { get; init; } = RestorationStrength.Normal;
+
+    /// <summary>Part of the automatic restoration: neutralise colour casts (yellowing, fading).</summary>
+    public bool AutoWhiteBalance { get; init; } = true;
+
+    /// <summary>Part of the automatic restoration: stretch levels and recover local contrast.</summary>
+    public bool AutoContrast { get; init; } = true;
+
+    /// <summary>Part of the automatic restoration: revive faded colours.</summary>
+    public bool AutoSaturation { get; init; } = true;
+
+    public PhotoColorMode ColorMode { get; init; } = PhotoColorMode.Auto;
+
+    /// <summary>Manual adjustments, each from -100 to 100 (0 = unchanged), applied after the automatic ones.</summary>
+    public int Brightness { get; init; }
+    public int Contrast { get; init; }
+    public int Warmth { get; init; }
+    public int Tint { get; init; }
+    public int Saturation { get; init; }
+
+    /// <summary>True when any manual adjustment is set.</summary>
+    public bool HasManualAdjustments => Brightness != 0 || Contrast != 0 || Warmth != 0 || Tint != 0 || Saturation != 0;
+
+    /// <summary>True when applying these settings would change the photo at all.</summary>
+    public bool ChangesPhoto =>
+        RestoreColors || RemoveDust || HasManualAdjustments || ColorMode == PhotoColorMode.BlackAndWhiteNeutral;
+
     public static RestorationSettings None { get; } = new();
+
+    // ---- Presets: starting points that can then be tweaked per photo ----
+
+    /// <summary>Faded colour print: automatic colour, contrast and saturation recovery, plus dust removal.</summary>
+    public static RestorationSettings FadedColorPrint { get; } = new() { RestoreColors = true, RemoveDust = true, ColorMode = PhotoColorMode.Color };
+
+    /// <summary>Black-and-white print: contrast recovery and dust removal, made neutral grey.</summary>
+    public static RestorationSettings BlackAndWhite { get; } = new() { RestoreColors = true, RemoveDust = true, ColorMode = PhotoColorMode.BlackAndWhiteNeutral };
+
+    /// <summary>Sepia print: contrast recovery and dust removal, keeping the warm tone.</summary>
+    public static RestorationSettings Sepia { get; } = new() { RestoreColors = true, RemoveDust = true, ColorMode = PhotoColorMode.BlackAndWhiteKeepTone };
+
+    /// <summary>Only remove dust and scratches; colours stay exactly as scanned.</summary>
+    public static RestorationSettings OnlyCleanDust { get; } = new() { RemoveDust = true };
+
+    /// <summary>A preset by name ("faded", "bw", "sepia", "dust", "none"); null if unknown.</summary>
+    public static RestorationSettings? FromPresetName(string? name) => name?.Trim().ToUpperInvariant() switch
+    {
+        "FADED" => FadedColorPrint,
+        "BW" => BlackAndWhite,
+        "SEPIA" => Sepia,
+        "DUST" => OnlyCleanDust,
+        "NONE" => None,
+        _ => null
+    };
 }
 
 /// <summary>
