@@ -214,22 +214,29 @@ public sealed class PhotoExporterTests : IDisposable
     [Fact]
     public void ResolveUniqueExportPath_WhenTargetClaimedOrExists_ShouldDisambiguate()
     {
-        PhotoExporter.ClearClaimedExportPaths();
+        // The claim registry is process-wide; this folder is unique to the test, so no other test touches these names.
         string testFile = Path.Combine(_tempDir, "collision_test.jpg");
 
         string path1 = PhotoExporter.ResolveUniqueExportPath(testFile);
         string path2 = PhotoExporter.ResolveUniqueExportPath(testFile);
         string path3 = PhotoExporter.ResolveUniqueExportPath(testFile);
-
-        Path.GetFileName(path1).ShouldBe("collision_test.jpg");
-        Path.GetFileName(path2).ShouldBe("collision_test (1).jpg");
-        Path.GetFileName(path3).ShouldBe("collision_test (2).jpg");
+        try
+        {
+            Path.GetFileName(path1).ShouldBe("collision_test.jpg");
+            Path.GetFileName(path2).ShouldBe("collision_test (1).jpg");
+            Path.GetFileName(path3).ShouldBe("collision_test (2).jpg");
+        }
+        finally
+        {
+            PhotoExporter.ReleaseExportPath(path1);
+            PhotoExporter.ReleaseExportPath(path2);
+            PhotoExporter.ReleaseExportPath(path3);
+        }
     }
 
     [Fact]
     public void SavePhotos_ConcurrentScansWithSameNamingPattern_ShouldExportAllPhotosWithoutCollision()
     {
-        PhotoExporter.ClearClaimedExportPaths();
         string exportDir = Path.Combine(_tempDir, "concurrent_export");
 
         string scan1 = Path.Combine(_tempDir, "scan_alpha.jpg");

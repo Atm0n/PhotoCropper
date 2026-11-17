@@ -20,7 +20,6 @@ public sealed class ExportCleanupTests : IDisposable
         _tempDir = TestImageFactory.CreateTempDirectory("ExportCleanupTests");
         _outputDir = Path.Combine(_tempDir, "out");
         Directory.CreateDirectory(_outputDir);
-        PhotoExporter.ClearClaimedExportPaths();
     }
 
     private string CreateScan(string name, string? directory = null)
@@ -131,7 +130,6 @@ public sealed class ExportCleanupTests : IDisposable
         using var photo = Photo();
         var first = PhotoExporter.SavePhotos([photo], scan, customOutputFolder: _outputDir,
             fileNamePattern: FileNameTemplateHelper.DefaultPattern, cleanOldExports: true);
-        PhotoExporter.ClearClaimedExportPaths();
 
         PhotoExporter.SavePhotos([photo], scan, customOutputFolder: _outputDir,
             fileNamePattern: FileNameTemplateHelper.PhotoPrefixPattern, cleanOldExports: true, previousExports: first);
@@ -145,7 +143,6 @@ public sealed class ExportCleanupTests : IDisposable
         string scan = CreateScan("scan_0001.jpg");
         using var photo = Photo();
         var first = PhotoExporter.SavePhotos([photo], scan, customOutputFolder: _outputDir, cleanOldExports: true);
-        PhotoExporter.ClearClaimedExportPaths();
 
         // Something else has since been saved under the recorded name.
         File.WriteAllText(first[0].Path, "a different file that happens to reuse the name");
@@ -163,7 +160,6 @@ public sealed class ExportCleanupTests : IDisposable
         string newOutput = Path.Combine(_tempDir, "out2");
         using var photo = Photo();
         var first = PhotoExporter.SavePhotos([photo], scan, customOutputFolder: _outputDir, cleanOldExports: true);
-        PhotoExporter.ClearClaimedExportPaths();
 
         PhotoExporter.SavePhotos([photo], scan, customOutputFolder: newOutput, cleanOldExports: true, previousExports: first);
 
@@ -230,7 +226,6 @@ public sealed class ExportCleanupTests : IDisposable
 
     public void Dispose()
     {
-        PhotoExporter.ClearClaimedExportPaths();
         try
         {
             if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true);
