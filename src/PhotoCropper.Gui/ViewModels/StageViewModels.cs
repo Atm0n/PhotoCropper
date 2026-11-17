@@ -331,6 +331,44 @@ internal sealed partial class FinishPhotoViewModel : ObservableObject
     /// <summary>Replaces this photo's settings (e.g. copied from another photo).</summary>
     public void ApplySettings(RestorationSettings settings) => Update(_ => settings);
 
+    // ---- Repair brush ----
+
+    public int RepairCount => Photo.Repairs.Count;
+
+    public bool HasRepairs => Photo.Repairs.Count > 0;
+
+    /// <summary>
+    /// Adds a repair-brush stroke painted on the cropped photo of <paramref name="imageWidth"/> × <paramref name="imageHeight"/>.
+    /// Strokes left from an earlier crop of a different size couldn't be applied anyway, so they are replaced.
+    /// </summary>
+    public void AddRepair(RepairStroke stroke, int imageWidth, int imageHeight)
+    {
+        ArgumentNullException.ThrowIfNull(stroke);
+        if (stroke.PointCount == 0) return;
+
+        if (Photo.AreRepairsOutdated(imageWidth, imageHeight)) Photo.Repairs.Clear();
+        Photo.RepairImageWidth = imageWidth;
+        Photo.RepairImageHeight = imageHeight;
+        Photo.Repairs.Add(stroke);
+        OnRestorationChanged();
+    }
+
+    [RelayCommand]
+    private void UndoRepair()
+    {
+        if (Photo.Repairs.Count == 0) return;
+        Photo.Repairs.RemoveAt(Photo.Repairs.Count - 1);
+        OnRestorationChanged();
+    }
+
+    [RelayCommand]
+    private void ClearRepairs()
+    {
+        if (Photo.Repairs.Count == 0) return;
+        Photo.Repairs.Clear();
+        OnRestorationChanged();
+    }
+
     private void Update(Func<RestorationSettings, RestorationSettings> change)
     {
         var updated = change(Photo.Restoration);
@@ -526,6 +564,51 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
     /// Renders the selected photo before and after restoration (at preview size). Only the latest request is
     /// shown: a request superseded by a newer selection or setting change is discarded.
     /// </summary>
+    // ---- Repair brush (painting happens in the view; finished strokes arrive here) ----
+
+    /// <summary>Brush mode: the preview shows one large "After" image to paint repairs on.</summary>
+    [ObservableProperty]
+    public partial bool IsRepairMode { get; set; }
+
+    /// <summary>Brush size from 1 to 50; the brush radius is this many thousandths of the photo's width.</summary>
+    [ObservableProperty]
+    public partial double BrushSize { get; set; } = 8;
+
+    /// <summary>The selected photo has strokes from an earlier crop of a different size; they are not applied.</summary>
+    [ObservableProperty]
+    public partial bool RepairsOutdated { get; set; }
+
+    /// <summary>Full size of the selected cropped photo, known once its preview has been rendered.</summary>
+    private System.Drawing.Size _previewSourceSize;
+
+    internal float BrushRadius => (float)(Math.Clamp(BrushSize, 1, 50) / 1000.0);
+
+    /// <summary>
+    /// Adds a stroke painted on the preview. <paramref name="normalizedPoints"/> are fractions of the photo's width
+    /// and height (0..1), as the view measures them on the displayed image.
+    /// </summary>
+    public void AddRepairStroke(IReadOnlyList<(double X, double Y)> normalizedPoints)
+    {
+        ArgumentNullException.ThrowIfNull(normalizedPoints);
+        var row = SelectedPhoto;
+        if (row == null || normalizedPoints.Count == 0 || _previewSourceSize.IsEmpty) return;
+
+        var stroke = new RepairStroke { Radius = BrushRadius };
+        foreach (var (x, y) in normalizedPoints)
+        {
+            stroke.Points.Add((float)Math.Clamp(x, 0, 1));
+            stroke.Points.Add((float)Math.Clamp(y, 0, 1));
+        }
+        row.AddRepair(stroke, _previewSourceSize.Width, _previewSourceSize.Height);
+    }
+
+    [RelayCommand]
+    private void ToggleRepairMode() => IsRepairMode = !IsRepairMode;
+
+    /// <summary>
+    /// Renders the selected photo before and after its repairs and restoration (at preview size). Only the latest
+    /// request is shown: a request superseded by a newer selection or change is discarded.
+    /// </summary>
     internal async Task UpdatePreviewAsync()
     {
         int version = ++_previewVersion;
@@ -536,89 +619,102 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         {
             SetPreview(null, null);
             IsPreviewBusy = false;
+            RepairsOutdated = false;
             return;
         }
 
-        string path = row.Photo.Cropped.GetFullPath(workDir);
-        var restoration = row.Photo.Restoration;
+        // Snapshot the inputs: the user may keep painting or changing settings while this renders.
+        var request = new PreviewRequest(
+            row.Photo.Cropped.GetFullPath(workDir),
+            row.Photo.Restoration,
+            [.. row.Photo.Repairs],
+            new System.Drawing.Size(row.Photo.RepairImageWidth, row.Photo.RepairImageHeight));
         IsPreviewBusy = true;
 
-        (Bitmap Before, Bitmap? After)? result = null;
-        try
-        {
-            result = await Task.Run(() => RenderPreview(path, restoration));
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
-        {
-            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not render preview for '{path}': {ex.Message}");
-        }
-
+        var result = await TryRenderAsync(request, fullQuality: false);
         if (version != _previewVersion)
         {
-            // A newer request is on its way; drop this one.
-            result?.Before.Dispose();
-            result?.After?.Dispose();
+            result?.Dispose(); // a newer request is on its way
             return;
         }
 
+        if (result != null)
+        {
+            _previewSourceSize = result.SourceSize;
+            RepairsOutdated = row.Photo.AreRepairsOutdated(result.SourceSize.Width, result.SourceSize.Height);
+        }
         SetPreview(result?.Before, result?.After);
         IsPreviewBusy = false;
 
-        // Dust removal at preview size can differ from the export; after a pause, render it from the full photo.
-        if (result == null || !restoration.RemoveDust) return;
+        // Dust removal and repairs fill in pixels, which looks slightly different at preview size than in the
+        // export; after a pause, render them from the full photo so the preview matches exactly.
+        bool needsExactPass = request.Restoration.RemoveDust || (request.Repairs.Count > 0 && !RepairsOutdated);
+        if (result == null || !needsExactPass) return;
         if (FullQualityDelay > TimeSpan.Zero)
         {
             await Task.Delay(FullQualityDelay);
             if (version != _previewVersion) return;
         }
 
-        (Bitmap Before, Bitmap? After)? exact = null;
+        var exact = await TryRenderAsync(request, fullQuality: true);
+        if (version != _previewVersion || exact == null)
+        {
+            exact?.Dispose();
+            return;
+        }
+        SetPreview(exact.Before, exact.After);
+    }
+
+    private sealed record PreviewRequest(string Path, RestorationSettings Restoration, List<RepairStroke> Repairs, System.Drawing.Size RepairImageSize);
+
+    private sealed record PreviewResult(Bitmap Before, Bitmap? After, System.Drawing.Size SourceSize) : IDisposable
+    {
+        public void Dispose()
+        {
+            if (After != null && !ReferenceEquals(After, Before)) After.Dispose();
+            Before.Dispose();
+        }
+    }
+
+    private static async Task<PreviewResult?> TryRenderAsync(PreviewRequest request, bool fullQuality)
+    {
         try
         {
-            exact = await Task.Run(() => RenderPreview(path, restoration, fullQuality: true));
+            return await Task.Run(() => RenderPreview(request, fullQuality));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
-            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not render full-quality preview for '{path}': {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not render preview for '{request.Path}': {ex.Message}");
+            return null;
         }
-
-        if (version != _previewVersion || exact == null)
-        {
-            exact?.Before.Dispose();
-            exact?.After?.Dispose();
-            return;
-        }
-        SetPreview(exact.Value.Before, exact.Value.After);
     }
 
     /// <param name="fullQuality">
-    /// Restore the full-size photo and shrink the result (exactly what Export writes), instead of restoring a
-    /// shrunken copy (fast, but dust removal can differ slightly).
+    /// Repair and restore the full-size photo and shrink the result (exactly what Export writes), instead of working
+    /// on a shrunken copy (fast, but filled-in areas can differ slightly).
     /// </param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The bitmaps are returned to the caller, which owns and disposes them; 'before' is disposed if restoration fails")]
-    private static (Bitmap Before, Bitmap? After) RenderPreview(string path, RestorationSettings restoration, bool fullQuality = false)
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The bitmaps are returned to the caller, which owns and disposes them; 'before' is disposed if rendering fails")]
+    private static PreviewResult RenderPreview(PreviewRequest request, bool fullQuality)
     {
-        using Mat full = Core.Export.RestoreStage.ReadImage(path);
+        using Mat full = Core.Export.RestoreStage.ReadImage(request.Path);
         using Mat small = Shrink(full);
+        var sourceSize = new System.Drawing.Size(full.Width, full.Height);
+
+        // Strokes from an earlier crop of a different size would land in the wrong place: skip them.
+        List<RepairStroke> repairs = request.Repairs.Count > 0 && request.RepairImageSize == sourceSize
+            ? request.Repairs
+            : [];
 
         Bitmap before = MatBitmapConverter.ToAvaloniaBitmap(small);
-        if (!restoration.ChangesPhoto) return (before, null);
+        if (!request.Restoration.ChangesPhoto && repairs.Count == 0) return new PreviewResult(before, null, sourceSize);
 
         try
         {
-            Mat source = fullQuality ? full : small;
-            Mat restored = Core.Extraction.PhotoRestorationService.Restore(source, restoration);
-            try
-            {
-                if (!fullQuality) return (before, MatBitmapConverter.ToAvaloniaBitmap(restored));
+            using Mat rendered = Core.Export.RestoreStage.Render(fullQuality ? full : small, request.Restoration, repairs);
+            if (!fullQuality) return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(rendered), sourceSize);
 
-                using Mat shrunk = Shrink(restored);
-                return (before, MatBitmapConverter.ToAvaloniaBitmap(shrunk));
-            }
-            finally
-            {
-                if (!ReferenceEquals(restored, source)) restored.Dispose();
-            }
+            using Mat shrunk = Shrink(rendered);
+            return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(shrunk), sourceSize);
         }
         catch
         {

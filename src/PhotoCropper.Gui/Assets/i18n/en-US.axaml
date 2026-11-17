@@ -127,6 +127,13 @@
 	<sys:String x:Key="LblWarmth">Warmth</sys:String>
 	<sys:String x:Key="LblTint">Tint</sys:String>
 	<sys:String x:Key="LblSaturation">Saturation</sys:String>
+	<sys:String x:Key="BtnRepairBrush">🖌 Repair brush</sys:String>
+	<sys:String x:Key="TipRepairBrush">Paint over scratches, creases, tears or stains: they are filled in from their surroundings</sys:String>
+	<sys:String x:Key="LblBrushSize">Size</sys:String>
+	<sys:String x:Key="BtnUndoStroke">Undo stroke</sys:String>
+	<sys:String x:Key="BtnClearRepairs">Clear repairs</sys:String>
+	<sys:String x:Key="LblRepairHint">Paint over the damage</sys:String>
+	<sys:String x:Key="MsgRepairsOutdated">This photo's repairs were painted on an earlier crop of a different size, so they are not applied. Painting a new stroke replaces them; Clear repairs removes them.</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">All {0} scans are already saved to 'Cropped'. No changes to export.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessing scan with new settings...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detecting photos...</sys:String>

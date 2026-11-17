@@ -127,6 +127,13 @@
 	<sys:String x:Key="LblWarmth">Calidez</sys:String>
 	<sys:String x:Key="LblTint">Matiz</sys:String>
 	<sys:String x:Key="LblSaturation">Saturación</sys:String>
+	<sys:String x:Key="BtnRepairBrush">🖌 Pincel de reparación</sys:String>
+	<sys:String x:Key="TipRepairBrush">Pinta sobre arañazos, pliegues, roturas o manchas: se rellenan a partir de su entorno</sys:String>
+	<sys:String x:Key="LblBrushSize">Tamaño</sys:String>
+	<sys:String x:Key="BtnUndoStroke">Deshacer trazo</sys:String>
+	<sys:String x:Key="BtnClearRepairs">Borrar reparaciones</sys:String>
+	<sys:String x:Key="LblRepairHint">Pinta sobre los daños</sys:String>
+	<sys:String x:Key="MsgRepairsOutdated">Las reparaciones de esta foto se pintaron sobre un recorte anterior de otro tamaño, así que no se aplican. Al pintar un trazo nuevo se sustituyen; Borrar reparaciones las elimina.</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">Todos los {0} escaneos ya están guardados en 'Cropped'. No hay cambios por exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocesando escaneo con nuevos ajustes...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detectando fotos...</sys:String>

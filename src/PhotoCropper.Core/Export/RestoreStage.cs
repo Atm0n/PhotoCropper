@@ -14,7 +14,10 @@ namespace PhotoCropper.Core.Export;
 /// </summary>
 public static class RestoreStage
 {
-    /// <summary>Applies <paramref name="restoration"/> to <paramref name="image"/> and encodes the result for export.</summary>
+    /// <summary>
+    /// Applies the repair-brush <paramref name="repairs"/> (first, so damage doesn't skew the automatic colour
+    /// correction), then <paramref name="restoration"/>, and encodes the result for export.
+    /// </summary>
     public static byte[] RestoreAndEncode(
         Mat image,
         RestorationSettings restoration,
@@ -22,24 +25,46 @@ public static class RestoreStage
         int jpegQuality,
         PhotoExportMetadata? metadata,
         int xDpi,
-        int yDpi)
+        int yDpi,
+        IReadOnlyCollection<RepairStroke>? repairs = null)
     {
         ArgumentNullException.ThrowIfNull(image);
         ArgumentNullException.ThrowIfNull(restoration);
 
-        Mat? restored = null;
+        using Mat finalImage = Render(image, restoration, repairs);
+        return PhotoExporter.EncodePhoto(finalImage, format, jpegQuality, metadata, xDpi, yDpi);
+    }
+
+    /// <summary>Repairs then restores <paramref name="image"/>, always returning a new Mat the caller owns.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The result is returned to the caller; intermediate images are disposed on every path")]
+    public static Mat Render(Mat image, RestorationSettings restoration, IReadOnlyCollection<RepairStroke>? repairs = null)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        ArgumentNullException.ThrowIfNull(restoration);
+
+        // Each step returns its input when it has nothing to do.
+        Mat repaired = repairs is { Count: > 0 } ? PhotoRepairService.ApplyRepairs(image, repairs) : image;
+        bool ownsRepaired = !ReferenceEquals(repaired, image);
+
+        Mat restored;
         try
         {
-            // Restore returns the image itself when the settings change nothing.
-            Mat result = PhotoRestorationService.Restore(image, restoration);
-            if (!ReferenceEquals(result, image)) restored = result;
-
-            return PhotoExporter.EncodePhoto(restored ?? image, format, jpegQuality, metadata, xDpi, yDpi);
+            restored = PhotoRestorationService.Restore(repaired, restoration);
         }
-        finally
+        catch
         {
-            restored?.Dispose();
+            if (ownsRepaired) repaired.Dispose();
+            throw;
         }
+
+        if (!ReferenceEquals(restored, repaired))
+        {
+            // Restoration made a new image; the repaired one was only an intermediate step.
+            if (ownsRepaired) repaired.Dispose();
+            return restored;
+        }
+
+        return ownsRepaired ? repaired : image.Clone();
     }
 
     /// <summary>

@@ -93,7 +93,7 @@
 				<!-- Preview and settings of the selected photo -->
 				<Border Grid.Column="1" Width="600" Margin="12,0,0,0" Padding="12" CornerRadius="8" IsVisible="{Binding HasSelection}"
 						Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-					<Grid RowDefinitions="Auto, Auto, 260, *">
+					<Grid RowDefinitions="Auto, Auto, Auto, Auto, *">
 						<!-- Title (bound through the selected photo, so nothing binds while none is selected) -->
 						<Grid Grid.Row="0" ColumnDefinitions="*, Auto">
 							<ContentControl Content="{Binding SelectedPhoto}" VerticalAlignment="Center">
@@ -109,26 +109,70 @@
 							</Button>
 						</Grid>
 
-						<!-- Before | After, side by side -->
-						<Grid Grid.Row="1" ColumnDefinitions="*, 8, *" Margin="0,8,0,4">
-							<TextBlock Grid.Column="0" Text="{DynamicResource LblBefore}" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+						<!-- Repair brush bar -->
+						<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+							<ToggleButton IsChecked="{Binding IsRepairMode}" Padding="10,4" CornerRadius="5" ToolTip.Tip="{DynamicResource TipRepairBrush}">
+								<TextBlock Text="{DynamicResource BtnRepairBrush}"/>
+							</ToggleButton>
+							<StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRepairMode}">
+								<TextBlock Text="{DynamicResource LblBrushSize}" VerticalAlignment="Center"/>
+								<Slider Width="110" Minimum="1" Maximum="50" Value="{Binding BrushSize}" VerticalAlignment="Center"/>
+								<ContentControl Content="{Binding SelectedPhoto}" VerticalAlignment="Center">
+									<ContentControl.ContentTemplate>
+										<DataTemplate x:DataType="vm:FinishPhotoViewModel">
+											<StackPanel Orientation="Horizontal" Spacing="6">
+												<Button Classes="preset" Command="{Binding UndoRepairCommand}" IsEnabled="{Binding HasRepairs}" Content="{DynamicResource BtnUndoStroke}"/>
+												<Button Classes="preset" Command="{Binding ClearRepairsCommand}" IsEnabled="{Binding HasRepairs}" Content="{DynamicResource BtnClearRepairs}"/>
+												<TextBlock Text="{Binding RepairCount}" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+											</StackPanel>
+										</DataTemplate>
+									</ContentControl.ContentTemplate>
+								</ContentControl>
+							</StackPanel>
+						</StackPanel>
+
+						<!-- Labels -->
+						<Grid Grid.Row="2" ColumnDefinitions="*, 8, *" Margin="0,8,0,4">
+							<TextBlock Grid.Column="0" Text="{DynamicResource LblBefore}" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"
+									   IsVisible="{Binding !IsRepairMode}"/>
 							<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
 								<TextBlock Text="{DynamicResource LblAfter}" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 								<TextBlock Text="{DynamicResource LblUpdatingPreview}" FontSize="11" IsVisible="{Binding IsPreviewBusy}"
 										   Foreground="{DynamicResource AppTextMutedBrush}"/>
 							</StackPanel>
-						</Grid>
-						<Grid Grid.Row="2" ColumnDefinitions="*, 8, *">
-							<Border Grid.Column="0" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="4">
-								<Image Source="{Binding BeforePreview}" Stretch="Uniform"/>
-							</Border>
-							<Border Grid.Column="2" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="4">
-								<Image Source="{Binding AfterPreview}" Stretch="Uniform"/>
-							</Border>
+							<TextBlock Grid.Column="0" Text="{DynamicResource LblRepairHint}" FontSize="11" IsVisible="{Binding IsRepairMode}"
+									   Foreground="{DynamicResource AppTextMutedBrush}" TextTrimming="CharacterEllipsis"/>
 						</Grid>
 
+						<StackPanel Grid.Row="3">
+							<!-- Before | After, side by side -->
+							<Grid ColumnDefinitions="*, 8, *" Height="260" IsVisible="{Binding !IsRepairMode}">
+								<Border Grid.Column="0" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="4">
+									<Image Source="{Binding BeforePreview}" Stretch="Uniform"/>
+								</Border>
+								<Border Grid.Column="2" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="4">
+									<Image Source="{Binding AfterPreview}" Stretch="Uniform"/>
+								</Border>
+							</Grid>
+
+							<!-- Repair brush: one large "After" to paint on; strokes are drawn live, then filled in -->
+							<Border Height="460" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="4" IsVisible="{Binding IsRepairMode}">
+								<Panel x:Name="pnlRepairSurface" Background="Transparent" Cursor="Cross" ClipToBounds="True"
+									   PointerPressed="RepairSurface_PointerPressed" PointerMoved="RepairSurface_PointerMoved"
+									   PointerReleased="RepairSurface_PointerReleased" PointerExited="RepairSurface_PointerExited">
+									<Image x:Name="imgRepair" Source="{Binding AfterPreview}" Stretch="Uniform"/>
+									<Canvas x:Name="cnvRepairStroke" IsHitTestVisible="False">
+										<Ellipse x:Name="ellBrushCursor" Stroke="White" StrokeThickness="1.5" IsVisible="False" Opacity="0.9"/>
+									</Canvas>
+								</Panel>
+							</Border>
+
+							<TextBlock Text="{DynamicResource MsgRepairsOutdated}" IsVisible="{Binding RepairsOutdated}" TextWrapping="Wrap"
+									   Margin="0,6,0,0" FontSize="11" Foreground="{DynamicResource AppDangerTextBrush}"/>
+						</StackPanel>
+
 						<!-- Settings of the selected photo; every change updates "After" -->
-						<ScrollViewer Grid.Row="3" Margin="0,8,0,0">
+						<ScrollViewer Grid.Row="4" Margin="0,8,0,0">
 							<ContentControl Content="{Binding SelectedPhoto}">
 								<ContentControl.ContentTemplate>
 									<DataTemplate x:DataType="vm:FinishPhotoViewModel">

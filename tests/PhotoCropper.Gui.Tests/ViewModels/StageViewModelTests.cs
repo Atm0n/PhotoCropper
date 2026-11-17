@@ -115,6 +115,79 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task FinishStage_RepairStroke_ShouldBeStoredWithTheBrushSizeAndPhotoSize()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        using var vm = Finish();
+        vm.Refresh();
+        vm.SelectedPhoto = vm.Photos[0];
+        await vm.UpdatePreviewAsync(); // learns the photo's full size
+        vm.BrushSize = 20;
+        int savesBefore = _host.Saves;
+
+        vm.AddRepairStroke([(0.1, 0.5), (0.9, 0.5)]);
+
+        var photo = vm.Photos[0].Photo;
+        photo.Repairs.Count.ShouldBe(1);
+        photo.Repairs[0].Radius.ShouldBe(0.02f);
+        photo.Repairs[0].Points.ShouldBe([0.1f, 0.5f, 0.9f, 0.5f]);
+        (photo.RepairImageWidth, photo.RepairImageHeight).ShouldBe((60, 40));
+        photo.IsFinalStale.ShouldBeTrue();
+        _host.Saves.ShouldBe(savesBefore + 1);
+        vm.Photos[0].RepairCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task FinishPhoto_UndoAndClearRepairs()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        using var vm = Finish();
+        vm.Refresh();
+        vm.SelectedPhoto = vm.Photos[0];
+        await vm.UpdatePreviewAsync();
+        vm.AddRepairStroke([(0.2, 0.2)]);
+        vm.AddRepairStroke([(0.8, 0.8)]);
+
+        vm.Photos[0].UndoRepairCommand.Execute(null);
+        vm.Photos[0].Photo.Repairs.Single().Points.ShouldBe([0.2f, 0.2f]);
+
+        vm.Photos[0].ClearRepairsCommand.Execute(null);
+        vm.Photos[0].HasRepairs.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task FinishStage_RepairsFromAnEarlierCropSize_ShouldBeFlagged()
+    {
+        var photo = AddCroppedPhoto("scan_0001.png");
+        photo.RepairImageWidth = 999;
+        photo.RepairImageHeight = 999;
+        photo.Repairs.Add(new RepairStroke { Radius = 0.01f, Points = { 0.5f, 0.5f } });
+        using var vm = Finish();
+        vm.Refresh();
+
+        vm.SelectedPhoto = vm.Photos[0];
+        await vm.UpdatePreviewAsync();
+
+        vm.RepairsOutdated.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task FinishStage_CopySettingsToAll_ShouldNotCopyRepairs()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        AddCroppedPhoto("scan_0002.png");
+        using var vm = Finish();
+        vm.Refresh();
+        vm.SelectedPhoto = vm.Photos[0];
+        await vm.UpdatePreviewAsync();
+        vm.AddRepairStroke([(0.5, 0.5)]);
+
+        vm.CopySettingsToAllCommand.Execute(null);
+
+        vm.Photos[1].HasRepairs.ShouldBeFalse("repairs belong to one photo");
+    }
+
+    [Fact]
     public void FinishPhoto_Presets_ShouldReplaceAllSettings()
     {
         AddCroppedPhoto("scan_0001.png");

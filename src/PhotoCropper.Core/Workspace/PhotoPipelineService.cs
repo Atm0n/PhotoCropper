@@ -189,13 +189,16 @@ public static class PhotoPipelineService
         // Record the cropped file as it is now (it may have been edited outside the app since it was written).
         var renderedFrom = ProjectFile.FromDisk(workDirectory, croppedPath);
         var restoration = photo.Restoration;
+        string repairsFingerprint = photo.RepairsFingerprint;
 
         var metadata = photo.Metadata ?? options.DefaultMetadata;
         byte[] bytes;
         using (Mat cropped = RestoreStage.ReadImage(croppedPath))
         {
             var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(croppedPath);
-            bytes = RestoreStage.RestoreAndEncode(cropped, restoration, options.Format, options.JpegQuality, metadata, xDpi, yDpi);
+            // Repair-brush strokes apply only if they were painted on a cropped photo of this size.
+            var repairs = Extraction.PhotoRepairService.ApplicableRepairs(photo, cropped);
+            bytes = RestoreStage.RestoreAndEncode(cropped, restoration, options.Format, options.JpegQuality, metadata, xDpi, yDpi, repairs);
         }
 
         string extension = string.Equals(options.Format, AppConstants.FormatPng, StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
@@ -228,6 +231,7 @@ public static class PhotoPipelineService
         photo.Final = ProjectFile.FromDisk(workDirectory, target);
         photo.FinalRenderedFrom = renderedFrom;
         photo.FinalRenderedWith = restoration;
+        photo.FinalRenderedRepairs = repairsFingerprint;
     }
 
     /// <summary>Renders the final version of every photo whose final file is missing or out of date.</summary>

@@ -46,6 +46,24 @@ public sealed class ProjectFile
         LastWriteTimeUtc == other.LastWriteTimeUtc;
 }
 
+/// <summary>
+/// One stroke of the repair brush on a cropped photo: the area under it is filled in from its surroundings.
+/// Coordinates are fractions of the photo's width and height (0..1), so a stroke applies the same way to the
+/// preview and to the full-size photo.
+/// </summary>
+public sealed class RepairStroke
+{
+    /// <summary>Brush radius as a fraction of the photo's width.</summary>
+    public float Radius { get; init; }
+
+    /// <summary>The stroke's points as x0, y0, x1, y1, …, each a fraction of the photo's width or height.</summary>
+    [System.Text.Json.Serialization.JsonObjectCreationHandling(System.Text.Json.Serialization.JsonObjectCreationHandling.Populate)]
+    public System.Collections.ObjectModel.Collection<float> Points { get; } = [];
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int PointCount => Points.Count / 2;
+}
+
 /// <summary>How strongly the automatic restoration corrects a photo.</summary>
 public enum RestorationStrength
 {
@@ -174,12 +192,52 @@ public sealed class ProjectPhoto
     /// <summary>The restoration settings the final photo was rendered with.</summary>
     public RestorationSettings? FinalRenderedWith { get; set; }
 
+    /// <summary>Repair-brush strokes, applied to the cropped photo before restoration. Never written into Cropped/.</summary>
+    [System.Text.Json.Serialization.JsonObjectCreationHandling(System.Text.Json.Serialization.JsonObjectCreationHandling.Populate)]
+    public System.Collections.ObjectModel.Collection<RepairStroke> Repairs { get; } = [];
+
     /// <summary>
-    /// True when the final photo is missing or no longer matches the cropped photo or restoration settings.
+    /// Size of the cropped photo the strokes were painted on. If a re-crop changes the size, the strokes would no
+    /// longer line up, so they are kept but not applied (see <see cref="AreRepairsOutdated"/>).
     /// </summary>
+    public int RepairImageWidth { get; set; }
+    public int RepairImageHeight { get; set; }
+
+    /// <summary>Fingerprint of the strokes the final photo was rendered with.</summary>
+    public string? FinalRenderedRepairs { get; set; }
+
+    /// <summary>True when the strokes were painted on a cropped photo of a different size than <paramref name="width"/> × <paramref name="height"/>.</summary>
+    public bool AreRepairsOutdated(int width, int height) =>
+        Repairs.Count > 0 && (RepairImageWidth != width || RepairImageHeight != height);
+
+    /// <summary>A short fingerprint of the current strokes ("" when there are none), to detect changes.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string RepairsFingerprint
+    {
+        get
+        {
+            if (Repairs.Count == 0) return string.Empty;
+            var text = new System.Text.StringBuilder();
+            text.Append(System.Globalization.CultureInfo.InvariantCulture, $"{RepairImageWidth}x{RepairImageHeight};");
+            foreach (var stroke in Repairs)
+            {
+                text.Append(System.Globalization.CultureInfo.InvariantCulture, $"{stroke.Radius:R}:");
+                foreach (float p in stroke.Points) text.Append(System.Globalization.CultureInfo.InvariantCulture, $"{p:R},");
+                text.Append('|');
+            }
+            byte[] hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text.ToString()));
+            return Convert.ToHexString(hash, 0, 8);
+        }
+    }
+
+    /// <summary>
+    /// True when the final photo is missing or no longer matches the cropped photo, restoration settings or repairs.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool IsFinalStale =>
         Final == null ||
         Cropped == null ||
         !Cropped.IsSameVersionAs(FinalRenderedFrom) ||
-        FinalRenderedWith != Restoration;
+        FinalRenderedWith != Restoration ||
+        (FinalRenderedRepairs ?? string.Empty) != RepairsFingerprint;
 }

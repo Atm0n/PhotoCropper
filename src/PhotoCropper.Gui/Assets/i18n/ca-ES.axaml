@@ -127,6 +127,13 @@
 	<sys:String x:Key="LblWarmth">Calidesa</sys:String>
 	<sys:String x:Key="LblTint">Tint</sys:String>
 	<sys:String x:Key="LblSaturation">Saturació</sys:String>
+	<sys:String x:Key="BtnRepairBrush">🖌 Pinzell de reparació</sys:String>
+	<sys:String x:Key="TipRepairBrush">Pinta sobre ratllades, plecs, estrips o taques: s'omplen a partir del seu entorn</sys:String>
+	<sys:String x:Key="LblBrushSize">Mida</sys:String>
+	<sys:String x:Key="BtnUndoStroke">Desfer el traç</sys:String>
+	<sys:String x:Key="BtnClearRepairs">Esborrar les reparacions</sys:String>
+	<sys:String x:Key="LblRepairHint">Pinta sobre els danys</sys:String>
+	<sys:String x:Key="MsgRepairsOutdated">Les reparacions d'aquesta foto es van pintar sobre un retall anterior d'una altra mida, així que no s'apliquen. En pintar un traç nou se substitueixen; Esborrar les reparacions les elimina.</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">Tots els {0} escanejos ja estan guardats a 'Cropped'. No hi ha canvis per exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessant amb nous ajustos...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detectant fotos...</sys:String>
