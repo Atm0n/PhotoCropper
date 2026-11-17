@@ -82,7 +82,14 @@
 						Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 					<Grid RowDefinitions="Auto, Auto, *, Auto, *, Auto">
 						<Grid Grid.Row="0" ColumnDefinitions="*, Auto">
-							<TextBlock Text="{Binding SelectedPhoto.Title, FallbackValue=''}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+							<!-- Bound through the selected photo itself, so nothing binds (or logs) while none is selected -->
+							<ContentControl Content="{Binding SelectedPhoto}" VerticalAlignment="Center">
+								<ContentControl.ContentTemplate>
+									<DataTemplate x:DataType="vm:FinishPhotoViewModel">
+										<TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+									</DataTemplate>
+								</ContentControl.ContentTemplate>
+							</ContentControl>
 							<Button Grid.Column="1" Command="{Binding ClosePreviewCommand}" Padding="8,2" Background="Transparent"
 									ToolTip.Tip="{DynamicResource TipClosePreview}">
 								<TextBlock Text="✕"/>
@@ -105,11 +112,16 @@
 						</Border>
 
 						<!-- The selected photo's settings; changing them updates "After" -->
-						<StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="16" Margin="0,10,0,0">
-							<CheckBox IsChecked="{Binding SelectedPhoto.RestoreColors, FallbackValue=False}" Content="{DynamicResource LblRestoreColors}"/>
-							<CheckBox IsChecked="{Binding SelectedPhoto.RemoveDust, FallbackValue=False}"
-									  IsEnabled="{Binding SelectedPhoto.RestoreColors, FallbackValue=False}" Content="{DynamicResource LblRemoveDust}"/>
-						</StackPanel>
+						<ContentControl Grid.Row="5" Content="{Binding SelectedPhoto}" Margin="0,10,0,0">
+							<ContentControl.ContentTemplate>
+								<DataTemplate x:DataType="vm:FinishPhotoViewModel">
+									<StackPanel Orientation="Horizontal" Spacing="16">
+										<CheckBox IsChecked="{Binding RestoreColors}" Content="{DynamicResource LblRestoreColors}"/>
+										<CheckBox IsChecked="{Binding RemoveDust}" IsEnabled="{Binding RestoreColors}" Content="{DynamicResource LblRemoveDust}"/>
+									</StackPanel>
+								</DataTemplate>
+							</ContentControl.ContentTemplate>
+						</ContentControl>
 					</Grid>
 				</Border>
 			</Grid>
