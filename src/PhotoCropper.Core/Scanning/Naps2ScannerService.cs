@@ -18,7 +18,13 @@ public sealed class Naps2ScannerService : IScannerService
 
     public Naps2ScannerService()
     {
+        // NAPS2 1.6.1 deprecates NAPS2.Images.ImageSharp in favour of NAPS2.Images.Skia, but
+        // NAPS2.Images.Skia requires SkiaSharp 4.x while Avalonia 12.1.x requires SkiaSharp 3.x, and
+        // only one SkiaSharp version can load per process. Keep ImageSharp until Avalonia ships on
+        // SkiaSharp 4, then switch to SkiaImageContext and drop the SixLabors.ImageSharp pin.
+#pragma warning disable CS0618 // Type or member is obsolete
         _context = new ScanningContext(new ImageSharpImageContext());
+#pragma warning restore CS0618
         if (OperatingSystem.IsWindows())
         {
             string workerPath = Path.Combine(AppContext.BaseDirectory, "NAPS2.Worker.exe");
