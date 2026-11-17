@@ -96,14 +96,30 @@ internal sealed partial class MainWindow : Window
         if (pnlUnsavedOverlay != null) pnlUnsavedOverlay.IsVisible = false;
     }
 
-    private async Task ExecuteWithLoadingAsync(
+    /// <summary>
+    /// How long a cancelled operation gets to actually stop before the UI gives up waiting on it.
+    /// Most operations honour the token well within this; the grace period only expires for work
+    /// that ignores cancellation, such as a scanner driver that has hung.
+    /// </summary>
+    internal static readonly TimeSpan CancellationGracePeriod = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Runs <paramref name="action"/> behind the loading overlay.
+    /// </summary>
+    /// <param name="propagateExceptions">
+    /// When true, failures (including cancellation) are rethrown to the caller after the overlay is
+    /// closed, so it can show its own error handling. When false they are reported generically.
+    /// </param>
+    /// <returns>True when the action ran to completion; false if it was skipped, cancelled or failed.</returns>
+    private async Task<bool> ExecuteWithLoadingAsync(
         string statusText,
         Func<CancellationToken, Task> action,
         string? completionText = null,
         bool canCancel = false,
-        TimeSpan? timeout = null)
+        TimeSpan? timeout = null,
+        bool propagateExceptions = false)
     {
-        if (isLoading) return;
+        if (isLoading) return false;
         isLoading = true;
         pnlLoadingOverlay.IsVisible = true;
         btnCancelLoading.IsVisible = canCancel;
@@ -111,22 +127,51 @@ internal sealed partial class MainWindow : Window
         txtLoadingText.Text = statusText;
         lblStatus.Text = statusText;
 
-        using var cts = timeout.HasValue
+        var cts = timeout.HasValue
             ? new CancellationTokenSource(timeout.Value)
             : new CancellationTokenSource();
         _activeOperationCts = cts;
 
-        var cancelTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var cancelReg = cts.Token.Register(() => cancelTcs.TrySetResult(true));
+        Task? actionTask = null;
+        bool abandoned = false;
 
         try
         {
-            var actionTask = action(cts.Token);
-            var completedTask = await Task.WhenAny(actionTask, cancelTcs.Task).ConfigureAwait(true);
+            actionTask = action(cts.Token);
 
-            if (completedTask == cancelTcs.Task)
+            var cancelTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using (cts.Token.Register(() => cancelTcs.TrySetResult()))
             {
-                throw new OperationCanceledException(cts.Token);
+                await Task.WhenAny(actionTask, cancelTcs.Task).ConfigureAwait(true);
+            }
+
+            if (!actionTask.IsCompleted)
+            {
+                // Cancellation was requested. Keep the overlay up (showing "Cancelling...") and wait for
+                // the operation to actually stop, so a second operation can't start on top of it.
+                txtLoadingText.Text = LocalizationService.GetString(ResourceKeys.TxtCancelling, "Cancelling...");
+                btnCancelLoading.IsEnabled = false;
+                try
+                {
+                    await actionTask.WaitAsync(CancellationGracePeriod).ConfigureAwait(true);
+                }
+                catch (TimeoutException)
+                {
+                    // Handled below: the operation is still running.
+                }
+                catch (Exception)
+                {
+                    // The operation stopped (by cancelling or failing); its outcome is rethrown below.
+                }
+
+                if (!actionTask.IsCompleted)
+                {
+                    // The operation ignores cancellation (e.g. a hung scanner driver). Release the UI and
+                    // let it finish in the background; callers must discard results from a cancelled token.
+                    abandoned = true;
+                    ObserveAbandonedOperation(actionTask, cts);
+                    throw new OperationCanceledException(cts.Token);
+                }
             }
 
             await actionTask.ConfigureAwait(true);
@@ -135,14 +180,18 @@ internal sealed partial class MainWindow : Window
             {
                 lblStatus.Text = completionText;
             }
+
+            return true;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (!propagateExceptions)
         {
             lblStatus.Text = LocalizationService.GetString(ResourceKeys.MsgScanCancelled, "Operation cancelled.");
+            return false;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!propagateExceptions)
         {
             ShowAppError("Operation Failed", ex.Message);
+            return false;
         }
         finally
         {
@@ -150,7 +199,25 @@ internal sealed partial class MainWindow : Window
             btnCancelLoading.IsVisible = false;
             pnlLoadingOverlay.IsVisible = false;
             isLoading = false;
+
+            // An abandoned operation still holds the token, so its source is disposed when it ends.
+            if (!abandoned)
+            {
+                cts.Dispose();
+            }
         }
+    }
+
+    private static void ObserveAbandonedOperation(Task actionTask, CancellationTokenSource cts)
+    {
+        _ = actionTask.ContinueWith(t =>
+        {
+            if (t.Exception != null)
+            {
+                System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Abandoned operation failed after cancellation: {t.Exception.GetBaseException().Message}");
+            }
+            cts.Dispose();
+        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 
     internal void ShowAppError(string title, string message)
@@ -160,7 +227,7 @@ internal sealed partial class MainWindow : Window
         if (pnlErrorOverlay != null) pnlErrorOverlay.IsVisible = true;
     }
 
-    private Task ExecuteWithLoadingAsync(string statusText, Func<Task> action, string? completionText = null)
+    private Task<bool> ExecuteWithLoadingAsync(string statusText, Func<Task> action, string? completionText = null)
     {
         return ExecuteWithLoadingAsync(statusText, _ => action(), completionText, canCancel: false);
     }

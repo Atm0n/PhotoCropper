@@ -13,6 +13,18 @@ internal sealed partial class MainWindow
     private IScannerService _scannerService;
     private readonly List<ScannerDeviceInfo> _availableScanners = [];
 
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Trace.TraceWarning($"[PhotoCropper] Could not remove cancelled scan '{path}': {ex.Message}");
+        }
+    }
+
     private void ResetScannerService()
     {
         try
@@ -131,34 +143,40 @@ internal sealed partial class MainWindow
         try
         {
             btnScan.IsEnabled = false;
+            var scannerService = _scannerService;
             await ExecuteWithLoadingAsync(scanningMsg, async (token) =>
             {
-                var scannedMats = await _scannerService.ScanAsync(scannerOptions, token).ConfigureAwait(false);
-                if (scannedMats.Count == 0) return;
-
-                foreach (var mat in scannedMats)
+                var scannedMats = await scannerService.ScanAsync(scannerOptions, token).ConfigureAwait(false);
+                try
                 {
-                    using (mat)
+                    // A driver can return after the user cancelled or the scan timed out. The UI has
+                    // already moved on by then, so discard the late result instead of staging it.
+                    token.ThrowIfCancellationRequested();
+
+                    // Staging (PNG encode + disk write) stays on the thread pool; the shared session is
+                    // only updated on the UI thread once the operation has completed.
+                    var paths = new List<string>(scannedMats.Count);
+                    try
                     {
-                        string stagedPath = ProjectWorkspaceService.StageRawScanFromMat(workDir, mat);
-                        stagedPaths.Add(stagedPath);
-
-                        string relativePath = Path.GetRelativePath(workDir, stagedPath);
-                        _workspaceSession ??= new WorkspaceSessionState();
-                        _workspaceSession.Scans.Add(new WorkspaceScanEntry
+                        foreach (var mat in scannedMats)
                         {
-                            RelativePath = relativePath,
-                            OriginalFileName = Path.GetFileName(stagedPath),
-                            StagedAtUtc = DateTime.UtcNow
-                        });
+                            token.ThrowIfCancellationRequested();
+                            paths.Add(ProjectWorkspaceService.StageRawScanFromMat(workDir, mat));
+                        }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        // Don't leave half a multi-page scan orphaned in RawScans.
+                        foreach (string path in paths) TryDeleteFile(path);
+                        throw;
+                    }
+                    stagedPaths.AddRange(paths);
                 }
-
-                if (_workspaceSession != null)
+                finally
                 {
-                    ProjectWorkspaceService.SaveSession(workDir, _workspaceSession);
+                    foreach (var mat in scannedMats) mat.Dispose();
                 }
-            }, null, canCancel: true, timeout: TimeSpan.FromSeconds(dpi >= 600 ? 180 : 90));
+            }, null, canCancel: true, timeout: TimeSpan.FromSeconds(dpi >= 600 ? 180 : 90), propagateExceptions: true);
         }
         catch (OperationCanceledException)
         {
@@ -202,6 +220,27 @@ internal sealed partial class MainWindow
 
         if (stagedPaths.Count > 0)
         {
+            _workspaceSession ??= new WorkspaceSessionState();
+            foreach (string stagedPath in stagedPaths)
+            {
+                _workspaceSession.Scans.Add(new WorkspaceScanEntry
+                {
+                    RelativePath = Path.GetRelativePath(workDir, stagedPath),
+                    OriginalFileName = Path.GetFileName(stagedPath),
+                    StagedAtUtc = DateTime.UtcNow
+                });
+            }
+            try
+            {
+                ProjectWorkspaceService.SaveSession(workDir, _workspaceSession);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // The scans are already on disk in RawScans; only crash-recovery bookkeeping failed.
+                Trace.TraceError($"[PhotoCropper] Failed to save session after scanning: {ex.Message}");
+                ShowAppError("Operation Failed", ex.Message);
+            }
+
             var options = GetDetectionOptionsFromUi();
             var newItems = stagedPaths.Select(path => new ScanSessionItem(path, options, isSaved: false, isModified: true)).ToList();
             _sessionManager.AddRange(newItems);
