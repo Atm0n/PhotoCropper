@@ -57,14 +57,16 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 - **Hierarchical AI Face & Landscape Orientation:** Extracted photos are automatically rotated upright.
   - **Embedded YuNet Neural Face Detector:** Analyzes 4 candidate orientations (`0°`, `90°`, `180°`, `270°`) and verifies full 5-point facial landmark anatomy (eye-to-nose-to-mouth sequencing, horizontal eye span, and level tilt) with zero cloud dependencies.
   - **Landscape & Water Scene Heuristics:** Evaluates sky gradients (blue and overcast), horizon textures, ground/vegetation, and water bodies (seas, lakes, rivers) with strict non-landscape guards to prevent false indoor rotations.
-- **Vintage Photo Color & Contrast Restoration:**
-  - **Warmth-Preserving White Balance:** Damped gray-world channel normalization (`[0.85, 1.18]`) neutralizes yellowing, aged paper, and dark storage discolouration without turning warm vintage memories icy blue.
-  - **LAB Contrast-Limited Adaptive Histogram Equalization (CLAHE):** Enhances local luminance dynamic range (`clipLimit: 1.3`) across shadow and highlight regions without channel clipping or artifacts.
-  - **Vibrancy Revival:** Gentle HSV saturation enhancement revives faded pigments while preserving natural skin tones.
-- **Automated Dust, Hair & Scratch Inpainting:**
-  - **Dual Morphological Defect Detection:** Combines Black-Hat and Top-Hat filters with median pre-smoothing to isolate dark hair/fibers, dust specks, and bright white hairline scratches.
-  - **Canny Edge Protection Masking:** Subtracts dilated high-frequency structural edges so fine photo contours, eyes, and sharp boundaries are strictly preserved without smearing or blurring.
-  - **Fast Marching Method Inpainting:** Uses `CvInvoke.Inpaint` (Alexandru Telea / FMM) within a localized 2.5px radius to invisibly blend away detected blemishes into surrounding textures.
+- **Vintage Photo Color & Contrast Restoration (per photo, in the Finish stage):**
+  - **Presets:** Faded colour print, Black & white, Sepia, Only clean dust, None. Apply one, tweak it, then "Copy settings to all".
+  - **Automatic restoration** at Gentle, Normal or Strong, with each part optional: colour cast removal (damped gray-world white balance, gains limited to `[0.85, 1.18]`), contrast (levels stretch and CLAHE on lightness only, so colour casts are not amplified) and faded-colour revival (vibrancy that spares skin tones).
+  - **Black & white handling:** black-and-white and sepia prints are detected automatically and skip white balance and saturation, keeping their tone; or choose "neutral grey" to remove tinting.
+  - **Manual adjustments:** brightness, contrast, warmth, tint and saturation (-100 to 100).
+  - **Before/after preview** of the selected photo, updated as settings change (rendered from the full photo when dust removal is on).
+- **Automated Dust, Hair & Scratch Inpainting** (independent of the colour settings):
+  - **Dual Morphological Defect Detection:** Combines Black-Hat and Top-Hat filters with median pre-smoothing to isolate dark hair/fibers, dust specks, and bright white specks. The detection size scales with resolution (5 to 15 px).
+  - **Edge-Aware Protection:** A candidate is only removed when it stands alone; specks with other edges running past them (eyes, contours, text) are left untouched.
+  - **Fast Marching Method Inpainting:** Uses `CvInvoke.Inpaint` (Alexandru Telea / FMM) within a localized 2.5px radius to blend detected blemishes into surrounding textures.
 - **Hold-to-Compare (`Space` / `B`):** Instant zero-latency toggle between the pristine restored photo and the original unedited scan crop for effortless quality inspection.
 - **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm, automatically detecting and removing scanner glass/bed white borders. The refined area is mapped back onto the scan, so the box overlay follows it and it is kept with the session.
 - **Local ROI Perspective Warp:** Instead of rotating the entire giant scan, only the region of interest is extracted and warped with `Inter.Cubic` interpolation with transparent alpha margins.

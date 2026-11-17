@@ -3,6 +3,22 @@
              xmlns:vm="using:PhotoCropper.Gui.ViewModels"
              x:Class="PhotoCropper.Gui.Views.Stages.FinishStageView"
              x:DataType="vm:FinishStageViewModel">
+	<UserControl.Styles>
+		<Style Selector="TextBlock.sectionTitle">
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
+			<Setter Property="Margin" Value="0,10,0,4"/>
+		</Style>
+		<Style Selector="Button.preset">
+			<Setter Property="Padding" Value="8,4"/>
+			<Setter Property="CornerRadius" Value="5"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Background" Value="{DynamicResource AppSubtleCardBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+		</Style>
+	</UserControl.Styles>
+
 	<Border Margin="10,0,10,10" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="8"
 			BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 		<Grid RowDefinitions="Auto, *" Margin="16">
@@ -16,13 +32,10 @@
 						Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}">
 					<TextBlock Text="{DynamicResource BtnImportPhotos}"/>
 				</Button>
-				<Button Command="{Binding RestoreAllCommand}" Padding="12,8" CornerRadius="6"
+				<Button Command="{Binding CopySettingsToAllCommand}" Padding="12,8" CornerRadius="6"
+						ToolTip.Tip="{DynamicResource TipCopySettingsToAll}"
 						Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}">
-					<TextBlock Text="{DynamicResource BtnRestoreAll}"/>
-				</Button>
-				<Button Command="{Binding RestoreNoneCommand}" Padding="12,8" CornerRadius="6"
-						Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}">
-					<TextBlock Text="{DynamicResource BtnRestoreNone}"/>
+					<TextBlock Text="{DynamicResource BtnCopySettingsToAll}"/>
 				</Button>
 				<Button Command="{Binding OpenFinalFolderCommand}" Padding="12,8" CornerRadius="6"
 						Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}">
@@ -50,7 +63,7 @@
 						   TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 			</Border>
 
-			<!-- Photo grid (click a photo to preview it) + before/after preview panel -->
+			<!-- Photo grid (click a photo to preview and adjust it) + preview panel -->
 			<Grid Grid.Row="1" IsVisible="{Binding !IsEmpty}" ColumnDefinitions="*, Auto">
 				<ListBox Grid.Column="0" ItemsSource="{Binding Photos}" SelectedItem="{Binding SelectedPhoto}"
 						 Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -61,14 +74,14 @@
 					</ListBox.ItemsPanel>
 					<ListBox.ItemTemplate>
 						<DataTemplate x:DataType="vm:FinishPhotoViewModel">
-							<Border Width="260" Margin="6" Padding="10" CornerRadius="8"
+							<Border Width="240" Margin="6" Padding="10" CornerRadius="8"
 									Background="{DynamicResource AppPhotoCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 								<StackPanel Spacing="6">
-									<Image Source="{Binding Thumbnail}" Height="170" Stretch="Uniform"/>
+									<Image Source="{Binding Thumbnail}" Height="160" Stretch="Uniform"/>
 									<TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
 									<TextBlock Text="{Binding SourceText}" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}" TextTrimming="CharacterEllipsis"/>
-									<CheckBox IsChecked="{Binding RestoreColors}" Content="{DynamicResource LblRestoreColors}"/>
-									<CheckBox IsChecked="{Binding RemoveDust}" IsEnabled="{Binding RestoreColors}" Content="{DynamicResource LblRemoveDust}"/>
+									<CheckBox IsChecked="{Binding RestoreColors}" Content="{DynamicResource LblAutoRestore}"/>
+									<CheckBox IsChecked="{Binding RemoveDust}" Content="{DynamicResource LblRemoveDust}"/>
 									<TextBlock Text="{Binding StatusText}" FontSize="11"
 											   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 								</StackPanel>
@@ -77,12 +90,12 @@
 					</ListBox.ItemTemplate>
 				</ListBox>
 
-				<!-- Before / after preview of the selected photo -->
-				<Border Grid.Column="1" Width="560" Margin="12,0,0,0" Padding="12" CornerRadius="8" IsVisible="{Binding HasSelection}"
+				<!-- Preview and settings of the selected photo -->
+				<Border Grid.Column="1" Width="600" Margin="12,0,0,0" Padding="12" CornerRadius="8" IsVisible="{Binding HasSelection}"
 						Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-					<Grid RowDefinitions="Auto, Auto, *, Auto, *, Auto">
+					<Grid RowDefinitions="Auto, Auto, 260, *">
+						<!-- Title (bound through the selected photo, so nothing binds while none is selected) -->
 						<Grid Grid.Row="0" ColumnDefinitions="*, Auto">
-							<!-- Bound through the selected photo itself, so nothing binds (or logs) while none is selected -->
 							<ContentControl Content="{Binding SelectedPhoto}" VerticalAlignment="Center">
 								<ContentControl.ContentTemplate>
 									<DataTemplate x:DataType="vm:FinishPhotoViewModel">
@@ -96,32 +109,100 @@
 							</Button>
 						</Grid>
 
-						<TextBlock Grid.Row="1" Text="{DynamicResource LblBefore}" Margin="0,8,0,4" FontSize="11"
-								   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-						<Border Grid.Row="2" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="4">
-							<Image Source="{Binding BeforePreview}" Stretch="Uniform"/>
-						</Border>
+						<!-- Before | After, side by side -->
+						<Grid Grid.Row="1" ColumnDefinitions="*, 8, *" Margin="0,8,0,4">
+							<TextBlock Grid.Column="0" Text="{DynamicResource LblBefore}" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+							<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+								<TextBlock Text="{DynamicResource LblAfter}" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+								<TextBlock Text="{DynamicResource LblUpdatingPreview}" FontSize="11" IsVisible="{Binding IsPreviewBusy}"
+										   Foreground="{DynamicResource AppTextMutedBrush}"/>
+							</StackPanel>
+						</Grid>
+						<Grid Grid.Row="2" ColumnDefinitions="*, 8, *">
+							<Border Grid.Column="0" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="4">
+								<Image Source="{Binding BeforePreview}" Stretch="Uniform"/>
+							</Border>
+							<Border Grid.Column="2" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="4">
+								<Image Source="{Binding AfterPreview}" Stretch="Uniform"/>
+							</Border>
+						</Grid>
 
-						<StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,8,0,4">
-							<TextBlock Text="{DynamicResource LblAfter}" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-							<TextBlock Text="{DynamicResource LblUpdatingPreview}" FontSize="11" IsVisible="{Binding IsPreviewBusy}"
-									   Foreground="{DynamicResource AppTextMutedBrush}"/>
-						</StackPanel>
-						<Border Grid.Row="4" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="4">
-							<Image Source="{Binding AfterPreview}" Stretch="Uniform"/>
-						</Border>
+						<!-- Settings of the selected photo; every change updates "After" -->
+						<ScrollViewer Grid.Row="3" Margin="0,8,0,0">
+							<ContentControl Content="{Binding SelectedPhoto}">
+								<ContentControl.ContentTemplate>
+									<DataTemplate x:DataType="vm:FinishPhotoViewModel">
+										<StackPanel Spacing="2" Margin="0,0,10,0">
+											<!-- Presets -->
+											<TextBlock Classes="sectionTitle" Text="{DynamicResource LblPresets}" Margin="0,0,0,4"/>
+											<WrapPanel>
+												<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="faded" Content="{DynamicResource PresetFaded}"/>
+												<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="bw" Content="{DynamicResource PresetBlackAndWhite}"/>
+												<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="sepia" Content="{DynamicResource PresetSepia}"/>
+												<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="dust" Content="{DynamicResource PresetOnlyDust}"/>
+												<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="none" Content="{DynamicResource PresetNone}"/>
+											</WrapPanel>
 
-						<!-- The selected photo's settings; changing them updates "After" -->
-						<ContentControl Grid.Row="5" Content="{Binding SelectedPhoto}" Margin="0,10,0,0">
-							<ContentControl.ContentTemplate>
-								<DataTemplate x:DataType="vm:FinishPhotoViewModel">
-									<StackPanel Orientation="Horizontal" Spacing="16">
-										<CheckBox IsChecked="{Binding RestoreColors}" Content="{DynamicResource LblRestoreColors}"/>
-										<CheckBox IsChecked="{Binding RemoveDust}" IsEnabled="{Binding RestoreColors}" Content="{DynamicResource LblRemoveDust}"/>
-									</StackPanel>
-								</DataTemplate>
-							</ContentControl.ContentTemplate>
-						</ContentControl>
+											<!-- Automatic restoration -->
+											<TextBlock Classes="sectionTitle" Text="{DynamicResource LblAutomatic}"/>
+											<Grid ColumnDefinitions="Auto, *, Auto">
+												<CheckBox Grid.Column="0" IsChecked="{Binding RestoreColors}" Content="{DynamicResource LblAutoRestore}"/>
+												<ComboBox Grid.Column="2" SelectedIndex="{Binding StrengthIndex}" IsEnabled="{Binding RestoreColors}" MinWidth="130">
+													<ComboBoxItem Content="{DynamicResource StrengthGentle}"/>
+													<ComboBoxItem Content="{DynamicResource StrengthNormal}"/>
+													<ComboBoxItem Content="{DynamicResource StrengthStrong}"/>
+												</ComboBox>
+											</Grid>
+											<WrapPanel Margin="24,0,0,0" IsEnabled="{Binding RestoreColors}">
+												<CheckBox Margin="0,0,14,0" IsChecked="{Binding AutoWhiteBalance}" Content="{DynamicResource LblAutoWhiteBalance}"/>
+												<CheckBox Margin="0,0,14,0" IsChecked="{Binding AutoContrast}" Content="{DynamicResource LblAutoContrast}"/>
+												<CheckBox IsChecked="{Binding AutoSaturation}" Content="{DynamicResource LblAutoSaturation}"/>
+											</WrapPanel>
+
+											<!-- Photo type -->
+											<Grid ColumnDefinitions="Auto, *, Auto" Margin="0,8,0,0">
+												<TextBlock Grid.Column="0" Text="{DynamicResource LblPhotoType}" VerticalAlignment="Center"/>
+												<ComboBox Grid.Column="2" SelectedIndex="{Binding ColorModeIndex}" MinWidth="230">
+													<ComboBoxItem Content="{DynamicResource ColorModeAuto}"/>
+													<ComboBoxItem Content="{DynamicResource ColorModeColor}"/>
+													<ComboBoxItem Content="{DynamicResource ColorModeKeepTone}"/>
+													<ComboBoxItem Content="{DynamicResource ColorModeNeutral}"/>
+												</ComboBox>
+											</Grid>
+
+											<CheckBox Margin="0,6,0,0" IsChecked="{Binding RemoveDust}" Content="{DynamicResource LblRemoveDust}"/>
+
+											<!-- Manual adjustments -->
+											<Grid ColumnDefinitions="*, Auto">
+												<TextBlock Grid.Column="0" Classes="sectionTitle" Text="{DynamicResource LblAdjustments}"/>
+												<Button Grid.Column="1" Classes="preset" VerticalAlignment="Bottom" Command="{Binding ResetAdjustmentsCommand}" Content="{DynamicResource BtnResetAdjustments}"/>
+											</Grid>
+											<Grid ColumnDefinitions="110, *, 40" RowDefinitions="Auto, Auto, Auto, Auto, Auto">
+												<TextBlock Grid.Row="0" Text="{DynamicResource LblBrightness}" VerticalAlignment="Center"/>
+												<Slider Grid.Row="0" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Brightness}" IsSnapToTickEnabled="True" TickFrequency="1"/>
+												<TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Brightness, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+
+												<TextBlock Grid.Row="1" Text="{DynamicResource LblContrast}" VerticalAlignment="Center"/>
+												<Slider Grid.Row="1" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Contrast}" IsSnapToTickEnabled="True" TickFrequency="1"/>
+												<TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Contrast, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+
+												<TextBlock Grid.Row="2" Text="{DynamicResource LblWarmth}" VerticalAlignment="Center"/>
+												<Slider Grid.Row="2" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Warmth}" IsSnapToTickEnabled="True" TickFrequency="1"/>
+												<TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Warmth, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+
+												<TextBlock Grid.Row="3" Text="{DynamicResource LblTint}" VerticalAlignment="Center"/>
+												<Slider Grid.Row="3" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Tint}" IsSnapToTickEnabled="True" TickFrequency="1"/>
+												<TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Tint, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+
+												<TextBlock Grid.Row="4" Text="{DynamicResource LblSaturation}" VerticalAlignment="Center"/>
+												<Slider Grid.Row="4" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Saturation}" IsSnapToTickEnabled="True" TickFrequency="1"/>
+												<TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding Saturation, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+											</Grid>
+										</StackPanel>
+									</DataTemplate>
+								</ContentControl.ContentTemplate>
+							</ContentControl>
+						</ScrollViewer>
 					</Grid>
 				</Border>
 			</Grid>

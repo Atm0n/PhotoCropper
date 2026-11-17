@@ -40,7 +40,7 @@ public sealed class StageViewModelTests : IDisposable
     {
         AddCroppedPhoto("scan_0001.png");
         AddCroppedPhoto("scan_0002.png");
-        var vm = new FinishStageViewModel(_host);
+        using var vm = Finish();
 
         vm.Refresh();
 
@@ -52,7 +52,7 @@ public sealed class StageViewModelTests : IDisposable
     [Fact]
     public void FinishStage_WithoutProject_ShouldShowNoProject()
     {
-        var vm = new FinishStageViewModel(new FakeHost(null, null));
+        using var vm = Finish(new FakeHost(null, null));
 
         vm.Refresh();
 
@@ -65,7 +65,7 @@ public sealed class StageViewModelTests : IDisposable
     public async Task FinishStage_Export_ShouldWriteFinalsAndClearStaleness()
     {
         AddCroppedPhoto("scan_0001.png");
-        var vm = new FinishStageViewModel(_host);
+        using var vm = Finish();
         vm.Refresh();
 
         await vm.ExportCommand.ExecuteAsync(null);
@@ -80,7 +80,7 @@ public sealed class StageViewModelTests : IDisposable
     public async Task FinishStage_ChangingRestoration_ShouldMarkStaleAndSaveImmediately()
     {
         AddCroppedPhoto("scan_0001.png");
-        var vm = new FinishStageViewModel(_host);
+        using var vm = Finish();
         vm.Refresh();
         await vm.ExportCommand.ExecuteAsync(null);
         int savesBefore = _host.Saves;
@@ -93,24 +93,91 @@ public sealed class StageViewModelTests : IDisposable
         vm.ExportCommand.CanExecute(null).ShouldBeTrue();
     }
 
+    /// <summary>A Finish view-model that commits changes and renders previews immediately (no timers in tests).</summary>
+    private FinishStageViewModel Finish(FakeHost? host = null) =>
+        new(host ?? _host) { ChangeDebounce = TimeSpan.Zero, FullQualityDelay = TimeSpan.Zero };
+
     [Fact]
-    public void FinishStage_RestoreAll_ShouldSetEveryPhoto()
+    public void FinishStage_CopySettingsToAll_ShouldGiveEveryPhotoTheSelectedPhotosSettings()
     {
         AddCroppedPhoto("scan_0001.png");
         AddCroppedPhoto("scan_0002.png");
-        var vm = new FinishStageViewModel(_host);
+        using var vm = Finish();
         vm.Refresh();
+        vm.CopySettingsToAllCommand.CanExecute(null).ShouldBeFalse("nothing is selected yet");
 
-        vm.RestoreAllCommand.Execute(null);
+        vm.SelectedPhoto = vm.Photos[0];
+        vm.Photos[0].ApplyPresetCommand.Execute("sepia");
+        vm.Photos[0].Warmth = 30;
+        vm.CopySettingsToAllCommand.Execute(null);
 
-        vm.Photos.ShouldAllBe(p => p.RestoreColors);
+        vm.Photos[1].Photo.Restoration.ShouldBe(RestorationSettings.Sepia with { Warmth = 30 });
+    }
+
+    [Fact]
+    public void FinishPhoto_Presets_ShouldReplaceAllSettings()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        using var vm = Finish();
+        vm.Refresh();
+        var photo = vm.Photos[0];
+        photo.Brightness = 40;
+
+        photo.ApplyPresetCommand.Execute("dust");
+
+        photo.Photo.Restoration.ShouldBe(RestorationSettings.OnlyCleanDust);
+        photo.RestoreColors.ShouldBeFalse();
+        photo.RemoveDust.ShouldBeTrue();
+        photo.Brightness.ShouldBe(0);
+    }
+
+    [Fact]
+    public void FinishPhoto_SettingsShouldUpdateTheRecord()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        using var vm = Finish();
+        vm.Refresh();
+        var photo = vm.Photos[0];
+
+        photo.StrengthIndex = 2;
+        photo.ColorModeIndex = 3;
+        photo.AutoSaturation = false;
+        photo.Contrast = 25.4;
+        photo.Tint = -150;
+
+        var s = photo.Photo.Restoration;
+        s.Strength.ShouldBe(RestorationStrength.Strong);
+        s.ColorMode.ShouldBe(PhotoColorMode.BlackAndWhiteNeutral);
+        s.AutoSaturation.ShouldBeFalse();
+        s.Contrast.ShouldBe(25);
+        s.Tint.ShouldBe(-100, "adjustments are clamped to -100..100");
+
+        photo.ResetAdjustmentsCommand.Execute(null);
+        photo.Photo.Restoration.HasManualAdjustments.ShouldBeFalse();
+        photo.Photo.Restoration.Strength.ShouldBe(RestorationStrength.Strong, "reset only clears the manual sliders");
+    }
+
+    [Fact]
+    public async Task FinishStage_RapidChanges_ShouldBeSavedOnceAfterTheDelay()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        using var vm = new FinishStageViewModel(_host) { ChangeDebounce = TimeSpan.FromMilliseconds(80), FullQualityDelay = TimeSpan.Zero };
+        vm.Refresh();
+        int savesBefore = _host.Saves;
+
+        for (int i = 1; i <= 10; i++) vm.Photos[0].Brightness = i; // like dragging a slider
+
+        _host.Saves.ShouldBe(savesBefore, "nothing is written while the slider moves");
+        await Task.Delay(400, TestContext.Current.CancellationToken);
+        _host.Saves.ShouldBe(savesBefore + 1);
+        vm.Photos[0].Photo.Restoration.Brightness.ShouldBe(10);
     }
 
     [Fact]
     public async Task FinishStage_SelectingAPhoto_ShouldShowTheSameImageBeforeAndAfterWithoutRestoration()
     {
         AddCroppedPhoto("scan_0001.png");
-        var vm = new FinishStageViewModel(_host);
+        using var vm = Finish();
         vm.Refresh();
 
         vm.SelectedPhoto = vm.Photos[0];
@@ -126,7 +193,7 @@ public sealed class StageViewModelTests : IDisposable
     public async Task FinishStage_TurningRestorationOn_ShouldRenderASeparateAfterImage()
     {
         AddCroppedPhoto("scan_0001.png");
-        var vm = new FinishStageViewModel(_host);
+        using var vm = Finish();
         vm.Refresh();
         vm.SelectedPhoto = vm.Photos[0];
         await vm.UpdatePreviewAsync();
@@ -143,7 +210,7 @@ public sealed class StageViewModelTests : IDisposable
     public async Task FinishStage_ClosePreview_ShouldClearTheSelectionAndImages()
     {
         AddCroppedPhoto("scan_0001.png");
-        var vm = new FinishStageViewModel(_host);
+        using var vm = Finish();
         vm.Refresh();
         vm.SelectedPhoto = vm.Photos[0];
         await vm.UpdatePreviewAsync();
@@ -161,7 +228,7 @@ public sealed class StageViewModelTests : IDisposable
     {
         AddCroppedPhoto("scan_0001.png");
         AddCroppedPhoto("scan_0002.png");
-        var vm = new FinishStageViewModel(_host);
+        using var vm = Finish();
         vm.Refresh();
         vm.SelectedPhoto = vm.Photos[1];
         await vm.UpdatePreviewAsync();

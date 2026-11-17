@@ -665,5 +665,6 @@ internal sealed partial class MainWindow : Window
         undoHistory.Dispose();
         _sessionManager.Dispose();
         PhotoCropper.Core.Extraction.FaceOrientationService.ReleaseCachedDetectors();
+        _finishStageVm?.Dispose();
     }
 }

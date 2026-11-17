@@ -237,26 +237,106 @@ internal sealed partial class FinishPhotoViewModel : ObservableObject
     [ObservableProperty]
     public partial Bitmap? Thumbnail { get; set; }
 
+    // ---- Restoration settings (each change updates the photo's record and is saved shortly after) ----
+
     public bool RestoreColors
     {
         get => Photo.Restoration.RestoreColors;
-        set
-        {
-            if (value == Photo.Restoration.RestoreColors) return;
-            Photo.Restoration = Photo.Restoration with { RestoreColors = value };
-            OnRestorationChanged();
-        }
+        set => Update(s => s with { RestoreColors = value });
     }
 
     public bool RemoveDust
     {
         get => Photo.Restoration.RemoveDust;
-        set
-        {
-            if (value == Photo.Restoration.RemoveDust) return;
-            Photo.Restoration = Photo.Restoration with { RemoveDust = value };
-            OnRestorationChanged();
-        }
+        set => Update(s => s with { RemoveDust = value });
+    }
+
+    /// <summary>0 = Gentle, 1 = Normal, 2 = Strong (bound to a ComboBox).</summary>
+    public int StrengthIndex
+    {
+        get => (int)Photo.Restoration.Strength;
+        set => Update(s => s with { Strength = (RestorationStrength)Math.Clamp(value, 0, 2) });
+    }
+
+    public bool AutoWhiteBalance
+    {
+        get => Photo.Restoration.AutoWhiteBalance;
+        set => Update(s => s with { AutoWhiteBalance = value });
+    }
+
+    public bool AutoContrast
+    {
+        get => Photo.Restoration.AutoContrast;
+        set => Update(s => s with { AutoContrast = value });
+    }
+
+    public bool AutoSaturation
+    {
+        get => Photo.Restoration.AutoSaturation;
+        set => Update(s => s with { AutoSaturation = value });
+    }
+
+    /// <summary>0 = Auto, 1 = Colour, 2 = Black &amp; white (keep tone), 3 = Black &amp; white (neutral).</summary>
+    public int ColorModeIndex
+    {
+        get => (int)Photo.Restoration.ColorMode;
+        set => Update(s => s with { ColorMode = (PhotoColorMode)Math.Clamp(value, 0, 3) });
+    }
+
+    public double Brightness
+    {
+        get => Photo.Restoration.Brightness;
+        set => Update(s => s with { Brightness = ToAdjustment(value) });
+    }
+
+    public double Contrast
+    {
+        get => Photo.Restoration.Contrast;
+        set => Update(s => s with { Contrast = ToAdjustment(value) });
+    }
+
+    public double Warmth
+    {
+        get => Photo.Restoration.Warmth;
+        set => Update(s => s with { Warmth = ToAdjustment(value) });
+    }
+
+    public double Tint
+    {
+        get => Photo.Restoration.Tint;
+        set => Update(s => s with { Tint = ToAdjustment(value) });
+    }
+
+    public double Saturation
+    {
+        get => Photo.Restoration.Saturation;
+        set => Update(s => s with { Saturation = ToAdjustment(value) });
+    }
+
+    private static int ToAdjustment(double value) => (int)Math.Round(Math.Clamp(value, -100, 100));
+
+    /// <summary>Replaces all settings with a preset ("faded", "bw", "sepia", "dust", "none").</summary>
+    [RelayCommand]
+    private void ApplyPreset(string? name)
+    {
+        var preset = RestorationSettings.FromPresetName(name);
+        if (preset != null) ApplySettings(preset);
+    }
+
+    /// <summary>Sets the manual adjustments back to 0, keeping the automatic settings.</summary>
+    [RelayCommand]
+    private void ResetAdjustments() =>
+        Update(s => s with { Brightness = 0, Contrast = 0, Warmth = 0, Tint = 0, Saturation = 0 });
+
+    /// <summary>Replaces this photo's settings (e.g. copied from another photo).</summary>
+    public void ApplySettings(RestorationSettings settings) => Update(_ => settings);
+
+    private void Update(Func<RestorationSettings, RestorationSettings> change)
+    {
+        var updated = change(Photo.Restoration);
+        if (updated == Photo.Restoration) return; // records compare by value: nothing changed
+        Photo.Restoration = updated;
+        OnRestorationChanged();
     }
 
     public bool IsStale => Photo.IsFinalStale;
@@ -270,10 +350,8 @@ internal sealed partial class FinishPhotoViewModel : ObservableObject
     /// <summary>Re-reads the record after it was changed elsewhere (e.g. after exporting).</summary>
     public void NotifyRecordChanged()
     {
-        OnPropertyChanged(nameof(RestoreColors));
-        OnPropertyChanged(nameof(RemoveDust));
-        OnPropertyChanged(nameof(IsStale));
-        OnPropertyChanged(nameof(StatusText));
+        // Every setting is read from the record, so refresh them all.
+        OnPropertyChanged(string.Empty);
     }
 
     private void OnRestorationChanged()
@@ -284,7 +362,7 @@ internal sealed partial class FinishPhotoViewModel : ObservableObject
 }
 
 /// <summary>Stage 3: restore cropped photos (each with its own settings) and export them to Final/.</summary>
-internal sealed partial class FinishStageViewModel : ObservableObject
+internal sealed partial class FinishStageViewModel : ObservableObject, IDisposable
 {
     /// <summary>Thumbnail width in pixels; decoding at this size keeps memory low for large photos.</summary>
     internal const int ThumbnailWidth = 240;
@@ -358,12 +436,51 @@ internal sealed partial class FinishStageViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// How long after the last setting change the workspace is saved and the preview re-rendered, so dragging a
+    /// slider doesn't write session.json and re-render on every step. Zero commits immediately (used by tests).
+    /// </summary>
+    internal TimeSpan ChangeDebounce { get; set; } = TimeSpan.FromMilliseconds(250);
+
+    private CancellationTokenSource? _changeCts;
+
     private void OnPhotoChanged(FinishPhotoViewModel row)
     {
-        // Per-photo choices are saved as they are made, not only on export.
-        _host.SaveWorkspace();
         UpdateSummary();
-        if (ReferenceEquals(row, SelectedPhoto)) _ = UpdatePreviewAsync();
+        CopySettingsToAllCommand.NotifyCanExecuteChanged();
+
+        _changeCts?.Cancel();
+        _changeCts?.Dispose();
+        _changeCts = null;
+
+        if (ChangeDebounce <= TimeSpan.Zero)
+        {
+            CommitChanges();
+            return;
+        }
+
+        _changeCts = new CancellationTokenSource();
+        _ = CommitAfterDelayAsync(_changeCts.Token);
+    }
+
+    private async Task CommitAfterDelayAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(ChangeDebounce, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return; // superseded by a newer change
+        }
+        CommitChanges();
+    }
+
+    /// <summary>Saves per-photo choices (as they are made, not only on export) and refreshes the preview.</summary>
+    private void CommitChanges()
+    {
+        _host.SaveWorkspace();
+        if (SelectedPhoto != null) _ = UpdatePreviewAsync();
     }
 
     // ---- Before/after preview of the selected photo ----
@@ -392,8 +509,15 @@ internal sealed partial class FinishStageViewModel : ObservableObject
     partial void OnSelectedPhotoChanged(FinishPhotoViewModel? value)
     {
         OnPropertyChanged(nameof(HasSelection));
+        CopySettingsToAllCommand.NotifyCanExecuteChanged();
         _ = UpdatePreviewAsync();
     }
+
+    /// <summary>
+    /// After a pause, the preview is rendered again from the full-size photo when dust removal is on: dust
+    /// detection depends on pixel size, so only a full-size pass shows exactly what Export will write.
+    /// </summary>
+    internal TimeSpan FullQualityDelay { get; set; } = TimeSpan.FromMilliseconds(600);
 
     [RelayCommand]
     private void ClosePreview() => SelectedPhoto = null;
@@ -439,38 +563,61 @@ internal sealed partial class FinishStageViewModel : ObservableObject
 
         SetPreview(result?.Before, result?.After);
         IsPreviewBusy = false;
+
+        // Dust removal at preview size can differ from the export; after a pause, render it from the full photo.
+        if (result == null || !restoration.RemoveDust) return;
+        if (FullQualityDelay > TimeSpan.Zero)
+        {
+            await Task.Delay(FullQualityDelay);
+            if (version != _previewVersion) return;
+        }
+
+        (Bitmap Before, Bitmap? After)? exact = null;
+        try
+        {
+            exact = await Task.Run(() => RenderPreview(path, restoration, fullQuality: true));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not render full-quality preview for '{path}': {ex.Message}");
+        }
+
+        if (version != _previewVersion || exact == null)
+        {
+            exact?.Before.Dispose();
+            exact?.After?.Dispose();
+            return;
+        }
+        SetPreview(exact.Value.Before, exact.Value.After);
     }
 
+    /// <param name="fullQuality">
+    /// Restore the full-size photo and shrink the result (exactly what Export writes), instead of restoring a
+    /// shrunken copy (fast, but dust removal can differ slightly).
+    /// </param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The bitmaps are returned to the caller, which owns and disposes them; 'before' is disposed if restoration fails")]
-    private static (Bitmap Before, Bitmap? After) RenderPreview(string path, RestorationSettings restoration)
+    private static (Bitmap Before, Bitmap? After) RenderPreview(string path, RestorationSettings restoration, bool fullQuality = false)
     {
         using Mat full = Core.Export.RestoreStage.ReadImage(path);
-        using Mat small = new();
-        double scale = Math.Min(1.0, (double)PreviewMaxSize / Math.Max(full.Width, full.Height));
-        if (scale < 1.0)
-        {
-            Emgu.CV.CvInvoke.Resize(full, small, new System.Drawing.Size(
-                Math.Max(1, (int)Math.Round(full.Width * scale)),
-                Math.Max(1, (int)Math.Round(full.Height * scale))), 0, 0, Emgu.CV.CvEnum.Inter.Area);
-        }
-        else
-        {
-            full.CopyTo(small);
-        }
+        using Mat small = Shrink(full);
 
         Bitmap before = MatBitmapConverter.ToAvaloniaBitmap(small);
-        if (!restoration.RestoreColors) return (before, null);
+        if (!restoration.ChangesPhoto) return (before, null);
 
         try
         {
-            Mat restored = Core.Extraction.PhotoRestorationService.RestoreColors(small, removeDust: restoration.RemoveDust);
+            Mat source = fullQuality ? full : small;
+            Mat restored = Core.Extraction.PhotoRestorationService.Restore(source, restoration);
             try
             {
-                return (before, MatBitmapConverter.ToAvaloniaBitmap(restored));
+                if (!fullQuality) return (before, MatBitmapConverter.ToAvaloniaBitmap(restored));
+
+                using Mat shrunk = Shrink(restored);
+                return (before, MatBitmapConverter.ToAvaloniaBitmap(shrunk));
             }
             finally
             {
-                if (!ReferenceEquals(restored, small)) restored.Dispose();
+                if (!ReferenceEquals(restored, source)) restored.Dispose();
             }
         }
         catch
@@ -478,6 +625,34 @@ internal sealed partial class FinishStageViewModel : ObservableObject
             before.Dispose();
             throw;
         }
+    }
+
+    /// <summary>A copy no larger than <see cref="PreviewMaxSize"/> on its longest side.</summary>
+    private static Mat Shrink(Mat image)
+    {
+        Mat result = new();
+        double scale = Math.Min(1.0, (double)PreviewMaxSize / Math.Max(image.Width, image.Height));
+        if (scale < 1.0)
+        {
+            Emgu.CV.CvInvoke.Resize(image, result, new System.Drawing.Size(
+                Math.Max(1, (int)Math.Round(image.Width * scale)),
+                Math.Max(1, (int)Math.Round(image.Height * scale))), 0, 0, Emgu.CV.CvEnum.Inter.Area);
+        }
+        else
+        {
+            image.CopyTo(result);
+        }
+        return result;
+    }
+
+    public void Dispose()
+    {
+        _changeCts?.Cancel();
+        _changeCts?.Dispose();
+        _changeCts = null;
+        _previewVersion++; // drop any preview still rendering
+        SetPreview(null, null);
+        foreach (var row in Photos) row.Thumbnail?.Dispose();
     }
 
     /// <summary>Shows new preview images; with no restoration, After shows the same image as Before.</summary>
@@ -567,17 +742,15 @@ internal sealed partial class FinishStageViewModel : ObservableObject
         Refresh();
     }
 
-    [RelayCommand]
-    private void RestoreAll() => SetRestoreColors(true);
-
-    [RelayCommand]
-    private void RestoreNone() => SetRestoreColors(false);
-
-    private void SetRestoreColors(bool restore)
+    /// <summary>Copies the selected photo's restoration settings (e.g. a tweaked preset) to every photo.</summary>
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void CopySettingsToAll()
     {
+        var settings = SelectedPhoto?.Photo.Restoration;
+        if (settings == null) return;
         foreach (var row in Photos)
         {
-            row.RestoreColors = restore;
+            row.ApplySettings(settings);
         }
     }
 
