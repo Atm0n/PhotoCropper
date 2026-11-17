@@ -227,6 +227,37 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
+    public void FinishStage_NextAndPreviousPhoto_ShouldStepThroughThePhotosAndWrapAround()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        AddCroppedPhoto("scan_0002.png");
+        AddCroppedPhoto("scan_0003.png");
+        using var vm = Finish();
+        vm.Refresh();
+        vm.SelectedPhoto = vm.Photos[0];
+
+        vm.NextPhotoCommand.Execute(null);
+        vm.SelectedPhoto.ShouldBe(vm.Photos[1]);
+        vm.PreviousPhotoCommand.Execute(null);
+        vm.PreviousPhotoCommand.Execute(null);
+        vm.SelectedPhoto.ShouldBe(vm.Photos[2], "wraps to the last photo");
+        vm.NextPhotoCommand.Execute(null);
+        vm.SelectedPhoto.ShouldBe(vm.Photos[0], "wraps to the first photo");
+    }
+
+    [Fact]
+    public void FinishStage_NextPhoto_WithTheEditorClosed_ShouldDoNothing()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        using var vm = Finish();
+        vm.Refresh();
+
+        vm.NextPhotoCommand.Execute(null);
+
+        vm.SelectedPhoto.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task FinishPhoto_UndoAndClearRepairs()
     {
         AddCroppedPhoto("scan_0001.png");

@@ -523,8 +523,11 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     // ---- Before/after preview of the selected photo ----
 
-    /// <summary>Longest side of the preview images; small enough that toggling restoration feels immediate.</summary>
-    internal const int PreviewMaxSize = 1000;
+    /// <summary>
+    /// Longest side of the preview images. Large enough to judge detail when zoomed in the editor (most scanned
+    /// photos are smaller, so they are shown at full size), small enough that changes still feel quick.
+    /// </summary>
+    internal const int PreviewMaxSize = 2048;
 
     private int _previewVersion;
 
@@ -559,6 +562,21 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     [RelayCommand]
     private void ClosePreview() => SelectedPhoto = null;
+
+    /// <summary>Opens the next photo in the editor (wraps around).</summary>
+    [RelayCommand]
+    private void NextPhoto() => StepPhoto(+1);
+
+    /// <summary>Opens the previous photo in the editor (wraps around).</summary>
+    [RelayCommand]
+    private void PreviousPhoto() => StepPhoto(-1);
+
+    private void StepPhoto(int step)
+    {
+        if (SelectedPhoto == null || Photos.Count == 0) return;
+        int index = Photos.IndexOf(SelectedPhoto);
+        SelectedPhoto = Photos[((index + step) % Photos.Count + Photos.Count) % Photos.Count];
+    }
 
     // ---- Repair brush (painting happens in the view; finished strokes arrive here) ----
 

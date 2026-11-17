@@ -98,7 +98,6 @@
 	<sys:String x:Key="LblBefore">Abans</sys:String>
 	<sys:String x:Key="LblAfter">Després (tal com s'exportarà)</sys:String>
 	<sys:String x:Key="LblUpdatingPreview">actualitzant…</sys:String>
-	<sys:String x:Key="TipClosePreview">Tancar la vista prèvia</sys:String>
 	<sys:String x:Key="BtnCopySettingsToAll">Copiar els ajustos a totes</sys:String>
 	<sys:String x:Key="TipCopySettingsToAll">Aplicar a totes les fotos els ajustos de restauració de la foto seleccionada</sys:String>
 	<sys:String x:Key="LblAutoRestore">Restauració automàtica</sys:String>
@@ -143,6 +142,12 @@
 	<sys:String x:Key="MsgAiDownload">El farciment amb IA necessita descarregar una sola vegada el model LaMa (208 MB). S'executa en aquest ordinador: les teves fotos no es pugen mai.</sys:String>
 	<sys:String x:Key="BtnDownloadAiModel">Descarregar (208 MB)</sys:String>
 	<sys:String x:Key="BtnCancelDownload">Cancel·lar</sys:String>
+	<sys:String x:Key="BtnBackToGrid">◀ Totes les fotos</sys:String>
+	<sys:String x:Key="TipBackToGrid">Tornar a totes les fotos (Esc)</sys:String>
+	<sys:String x:Key="TipPreviousPhoto">Foto anterior (←)</sys:String>
+	<sys:String x:Key="TipNextPhoto">Foto següent (→)</sys:String>
+	<sys:String x:Key="BtnZoomFit">Ajustar</sys:String>
+	<sys:String x:Key="TipViewerControls">Roda del ratolí: zoom · arrossegar: moure la foto · arrossegar el divisor: comparar abans i després · mantenir Espai: veure l'original · F: ajustar · B: pinzell de reparació</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">Tots els {0} escanejos ja estan guardats a 'Cropped'. No hi ha canvis per exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessant amb nous ajustos...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detectant fotos...</sys:String>

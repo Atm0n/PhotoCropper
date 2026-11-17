@@ -98,7 +98,6 @@
 	<sys:String x:Key="LblBefore">Before</sys:String>
 	<sys:String x:Key="LblAfter">After (as it will be exported)</sys:String>
 	<sys:String x:Key="LblUpdatingPreview">updating…</sys:String>
-	<sys:String x:Key="TipClosePreview">Close preview</sys:String>
 	<sys:String x:Key="BtnCopySettingsToAll">Copy settings to all</sys:String>
 	<sys:String x:Key="TipCopySettingsToAll">Give every photo the restoration settings of the selected photo</sys:String>
 	<sys:String x:Key="LblAutoRestore">Auto restore</sys:String>
@@ -143,6 +142,12 @@
 	<sys:String x:Key="MsgAiDownload">AI fill needs a one-time download of the LaMa model (208 MB). It runs on this computer: your photos are never uploaded.</sys:String>
 	<sys:String x:Key="BtnDownloadAiModel">Download (208 MB)</sys:String>
 	<sys:String x:Key="BtnCancelDownload">Cancel</sys:String>
+	<sys:String x:Key="BtnBackToGrid">◀ All photos</sys:String>
+	<sys:String x:Key="TipBackToGrid">Back to all photos (Esc)</sys:String>
+	<sys:String x:Key="TipPreviousPhoto">Previous photo (←)</sys:String>
+	<sys:String x:Key="TipNextPhoto">Next photo (→)</sys:String>
+	<sys:String x:Key="BtnZoomFit">Fit</sys:String>
+	<sys:String x:Key="TipViewerControls">Mouse wheel: zoom · drag: move the photo · drag the divider: compare before and after · hold Space: show the original · F: fit · B: repair brush</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">All {0} scans are already saved to 'Cropped'. No changes to export.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessing scan with new settings...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detecting photos...</sys:String>

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PhotoCropper.Gui.ViewModels"
+             xmlns:local="using:PhotoCropper.Gui.Views.Stages"
              x:Class="PhotoCropper.Gui.Views.Stages.FinishStageView"
              x:DataType="vm:FinishStageViewModel">
 	<UserControl.Styles>
@@ -63,9 +64,9 @@
 						   TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 			</Border>
 
-			<!-- Photo grid (click a photo to preview and adjust it) + preview panel -->
-			<Grid Grid.Row="1" IsVisible="{Binding !IsEmpty}" ColumnDefinitions="*, Auto">
-				<ListBox Grid.Column="0" ItemsSource="{Binding Photos}" SelectedItem="{Binding SelectedPhoto}"
+			<!-- Photo grid: click a photo to open it in the editor -->
+			<Grid Grid.Row="1" IsVisible="{Binding !IsEmpty}">
+				<ListBox ItemsSource="{Binding Photos}" IsVisible="{Binding !HasSelection}" SelectedItem="{Binding SelectedPhoto}"
 						 Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 					<ListBox.ItemsPanel>
 						<ItemsPanelTemplate>
@@ -90,198 +91,198 @@
 					</ListBox.ItemTemplate>
 				</ListBox>
 
-				<!-- Preview and settings of the selected photo -->
-				<Border Grid.Column="1" Width="600" Margin="12,0,0,0" Padding="12" CornerRadius="8" IsVisible="{Binding HasSelection}"
-						Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-					<Grid RowDefinitions="Auto, Auto, Auto, Auto, *">
-						<!-- Title (bound through the selected photo, so nothing binds while none is selected) -->
-						<Grid Grid.Row="0" ColumnDefinitions="*, Auto">
-							<ContentControl Content="{Binding SelectedPhoto}" VerticalAlignment="Center">
-								<ContentControl.ContentTemplate>
-									<DataTemplate x:DataType="vm:FinishPhotoViewModel">
-										<TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-									</DataTemplate>
-								</ContentControl.ContentTemplate>
-							</ContentControl>
-							<Button Grid.Column="1" Command="{Binding ClosePreviewCommand}" Padding="8,2" Background="Transparent"
-									ToolTip.Tip="{DynamicResource TipClosePreview}">
-								<TextBlock Text="✕"/>
-							</Button>
-						</Grid>
-
-						<!-- Repair brush bar -->
-						<StackPanel Grid.Row="1" Spacing="6" Margin="0,8,0,0">
-						<WrapPanel Orientation="Horizontal">
-							<ToggleButton IsChecked="{Binding IsRepairMode}" Padding="10,4" CornerRadius="5" Margin="0,0,8,0" ToolTip.Tip="{DynamicResource TipRepairBrush}">
-								<TextBlock Text="{DynamicResource BtnRepairBrush}"/>
-							</ToggleButton>
-							<StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRepairMode}">
-								<TextBlock Text="{DynamicResource LblBrushSize}" VerticalAlignment="Center"/>
-								<Slider Width="110" Minimum="1" Maximum="50" Value="{Binding BrushSize}" VerticalAlignment="Center"/>
-								<ContentControl Content="{Binding SelectedPhoto}" VerticalAlignment="Center">
-									<ContentControl.ContentTemplate>
-										<DataTemplate x:DataType="vm:FinishPhotoViewModel">
-											<StackPanel Orientation="Horizontal" Spacing="6">
-												<Button Classes="preset" Command="{Binding UndoRepairCommand}" IsEnabled="{Binding HasRepairs}" Content="{DynamicResource BtnUndoStroke}"/>
-												<Button Classes="preset" Command="{Binding ClearRepairsCommand}" IsEnabled="{Binding HasRepairs}" Content="{DynamicResource BtnClearRepairs}"/>
-												<TextBlock Text="{Binding RepairCount}" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-											</StackPanel>
-										</DataTemplate>
-									</ContentControl.ContentTemplate>
-								</ContentControl>
-							</StackPanel>
-						</WrapPanel>
-
-						<!-- Fill method: quick (instant) or AI (LaMa, optional download) -->
-						<StackPanel Spacing="6" IsVisible="{Binding IsRepairMode}">
-							<WrapPanel Orientation="Horizontal">
-								<TextBlock Text="{DynamicResource LblFillMethod}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-								<RadioButton GroupName="FillMethod" IsChecked="{Binding !UseAiFill, Mode=OneWay}" Margin="0,0,8,0"
-											 Content="{DynamicResource OptQuickFill}" ToolTip.Tip="{DynamicResource TipQuickFill}"/>
-								<RadioButton GroupName="FillMethod" IsChecked="{Binding UseAiFill}" Margin="0,0,8,0"
-											 Content="{DynamicResource OptAiFill}" ToolTip.Tip="{DynamicResource TipAiFill}"/>
-								<TextBlock Text="{DynamicResource LblAiLoading}" IsVisible="{Binding IsAiModelLoading}" VerticalAlignment="Center"
-										   FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
-							</WrapPanel>
-
-							<Border IsVisible="{Binding ShowAiDownload}" Padding="10" CornerRadius="6"
-									Background="{DynamicResource AppSubtleCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-								<StackPanel Spacing="8">
-									<TextBlock Text="{DynamicResource MsgAiDownload}" TextWrapping="Wrap" FontSize="12"/>
-									<StackPanel Orientation="Horizontal" Spacing="8">
-										<Button Command="{Binding DownloadAiModelCommand}" IsVisible="{Binding !IsAiModelDownloading}" Padding="10,4"
-												Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}"
-												Content="{DynamicResource BtnDownloadAiModel}"/>
-										<ProgressBar IsVisible="{Binding IsAiModelDownloading}" Value="{Binding AiDownloadProgress}"
-													 Minimum="0" Maximum="100" Width="180" VerticalAlignment="Center" ShowProgressText="True"/>
-										<Button Command="{Binding CancelAiDownloadCommand}" IsVisible="{Binding IsAiModelDownloading}" Padding="10,4"
-												Content="{DynamicResource BtnCancelDownload}"/>
+				<!-- Editor: the selected photo large (zoom, pan, before/after split), settings on the right, filmstrip below -->
+				<Grid IsVisible="{Binding HasSelection}" RowDefinitions="Auto, *, Auto" ColumnDefinitions="*, 12, 340">
+					<!-- Editor toolbar -->
+					<DockPanel Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,8" LastChildFill="False">
+						<Button DockPanel.Dock="Left" Command="{Binding ClosePreviewCommand}" Padding="10,4" CornerRadius="5"
+								ToolTip.Tip="{DynamicResource TipBackToGrid}" Content="{DynamicResource BtnBackToGrid}"/>
+						<Button DockPanel.Dock="Left" Command="{Binding PreviousPhotoCommand}" Padding="10,4" Margin="8,0,0,0" CornerRadius="5"
+								ToolTip.Tip="{DynamicResource TipPreviousPhoto}" Content="‹"/>
+						<Button DockPanel.Dock="Left" Command="{Binding NextPhotoCommand}" Padding="10,4" Margin="4,0,0,0" CornerRadius="5"
+								ToolTip.Tip="{DynamicResource TipNextPhoto}" Content="›"/>
+						<ContentControl DockPanel.Dock="Left" Content="{Binding SelectedPhoto}" VerticalAlignment="Center" Margin="12,0,0,0">
+							<ContentControl.ContentTemplate>
+								<DataTemplate x:DataType="vm:FinishPhotoViewModel">
+									<StackPanel Orientation="Horizontal" Spacing="10">
+										<TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+										<TextBlock Text="{Binding StatusText}" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 									</StackPanel>
-									<TextBlock Text="{Binding AiDownloadError}" IsVisible="{Binding AiDownloadError, Converter={x:Static ObjectConverters.IsNotNull}}"
-											   TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource AppDangerTextBrush}"/>
-								</StackPanel>
-							</Border>
+								</DataTemplate>
+							</ContentControl.ContentTemplate>
+						</ContentControl>
+						<TextBlock DockPanel.Dock="Left" Text="{DynamicResource LblUpdatingPreview}" IsVisible="{Binding IsPreviewBusy}" FontSize="11"
+								   VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource AppTextMutedBrush}"/>
+
+						<StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" ToolTip.Tip="{DynamicResource TipViewerControls}">
+							<Button Padding="10,4" CornerRadius="5" Click="ZoomOut_Click" Content="−"/>
+							<TextBlock x:Name="txtZoom" Width="52" TextAlignment="Center" VerticalAlignment="Center" FontSize="12"
+									   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+							<Button Padding="10,4" CornerRadius="5" Click="ZoomIn_Click" Content="+"/>
+							<Button Padding="10,4" CornerRadius="5" Click="ZoomFit_Click" Content="{DynamicResource BtnZoomFit}"/>
+							<Button Padding="10,4" CornerRadius="5" Click="ZoomActual_Click" Content="100%"/>
 						</StackPanel>
-						</StackPanel>
+					</DockPanel>
 
-						<!-- Labels -->
-						<Grid Grid.Row="2" ColumnDefinitions="*, 8, *" Margin="0,8,0,4">
-							<TextBlock Grid.Column="0" Text="{DynamicResource LblBefore}" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"
-									   IsVisible="{Binding !IsRepairMode}"/>
-							<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-								<TextBlock Text="{DynamicResource LblAfter}" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
-								<TextBlock Text="{DynamicResource LblUpdatingPreview}" FontSize="11" IsVisible="{Binding IsPreviewBusy}"
-										   Foreground="{DynamicResource AppTextMutedBrush}"/>
-							</StackPanel>
-							<TextBlock Grid.Column="0" Text="{DynamicResource LblRepairHint}" FontSize="11" IsVisible="{Binding IsRepairMode}"
-									   Foreground="{DynamicResource AppTextMutedBrush}" TextTrimming="CharacterEllipsis"/>
-						</Grid>
+					<!-- The photo -->
+					<Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="6"
+							BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ClipToBounds="True">
+						<local:CompareImageViewer x:Name="viewer" Before="{Binding BeforePreview}" After="{Binding AfterPreview}"
+												  IsPainting="{Binding IsRepairMode}" BrushSize="{Binding BrushSize}"/>
+					</Border>
 
-						<StackPanel Grid.Row="3">
-							<!-- Before | After, side by side -->
-							<Grid ColumnDefinitions="*, 8, *" Height="260" IsVisible="{Binding !IsRepairMode}">
-								<Border Grid.Column="0" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="4">
-									<Image Source="{Binding BeforePreview}" Stretch="Uniform"/>
-								</Border>
-								<Border Grid.Column="2" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="4">
-									<Image Source="{Binding AfterPreview}" Stretch="Uniform"/>
-								</Border>
-							</Grid>
-
-							<!-- Repair brush: one large "After" to paint on; strokes are drawn live, then filled in -->
-							<Border Height="460" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="4" IsVisible="{Binding IsRepairMode}">
-								<Panel x:Name="pnlRepairSurface" Background="Transparent" Cursor="Cross" ClipToBounds="True"
-									   PointerPressed="RepairSurface_PointerPressed" PointerMoved="RepairSurface_PointerMoved"
-									   PointerReleased="RepairSurface_PointerReleased" PointerExited="RepairSurface_PointerExited">
-									<Image x:Name="imgRepair" Source="{Binding AfterPreview}" Stretch="Uniform"/>
-									<Canvas x:Name="cnvRepairStroke" IsHitTestVisible="False">
-										<Ellipse x:Name="ellBrushCursor" Stroke="White" StrokeThickness="1.5" IsVisible="False" Opacity="0.9"/>
-									</Canvas>
-								</Panel>
-							</Border>
-
-							<TextBlock Text="{DynamicResource MsgRepairsOutdated}" IsVisible="{Binding RepairsOutdated}" TextWrapping="Wrap"
-									   Margin="0,6,0,0" FontSize="11" Foreground="{DynamicResource AppDangerTextBrush}"/>
-						</StackPanel>
-
-						<!-- Settings of the selected photo; every change updates "After" -->
-						<ScrollViewer Grid.Row="4" Margin="0,8,0,0">
-							<ContentControl Content="{Binding SelectedPhoto}">
-								<ContentControl.ContentTemplate>
-									<DataTemplate x:DataType="vm:FinishPhotoViewModel">
-										<StackPanel Spacing="2" Margin="0,0,10,0">
-											<!-- Presets -->
-											<TextBlock Classes="sectionTitle" Text="{DynamicResource LblPresets}" Margin="0,0,0,4"/>
-											<WrapPanel>
-												<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="faded" Content="{DynamicResource PresetFaded}"/>
-												<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="bw" Content="{DynamicResource PresetBlackAndWhite}"/>
-												<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="sepia" Content="{DynamicResource PresetSepia}"/>
-												<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="dust" Content="{DynamicResource PresetOnlyDust}"/>
-												<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="none" Content="{DynamicResource PresetNone}"/>
-											</WrapPanel>
-
-											<!-- Automatic restoration -->
-											<TextBlock Classes="sectionTitle" Text="{DynamicResource LblAutomatic}"/>
-											<Grid ColumnDefinitions="Auto, *, Auto">
-												<CheckBox Grid.Column="0" IsChecked="{Binding RestoreColors}" Content="{DynamicResource LblAutoRestore}"/>
-												<ComboBox Grid.Column="2" SelectedIndex="{Binding StrengthIndex}" IsEnabled="{Binding RestoreColors}" MinWidth="130">
-													<ComboBoxItem Content="{DynamicResource StrengthGentle}"/>
-													<ComboBoxItem Content="{DynamicResource StrengthNormal}"/>
-													<ComboBoxItem Content="{DynamicResource StrengthStrong}"/>
-												</ComboBox>
-											</Grid>
-											<WrapPanel Margin="24,0,0,0" IsEnabled="{Binding RestoreColors}">
-												<CheckBox Margin="0,0,14,0" IsChecked="{Binding AutoWhiteBalance}" Content="{DynamicResource LblAutoWhiteBalance}"/>
-												<CheckBox Margin="0,0,14,0" IsChecked="{Binding AutoContrast}" Content="{DynamicResource LblAutoContrast}"/>
-												<CheckBox IsChecked="{Binding AutoSaturation}" Content="{DynamicResource LblAutoSaturation}"/>
-											</WrapPanel>
-
-											<!-- Photo type -->
-											<Grid ColumnDefinitions="Auto, *, Auto" Margin="0,8,0,0">
-												<TextBlock Grid.Column="0" Text="{DynamicResource LblPhotoType}" VerticalAlignment="Center"/>
-												<ComboBox Grid.Column="2" SelectedIndex="{Binding ColorModeIndex}" MinWidth="230">
-													<ComboBoxItem Content="{DynamicResource ColorModeAuto}"/>
-													<ComboBoxItem Content="{DynamicResource ColorModeColor}"/>
-													<ComboBoxItem Content="{DynamicResource ColorModeKeepTone}"/>
-													<ComboBoxItem Content="{DynamicResource ColorModeNeutral}"/>
-												</ComboBox>
-											</Grid>
-
-											<CheckBox Margin="0,6,0,0" IsChecked="{Binding RemoveDust}" Content="{DynamicResource LblRemoveDust}"/>
-
-											<!-- Manual adjustments -->
-											<Grid ColumnDefinitions="*, Auto">
-												<TextBlock Grid.Column="0" Classes="sectionTitle" Text="{DynamicResource LblAdjustments}"/>
-												<Button Grid.Column="1" Classes="preset" VerticalAlignment="Bottom" Command="{Binding ResetAdjustmentsCommand}" Content="{DynamicResource BtnResetAdjustments}"/>
-											</Grid>
-											<Grid ColumnDefinitions="110, *, 40" RowDefinitions="Auto, Auto, Auto, Auto, Auto">
-												<TextBlock Grid.Row="0" Text="{DynamicResource LblBrightness}" VerticalAlignment="Center"/>
-												<Slider Grid.Row="0" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Brightness}" IsSnapToTickEnabled="True" TickFrequency="1"/>
-												<TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Brightness, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
-
-												<TextBlock Grid.Row="1" Text="{DynamicResource LblContrast}" VerticalAlignment="Center"/>
-												<Slider Grid.Row="1" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Contrast}" IsSnapToTickEnabled="True" TickFrequency="1"/>
-												<TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Contrast, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
-
-												<TextBlock Grid.Row="2" Text="{DynamicResource LblWarmth}" VerticalAlignment="Center"/>
-												<Slider Grid.Row="2" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Warmth}" IsSnapToTickEnabled="True" TickFrequency="1"/>
-												<TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Warmth, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
-
-												<TextBlock Grid.Row="3" Text="{DynamicResource LblTint}" VerticalAlignment="Center"/>
-												<Slider Grid.Row="3" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Tint}" IsSnapToTickEnabled="True" TickFrequency="1"/>
-												<TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Tint, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
-
-												<TextBlock Grid.Row="4" Text="{DynamicResource LblSaturation}" VerticalAlignment="Center"/>
-												<Slider Grid.Row="4" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Saturation}" IsSnapToTickEnabled="True" TickFrequency="1"/>
-												<TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding Saturation, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
-											</Grid>
+					<!-- Sidebar: repair brush and the photo's settings; every change updates the photo -->
+					<Border Grid.Row="1" Grid.Column="2" Padding="12,10,4,10" CornerRadius="6"
+							Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+						<ScrollViewer>
+							<StackPanel Margin="0,0,8,0">
+								<!-- Repair brush -->
+								<StackPanel Spacing="8" Margin="0,0,0,14">
+									<ToggleButton IsChecked="{Binding IsRepairMode}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+												  Padding="10,6" CornerRadius="5" ToolTip.Tip="{DynamicResource TipRepairBrush}"
+												  Content="{DynamicResource BtnRepairBrush}"/>
+									<StackPanel Spacing="8" IsVisible="{Binding IsRepairMode}">
+										<TextBlock Text="{DynamicResource LblRepairHint}" TextWrapping="Wrap" FontSize="11"
+												   Foreground="{DynamicResource AppTextMutedBrush}"/>
+										<Grid ColumnDefinitions="Auto, *">
+											<TextBlock Text="{DynamicResource LblBrushSize}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+											<Slider Grid.Column="1" Minimum="1" Maximum="50" Value="{Binding BrushSize}" VerticalAlignment="Center"/>
+										</Grid>
+										<WrapPanel Orientation="Horizontal">
+											<TextBlock Text="{DynamicResource LblFillMethod}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+											<RadioButton GroupName="FillMethod" IsChecked="{Binding !UseAiFill, Mode=OneWay}" Margin="0,0,8,0"
+														 Content="{DynamicResource OptQuickFill}" ToolTip.Tip="{DynamicResource TipQuickFill}"/>
+											<RadioButton GroupName="FillMethod" IsChecked="{Binding UseAiFill}" Margin="0,0,8,0"
+														 Content="{DynamicResource OptAiFill}" ToolTip.Tip="{DynamicResource TipAiFill}"/>
+										</WrapPanel>
+										<TextBlock Text="{DynamicResource LblAiLoading}" IsVisible="{Binding IsAiModelLoading}"
+												   FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}"/>
+										<Border IsVisible="{Binding ShowAiDownload}" Padding="10" CornerRadius="6"
+											Background="{DynamicResource AppSubtleCardBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+										<StackPanel Spacing="8">
+											<TextBlock Text="{DynamicResource MsgAiDownload}" TextWrapping="Wrap" FontSize="12"/>
+											<StackPanel Orientation="Horizontal" Spacing="8">
+												<Button Command="{Binding DownloadAiModelCommand}" IsVisible="{Binding !IsAiModelDownloading}" Padding="10,4"
+														Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}"
+														Content="{DynamicResource BtnDownloadAiModel}"/>
+												<ProgressBar IsVisible="{Binding IsAiModelDownloading}" Value="{Binding AiDownloadProgress}"
+															 Minimum="0" Maximum="100" Width="150" VerticalAlignment="Center" ShowProgressText="True"/>
+												<Button Command="{Binding CancelAiDownloadCommand}" IsVisible="{Binding IsAiModelDownloading}" Padding="10,4"
+														Content="{DynamicResource BtnCancelDownload}"/>
+											</StackPanel>
+											<TextBlock Text="{Binding AiDownloadError}" IsVisible="{Binding AiDownloadError, Converter={x:Static ObjectConverters.IsNotNull}}"
+													   TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource AppDangerTextBrush}"/>
 										</StackPanel>
-									</DataTemplate>
-								</ContentControl.ContentTemplate>
-							</ContentControl>
+									</Border>
+										<ContentControl Content="{Binding SelectedPhoto}">
+											<ContentControl.ContentTemplate>
+												<DataTemplate x:DataType="vm:FinishPhotoViewModel">
+													<WrapPanel Orientation="Horizontal">
+														<Button Classes="preset" Margin="0,0,6,0" Command="{Binding UndoRepairCommand}" IsEnabled="{Binding HasRepairs}" Content="{DynamicResource BtnUndoStroke}"/>
+														<Button Classes="preset" Margin="0,0,8,0" Command="{Binding ClearRepairsCommand}" IsEnabled="{Binding HasRepairs}" Content="{DynamicResource BtnClearRepairs}"/>
+														<TextBlock Text="{Binding RepairCount}" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+													</WrapPanel>
+												</DataTemplate>
+											</ContentControl.ContentTemplate>
+										</ContentControl>
+									</StackPanel>
+									<TextBlock Text="{DynamicResource MsgRepairsOutdated}" IsVisible="{Binding RepairsOutdated}" TextWrapping="Wrap"
+											   FontSize="11" Foreground="{DynamicResource AppDangerTextBrush}"/>
+								</StackPanel>
+
+									<ContentControl Content="{Binding SelectedPhoto}">
+										<ContentControl.ContentTemplate>
+											<DataTemplate x:DataType="vm:FinishPhotoViewModel">
+												<StackPanel Spacing="2" Margin="0,0,10,0">
+													<!-- Presets -->
+													<TextBlock Classes="sectionTitle" Text="{DynamicResource LblPresets}" Margin="0,0,0,4"/>
+													<WrapPanel>
+														<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="faded" Content="{DynamicResource PresetFaded}"/>
+														<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="bw" Content="{DynamicResource PresetBlackAndWhite}"/>
+														<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="sepia" Content="{DynamicResource PresetSepia}"/>
+														<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="dust" Content="{DynamicResource PresetOnlyDust}"/>
+														<Button Classes="preset" Margin="0,0,6,6" Command="{Binding ApplyPresetCommand}" CommandParameter="none" Content="{DynamicResource PresetNone}"/>
+													</WrapPanel>
+
+													<!-- Automatic restoration -->
+													<TextBlock Classes="sectionTitle" Text="{DynamicResource LblAutomatic}"/>
+													<Grid ColumnDefinitions="Auto, *, Auto">
+														<CheckBox Grid.Column="0" IsChecked="{Binding RestoreColors}" Content="{DynamicResource LblAutoRestore}"/>
+														<ComboBox Grid.Column="2" SelectedIndex="{Binding StrengthIndex}" IsEnabled="{Binding RestoreColors}" MinWidth="130">
+															<ComboBoxItem Content="{DynamicResource StrengthGentle}"/>
+															<ComboBoxItem Content="{DynamicResource StrengthNormal}"/>
+															<ComboBoxItem Content="{DynamicResource StrengthStrong}"/>
+														</ComboBox>
+													</Grid>
+													<WrapPanel Margin="24,0,0,0" IsEnabled="{Binding RestoreColors}">
+														<CheckBox Margin="0,0,14,0" IsChecked="{Binding AutoWhiteBalance}" Content="{DynamicResource LblAutoWhiteBalance}"/>
+														<CheckBox Margin="0,0,14,0" IsChecked="{Binding AutoContrast}" Content="{DynamicResource LblAutoContrast}"/>
+														<CheckBox IsChecked="{Binding AutoSaturation}" Content="{DynamicResource LblAutoSaturation}"/>
+													</WrapPanel>
+
+													<!-- Photo type -->
+													<Grid ColumnDefinitions="Auto, *, Auto" Margin="0,8,0,0">
+														<TextBlock Grid.Column="0" Text="{DynamicResource LblPhotoType}" VerticalAlignment="Center"/>
+														<ComboBox Grid.Column="2" SelectedIndex="{Binding ColorModeIndex}" MinWidth="230">
+															<ComboBoxItem Content="{DynamicResource ColorModeAuto}"/>
+															<ComboBoxItem Content="{DynamicResource ColorModeColor}"/>
+															<ComboBoxItem Content="{DynamicResource ColorModeKeepTone}"/>
+															<ComboBoxItem Content="{DynamicResource ColorModeNeutral}"/>
+														</ComboBox>
+													</Grid>
+
+													<CheckBox Margin="0,6,0,0" IsChecked="{Binding RemoveDust}" Content="{DynamicResource LblRemoveDust}"/>
+
+													<!-- Manual adjustments -->
+													<Grid ColumnDefinitions="*, Auto">
+														<TextBlock Grid.Column="0" Classes="sectionTitle" Text="{DynamicResource LblAdjustments}"/>
+														<Button Grid.Column="1" Classes="preset" VerticalAlignment="Bottom" Command="{Binding ResetAdjustmentsCommand}" Content="{DynamicResource BtnResetAdjustments}"/>
+													</Grid>
+													<Grid ColumnDefinitions="110, *, 40" RowDefinitions="Auto, Auto, Auto, Auto, Auto">
+														<TextBlock Grid.Row="0" Text="{DynamicResource LblBrightness}" VerticalAlignment="Center"/>
+														<Slider Grid.Row="0" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Brightness}" IsSnapToTickEnabled="True" TickFrequency="1"/>
+														<TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Brightness, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+
+														<TextBlock Grid.Row="1" Text="{DynamicResource LblContrast}" VerticalAlignment="Center"/>
+														<Slider Grid.Row="1" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Contrast}" IsSnapToTickEnabled="True" TickFrequency="1"/>
+														<TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Contrast, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+
+														<TextBlock Grid.Row="2" Text="{DynamicResource LblWarmth}" VerticalAlignment="Center"/>
+														<Slider Grid.Row="2" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Warmth}" IsSnapToTickEnabled="True" TickFrequency="1"/>
+														<TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Warmth, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+
+														<TextBlock Grid.Row="3" Text="{DynamicResource LblTint}" VerticalAlignment="Center"/>
+														<Slider Grid.Row="3" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Tint}" IsSnapToTickEnabled="True" TickFrequency="1"/>
+														<TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Tint, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+
+														<TextBlock Grid.Row="4" Text="{DynamicResource LblSaturation}" VerticalAlignment="Center"/>
+														<Slider Grid.Row="4" Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding Saturation}" IsSnapToTickEnabled="True" TickFrequency="1"/>
+														<TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding Saturation, StringFormat='{}{0:0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+													</Grid>
+												</StackPanel>
+											</DataTemplate>
+										</ContentControl.ContentTemplate>
+									</ContentControl>
+							</StackPanel>
 						</ScrollViewer>
-					</Grid>
-				</Border>
+					</Border>
+
+					<!-- Filmstrip: every photo, to switch quickly -->
+					<ListBox x:Name="lstFilmstrip" Grid.Row="2" Grid.ColumnSpan="3" Margin="0,8,0,0" ItemsSource="{Binding Photos}"
+							 SelectedItem="{Binding SelectedPhoto}" Background="Transparent"
+							 ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+						<ListBox.ItemsPanel>
+							<ItemsPanelTemplate>
+								<StackPanel Orientation="Horizontal"/>
+							</ItemsPanelTemplate>
+						</ListBox.ItemsPanel>
+						<ListBox.ItemTemplate>
+							<DataTemplate x:DataType="vm:FinishPhotoViewModel">
+								<Image Source="{Binding Thumbnail}" Height="72" MaxWidth="110" Stretch="Uniform" ToolTip.Tip="{Binding Title}"/>
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+					</ListBox>
+				</Grid>
 			</Grid>
 		</Grid>
 	</Border>

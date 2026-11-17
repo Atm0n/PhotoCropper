@@ -98,7 +98,6 @@
 	<sys:String x:Key="LblBefore">Antes</sys:String>
 	<sys:String x:Key="LblAfter">Después (tal como se exportará)</sys:String>
 	<sys:String x:Key="LblUpdatingPreview">actualizando…</sys:String>
-	<sys:String x:Key="TipClosePreview">Cerrar vista previa</sys:String>
 	<sys:String x:Key="BtnCopySettingsToAll">Copiar ajustes a todas</sys:String>
 	<sys:String x:Key="TipCopySettingsToAll">Aplicar a todas las fotos los ajustes de restauración de la foto seleccionada</sys:String>
 	<sys:String x:Key="LblAutoRestore">Restauración automática</sys:String>
@@ -143,6 +142,12 @@
 	<sys:String x:Key="MsgAiDownload">El relleno con IA necesita descargar una sola vez el modelo LaMa (208 MB). Se ejecuta en este ordenador: tus fotos nunca se suben.</sys:String>
 	<sys:String x:Key="BtnDownloadAiModel">Descargar (208 MB)</sys:String>
 	<sys:String x:Key="BtnCancelDownload">Cancelar</sys:String>
+	<sys:String x:Key="BtnBackToGrid">◀ Todas las fotos</sys:String>
+	<sys:String x:Key="TipBackToGrid">Volver a todas las fotos (Esc)</sys:String>
+	<sys:String x:Key="TipPreviousPhoto">Foto anterior (←)</sys:String>
+	<sys:String x:Key="TipNextPhoto">Foto siguiente (→)</sys:String>
+	<sys:String x:Key="BtnZoomFit">Ajustar</sys:String>
+	<sys:String x:Key="TipViewerControls">Rueda del ratón: zoom · arrastrar: mover la foto · arrastrar el divisor: comparar antes y después · mantener Espacio: ver el original · F: ajustar · B: pincel de reparación</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">Todos los {0} escaneos ya están guardados en 'Cropped'. No hay cambios por exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocesando escaneo con nuevos ajustes...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detectando fotos...</sys:String>

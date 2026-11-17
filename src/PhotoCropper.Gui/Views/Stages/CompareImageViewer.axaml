@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 x:Class="PhotoCropper.Gui.Views.Stages.CompareImageViewer">
+	<!-- A zoomable, pannable image with a before/after split. All interaction is in the code-behind. -->
+	<Grid x:Name="pnlViewport" Background="Transparent" ClipToBounds="True" Focusable="True"
+		  PointerPressed="Viewport_PointerPressed" PointerMoved="Viewport_PointerMoved"
+		  PointerReleased="Viewport_PointerReleased" PointerExited="Viewport_PointerExited"
+		  PointerWheelChanged="Viewport_PointerWheelChanged" PointerCaptureLost="Viewport_PointerCaptureLost">
+		<!-- The photo, at its pixel size, moved and scaled by a render transform -->
+		<Canvas>
+			<Panel x:Name="pnlContent" RenderTransformOrigin="0,0">
+				<Image x:Name="imgAfter" Stretch="Fill"/>
+				<Image x:Name="imgBefore" Stretch="Fill"/>
+				<Canvas x:Name="cnvStrokes" IsHitTestVisible="False">
+					<Ellipse x:Name="ellBrushCursor" Stroke="White" IsVisible="False" Opacity="0.9"/>
+				</Canvas>
+			</Panel>
+		</Canvas>
+
+		<!-- Split divider, drawn in screen space so it stays thin at any zoom -->
+		<Canvas IsHitTestVisible="False">
+			<Rectangle x:Name="rectDivider" Width="2" Fill="White" Opacity="0.95" IsVisible="False"/>
+			<Border x:Name="bdrDividerHandle" Width="30" Height="30" CornerRadius="15" Background="White" IsVisible="False"
+					BoxShadow="0 1 4 0 #60000000">
+				<TextBlock Text="◀▶" FontSize="10" Foreground="#333" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+			</Border>
+		</Canvas>
+
+		<Border x:Name="bdrBeforeLabel" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Padding="8,3"
+				CornerRadius="4" Background="#99000000" IsHitTestVisible="False" IsVisible="False">
+			<TextBlock Text="{DynamicResource LblBefore}" Foreground="White" FontSize="11"/>
+		</Border>
+		<Border x:Name="bdrAfterLabel" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Padding="8,3"
+				CornerRadius="4" Background="#99000000" IsHitTestVisible="False" IsVisible="False">
+			<TextBlock Text="{DynamicResource LblAfter}" Foreground="White" FontSize="11"/>
+		</Border>
+	</Grid>
+</UserControl>
