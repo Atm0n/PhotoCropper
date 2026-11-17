@@ -99,9 +99,11 @@ internal sealed partial class MainWindow
                                 settings.CustomOutputDirectory,
                                 settings.WorkDirectory);
 
-                            var scanMetadata = settings.ApplyYearToAllScans
-                                ? new PhotoExportMetadata { Year = settings.DefaultYear, Description = settings.DefaultDescription }
-                                : session.Metadata;
+                            var scanMetadata = ExportMetadataResolver.Resolve(
+                                session.Metadata,
+                                settings.ApplyYearToAllScans,
+                                settings.DefaultYear,
+                                settings.DefaultDescription);
 
                             engine.SaveDetectedPhotos(
                                 scanTargetFolder,
@@ -179,11 +181,15 @@ internal sealed partial class MainWindow
 
             }, ct);
 
+            // Format the completion message only now that the export has finished; building it as an
+            // argument to ExecuteWithLoadingAsync would capture totalSavedPhotos while it is still 0.
+            lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgSaved, "Successfully saved {0} photos to 'cropped' folders.", totalSavedPhotos);
+
             if (totalSavedPhotos > 0)
             {
                 _notificationService.NotifyExportCompleted(totalSavedPhotos, targetOutputFolder);
             }
-        }, LocalizationService.Format(ResourceKeys.MsgSaved, "Successfully saved {0} photos to 'cropped' folders.", totalSavedPhotos));
+        });
 
         if (closeAfterSave)
         {
@@ -208,9 +214,11 @@ internal sealed partial class MainWindow
         string defaultExt = string.Equals(settings.PreferredFormat, AppConstants.FormatPng, StringComparison.OrdinalIgnoreCase) ? AppConstants.ExtensionPng : AppConstants.ExtensionJpg;
         string baseName = Path.GetFileNameWithoutExtension(ScanSessions[CurrentIndex].FilePath);
 
-        var scanMetadata = settings.ApplyYearToAllScans
-            ? new PhotoExportMetadata { Year = settings.DefaultYear, Description = settings.DefaultDescription }
-            : ScanSessions[CurrentIndex].Metadata;
+        var scanMetadata = ExportMetadataResolver.Resolve(
+            ScanSessions[CurrentIndex].Metadata,
+            settings.ApplyYearToAllScans,
+            settings.DefaultYear,
+            settings.DefaultDescription);
 
         string suggestedName = FileNameTemplateHelper.FormatFileName(
             settings.FileNamePattern,
