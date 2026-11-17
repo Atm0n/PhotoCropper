@@ -295,7 +295,7 @@ public class PhotoCropperEngine : IDisposable
         IReadOnlyList<CropCandidate> candidates,
         Mat? padded = null,
         int pad = 0,
-        IReadOnlyList<int?>? knownOrientations = null)
+        List<int?>? knownOrientations = null)
     {
         Mat?[] results = new Mat[candidates.Count];
         Mat?[] rawResults = new Mat[candidates.Count];

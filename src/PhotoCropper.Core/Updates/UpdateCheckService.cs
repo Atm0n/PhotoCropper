@@ -26,7 +26,7 @@ public static class UpdateCheckService
         }
 
         string trimmed = tag.Trim();
-        if (trimmed.StartsWith('v') || trimmed.StartsWith('V'))
+        if (trimmed is ['v' or 'V', ..])
         {
             trimmed = trimmed[1..];
         }

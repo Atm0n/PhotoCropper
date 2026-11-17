@@ -39,7 +39,7 @@ public record DetectionOptions
 
     public MCvScalar GetBoundingBoxColorBgr()
     {
-        if (!string.IsNullOrWhiteSpace(BoundingBoxColor) && BoundingBoxColor.StartsWith('#'))
+        if (!string.IsNullOrWhiteSpace(BoundingBoxColor) && BoundingBoxColor is ['#', ..])
         {
             string hex = BoundingBoxColor.TrimStart('#');
             if (hex.Length == 6 &&

@@ -159,7 +159,7 @@ internal sealed partial class MainWindow
 
             menu.Items.Add(new Separator());
 
-            bool isCustomSelected = !string.IsNullOrWhiteSpace(currentColor) && currentColor.StartsWith('#');
+            bool isCustomSelected = !string.IsNullOrWhiteSpace(currentColor) && currentColor is ['#', ..];
             Color customColor = isCustomSelected && Color.TryParse(currentColor, out var parsedCustom)
                 ? parsedCustom
                 : Color.Parse("#00D4FF");
@@ -254,7 +254,7 @@ internal sealed partial class MainWindow
         if (rectCrop == null) return;
 
         Color stroke;
-        if (!string.IsNullOrWhiteSpace(colorName) && colorName.StartsWith('#') && Color.TryParse(colorName, out var parsed))
+        if (!string.IsNullOrWhiteSpace(colorName) && colorName is ['#', ..] && Color.TryParse(colorName, out var parsed))
         {
             stroke = parsed;
         }

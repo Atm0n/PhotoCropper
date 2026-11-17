@@ -1,13 +1,12 @@
 ﻿<Project>
   <PropertyGroup>
     <Version>2.9.0</Version>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest-All</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <EnablePreviewFeatures>true</EnablePreviewFeatures>
-    <NoWarn>$(NoWarn);CA2007;CA1305;CA1707;CA1031;NETSDK1206;CA2252;NU1701</NoWarn>
+    <NoWarn>$(NoWarn);CA2007;CA1305;CA1707;CA1031;NETSDK1206;NU1701</NoWarn>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
   </PropertyGroup>
 

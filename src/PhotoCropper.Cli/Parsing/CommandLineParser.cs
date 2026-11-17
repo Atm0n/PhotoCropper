@@ -177,7 +177,7 @@ internal static class CommandLineParser
             {
                 options.Inputs.Add(args[++i]);
             }
-            else if (!arg.StartsWith('-'))
+            else if (arg is not ['-', ..])
             {
                 options.Inputs.Add(arg);
             }

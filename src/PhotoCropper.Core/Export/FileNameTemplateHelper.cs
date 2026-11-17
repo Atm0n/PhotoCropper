@@ -45,7 +45,7 @@ public static partial class FileNameTemplateHelper
         string effectiveTemplate = string.IsNullOrWhiteSpace(template) ? DefaultPattern : template.Trim();
 
         // Ensure extension starts with dot
-        string cleanExt = extension.StartsWith('.') ? extension : $".{extension}";
+        string cleanExt = extension is ['.', ..] ? extension : $".{extension}";
 
         string result = effectiveTemplate;
 
@@ -90,11 +90,11 @@ public static partial class FileNameTemplateHelper
         // Clean up duplicate separators and leading/trailing separators if year/date was empty
         result = DuplicateSeparatorRegex().Replace(result, "$1");
         result = result.Trim();
-        if (result.StartsWith('_') || result.StartsWith('-'))
+        if (result is ['_' or '-', ..])
         {
             result = result.TrimStart('_', '-');
         }
-        if (result.EndsWith('_') || result.EndsWith('-'))
+        if (result is [.., '_' or '-'])
         {
             result = result.TrimEnd('_', '-');
         }
