@@ -17,6 +17,15 @@ internal static class BatchProcessor
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(scanFiles);
 
+        if (options.Stage == PipelineStage.Crop)
+        {
+            // The crop stage produces what a project keeps in Cropped/: geometry fixes only, saved losslessly so
+            // the restore stage doesn't recompress a JPEG.
+            options.RestoreColors = false;
+            options.RemoveDust = false;
+            options.Format = AppConstants.FormatPng;
+        }
+
         PrintHeader(options, scanFiles.Count);
 
         var detectionOptions = CreateDetectionOptions(options);
@@ -379,6 +388,10 @@ internal static class BatchProcessor
         grid.AddColumn(new GridColumn());
 
         grid.AddRow("[bold cyan]Scans Found:[/]", $"[bold white]{scanCount}[/]");
+        if (options.Stage == PipelineStage.Crop)
+        {
+            grid.AddRow("[bold cyan]Stage:[/]", "[bold yellow]Crop only[/] (lossless PNG, no restoration)");
+        }
         grid.AddRow("[bold cyan]Output Format:[/]", $"[bold white]{options.Format}[/] (Quality: {options.JpegQuality})");
         grid.AddRow("[bold cyan]Detection:[/]", $"Tolerance: [bold white]{options.Tolerance}[/], MinSize: [bold white]{options.MinAreaFactor * 100:0}%[/], MaxSize: [bold white]{options.MaxAreaFactor * 100:0}%[/]");
         grid.AddRow("[bold cyan]Auto-Tune:[/]", options.AlwaysAutoTune ? "[bold green]Always[/]" : options.AutoTune ? "[bold yellow]On Mismatch[/]" : options.AutoAdjustLowCoverage ? $"[bold yellow]Low-Coverage Trigger (< {options.MinCoverageThresholdPercent:0}%)[/]" : "[grey]Disabled[/]");
