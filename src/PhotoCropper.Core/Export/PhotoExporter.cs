@@ -197,8 +197,16 @@ public static class PhotoExporter
         return written;
     }
 
-    private static byte[] EncodePhoto(Mat photo, string format, int jpegQuality, PhotoCropper.Core.Models.PhotoExportMetadata? metadata, int xDpi, int yDpi)
+    /// <summary>
+    /// Encodes a photo exactly as exports write it: PNG or JPEG, with EXIF/text metadata (when present) and
+    /// the source scan's DPI. Shared by batch and single-photo export so both produce identical files.
+    /// </summary>
+    /// <param name="format">"PNG" for PNG; anything else produces JPEG.</param>
+    public static byte[] EncodePhoto(Mat photo, string format, int jpegQuality, PhotoCropper.Core.Models.PhotoExportMetadata? metadata, int xDpi, int yDpi)
     {
+        ArgumentNullException.ThrowIfNull(photo);
+        ArgumentNullException.ThrowIfNull(format);
+
         bool isPng = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase);
         using Emgu.CV.Util.VectorOfByte buf = new();
         if (isPng)

@@ -344,35 +344,14 @@ internal sealed partial class MainWindow
             string targetPath = fileResult.Path.LocalPath;
             try
             {
-                var photoMat = engine.DetectedPhotos[photoIndex];
                 var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(ScanSessions[CurrentIndex].FilePath);
 
-                if (targetPath.EndsWith(AppConstants.ExtensionPng, StringComparison.OrdinalIgnoreCase))
-                {
-                    using var buf = new Emgu.CV.Util.VectorOfByte();
-                    Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionPng, photoMat, buf);
-                    await File.WriteAllBytesAsync(targetPath, buf.ToArray(), cancellationToken);
-                    PhotoExporter.EmbedPngDpi(targetPath, xDpi, yDpi);
-                    if (scanMetadata.HasMetadata)
-                    {
-                        PhotoExporter.EmbedPngMetadata(targetPath, scanMetadata);
-                    }
-                }
-                else
-                {
-                    var parameters = new[] {
-                        new KeyValuePair<ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegQuality, settings.JpegQuality),
-                        new KeyValuePair<Emgu.CV.CvEnum.ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegOptimize, 1)
-                    };
-                    using var buf = new VectorOfByte();
-                    Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionJpg, photoMat, buf, parameters);
-                    await File.WriteAllBytesAsync(targetPath, buf.ToArray(), cancellationToken);
-                    PhotoExporter.EmbedJpegDpi(targetPath, xDpi, yDpi);
-                    if (scanMetadata.HasMetadata)
-                    {
-                        PhotoExporter.EmbedJpegMetadata(targetPath, scanMetadata);
-                    }
-                }
+                // The format follows the extension chosen in the save dialog; encoding is shared with batch export.
+                string format = targetPath.EndsWith(AppConstants.ExtensionPng, StringComparison.OrdinalIgnoreCase)
+                    ? AppConstants.FormatPng
+                    : AppConstants.FormatJpeg;
+                byte[] fileBytes = PhotoExporter.EncodePhoto(engine.DetectedPhotos[photoIndex], format, settings.JpegQuality, scanMetadata, xDpi, yDpi);
+                await File.WriteAllBytesAsync(targetPath, fileBytes, cancellationToken);
 
                 string exportMsg = $"Exported photo to {Path.GetFileName(targetPath)}";
                 lblStatus.Text = exportMsg;
