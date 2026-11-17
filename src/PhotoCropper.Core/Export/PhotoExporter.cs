@@ -124,19 +124,19 @@ public static class PhotoExporter
 
         string baseFileName = Path.GetFileNameWithoutExtension(originalFilePath);
 
-        if (cleanOldExports)
-        {
-            CleanOldExports(outputFolder, baseFileName);
-        }
-
-        string extension = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
-        var (xDpi, yDpi) = GetDpiFromSource(originalFilePath);
-
         int totalValidPhotos = 0;
         for (int p = 0; p < photos.Count; p++)
         {
             if (!photos[p].IsEmpty) totalValidPhotos++;
         }
+
+        if (cleanOldExports)
+        {
+            CleanOldExports(outputFolder, originalFilePath, fileNamePattern, metadata, totalValidPhotos);
+        }
+
+        string extension = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
+        var (xDpi, yDpi) = GetDpiFromSource(originalFilePath);
 
         int saveCounter = 1;
         for (int i = 0; i < photos.Count; i++)
@@ -189,26 +189,96 @@ public static class PhotoExporter
 
     public static void ClearClaimedExportPaths() => ClaimedExportPaths.Clear();
 
-    private static void CleanOldExports(string outputFolder, string baseFileName)
-    {
-        try
-        {
-            var files = Directory.GetFiles(outputFolder, $"{baseFileName}_*.*")
-                .Concat(Directory.GetFiles(outputFolder, $"*_{baseFileName}_*.*"))
-                .Distinct();
+    private static readonly string[] ExportExtensions = [".jpg", ".png"];
 
-            foreach (var f in files)
+    /// <summary>Upper bound on photo indices probed when looking for previous exports.</summary>
+    private const int MaxProbedExportIndex = 10_000;
+
+    private static void CleanOldExports(string outputFolder, string originalFilePath, string fileNamePattern, PhotoCropper.Core.Models.PhotoExportMetadata? metadata, int totalPhotos)
+    {
+        string sourceFullPath = Path.GetFullPath(originalFilePath);
+        foreach (string file in FindPreviousExports(outputFolder, Path.GetFileNameWithoutExtension(originalFilePath), fileNamePattern, metadata, totalPhotos))
+        {
+            // A pattern like "{original}" exporting next to the scan generates the scan's own name.
+            if (string.Equals(Path.GetFullPath(file), sourceFullPath, StringComparison.OrdinalIgnoreCase)) continue;
+
+            try
             {
-                string ext = Path.GetExtension(f).ToUpperInvariant();
-                if (ext == ".JPG" || ext == ".JPEG" || ext == ".PNG")
-                {
-                    File.Delete(f);
-                }
+                File.Delete(file);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Failed to remove previous export '{file}': {ex.Message}");
             }
         }
-        catch (Exception ex)
+    }
+
+    /// <summary>
+    /// Finds files from an earlier export of this scan that a re-export should replace.
+    /// </summary>
+    /// <remarks>
+    /// Only files whose names are exactly what <paramref name="fileNamePattern"/> produces for this scan
+    /// (index 1, 2, … in .jpg or .png, plus the " (n)" variants <see cref="ResolveUniqueExportPath"/> adds on
+    /// collisions) are returned, so unrelated files that merely share a prefix are never touched. Indices
+    /// beyond <paramref name="totalPhotos"/> are included while they keep existing, to remove photos the user
+    /// has since deleted. Patterns without {original}/{filename} return nothing: their names don't identify the
+    /// scan, so they could belong to another scan exported into the same folder.
+    /// Exports made with a different pattern or metadata aren't found; those are left in place.
+    /// </remarks>
+    internal static IReadOnlyList<string> FindPreviousExports(
+        string outputFolder,
+        string baseFileName,
+        string fileNamePattern,
+        PhotoCropper.Core.Models.PhotoExportMetadata? metadata,
+        int totalPhotos)
+    {
+        ArgumentNullException.ThrowIfNull(outputFolder);
+        ArgumentNullException.ThrowIfNull(baseFileName);
+
+        var found = new List<string>();
+        if (!PatternIdentifiesScan(fileNamePattern) || !Directory.Exists(outputFolder)) return found;
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int index = 1; index <= MaxProbedExportIndex; index++)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to clean old exports for {baseFileName}: {ex.Message}");
+            bool foundForIndex = false;
+            foreach (string ext in ExportExtensions)
+            {
+                string name = FileNameTemplateHelper.FormatFileName(fileNamePattern, baseFileName, index, totalPhotos, metadata, ext);
+                string path = Path.Combine(outputFolder, name);
+                if (!seen.Add(path)) continue;
+
+                foreach (string existing in ExistingWithDuplicateSuffixes(path))
+                {
+                    found.Add(existing);
+                    foundForIndex = true;
+                }
+            }
+
+            if (index >= totalPhotos && !foundForIndex) break;
+        }
+
+        return found;
+    }
+
+    private static bool PatternIdentifiesScan(string? fileNamePattern) =>
+        string.IsNullOrWhiteSpace(fileNamePattern) ||
+        fileNamePattern.Contains("{original}", StringComparison.OrdinalIgnoreCase) ||
+        fileNamePattern.Contains("{filename}", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Yields <paramref name="path"/> and its "name (1).ext", "name (2).ext", … siblings while they exist.</summary>
+    private static IEnumerable<string> ExistingWithDuplicateSuffixes(string path)
+    {
+        if (File.Exists(path)) yield return path;
+
+        string dir = Path.GetDirectoryName(path) ?? string.Empty;
+        string nameWithoutExt = Path.GetFileNameWithoutExtension(path);
+        string ext = Path.GetExtension(path);
+        for (int n = 1; n <= AppConstants.MaxExportPathRetries; n++)
+        {
+            string candidate = Path.Combine(dir, $"{nameWithoutExt} ({n}){ext}");
+            if (!File.Exists(candidate)) yield break;
+            yield return candidate;
         }
     }
 
