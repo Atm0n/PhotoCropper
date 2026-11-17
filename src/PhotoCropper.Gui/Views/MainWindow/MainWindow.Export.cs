@@ -3,6 +3,7 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Util;
+using PhotoCropper.Core;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
@@ -118,63 +119,68 @@ internal sealed partial class MainWindow
                                 settings.DefaultYear,
                                 settings.DefaultDescription);
 
-                            IReadOnlyList<ExportedFile> exportedFiles;
-                            try
-                            {
-                                exportedFiles = engine.SaveDetectedPhotos(
-                                    scanTargetFolder,
-                                    settings.PreferredFormat,
-                                    settings.JpegQuality,
-                                    settings.FileNamePattern,
-                                    scanMetadata,
-                                    progressCallback: null,
-                                    cleanOldExports: true,
-                                    previousExports: session.ExportedFiles,
-                                    matchPreviousExportsByName: !ambiguousScanNames.Contains(session.FilePath));
-                            }
-                            catch (PartialExportException partial)
-                            {
-                                // Record the files that did get written so the next export replaces them
-                                // instead of leaving orphans, then report the scan as failed.
-                                RecordExportedFiles(session, workspaceLookup, partial.WrittenFiles);
-                                throw;
-                            }
-                            RecordExportedFiles(session, workspaceLookup, exportedFiles);
+                            // Each session maps to exactly one WorkspaceScanEntry — resolved via the
+                            // pre-built dict so no concurrent list traversal occurs inside the parallel body.
+                            WorkspaceScanEntry? entry = null;
+                            workspaceLookup?.TryGetValue(Path.GetFileName(session.FilePath), out entry);
+                            var crops = BuildCropData(engine);
 
-                            int savedCount = engine.DetectedPhotos.Count;
+                            IReadOnlyList<ExportedFile> exportedFiles;
+                            if (entry != null && _workspaceSession != null && !string.IsNullOrEmpty(settings.WorkDirectory))
+                            {
+                                // Project: RawScans → Cropped/{id}.png → Final/ (or the custom output folder).
+                                exportedFiles = ExportScanThroughPipeline(
+                                    settings.WorkDirectory, _workspaceSession, entry, engine, crops, session,
+                                    new FinalRenderOptions
+                                    {
+                                        Format = settings.PreferredFormat,
+                                        JpegQuality = settings.JpegQuality,
+                                        FileNamePattern = settings.FileNamePattern,
+                                        DefaultMetadata = scanMetadata,
+                                        OutputDirectory = string.IsNullOrWhiteSpace(settings.CustomOutputDirectory) ? null : settings.CustomOutputDirectory
+                                    });
+                                RecordExportedFiles(session, workspaceLookup, exportedFiles);
+                            }
+                            else
+                            {
+                                // No project: export the finished photos directly, as before.
+                                try
+                                {
+                                    exportedFiles = engine.SaveDetectedPhotos(
+                                        scanTargetFolder,
+                                        settings.PreferredFormat,
+                                        settings.JpegQuality,
+                                        settings.FileNamePattern,
+                                        scanMetadata,
+                                        progressCallback: null,
+                                        cleanOldExports: true,
+                                        previousExports: session.ExportedFiles,
+                                        matchPreviousExportsByName: !ambiguousScanNames.Contains(session.FilePath));
+                                }
+                                catch (PartialExportException partial)
+                                {
+                                    // Record the files that did get written so the next export replaces them
+                                    // instead of leaving orphans, then report the scan as failed.
+                                    RecordExportedFiles(session, workspaceLookup, partial.WrittenFiles);
+                                    throw;
+                                }
+                                RecordExportedFiles(session, workspaceLookup, exportedFiles);
+                            }
+
+                            int savedCount = exportedFiles.Count;
                             Interlocked.Add(ref totalSavedPhotos, savedCount);
 
                             session.IsSaved = true;
                             session.IsModified = false;
 
-                            // Each session maps to exactly one WorkspaceScanEntry — resolved via the
-                            // pre-built dict so no concurrent list traversal occurs inside the parallel body.
-                            if (workspaceLookup != null)
+                            if (entry != null)
                             {
-                                string sessionFileName = Path.GetFileName(session.FilePath);
-                                if (workspaceLookup.TryGetValue(sessionFileName, out var entry))
-                                {
-                                    entry.IsProcessed = true;
-                                    entry.ExtractedPhotoCount = savedCount;
-                                    entry.Metadata = scanMetadata;
+                                entry.IsProcessed = true;
+                                entry.ExtractedPhotoCount = savedCount;
+                                entry.Metadata = scanMetadata;
 
-                                    entry.FinalCrops.Clear();
-                                    for (int cIdx = 0; cIdx < engine.AcceptedCandidates.Count; cIdx++)
-                                    {
-                                        var cand = engine.AcceptedCandidates[cIdx];
-                                        int rot = engine.PhotoRotations.TryGetValue(cIdx, out int r) ? r : 0;
-                                        entry.FinalCrops.Add(new WorkspaceCropData
-                                        {
-                                            CenterX = cand.Rotated.Center.X,
-                                            CenterY = cand.Rotated.Center.Y,
-                                            Width = cand.Rotated.Size.Width,
-                                            Height = cand.Rotated.Size.Height,
-                                            Angle = cand.Rotated.Angle,
-                                            RotationDegrees = rot,
-                                            AutoRotationDegrees = cand.OrientationDegrees
-                                        });
-                                    }
-                                }
+                                entry.FinalCrops.Clear();
+                                foreach (var crop in crops) entry.FinalCrops.Add(crop);
                             }
                         }
                         finally
@@ -258,6 +264,87 @@ internal sealed partial class MainWindow
     /// Builds a bullet list of failed scans for the error dialog, capped so a large batch of
     /// failures (e.g. an unwritable output folder) doesn't overflow the dialog.
     /// </summary>
+    /// <summary>The engine's boxes, with each photo's manual and auto rotation, as saved in session.json.</summary>
+    private static List<WorkspaceCropData> BuildCropData(PhotoCropperEngine engine)
+    {
+        var crops = new List<WorkspaceCropData>(engine.AcceptedCandidates.Count);
+        for (int i = 0; i < engine.AcceptedCandidates.Count; i++)
+        {
+            var cand = engine.AcceptedCandidates[i];
+            crops.Add(new WorkspaceCropData
+            {
+                CenterX = cand.Rotated.Center.X,
+                CenterY = cand.Rotated.Center.Y,
+                Width = cand.Rotated.Size.Width,
+                Height = cand.Rotated.Size.Height,
+                Angle = cand.Rotated.Angle,
+                RotationDegrees = engine.PhotoRotations.TryGetValue(i, out int r) ? r : 0,
+                AutoRotationDegrees = cand.OrientationDegrees
+            });
+        }
+        return crops;
+    }
+
+    /// <summary>
+    /// Exports a project scan through the folder pipeline: its geometry-only photos (the hold-to-compare copies)
+    /// go to Cropped/{id}.png, then each is restored with the scan's settings and written as a final photo.
+    /// </summary>
+    /// <returns>The final files written.</returns>
+    private static List<ExportedFile> ExportScanThroughPipeline(
+        string workDirectory,
+        WorkspaceSessionState workspace,
+        WorkspaceScanEntry entry,
+        PhotoCropperEngine engine,
+        List<WorkspaceCropData> crops,
+        ScanSessionItem session,
+        FinalRenderOptions options)
+    {
+        int count = Math.Min(Math.Min(engine.RawDetectedPhotos.Count, engine.DetectedPhotos.Count), crops.Count);
+        var inputs = new List<CroppedPhotoInput>(count);
+        for (int i = 0; i < count; i++)
+        {
+            inputs.Add(new CroppedPhotoInput(engine.RawDetectedPhotos[i], crops[i]));
+        }
+
+        // Restoration is still a per-scan setting in this screen, so it applies to all of the scan's photos.
+        var restoration = new RestorationSettings
+        {
+            RestoreColors = engine.RestoreVintageColors,
+            RemoveDust = engine.RemoveDustAndScratches
+        };
+
+        var photos = PhotoPipelineService.SaveCroppedPhotos(workDirectory, workspace, entry, inputs, restoration);
+
+        // Exports made before the pipeline (moved to Final/ by the migration) would otherwise stay next to
+        // the new ones. Remove the ones this scan recorded, if still unchanged.
+        foreach (var legacy in session.ExportedFiles.Where(f => f.IsUnchangedOnDisk()))
+        {
+            bool isPipelineFile = photos.Any(p => p.Final != null &&
+                string.Equals(p.Final.GetFullPath(workDirectory), Path.GetFullPath(legacy.Path), StringComparison.OrdinalIgnoreCase));
+            if (!isPipelineFile)
+            {
+                try
+                {
+                    File.Delete(legacy.Path);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Trace.TraceWarning($"[PhotoCropper] Could not remove previous export '{legacy.Path}': {ex.Message}");
+                }
+            }
+        }
+
+        // Re-render every photo: the export settings (pattern, format, metadata) may have changed too.
+        var written = new List<ExportedFile>(photos.Count);
+        foreach (var photo in photos)
+        {
+            photo.Restoration = restoration;
+            PhotoPipelineService.RenderFinal(workDirectory, workspace, photo, options);
+            written.Add(ExportedFile.FromDisk(photo.Final!.GetFullPath(workDirectory)));
+        }
+        return written;
+    }
+
     /// <summary>Stores the files an export wrote on the scan session and its workspace entry (persisted in session.json).</summary>
     private static void RecordExportedFiles(
         ScanSessionItem session,
