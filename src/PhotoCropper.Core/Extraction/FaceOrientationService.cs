@@ -125,11 +125,42 @@ public static class FaceOrientationService
     }
 
     /// <summary>
-    /// One detector per thread, reused across rotations and photos. Creating a FaceDetectorYN parses the ONNX
-    /// model, which previously happened four times per photo. Detectors aren't thread-safe, so they are not
-    /// shared between threads; the extraction pipeline runs photos in parallel.
+    /// Idle detectors, reused across photos. Creating a FaceDetectorYN parses the ONNX model, which previously
+    /// happened four times per photo. A detector isn't thread-safe, so each one is rented by a single call at a
+    /// time; parallel extraction rents several.
     /// </summary>
-    private static readonly ThreadLocal<FaceDetectorYN?> ThreadDetector = new(CreateDetector);
+    private static readonly System.Collections.Concurrent.ConcurrentBag<FaceDetectorYN> IdleDetectors = [];
+
+    /// <summary>At most this many idle detectors are kept; extras are disposed when returned.</summary>
+    internal static int MaxIdleDetectors { get; } = Math.Max(1, Environment.ProcessorCount);
+
+    internal static int IdleDetectorCount => IdleDetectors.Count;
+
+    private static FaceDetectorYN? RentDetector() =>
+        IdleDetectors.TryTake(out var detector) ? detector : CreateDetector();
+
+    private static void ReturnDetector(FaceDetectorYN detector)
+    {
+        // The count check and Add aren't atomic, so the pool may briefly exceed the cap by a few under
+        // contention; it stays bounded by the number of concurrent callers.
+        if (IdleDetectors.Count < MaxIdleDetectors)
+        {
+            IdleDetectors.Add(detector);
+        }
+        else
+        {
+            detector.Dispose();
+        }
+    }
+
+    /// <summary>Frees all idle detectors (their native model memory). Detectors in use are freed when returned.</summary>
+    public static void ReleaseCachedDetectors()
+    {
+        while (IdleDetectors.TryTake(out var detector))
+        {
+            detector.Dispose();
+        }
+    }
 
     private static FaceDetectorYN? CreateDetector()
     {
@@ -182,24 +213,34 @@ public static class FaceOrientationService
         }
 
         // Test the 4 cardinal rotations to find the orientation where faces are upright
-        int[] rotations = [0, 90, 180, 270];
-        int bestRot = -1;
-        float bestScore = scoreThreshold;
+        var detector = RentDetector();
+        if (detector == null) return -1;
 
-        foreach (int rot in rotations)
+        try
         {
-            float score = ScoreRotation(bgrSmall, rot, scoreThreshold);
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestRot = rot;
-            }
-        }
+            int[] rotations = [0, 90, 180, 270];
+            int bestRot = -1;
+            float bestScore = scoreThreshold;
 
-        return bestRot;
+            foreach (int rot in rotations)
+            {
+                float score = ScoreRotation(detector, bgrSmall, rot, scoreThreshold);
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestRot = rot;
+                }
+            }
+
+            return bestRot;
+        }
+        finally
+        {
+            ReturnDetector(detector);
+        }
     }
 
-    private static float ScoreRotation(Mat bgrSmall, int rot, float scoreThreshold)
+    private static float ScoreRotation(FaceDetectorYN detector, Mat bgrSmall, int rot, float scoreThreshold)
     {
         using Mat candidate = new();
         if (rot == 0)
@@ -217,9 +258,6 @@ public static class FaceOrientationService
             };
             CvInvoke.Rotate(bgrSmall, candidate, flag);
         }
-
-        var detector = ThreadDetector.Value;
-        if (detector == null) return 0f;
 
         try
         {
