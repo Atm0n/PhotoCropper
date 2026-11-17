@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Emgu.CV;
 using Emgu.CV.Structure;
+using PhotoCropper.Core;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Gui.Services;
@@ -27,7 +28,41 @@ internal sealed partial class MainWindow
 
     // Pre-drag snapshots used to record a ResizeCandidateAction when the drag ends.
     private Mat? _dragBeforeMat;
+    private Mat? _dragBeforeRaw;
     private IReadOnlyList<CropCandidate>? _dragBeforeCandidates;
+
+    private void CaptureDragSnapshot(PhotoCropperEngine photo, int index)
+    {
+        ClearDragSnapshot();
+        _dragBeforeMat = index < photo.DetectedPhotos.Count ? photo.DetectedPhotos[index].Clone() : null;
+        _dragBeforeRaw = index < photo.RawDetectedPhotos.Count ? photo.RawDetectedPhotos[index].Clone() : null;
+        _dragBeforeCandidates = [.. photo.AcceptedCandidates];
+    }
+
+    private void ClearDragSnapshot()
+    {
+        _dragBeforeMat?.Dispose();
+        _dragBeforeMat = null;
+        _dragBeforeRaw?.Dispose();
+        _dragBeforeRaw = null;
+        _dragBeforeCandidates = null;
+    }
+
+    private void PushDragUndo(PhotoCropperEngine photo, int index, string description)
+    {
+        if (_dragBeforeMat != null && _dragBeforeCandidates != null && index < photo.DetectedPhotos.Count)
+        {
+            undoHistory.PushResizeCandidate(
+                CurrentIndex, index,
+                _dragBeforeMat, photo.DetectedPhotos[index],
+                _dragBeforeCandidates, photo.AcceptedCandidates,
+                description,
+                _dragBeforeRaw,
+                index < photo.RawDetectedPhotos.Count ? photo.RawDetectedPhotos[index] : null);
+        }
+
+        ClearDragSnapshot();
+    }
 
     private void ScrollOriginal_SizeChanged(object? sender, SizeChangedEventArgs e) => UpdateCropCanvasSize();
 
@@ -144,8 +179,7 @@ internal sealed partial class MainWindow
                     initialMouseAngle = Math.Atan2(pt.Y - cand.Rotated.Center.Y, pt.X - cand.Rotated.Center.X) * 180.0 / Math.PI;
                     initialRotatedAngle = cand.Rotated.Angle;
                     // Snapshot the state before the drag so we can record an undo action on release.
-                    _dragBeforeMat = i < photo.DetectedPhotos.Count ? photo.DetectedPhotos[i].Clone() : null;
-                    _dragBeforeCandidates = [.. photo.AcceptedCandidates];
+                    CaptureDragSnapshot(photo, i);
                     e.Handled = true;
                     return;
                 }
@@ -159,8 +193,7 @@ internal sealed partial class MainWindow
                         dragCandIndex = i;
                         dragVertexIndex = j;
                         // Snapshot the state before the drag so we can record an undo action on release.
-                        _dragBeforeMat = i < photo.DetectedPhotos.Count ? photo.DetectedPhotos[i].Clone() : null;
-                        _dragBeforeCandidates = [.. photo.AcceptedCandidates];
+                        CaptureDragSnapshot(photo, i);
                         e.Handled = true;
                         return;
                     }
@@ -280,19 +313,7 @@ internal sealed partial class MainWindow
             var photo = ScanSessions[CurrentIndex].Activate();
             photo.ApplyGrabHandleResize(dragCandIndex);
             ScanSessions[CurrentIndex].IsModified = true;
-
-            if (_dragBeforeMat != null && _dragBeforeCandidates != null)
-            {
-                undoHistory.PushResizeCandidate(
-                    CurrentIndex, dragCandIndex,
-                    _dragBeforeMat, photo.DetectedPhotos[dragCandIndex],
-                    _dragBeforeCandidates, photo.AcceptedCandidates,
-                    "Rotate Crop Box");
-            }
-
-            _dragBeforeMat?.Dispose();
-            _dragBeforeMat = null;
-            _dragBeforeCandidates = null;
+            PushDragUndo(photo, dragCandIndex, "Rotate Crop Box");
 
             SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
@@ -335,9 +356,7 @@ internal sealed partial class MainWindow
                     LoadCroppedPhotosToSlider();
                     UpdatePhotoCounterLabel();
                     UpdateDetectionCoverageLabel();
-                    _dragBeforeMat?.Dispose();
-                    _dragBeforeMat = null;
-                    _dragBeforeCandidates = null;
+                    ClearDragSnapshot();
                     dragCandIndex = -1;
                     return;
                 }
@@ -345,19 +364,7 @@ internal sealed partial class MainWindow
 
             photo.ApplyGrabHandleResize(dragCandIndex);
             ScanSessions[CurrentIndex].IsModified = true;
-
-            if (_dragBeforeMat != null && _dragBeforeCandidates != null)
-            {
-                undoHistory.PushResizeCandidate(
-                    CurrentIndex, dragCandIndex,
-                    _dragBeforeMat, photo.DetectedPhotos[dragCandIndex],
-                    _dragBeforeCandidates, photo.AcceptedCandidates,
-                    "Resize Crop Box");
-            }
-
-            _dragBeforeMat?.Dispose();
-            _dragBeforeMat = null;
-            _dragBeforeCandidates = null;
+            PushDragUndo(photo, dragCandIndex, "Resize Crop Box");
 
             SetMainImage(photo.OriginalWithDetected);
             LoadCroppedPhotosToSlider();
@@ -564,13 +571,18 @@ internal sealed partial class MainWindow
 
         var currentEngine = ScanSessions[CurrentIndex].Activate();
         var beforeMat = currentEngine.DetectedPhotos[photoIndex].Clone();
+        var beforeRaw = photoIndex < currentEngine.RawDetectedPhotos.Count ? currentEngine.RawDetectedPhotos[photoIndex].Clone() : null;
 
         await ExecuteWithLoadingAsync(applyingMsg, async ct =>
         {
             ScanSessions[CurrentIndex].IsModified = true;
             await Task.Run(() => currentEngine.ApplyCropToPhoto(photoIndex, currentRefineRect), ct);
-            undoHistory.PushReplace(CurrentIndex, photoIndex, beforeMat, currentEngine.DetectedPhotos[photoIndex]);
+            undoHistory.PushReplace(
+                CurrentIndex, photoIndex, beforeMat, currentEngine.DetectedPhotos[photoIndex],
+                previousRaw: beforeRaw,
+                newRaw: photoIndex < currentEngine.RawDetectedPhotos.Count ? currentEngine.RawDetectedPhotos[photoIndex] : null);
             beforeMat.Dispose();
+            beforeRaw?.Dispose();
             CloseRefineMode();
             LoadCroppedPhotosToSlider();
             slides.SelectedIndex = photoIndex;

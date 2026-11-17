@@ -303,6 +303,10 @@ internal sealed partial class MainWindow
         {
             engine.RotatePhotoCounterClockwise(item.PhotoIndex);
             _reviewSessionRotations++;
+            if (item.ScanIndex == CurrentIndex)
+            {
+                undoHistory.PushRotate(CurrentIndex, item.PhotoIndex, clockwise: false);
+            }
             await LoadReviewPhotoAtCurrentIndexAsync();
         }
     }

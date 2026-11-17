@@ -281,7 +281,7 @@ internal sealed partial class MainWindow
             var actions = new List<IUndoableAction>();
             foreach (var idx in validIndices)
             {
-                actions.Add(new RotatePhotoAction(CurrentIndex, idx));
+                actions.Add(new RotatePhotoAction(CurrentIndex, idx, clockwise));
             }
             undoHistory.PushBatch(CurrentIndex, actions, desc);
 

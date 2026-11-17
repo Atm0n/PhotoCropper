@@ -163,6 +163,10 @@ public class PhotoCropperEngine : IDisposable
         foreach (var raw in RawDetectedPhotos) raw.Dispose();
         RawDetectedPhotos.Clear();
 
+        // Rotations are keyed by photo index, so they belong to the photos being discarded here.
+        // Keeping them would apply stale user rotations to newly detected photos.
+        PhotoRotations.Clear();
+
         OriginalWithDetected?.Dispose();
         OriginalWithDetected = Original.Clone();
     }
@@ -211,33 +215,71 @@ public class PhotoCropperEngine : IDisposable
             candidates.Add(new CropCandidate { Rotated = rr, Area = crop.Width * crop.Height, ShapePoints = [], Rect = new Rectangle(0, 0, (int)crop.Width, (int)crop.Height) });
         }
 
-        AcceptedCandidates = candidates;
-
+        // Saved crops whose extraction comes back empty are dropped, so map each kept photo back to
+        // the saved crop it came from rather than assuming photo i == saved crop i.
+        var keptIndices = ExtractAndProcessCandidates(candidates);
+        AcceptedCandidates = [.. keptIndices.Select(i => candidates[i])];
         DrawBoundingBoxes(AcceptedCandidates);
 
-        ExtractAndProcessCandidates(candidates);
-
-        int cropIdx = 0;
-        foreach (var crop in savedList)
+        for (int photoIdx = 0; photoIdx < keptIndices.Count; photoIdx++)
         {
-            if (cropIdx < DetectedPhotos.Count && crop.RotationDegrees > 0)
+            int rotationDegrees = ((savedList[keptIndices[photoIdx]].RotationDegrees % 360) + 360) % 360;
+            for (int r = 0; r < rotationDegrees / 90; r++)
             {
-                int rotCount = (crop.RotationDegrees % 360) / 90;
-                for (int r = 0; r < rotCount; r++)
-                {
-                    RotatePhoto(cropIdx);
-                }
+                RotatePhoto(photoIdx);
             }
-            cropIdx++;
         }
     }
 
 
-    private void ExtractAndProcessCandidates(System.Collections.Generic.IReadOnlyList<PhotoCropper.Core.Models.CropCandidate> candidates, Mat? padded = null, int pad = 0)
+    /// <summary>
+    /// Extracts every candidate in parallel and appends the non-empty results to
+    /// <see cref="DetectedPhotos"/> / <see cref="RawDetectedPhotos"/>.
+    /// </summary>
+    /// <returns>
+    /// The indices (into <paramref name="candidates"/>) of the candidates that produced a photo, in order.
+    /// Callers must use this to keep <see cref="AcceptedCandidates"/> aligned with <see cref="DetectedPhotos"/>.
+    /// </returns>
+    private List<int> ExtractAndProcessCandidates(IReadOnlyList<CropCandidate> candidates, Mat? padded = null, int pad = 0)
     {
         Mat?[] results = new Mat[candidates.Count];
         Mat?[] rawResults = new Mat[candidates.Count];
 
+        try
+        {
+            ExtractCandidatesInParallel(candidates, padded, pad, results, rawResults);
+        }
+        catch
+        {
+            // One failing extraction aborts the loop; free whatever the other workers produced.
+            foreach (var mat in results) mat?.Dispose();
+            foreach (var raw in rawResults) raw?.Dispose();
+            throw;
+        }
+
+        var keptIndices = new List<int>(candidates.Count);
+        for (int i = 0; i < results.Length; i++)
+        {
+            var mat = results[i];
+            var raw = rawResults[i];
+            if (mat != null && !mat.IsEmpty && raw != null && !raw.IsEmpty)
+            {
+                DetectedPhotos.Add(mat);
+                RawDetectedPhotos.Add(raw);
+                keptIndices.Add(i);
+            }
+            else
+            {
+                mat?.Dispose();
+                raw?.Dispose();
+            }
+        }
+
+        return keptIndices;
+    }
+
+    private void ExtractCandidatesInParallel(IReadOnlyList<CropCandidate> candidates, Mat? padded, int pad, Mat?[] results, Mat?[] rawResults)
+    {
         System.Threading.Tasks.Parallel.For(0, candidates.Count, i =>
         {
             Mat extracted = (padded != null && !padded.IsEmpty && pad > 0)
@@ -267,22 +309,6 @@ public class PhotoCropperEngine : IDisposable
             }
             results[i] = extracted;
         });
-
-        for (int i = 0; i < results.Length; i++)
-        {
-            var mat = results[i];
-            var raw = rawResults[i];
-            if (mat != null && !mat.IsEmpty && raw != null && !raw.IsEmpty)
-            {
-                DetectedPhotos.Add(mat);
-                RawDetectedPhotos.Add(raw);
-            }
-            else
-            {
-                mat?.Dispose();
-                raw?.Dispose();
-            }
-        }
     }
 
 
@@ -492,12 +518,13 @@ public class PhotoCropperEngine : IDisposable
 
         // Composite resolution and overlap filtering
         var acceptedCandidates = CandidateResolutionFilter.FilterCandidates(candidateDetections);
-        AcceptedCandidates = acceptedCandidates;
+
+        // Only keep candidates that produced a photo, so AcceptedCandidates[i] always matches DetectedPhotos[i].
+        var keptIndices = ExtractAndProcessCandidates(acceptedCandidates, padded, pad);
+        AcceptedCandidates = [.. keptIndices.Select(i => acceptedCandidates[i])];
 
         // Draw bounding boxes on OriginalWithDetected
-        DrawBoundingBoxes(acceptedCandidates);
-
-        ExtractAndProcessCandidates(acceptedCandidates, padded, pad);
+        DrawBoundingBoxes(AcceptedCandidates);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Mat is returned to caller")]
@@ -589,11 +616,19 @@ public class PhotoCropperEngine : IDisposable
 
     public void ApplyGrabHandleResize(int candIndex)
     {
+        if (candIndex < 0 || candIndex >= AcceptedCandidates.Count || candIndex >= DetectedPhotos.Count) return;
+
         var cand = AcceptedCandidates[candIndex];
 
         Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(cand.Rotated, Original);
+        if (extracted.IsEmpty)
+        {
+            // Box dragged too small to extract: keep the previous photo rather than storing an empty one.
+            extracted.Dispose();
+            return;
+        }
 
-        if (AutoOrientPhotos && !extracted.IsEmpty)
+        if (AutoOrientPhotos)
         {
             Mat oriented = AutoOrientationService.OrientPhoto(extracted);
             if (!ReferenceEquals(oriented, extracted))
@@ -603,7 +638,25 @@ public class PhotoCropperEngine : IDisposable
             }
         }
 
-        if (RestoreVintageColors && !extracted.IsEmpty)
+        // Re-apply the user's manual 90° rotations so resizing a box doesn't silently undo them.
+        int userRotation = PhotoRotations.TryGetValue(candIndex, out int rot) ? rot : 0;
+        if (userRotation != 0)
+        {
+            Mat rotated = new();
+            CvInvoke.Rotate(extracted, rotated, userRotation switch
+            {
+                90 => RotateFlags.Rotate90Clockwise,
+                180 => RotateFlags.Rotate180,
+                _ => RotateFlags.Rotate90CounterClockwise
+            });
+            extracted.Dispose();
+            extracted = rotated;
+        }
+
+        // The raw copy (used by hold-to-compare) must be taken before colour restoration.
+        Mat raw = extracted.Clone();
+
+        if (RestoreVintageColors)
         {
             Mat restored = PhotoRestorationService.RestoreColors(extracted, removeDust: RemoveDustAndScratches);
             if (!ReferenceEquals(restored, extracted))
@@ -619,11 +672,11 @@ public class PhotoCropperEngine : IDisposable
         if (candIndex < RawDetectedPhotos.Count)
         {
             RawDetectedPhotos[candIndex].Dispose();
-            RawDetectedPhotos[candIndex] = extracted.Clone();
+            RawDetectedPhotos[candIndex] = raw;
         }
         else
         {
-            RawDetectedPhotos.Add(extracted.Clone());
+            RawDetectedPhotos.Add(raw);
         }
 
         var vertices = cand.Rotated.GetVertices();
@@ -672,12 +725,9 @@ public class PhotoCropperEngine : IDisposable
             PhotoRotations[k] = v;
         }
 
-        if (AcceptedCandidates is List<CropCandidate> list && index < list.Count)
-        {
-            list.RemoveAt(index);
-            RedrawBoundingBoxes();
-        }
-        else if (AcceptedCandidates != null && index < AcceptedCandidates.Count)
+        // Always build a new list: AcceptedCandidates instances are handed out to callers (e.g. undo
+        // history snapshots), so mutating one in place would silently change their recorded state.
+        if (AcceptedCandidates != null && index < AcceptedCandidates.Count)
         {
             var newList = new List<CropCandidate>(AcceptedCandidates);
             newList.RemoveAt(index);
@@ -726,6 +776,15 @@ public class PhotoCropperEngine : IDisposable
     public void ApplyCropToPhoto(int index, Rectangle rect)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return;
+
+        // Crop the raw copy with the same rectangle so hold-to-compare keeps showing the same region.
+        // Both copies share dimensions (restoration never resizes), but guard in case they diverge.
+        if (index < RawDetectedPhotos.Count && RawDetectedPhotos[index].Size == DetectedPhotos[index].Size)
+        {
+            Mat rawCropped = EdgeRefinementService.ApplyCrop(RawDetectedPhotos[index], rect);
+            RawDetectedPhotos[index].Dispose();
+            RawDetectedPhotos[index] = rawCropped;
+        }
 
         Mat cropped = EdgeRefinementService.ApplyCrop(DetectedPhotos[index], rect);
         DetectedPhotos[index].Dispose();
