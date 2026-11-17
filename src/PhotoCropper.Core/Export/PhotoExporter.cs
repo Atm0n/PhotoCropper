@@ -158,36 +158,19 @@ public static class PhotoExporter
                 totalValidPhotos,
                 metadata,
                 extension);
+            byte[] fileBytes = EncodePhoto(photos[i], format, jpegQuality, metadata, xDpi, yDpi);
+
             string baseTargetFileName = Path.Combine(outputFolder, relativeFileName);
             string fileName = ResolveUniqueExportPath(baseTargetFileName);
-
-            if (string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                using Emgu.CV.Util.VectorOfByte buf = new();
-                CvInvoke.Imencode(".png", photos[i], buf);
-                byte[] fileBytes = buf.ToArray();
-                if (metadata?.HasMetadata == true)
-                {
-                    fileBytes = ExifMetadataWriter.InjectPngMetadata(fileBytes, metadata);
-                }
-                fileBytes = ApplyPngDpi(fileBytes, xDpi, yDpi);
                 WriteBytesToFile(fileName, fileBytes);
             }
-            else
+            finally
             {
-                KeyValuePair<ImwriteFlags, int>[] parameters = [
-                    new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegQuality, jpegQuality),
-                    new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegOptimize, 1)
-                ];
-                using Emgu.CV.Util.VectorOfByte buf = new();
-                CvInvoke.Imencode(".jpg", photos[i], buf, parameters);
-                byte[] fileBytes = buf.ToArray();
-                if (metadata?.HasMetadata == true)
-                {
-                    fileBytes = ExifMetadataWriter.InjectJpegMetadata(fileBytes, metadata);
-                }
-                fileBytes = ApplyJpegDpi(fileBytes, xDpi, yDpi);
-                WriteBytesToFile(fileName, fileBytes);
+                // Once the file exists on disk, File.Exists protects the name; the claim only has to cover
+                // the window between choosing the name and writing it.
+                ReleaseExportPath(fileName);
             }
 
             written.Add(ExportedFile.FromDisk(fileName));
@@ -197,8 +180,49 @@ public static class PhotoExporter
         return written;
     }
 
+    private static byte[] EncodePhoto(Mat photo, string format, int jpegQuality, PhotoCropper.Core.Models.PhotoExportMetadata? metadata, int xDpi, int yDpi)
+    {
+        bool isPng = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase);
+        using Emgu.CV.Util.VectorOfByte buf = new();
+        if (isPng)
+        {
+            CvInvoke.Imencode(".png", photo, buf);
+        }
+        else
+        {
+            KeyValuePair<ImwriteFlags, int>[] parameters = [
+                new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegQuality, jpegQuality),
+                new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegOptimize, 1)
+            ];
+            CvInvoke.Imencode(".jpg", photo, buf, parameters);
+        }
+
+        byte[] fileBytes = buf.ToArray();
+        if (metadata?.HasMetadata == true)
+        {
+            fileBytes = isPng
+                ? ExifMetadataWriter.InjectPngMetadata(fileBytes, metadata)
+                : ExifMetadataWriter.InjectJpegMetadata(fileBytes, metadata);
+        }
+
+        return isPng ? ApplyPngDpi(fileBytes, xDpi, yDpi) : ApplyJpegDpi(fileBytes, xDpi, yDpi);
+    }
+
+    /// <summary>
+    /// Paths handed out by <see cref="ResolveUniqueExportPath"/> whose files haven't been written yet, so two
+    /// concurrent exports can't pick the same new name. Entries are released once the file is written,
+    /// so this only ever holds in-flight exports.
+    /// </summary>
     private static readonly ConcurrentDictionary<string, byte> ClaimedExportPaths = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Releases a path claimed by <see cref="ResolveUniqueExportPath"/> once its file is written (or abandoned).</summary>
+    public static void ReleaseExportPath(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        ClaimedExportPaths.TryRemove(path, out _);
+    }
+
+    /// <summary>Drops all outstanding claims. Not needed in normal use; claims are released as files are written.</summary>
     public static void ClearClaimedExportPaths() => ClaimedExportPaths.Clear();
 
     private static readonly string[] ExportExtensions = [".jpg", ".png"];

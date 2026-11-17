@@ -72,8 +72,6 @@ internal sealed partial class MainWindow
         {
             await Task.Run(() =>
             {
-                PhotoExporter.ClearClaimedExportPaths();
-
                 // Build a filename-keyed lookup before entering the parallel loop so that
                 // each thread can resolve its own WorkspaceScanEntry without traversing
                 // _workspaceSession.Scans concurrently (which would be a data race).

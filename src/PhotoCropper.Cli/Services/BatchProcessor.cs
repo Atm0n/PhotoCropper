@@ -22,8 +22,6 @@ internal static class BatchProcessor
         var detectionOptions = CreateDetectionOptions(options);
         var metadata = CreateExportMetadata(options);
 
-        PhotoExporter.ClearClaimedExportPaths();
-
         int totalExtracted = 0;
         int errorCount = 0;
         var undetectedScans = new ConcurrentBag<string>();
