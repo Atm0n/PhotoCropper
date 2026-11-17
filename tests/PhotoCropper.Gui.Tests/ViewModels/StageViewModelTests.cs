@@ -137,6 +137,95 @@ public sealed class StageViewModelTests : IDisposable
         vm.Photos[0].RepairCount.ShouldBe(1);
     }
 
+    private FinishStageViewModel FinishWithAi(bool installed, Func<IProgress<double>, CancellationToken, Task>? download = null)
+    {
+        var vm = Finish();
+        vm.IsAiModelInstalled = installed;
+        vm.CheckAiModelInstalled = () => true;
+        vm.PreloadModel = () => { _preloads++; return Task.CompletedTask; };
+        vm.DownloadModel = download ?? ((_, _) => Task.CompletedTask);
+        return vm;
+    }
+
+    private int _preloads;
+
+    [Theory]
+    [InlineData(true, true, RepairMethod.Ai)]
+    [InlineData(false, true, RepairMethod.Quick)]
+    [InlineData(true, false, RepairMethod.Quick)] // AI chosen but not downloaded yet
+    public async Task FinishStage_NewStrokes_ShouldUseTheChosenFillMethod(bool useAi, bool installed, RepairMethod expected)
+    {
+        AddCroppedPhoto("scan_0001.png");
+        using var vm = FinishWithAi(installed);
+        vm.Refresh();
+        vm.SelectedPhoto = vm.Photos[0];
+        await vm.UpdatePreviewAsync();
+        vm.UseAiFill = useAi;
+
+        vm.AddRepairStroke([(0.5, 0.5)]);
+
+        vm.Photos[0].Photo.Repairs.Single().Method.ShouldBe(expected);
+        vm.ShowAiDownload.ShouldBe(useAi && !installed);
+    }
+
+    [Fact]
+    public void FinishStage_ChoosingAiFill_ShouldLoadTheModelInTheBackground()
+    {
+        using var vm = FinishWithAi(installed: true);
+
+        vm.UseAiFill = true;
+
+        _preloads.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task FinishStage_DownloadAiModel_ShouldInstallItAndHideTheOffer()
+    {
+        using var vm = FinishWithAi(installed: false);
+        vm.UseAiFill = true;
+        vm.ShowAiDownload.ShouldBeTrue();
+
+        await vm.DownloadAiModelCommand.ExecuteAsync(null);
+
+        vm.IsAiModelInstalled.ShouldBeTrue();
+        vm.ShowAiDownload.ShouldBeFalse();
+        vm.IsAiModelDownloading.ShouldBeFalse();
+        vm.AiDownloadError.ShouldBeNull();
+        _preloads.ShouldBe(1, "loaded right away, since AI fill is chosen");
+    }
+
+    [Fact]
+    public async Task FinishStage_FailedAiDownload_ShouldShowWhy()
+    {
+        using var vm = FinishWithAi(installed: false, download: (_, _) => throw new InvalidDataException("corrupted"));
+        vm.CheckAiModelInstalled = () => false;
+        vm.UseAiFill = true;
+
+        await vm.DownloadAiModelCommand.ExecuteAsync(null);
+
+        vm.AiDownloadError.ShouldBe("corrupted");
+        vm.ShowAiDownload.ShouldBeTrue("the offer stays so it can be retried");
+        vm.IsAiModelDownloading.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task FinishStage_CancelledAiDownload_ShouldNotBeAnError()
+    {
+        using var vm = FinishWithAi(installed: false, download: (_, token) => Task.Delay(Timeout.Infinite, token));
+        vm.CheckAiModelInstalled = () => false;
+        vm.UseAiFill = true;
+
+        Task download = vm.DownloadAiModelCommand.ExecuteAsync(null);
+        vm.IsAiModelDownloading.ShouldBeTrue();
+        vm.DownloadAiModelCommand.CanExecute(null).ShouldBeFalse("one download at a time");
+        vm.CancelAiDownloadCommand.Execute(null);
+        await download;
+
+        vm.AiDownloadError.ShouldBeNull();
+        vm.IsAiModelDownloading.ShouldBeFalse();
+        vm.IsAiModelInstalled.ShouldBeFalse();
+    }
+
     [Fact]
     public async Task FinishPhoto_UndoAndClearRepairs()
     {

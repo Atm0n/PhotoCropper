@@ -64,6 +64,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **Manual adjustments:** brightness, contrast, warmth, tint and saturation (-100 to 100).
   - **Before/after preview** of the selected photo, updated as settings change (rendered from the full photo when dust removal is on).
 - **Repair Brush (Finish stage):** Paint over scratches, creases, tears or stains on the large preview and they are filled in from their surroundings (Telea inpainting) with grain matched to the area around them, so repairs don't look smooth or blurred on grainy photos, before colour restoration. Strokes are stored per photo in `session.json` relative to the photo's size, so they apply identically to the preview and the full-size export, can be undone or cleared, and are never baked into `Cropped/`. Strokes painted on an earlier crop of a different size are kept but not applied.
+  - **AI fill (optional):** choose *Fill: AI* to have new strokes filled by [LaMa](https://github.com/advimman/lama), a large-mask inpainting network, which continues edges and structures (walls, sky, window frames, grass) instead of blending colours — best for large damage and torn corners; it invents detail, so it is not suited to faces or text. The 208 MB model is downloaded once on request from a pinned revision of [Carve/LaMa-ONNX](https://huggingface.co/Carve/LaMa-ONNX), verified against its SHA-256 checksum, stored in `%LocalAppData%/PhotoCropper/models` (`~/.local/share/PhotoCropper/models` on Linux), and run locally with ONNX Runtime — photos are never uploaded. Each damaged area is cut out with its surroundings, filled at 512×512, scaled back, and only the painted pixels are replaced (about 2 s per area on a CPU; results are cached so preview updates don't recompute them). Without the model (e.g. CLI on another machine), AI strokes fall back to the quick fill.
 - **Automated Dust, Hair & Scratch Inpainting** (independent of the colour settings):
   - **Dual Morphological Defect Detection:** Combines Black-Hat and Top-Hat filters with median pre-smoothing to isolate dark hair/fibers, dust specks, and bright white specks. The detection size scales with resolution (5 to 15 px).
   - **Edge-Aware Protection:** A candidate is only removed when it stands alone; specks with other edges running past them (eyes, contours, text) are left untouched.
@@ -313,6 +314,10 @@ dotnet publish src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -c Release -r linux-
 - **YuNet Face Detection Model (`face_detection_yunet_2023mar.onnx`)**:
   - Developed by Shiqi Yu & OpenCV Zoo contributors ([opencv/opencv_zoo](https://github.com/opencv/opencv_zoo)).
   - Licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+- **LaMa inpainting model (`lama_fp32.onnx`, optional download)**:
+  - "Resolution-robust Large Mask Inpainting with Fourier Convolutions" by Roman Suvorov et al., Samsung AI Center ([advimman/lama](https://github.com/advimman/lama)); ONNX export by Carve ([Carve/LaMa-ONNX](https://huggingface.co/Carve/LaMa-ONNX)).
+  - Licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+- **ONNX Runtime**: runs the LaMa model ([microsoft/onnxruntime](https://github.com/microsoft/onnxruntime), MIT License).
 - **Emgu.CV**: .NET cross-platform wrapper for OpenCV ([Emgu CV](https://www.emgu.com/)).
 - **Avalonia UI**: Cross-platform desktop XAML UI framework ([Avalonia UI](https://avaloniaui.net/)).
 - **NAPS2.Sdk**: Cross-platform scanning framework supporting TWAIN, WIA, SANE, and eSCL by Ben Olden-Cooligan ([NAPS2](https://www.naps2.com/sdk)).

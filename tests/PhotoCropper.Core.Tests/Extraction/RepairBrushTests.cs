@@ -55,19 +55,12 @@ public sealed class RepairBrushTests : IDisposable
         Math.Abs(MeanAt(photo, new Rectangle(40, 49, 120, 3)) - 128).ShouldBeGreaterThan(40, "the original is untouched");
     }
 
-    /// <summary>A photo with film-like grain and a long scratch.</summary>
+    /// <summary>A photo with film-like (Gaussian) grain and a long scratch.</summary>
     private static Mat GrainyScratchedPhoto(out Mat clean)
     {
+        // Gaussian noise centred on the photo's colours, std 14, well inside 0..255 so nothing is clipped.
         clean = new Mat(300, 400, DepthType.Cv8U, 3);
-        clean.SetTo(new MCvScalar(120, 130, 140));
-        using (var plus = new Mat(300, 400, DepthType.Cv8U, 3))
-        using (var minus = new Mat(300, 400, DepthType.Cv8U, 3))
-        {
-            CvInvoke.Randn(plus, new MCvScalar(0, 0, 0), new MCvScalar(14, 14, 14));
-            CvInvoke.Randn(minus, new MCvScalar(0, 0, 0), new MCvScalar(14, 14, 14));
-            CvInvoke.Add(clean, plus, clean);
-            CvInvoke.Subtract(clean, minus, clean);
-        }
+        CvInvoke.Randn(clean, new MCvScalar(120, 130, 140), new MCvScalar(14, 14, 14));
         var damaged = clean.Clone();
         CvInvoke.Line(damaged, new Point(40, 150), new Point(360, 150), new MCvScalar(20, 20, 20), 6);
         return damaged;

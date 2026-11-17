@@ -51,10 +51,27 @@ public sealed class ProjectFile
 /// Coordinates are fractions of the photo's width and height (0..1), so a stroke applies the same way to the
 /// preview and to the full-size photo.
 /// </summary>
+/// <summary>How a repair stroke is filled in.</summary>
+public enum RepairMethod
+{
+    /// <summary>Blends the surrounding colours inward and matches the grain. Instant; best for thin damage.</summary>
+    Quick = 0,
+
+    /// <summary>
+    /// AI inpainting (LaMa): generates new content that continues the surrounding structure. Best for large damage.
+    /// Needs the downloaded model; without it the stroke falls back to <see cref="Quick"/>.
+    /// </summary>
+    Ai = 1,
+}
+
 public sealed class RepairStroke
 {
     /// <summary>Brush radius as a fraction of the photo's width.</summary>
     public float Radius { get; init; }
+
+    /// <summary>How the painted area is filled in.</summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RepairMethod>))]
+    public RepairMethod Method { get; init; }
 
     /// <summary>The stroke's points as x0, y0, x1, y1, …, each a fraction of the photo's width or height.</summary>
     [System.Text.Json.Serialization.JsonObjectCreationHandling(System.Text.Json.Serialization.JsonObjectCreationHandling.Populate)]
@@ -222,6 +239,7 @@ public sealed class ProjectPhoto
             foreach (var stroke in Repairs)
             {
                 text.Append(System.Globalization.CultureInfo.InvariantCulture, $"{stroke.Radius:R}:");
+                if (stroke.Method != RepairMethod.Quick) text.Append(System.Globalization.CultureInfo.InvariantCulture, $"{stroke.Method}:");
                 foreach (float p in stroke.Points) text.Append(System.Globalization.CultureInfo.InvariantCulture, $"{p:R},");
                 text.Append('|');
             }

@@ -134,6 +134,15 @@
 	<sys:String x:Key="BtnClearRepairs">Borrar reparaciones</sys:String>
 	<sys:String x:Key="LblRepairHint">Pinta sobre los daños</sys:String>
 	<sys:String x:Key="MsgRepairsOutdated">Las reparaciones de esta foto se pintaron sobre un recorte anterior de otro tamaño, así que no se aplican. Al pintar un trazo nuevo se sustituyen; Borrar reparaciones las elimina.</sys:String>
+	<sys:String x:Key="LblFillMethod">Relleno:</sys:String>
+	<sys:String x:Key="OptQuickFill">Rápido</sys:String>
+	<sys:String x:Key="TipQuickFill">Mezcla el entorno en la zona pintada. Instantáneo; ideal para arañazos, pliegues y manchas pequeñas.</sys:String>
+	<sys:String x:Key="OptAiFill">IA</sys:String>
+	<sys:String x:Key="TipAiFill">Genera contenido nuevo que continúa el entorno (bordes, paredes, cielo, hierba). Unos segundos por zona; ideal para daños grandes y esquinas rotas. No sirve para caras ni texto: inventa detalles. Se ejecuta en este ordenador.</sys:String>
+	<sys:String x:Key="LblAiLoading">Cargando el modelo de IA…</sys:String>
+	<sys:String x:Key="MsgAiDownload">El relleno con IA necesita descargar una sola vez el modelo LaMa (208 MB). Se ejecuta en este ordenador: tus fotos nunca se suben.</sys:String>
+	<sys:String x:Key="BtnDownloadAiModel">Descargar (208 MB)</sys:String>
+	<sys:String x:Key="BtnCancelDownload">Cancelar</sys:String>
 	<sys:String x:Key="MsgAllScansAlreadySaved">Todos los {0} escaneos ya están guardados en 'Cropped'. No hay cambios por exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocesando escaneo con nuevos ajustes...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detectando fotos...</sys:String>
@@ -193,7 +202,7 @@
 	<sys:String x:Key="HelpAboutDescription">Extractor de fotos inteligente de alto rendimiento. Diseñado para digitalizar álbumes antiguos de forma rápida y precisa.</sys:String>
 	<sys:String x:Key="HelpAuthor">Desarrollado por Nil Riera</sys:String>
 	<sys:String x:Key="HelpPoweredBy">Impulsado por Emgu.CV (wrapper de OpenCV)</sys:String>
-	<sys:String x:Key="HelpModelLicense">Detección facial IA: YuNet por Shiqi Yu / OpenCV Zoo (Apache 2.0)</sys:String>
+	<sys:String x:Key="HelpModelLicense">Detección facial IA: YuNet por Shiqi Yu / OpenCV Zoo (Apache 2.0). Relleno con IA (descarga opcional): LaMa de Suvorov et al., Samsung AI (Apache 2.0), exportación ONNX de Carve; se ejecuta con ONNX Runtime (MIT).</sys:String>
 	<sys:String x:Key="HelpCopyright">© 2026 Nil Riera. Licencia GPLv3.</sys:String>
 	<sys:String x:Key="BtnReset">Restablecer valores</sys:String>
 	<sys:String x:Key="LblFormat">Formato de salida</sys:String>

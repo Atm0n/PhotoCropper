@@ -560,10 +560,6 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
     [RelayCommand]
     private void ClosePreview() => SelectedPhoto = null;
 
-    /// <summary>
-    /// Renders the selected photo before and after restoration (at preview size). Only the latest request is
-    /// shown: a request superseded by a newer selection or setting change is discarded.
-    /// </summary>
     // ---- Repair brush (painting happens in the view; finished strokes arrive here) ----
 
     /// <summary>Brush mode: the preview shows one large "After" image to paint repairs on.</summary>
@@ -593,7 +589,11 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         var row = SelectedPhoto;
         if (row == null || normalizedPoints.Count == 0 || _previewSourceSize.IsEmpty) return;
 
-        var stroke = new RepairStroke { Radius = BrushRadius };
+        var stroke = new RepairStroke
+        {
+            Radius = BrushRadius,
+            Method = UseAiFill && IsAiModelInstalled ? RepairMethod.Ai : RepairMethod.Quick,
+        };
         foreach (var (x, y) in normalizedPoints)
         {
             stroke.Points.Add((float)Math.Clamp(x, 0, 1));
@@ -604,6 +604,103 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     [RelayCommand]
     private void ToggleRepairMode() => IsRepairMode = !IsRepairMode;
+
+    // ---- AI fill (LaMa): optional model, downloaded once on request ----
+
+    private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromMinutes(30) };
+    private CancellationTokenSource? _downloadCts;
+
+    /// <summary>New strokes are filled by AI instead of the quick fill.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowAiDownload))]
+    public partial bool UseAiFill { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowAiDownload))]
+    public partial bool IsAiModelInstalled { get; set; } = Core.Extraction.AiInpainting.IsAvailable;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowAiDownload))]
+    [NotifyCanExecuteChangedFor(nameof(DownloadAiModelCommand))]
+    public partial bool IsAiModelDownloading { get; set; }
+
+    /// <summary>Download progress, 0 to 100.</summary>
+    [ObservableProperty]
+    public partial double AiDownloadProgress { get; set; }
+
+    /// <summary>Why the last download failed, or null.</summary>
+    [ObservableProperty]
+    public partial string? AiDownloadError { get; set; }
+
+    /// <summary>The model is being loaded into memory (takes several seconds, once per session).</summary>
+    [ObservableProperty]
+    public partial bool IsAiModelLoading { get; set; }
+
+    /// <summary>AI fill is chosen but the model isn't downloaded yet: offer the download.</summary>
+    public bool ShowAiDownload => UseAiFill && !IsAiModelInstalled;
+
+    /// <summary>Downloads and verifies the model (tests replace this).</summary>
+    internal Func<IProgress<double>, CancellationToken, Task> DownloadModel { get; set; } =
+        (progress, token) => Core.Extraction.AiModelStore.DownloadLamaAsync(SharedHttpClient, progress, token);
+
+    /// <summary>Whether the model is downloaded (tests replace this).</summary>
+    internal Func<bool> CheckAiModelInstalled { get; set; } = () => Core.Extraction.AiInpainting.IsAvailable;
+
+    /// <summary>Loads the model in the background (tests replace this).</summary>
+    internal Func<Task> PreloadModel { get; set; } = Core.Extraction.AiInpainting.PreloadAsync;
+
+    partial void OnUseAiFillChanged(bool value)
+    {
+        if (value && IsAiModelInstalled) _ = PreloadAsync();
+    }
+
+    private async Task PreloadAsync()
+    {
+        if (Core.Extraction.AiInpainting.IsLoaded) return;
+        IsAiModelLoading = true;
+        try
+        {
+            await PreloadModel();
+        }
+        finally
+        {
+            IsAiModelLoading = false;
+        }
+    }
+
+    private bool CanDownloadAiModel() => !IsAiModelDownloading;
+
+    [RelayCommand(CanExecute = nameof(CanDownloadAiModel))]
+    private async Task DownloadAiModelAsync()
+    {
+        _downloadCts?.Dispose();
+        _downloadCts = new CancellationTokenSource();
+        IsAiModelDownloading = true;
+        AiDownloadError = null;
+        AiDownloadProgress = 0;
+        try
+        {
+            // Progress<T> reports on the UI thread it was created on.
+            await DownloadModel(new Progress<double>(p => AiDownloadProgress = p * 100), _downloadCts.Token);
+            IsAiModelInstalled = CheckAiModelInstalled();
+            if (IsAiModelInstalled && UseAiFill) _ = PreloadAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            AiDownloadProgress = 0;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            AiDownloadError = ex.Message;
+        }
+        finally
+        {
+            IsAiModelDownloading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelAiDownload() => _downloadCts?.Cancel();
 
     /// <summary>
     /// Renders the selected photo before and after its repairs and restoration (at preview size). Only the latest
@@ -746,6 +843,9 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         _changeCts?.Cancel();
         _changeCts?.Dispose();
         _changeCts = null;
+        _downloadCts?.Cancel();
+        _downloadCts?.Dispose();
+        _downloadCts = null;
         _previewVersion++; // drop any preview still rendering
         SetPreview(null, null);
         foreach (var row in Photos) row.Thumbnail?.Dispose();
