@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Crash reports**: Unhandled errors are written to `%LocalAppData%/PhotoCropper/logs` (last 20 kept). Errors raised by UI actions show an error dialog with the report location and keep the app open so unsaved work can be saved.
+- **Export failure report**: Bulk export lists the scans that failed to export instead of only logging them.
+- Session crops now record each photo's auto-orientation (`AutoRotationDegrees`) and each scan's exported files (`ExportedFiles`) in `session.json`. Older sessions still load.
+
+### Changed
+- **Re-export cleanup** only removes files this scan previously exported: files recorded by its last export (if unchanged on disk and still in the output folder) and files named exactly as the current pattern produces. Unrelated files sharing the scan's name prefix are no longer deleted, the source scan is never deleted, and patterns without `{original}`/`{filename}` skip name-based cleanup.
+- **Crop refinement** now also moves the photo's box on the scan, so refinements are shown on the overlay and kept with the session.
+- **Manual crops** go through the same auto-orientation and colour restoration as detected photos.
+- **Box overlays** (lines, handles, badges) and their click areas scale with scan resolution instead of using fixed pixel sizes.
+- **Cancelling** an operation waits for it to stop (showing "Cancelling..."); a scan that ignores cancellation is abandoned after 5 seconds and its late result discarded.
+- Face detection reuses one detector per thread instead of loading the model four times per photo, and the model file is written atomically.
+- Build: warnings are treated as errors again; solution-wide preview features removed; `System.Drawing.Common` pinned to 11.0.0; unused `Avalonia.Diagnostics` removed.
+
+### Fixed
+- CI and release workflows installed the .NET 10 SDK while projects target .NET 11.
+- Bulk export kept every exported scan loaded in memory.
+- Export completion message always reported 0 saved photos.
+- "Apply year to all scans" dropped the photographer and exact date from exported metadata.
+- "Save & Exit" closed the app even when some scans failed to export.
+- Scanner errors ("scanner not found", timeouts) showed a generic error and skipped the scanner reset.
+- Re-detecting a scan kept stale manual rotations; dropped extractions misaligned photos and boxes; resizing a box lost its manual rotation; refinement and resize desynchronised the hold-to-compare copy.
+- Undo: counter-clockwise rotations undid in the wrong direction; undoing a rotation left the compare copy and saved rotation rotated; recorded box lists could change after being recorded.
+
 ## [2.9.0] - 2026-09-28
 
 ### Added

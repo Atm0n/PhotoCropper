@@ -66,7 +66,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **Canny Edge Protection Masking:** Subtracts dilated high-frequency structural edges so fine photo contours, eyes, and sharp boundaries are strictly preserved without smearing or blurring.
   - **Fast Marching Method Inpainting:** Uses `CvInvoke.Inpaint` (Alexandru Telea / FMM) within a localized 2.5px radius to invisibly blend away detected blemishes into surrounding textures.
 - **Hold-to-Compare (`Space` / `B`):** Instant zero-latency toggle between the pristine restored photo and the original unedited scan crop for effortless quality inspection.
-- **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm, automatically detecting and removing scanner glass/bed white borders.
+- **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm, automatically detecting and removing scanner glass/bed white borders. The refined area is mapped back onto the scan, so the box overlay follows it and it is kept with the session.
 - **Local ROI Perspective Warp:** Instead of rotating the entire giant scan, only the region of interest is extracted and warped with `Inter.Cubic` interpolation with transparent alpha margins.
 - **Subtle Deskew Regularization:** Snaps near-straight photos (within ±1.5° of right angles) to exact axis-aligned rectangles, avoiding resampling blur while maintaining exact dimensions.
 - **Intelligent Manual Crop Snapping:** Manually drawn selection boxes automatically snap to the nearest high-contrast photo boundary.
@@ -78,8 +78,8 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - Visual color indicator squares next to every option in the menu.
   - Dedicated **Custom Color...** modal dialog featuring a real-time photo simulation preview, 16 accessible quick swatches, RGB sliders, and direct hex input (`#RRGGBB`).
 - **Dual-View Inspection & Gallery Grid (`1` / `2`):** Instantly toggle between a focused single-photo carousel and an interactive thumbnail gallery overview displaying indices and pixel dimensions.
-- **Interactive Bounding Boxes:** Click a green box to instantly select it in the gallery. Click the top-right Red 'X' to delete bad detections. Drag corners to manually resize the crop area, and drag the bottom-right Blue circle to rotate the photo by hand.
-- **Safe Exit & Data Loss Prevention:** PhotoCropper detects unsaved photo edits or unexported scans on close, presenting a confirmation dialog with **Save & Exit**, **Discard & Exit**, or **Cancel** choices (closes silently when all work is saved).
+- **Interactive Bounding Boxes:** Click a box to instantly select it in the gallery. Click the top-right Red 'X' to delete bad detections. Drag corners to manually resize the crop area, and drag the Blue circle above the box to rotate the photo by hand. Box lines, handles and their click areas scale with the scan's resolution, so they look the same at 150 or 1200 DPI.
+- **Safe Exit & Data Loss Prevention:** PhotoCropper detects unsaved photo edits or unexported scans on close, presenting a confirmation dialog with **Save & Exit**, **Discard & Exit**, or **Cancel** choices (closes silently when all work is saved). If any scan fails to export, **Save & Exit** lists the failures and keeps the app open.
 - **Dedicated Multi-Window Dialog Architecture:** Replaced embedded overlay clutter with dedicated, modular Avalonia windows:
   - `HelpWindow`: Non-modal documentation and shortcut reference (<kbd>F1</kbd>) that can be placed side-by-side or on secondary monitors.
   - `ScannerConfigDialog`: Hardware device selection, DPI configuration, and network scanner discovery.
@@ -100,7 +100,8 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 
 ### 6. Project Work Directory & Automatic Crash Recovery
 - **Safe Raw Scan Auto-Staging (`RawScans/`):** When scanning or importing, images are immediately written to disk inside the project's `RawScans/` directory (`scan_0001.png`, `scan_0002.png`, etc.). Raw scans are never left stranded in volatile memory.
-- **Crash-Proof Session Persistence (`session.json`):** Tracks all scan files, individual detection settings, 90° rotations, and manual crops in real time. If the app is closed or interrupted by a system crash or power outage, launching the workspace prompts to resume the session instantly.
+- **Crash-Proof Session Persistence (`session.json`):** Tracks staged scan files as they are added, and records each scan's final crops (boxes, manual 90° rotations, auto-orientation, refinements) and exported files when it is exported. If the app is closed or interrupted by a system crash or power outage, launching the workspace prompts to resume the session. Crop edits made since a scan's last export are not yet saved.
+- **Crash Reports:** Unhandled errors are written to `%LocalAppData%/PhotoCropper/logs` (the last 20 are kept). Errors raised by UI actions show an error dialog pointing to the report and keep the app open so unsaved work can still be saved.
 - **Automatic Session Reconstruction:** Even if `session.json` is missing or accidentally removed, the workspace engine inspects the `RawScans/` directory on startup and reconstructs the session automatically.
 
 ### 7. File Naming Helper & Vintage EXIF Metadata
@@ -110,6 +111,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - `{year}` / `{date}`: Vintage year or date from metadata.
   - `{total}`: Total photo count detected in the scan.
 - **Dynamic Live Preview:** Real-time preview of the resulting filename as you type or pick presets.
+- **Safe Re-Export:** Re-exporting a scan replaces its previous exports instead of piling up duplicates. Only files that scan wrote are removed: those recorded by its last export (if unchanged and still in the output folder) and files named exactly as the current pattern produces. Unrelated files, and the source scan itself, are never deleted. Patterns without `{original}`/`{filename}` only use the recorded files, since their names can't be tied to one scan.
 - **EXIF Vintage Metadata Tagging:** Embeds standard EXIF `DateTimeOriginal`, `DateTimeDigitized`, and `UserComment` into exported JPEGs (APP1) and PNGs (`tEXt` chunks). Scanned vintage prints are automatically indexed chronologically by their capture decade in photo managers (Google Photos, Apple Photos, Immich, Lightroom) rather than the scanner ingestion date.
 
 ---
@@ -117,7 +119,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 ## Clean Code & Analysis Standards
 
 The codebase strictly enforces the highest standard of static analysis and memory hygiene:
-- **Warnings-as-Errors Policy:** Enforced solution-wide via `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<AnalysisLevel>latest-All</AnalysisLevel>` inside `Directory.Build.props`.
+- **Warnings-as-Errors Policy:** Enforced solution-wide via `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<AnalysisLevel>latest-All</AnalysisLevel>` inside `Directory.Build.props`. A few rules are suppressed there on purpose: `CA2007` (ConfigureAwait, not needed in a desktop app), `CA1305` (culture-specific formatting), `CA1707` (underscores in test names), `CA1031` (catching general exceptions at boundaries) and `NETSDK1206` (RID warnings from native packages).
 - **Zero-Warning Success:** Compiles with `0 Warnings` and `0 Errors` across both Debug and Release configurations.
 - **NuGet Compatibility (`NU1701`):** `Directory.Build.props` explicitly suppresses `NU1701` (`<NoWarn>$(NoWarn);...;NU1701</NoWarn>`). Emgu CV's Windows runtime package (`Emgu.CV.runtime.windows`) bundles MSVC C++ Redistributable sub-packages (`Emgu.runtime.windows.msvc.rt.*`) whose internal package metadata uses `.NETFramework` target tags. Suppressing `NU1701` allows NuGet to perform standard framework fallback on modern .NET without failing solution-wide `TreatWarningsAsErrors`.
 - **OpenCV & Avalonia Memory Safety (CA2000):** Implements explicit `using` statements, unmanaged resource trackers, proactive native `Bitmap` disposal, and bounded undo action queues to guarantee zero memory leaks.
