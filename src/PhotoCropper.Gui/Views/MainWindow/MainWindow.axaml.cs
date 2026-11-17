@@ -132,49 +132,25 @@ internal sealed partial class MainWindow : Window
             : new CancellationTokenSource();
         _activeOperationCts = cts;
 
-        Task? actionTask = null;
         bool abandoned = false;
 
         try
         {
-            actionTask = action(cts.Token);
-
-            var cancelTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            using (cts.Token.Register(() => cancelTcs.TrySetResult()))
+            // On cancel, keep the overlay up (showing "Cancelling...") until the operation actually stops,
+            // so a second operation can't start on top of it.
+            var outcome = await CancellableOperationRunner.RunAsync(action, cts, CancellationGracePeriod, () =>
             {
-                await Task.WhenAny(actionTask, cancelTcs.Task).ConfigureAwait(true);
-            }
-
-            if (!actionTask.IsCompleted)
-            {
-                // Cancellation was requested. Keep the overlay up (showing "Cancelling...") and wait for
-                // the operation to actually stop, so a second operation can't start on top of it.
                 txtLoadingText.Text = LocalizationService.GetString(ResourceKeys.TxtCancelling, "Cancelling...");
                 btnCancelLoading.IsEnabled = false;
-                try
-                {
-                    await actionTask.WaitAsync(CancellationGracePeriod).ConfigureAwait(true);
-                }
-                catch (TimeoutException)
-                {
-                    // Handled below: the operation is still running.
-                }
-                catch (Exception)
-                {
-                    // The operation stopped (by cancelling or failing); its outcome is rethrown below.
-                }
+            }).ConfigureAwait(true);
 
-                if (!actionTask.IsCompleted)
-                {
-                    // The operation ignores cancellation (e.g. a hung scanner driver). Release the UI and
-                    // let it finish in the background; callers must discard results from a cancelled token.
-                    abandoned = true;
-                    ObserveAbandonedOperation(actionTask, cts);
-                    throw new OperationCanceledException(cts.Token);
-                }
+            if (outcome == OperationOutcome.Abandoned)
+            {
+                // The operation ignores cancellation (e.g. a hung scanner driver) and was left running;
+                // the runner now owns the CTS. Callers must discard results from a cancelled token.
+                abandoned = true;
+                throw new OperationCanceledException(cts.Token);
             }
-
-            await actionTask.ConfigureAwait(true);
 
             if (completionText != null)
             {
@@ -206,18 +182,6 @@ internal sealed partial class MainWindow : Window
                 cts.Dispose();
             }
         }
-    }
-
-    private static void ObserveAbandonedOperation(Task actionTask, CancellationTokenSource cts)
-    {
-        _ = actionTask.ContinueWith(t =>
-        {
-            if (t.Exception != null)
-            {
-                System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Abandoned operation failed after cancellation: {t.Exception.GetBaseException().Message}");
-            }
-            cts.Dispose();
-        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 
     internal void ShowAppError(string title, string message)
