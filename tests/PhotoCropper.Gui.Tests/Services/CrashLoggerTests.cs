@@ -48,6 +48,34 @@ public sealed class CrashLoggerTests : IDisposable
     }
 
     [Fact]
+    public void WriteCrashLog_WhenAnOldReportCannotBeDeleted_ShouldStillReturnTheNewReportPath()
+    {
+        string locked = Path.Combine(_tempDir, "crash-locked.log");
+        File.WriteAllText(locked, "old");
+        File.SetLastWriteTimeUtc(locked, DateTime.UtcNow.AddDays(-60));
+        for (int i = 0; i < CrashLogger.MaxLogFiles; i++)
+        {
+            File.WriteAllText(Path.Combine(_tempDir, $"crash-recent-{i:D3}.log"), "recent");
+        }
+
+        // Read-only blocks deletion on Windows (UnauthorizedAccessException); held open blocks it elsewhere.
+        File.SetAttributes(locked, FileAttributes.ReadOnly);
+        try
+        {
+            using var hold = new FileStream(locked, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+            string? path = CrashLogger.WriteCrashLog(Thrown(), "test", _tempDir);
+
+            path.ShouldNotBeNull();
+            File.Exists(path).ShouldBeTrue();
+        }
+        finally
+        {
+            File.SetAttributes(locked, FileAttributes.Normal);
+        }
+    }
+
+    [Fact]
     public void WriteCrashLog_WhenDirectoryIsUnusable_ShouldReturnNullInsteadOfThrowing()
     {
         // A file where the directory should be makes CreateDirectory fail.

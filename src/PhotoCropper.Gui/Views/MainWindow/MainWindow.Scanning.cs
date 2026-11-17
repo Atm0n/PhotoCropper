@@ -164,9 +164,10 @@ internal sealed partial class MainWindow
                             paths.Add(ProjectWorkspaceService.StageRawScanFromMat(workDir, mat));
                         }
                     }
-                    catch (OperationCanceledException)
+                    catch
                     {
-                        // Don't leave half a multi-page scan orphaned in RawScans.
+                        // Cancelled or failed (e.g. disk full on page 2): pages already staged would never be
+                        // added to the session, so don't leave half a multi-page scan orphaned in RawScans.
                         foreach (string path in paths) TryDeleteFile(path);
                         throw;
                     }

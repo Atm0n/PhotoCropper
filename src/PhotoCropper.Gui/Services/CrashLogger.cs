@@ -37,7 +37,16 @@ internal static class CrashLogger
             string path = Path.Combine(dir, $"crash-{now.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture)}-{Environment.ProcessId}.log");
             File.WriteAllText(path, BuildReport(exception, source, now), Encoding.UTF8);
 
-            PruneOldLogs(dir);
+            // The report is written; failing to tidy old ones must not hide its path from the user.
+            try
+            {
+                PruneOldLogs(dir);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not prune old crash logs: {ex.Message}");
+            }
+
             return path;
         }
         catch (Exception ex)
@@ -74,9 +83,9 @@ internal static class CrashLogger
             {
                 file.Delete();
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                // Best effort.
+                // Best effort: skip files we can't delete (in use, read-only, no permission).
             }
         }
     }
