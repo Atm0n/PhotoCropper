@@ -166,13 +166,11 @@ internal sealed partial class MainWindow
                 System.Array.Sort(sortedVertices, (a, b) => (b.X - b.Y).CompareTo(a.X - a.Y));
                 var tr = sortedVertices[0];
 
-
-
-
+                // Hit-test distances scale with the overlay so they match the handles as drawn.
                 var imageBounds = new System.Drawing.Rectangle(0, 0, photo.OriginalWithDetected.Width, photo.OriginalWithDetected.Height);
-                var rotHandlePt = cand.GetRotationHandlePoint(60f, imageBounds);
+                var rotHandlePt = cand.GetRotationHandlePoint((float)(PhotoCropperEngine.RotationHandleBaseOffset * photo.OverlayScale), imageBounds);
                 double rotateDist = Math.Sqrt(Math.Pow(rotHandlePt.X - pt.X, 2) + Math.Pow(rotHandlePt.Y - pt.Y, 2));
-                if (rotateDist <= 55)
+                if (rotateDist <= photo.ScaleOverlay(55))
                 {
                     isRotatingHandle = true;
                     dragCandIndex = i;
@@ -187,7 +185,7 @@ internal sealed partial class MainWindow
                 for (int j = 0; j < 4; j++)
                 {
                     double dist = Math.Sqrt(Math.Pow(vertices[j].X - pt.X, 2) + Math.Pow(vertices[j].Y - pt.Y, 2));
-                    if (dist <= 60)
+                    if (dist <= photo.ScaleOverlay(60))
                     {
                         isDraggingHandle = true;
                         dragCandIndex = i;
@@ -390,7 +388,7 @@ internal sealed partial class MainWindow
             var tr = vertices[0];
 
             double dist = Math.Sqrt(Math.Pow(tr.X - pt.X, 2) + Math.Pow(tr.Y - pt.Y, 2));
-            if (dist <= 60)
+            if (dist <= photo.ScaleOverlay(60))
             {
                 if (i < photo.DetectedPhotos.Count)
                 {

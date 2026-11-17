@@ -349,29 +349,52 @@ public class PhotoCropperEngine : IDisposable
     }
 
 
+    /// <summary>Long side, in pixels, at which overlay elements are drawn at their base size (≈ A4 at 300 DPI).</summary>
+    private const double OverlayReferenceLongSide = 3500.0;
+
+    /// <summary>Base distance from a box's top edge to its rotation handle, before <see cref="OverlayScale"/>.</summary>
+    public const float RotationHandleBaseOffset = 60f;
+
+    /// <summary>
+    /// Factor applied to overlay sizes (lines, handles, badges) and to the matching hit-test distances, so they
+    /// keep the same size relative to the scan. Fixed pixel sizes looked huge on 150 DPI scans and tiny at 1200 DPI.
+    /// </summary>
+    public double OverlayScale =>
+        Original == null || Original.IsEmpty
+            ? 1.0
+            : Math.Clamp(Math.Max(Original.Width, Original.Height) / OverlayReferenceLongSide, 0.35, 6.0);
+
+    /// <summary>Scales a base overlay size (in pixels at the reference resolution) to this scan.</summary>
+    public int ScaleOverlay(double basePixels) => Math.Max(1, (int)Math.Round(basePixels * OverlayScale));
+
     private void DrawBoundingBoxes(IEnumerable<CropCandidate> candidates)
     {
         MCvScalar boxColor = CurrentOptions.GetBoundingBoxColorBgr();
         MCvScalar redBadge = new(0, 0, 255); // BGR for Red
         MCvScalar whiteText = new(255, 255, 255);
-        int radius = 45;
+        int radius = ScaleOverlay(45);
+        int boxThickness = ScaleOverlay(12);
+        int handleHalf = ScaleOverlay(25);
+        int handleBorder = ScaleOverlay(4);
+        int crossHalf = ScaleOverlay(15);
+        int crossThickness = ScaleOverlay(8);
 
         foreach (var cand in candidates)
         {
             PointF[] vertices = cand.Rotated.GetVertices();
             for (int j = 0; j < 4; j++)
             {
-                CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), boxColor, 12);
+                CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), boxColor, boxThickness);
 
                 // Draw white square for grab handles
-                Rectangle handleRect = new((int)vertices[j].X - 25, (int)vertices[j].Y - 25, 50, 50);
+                Rectangle handleRect = new((int)vertices[j].X - handleHalf, (int)vertices[j].Y - handleHalf, handleHalf * 2, handleHalf * 2);
                 handleRect.Intersect(new Rectangle(0, 0, OriginalWithDetected.Width, OriginalWithDetected.Height));
 
                 if (handleRect.Width > 0 && handleRect.Height > 0)
                 {
                     CvInvoke.Rectangle(OriginalWithDetected, handleRect, whiteText, -1);
                     // Draw border around the handle
-                    CvInvoke.Rectangle(OriginalWithDetected, handleRect, boxColor, 4);
+                    CvInvoke.Rectangle(OriginalWithDetected, handleRect, boxColor, handleBorder);
                 }
             }
 
@@ -381,26 +404,26 @@ public class PhotoCropperEngine : IDisposable
             var tr = Point.Round(sortedVertices[0]);
 
             CvInvoke.Circle(OriginalWithDetected, tr, radius, redBadge, -1);
-            CvInvoke.Line(OriginalWithDetected, new Point(tr.X - 15, tr.Y - 15), new Point(tr.X + 15, tr.Y + 15), whiteText, 8);
-            CvInvoke.Line(OriginalWithDetected, new Point(tr.X + 15, tr.Y - 15), new Point(tr.X - 15, tr.Y + 15), whiteText, 8);
+            CvInvoke.Line(OriginalWithDetected, new Point(tr.X - crossHalf, tr.Y - crossHalf), new Point(tr.X + crossHalf, tr.Y + crossHalf), whiteText, crossThickness);
+            CvInvoke.Line(OriginalWithDetected, new Point(tr.X + crossHalf, tr.Y - crossHalf), new Point(tr.X - crossHalf, tr.Y + crossHalf), whiteText, crossThickness);
 
             // Draw standard rotation handle at top-middle of box
             Rectangle imageBounds = new(0, 0, OriginalWithDetected.Width, OriginalWithDetected.Height);
             PointF[] ordered = PhotoExtractionEngine.OrderBoxPoints(vertices);
             Point topMid = Point.Round(new PointF((ordered[0].X + ordered[1].X) / 2f, (ordered[0].Y + ordered[1].Y) / 2f));
-            Point rotHandle = Point.Round(cand.GetRotationHandlePoint(60f, imageBounds));
+            Point rotHandle = Point.Round(cand.GetRotationHandlePoint((float)(RotationHandleBaseOffset * OverlayScale), imageBounds));
 
             // Stem connecting top edge to rotation handle
-            CvInvoke.Line(OriginalWithDetected, topMid, rotHandle, boxColor, 6);
+            CvInvoke.Line(OriginalWithDetected, topMid, rotHandle, boxColor, ScaleOverlay(6));
 
             // Blue rotation handle badge
             MCvScalar blueBadge = new(255, 0, 0); // Blue in BGR
             CvInvoke.Circle(OriginalWithDetected, rotHandle, radius, blueBadge, -1);
-            CvInvoke.Circle(OriginalWithDetected, rotHandle, radius, whiteText, 3);
+            CvInvoke.Circle(OriginalWithDetected, rotHandle, radius, whiteText, ScaleOverlay(3));
 
             // Draw spinning rotation arrow icon inside the badge
-            int arrowRadius = 22;
-            CvInvoke.Ellipse(OriginalWithDetected, rotHandle, new Size(arrowRadius, arrowRadius), 0, 45, 315, whiteText, 5);
+            int arrowRadius = ScaleOverlay(22);
+            CvInvoke.Ellipse(OriginalWithDetected, rotHandle, new Size(arrowRadius, arrowRadius), 0, 45, 315, whiteText, ScaleOverlay(5));
 
             // Arrow head at arc termination (angle 315°)
             double arrowAngleRad = 315.0 * Math.PI / 180.0;
@@ -414,8 +437,8 @@ public class PhotoCropperEngine : IDisposable
             double nx = -ty;
             double ny = tx;
 
-            const double headLen = 12.0;
-            const double headWidth = 8.0;
+            double headLen = 12.0 * OverlayScale;
+            double headWidth = 8.0 * OverlayScale;
 
             Point wing1 = new(
                 (int)(tip.X - headLen * tx + headWidth * nx),
