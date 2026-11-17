@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Folder pipeline for projects**: `RawScans/` → `Cropped/` (one lossless PNG per photo, geometry only) → `Final/` (restored, with metadata). Photos get permanent IDs (`scan_0003_p02`), so re-cropping keeps their settings and replaces their files; `session.json` (format 2.0) records each photo's history and knows when a final photo is out of date. Existing projects are migrated automatically: their exports move from `Cropped/` to `Final/`.
+- **CLI `--stage crop|restore`**: run only the crop stage (lossless PNGs, no restoration) or only the restore stage on any folder of photos, including photos cropped elsewhere.
 - **Crash reports**: Unhandled errors are written to `%LocalAppData%/PhotoCropper/logs` (last 20 kept). Errors raised by UI actions show an error dialog with the report location and keep the app open so unsaved work can be saved.
 - **Export failure report**: Bulk export lists the scans that failed to export instead of only logging them.
 - Session crops now record each photo's auto-orientation (`AutoRotationDegrees`) and each scan's exported files (`ExportedFiles`) in `session.json`. Older sessions still load.

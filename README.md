@@ -99,6 +99,12 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 - **Dedicated Scanner Configuration Dialog:** Set scan resolution (150, 300, 600 DPI) and color modes with one-click hardware enumeration and hot-reloading.
 
 ### 6. Project Work Directory & Automatic Crash Recovery
+- **Folder Pipeline (`RawScans/` → `Cropped/` → `Final/`):** Each stage of a project leaves real files in its own folder and never changes the previous one:
+  - `RawScans/`: the scans, exactly as acquired.
+  - `Cropped/`: one lossless PNG per photo (`scan_0003_p02.png`), straightened, cropped and rotated, with no colour restoration.
+  - `Final/`: the restored photos in your export format, with metadata and your naming pattern.
+
+  Every photo keeps a permanent ID, so re-cropping a scan keeps each photo's settings and replaces its files instead of duplicating them. `session.json` records where each file came from, so a final photo is known to be out of date when its cropped photo or restoration settings change. Projects created before this layout exported into `Cropped/`; those exports are moved to `Final/` automatically the first time the project is opened.
 - **Safe Raw Scan Auto-Staging (`RawScans/`):** When scanning or importing, images are immediately written to disk inside the project's `RawScans/` directory (`scan_0001.png`, `scan_0002.png`, etc.). Raw scans are never left stranded in volatile memory.
 - **Crash-Proof Session Persistence (`session.json`):** Tracks staged scan files as they are added, and records each scan's final crops (boxes, manual 90° rotations, auto-orientation, refinements) and exported files when it is exported. If the app is closed or interrupted by a system crash or power outage, launching the workspace prompts to resume the session. Crop edits made since a scan's last export are not yet saved.
 - **Crash Reports:** Unhandled errors are written to `%LocalAppData%/PhotoCropper/logs` (the last 20 are kept). Errors raised by UI actions show an error dialog pointing to the report and keep the app open so unsaved work can still be saved.
@@ -189,6 +195,13 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans -o
 # Batch process and isolate undetected scans for review
 dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans -o D:\Cropped --copy-undetected D:\NeedsReview
 
+# Run the pipeline in two steps: crop everything first (lossless PNG), restore later
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans --stage crop -o D:\Cropped
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Cropped --stage restore -o D:\Final
+
+# Restore photos that were already cropped elsewhere (no detection)
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\OldPhotos --stage restore --year 1975
+
 # Display all CLI options and flags
 dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 ```
@@ -198,7 +211,8 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | Option | Description | Default |
 |---|---|---|
 | `-i, --input <path>` | Input image file or directory of scans (positional arguments accepted) | *Required* |
-| `-o, --output <dir>` | Output destination directory for extracted photos | `<scan_dir>/cropped` |
+| `-o, --output <dir>` | Output destination directory for extracted photos | `<scan_dir>/cropped` (`<input_dir>/restored` with `--stage restore`) |
+| `--stage <all\|crop\|restore>` | Pipeline stage to run: `all` detects, crops, restores and exports; `crop` writes lossless PNGs with geometry fixes only (no restoration); `restore` restores existing photo files without detection, keeping their names unless `-p` is given | `all` |
 | `-f, --format <fmt>` | Output file format: `JPEG` or `PNG` | `JPEG` |
 | `-q, --quality <1-100>` | JPEG compression quality | `100` |
 | `-p, --pattern, --naming-pattern <pat>` | Output naming template (`{original}`, `{index:02}`, `{year}`, `{date}`, `{total}`) | `{original}_{index}` |
