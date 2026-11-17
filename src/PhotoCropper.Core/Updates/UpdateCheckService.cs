@@ -89,9 +89,17 @@ public static class UpdateCheckService
             }
             else if (response.Headers.Location != null)
             {
+                // A redirect the client didn't follow (e.g. a caller-supplied client hitting the
+                // github.com/.../releases/latest page): the target URL ends in the release tag.
                 Uri loc = response.Headers.Location;
                 downloadUri = loc.IsAbsoluteUri ? loc : new Uri(requestUri, loc);
                 tag = Path.GetFileName(downloadUri.AbsolutePath.TrimEnd('/'));
+            }
+            else
+            {
+                // Any other error (e.g. 403/429 when the unauthenticated GitHub API rate limit is hit) means
+                // the latest version is unknown. Reporting "up to date" here would hide available updates.
+                return UpdateCheckResult.Failed(activeVersion, DescribeHttpFailure(response));
             }
 
             downloadUri ??= DefaultFallbackDownloadUri;
@@ -106,7 +114,7 @@ public static class UpdateCheckService
                 return UpdateCheckResult.UpToDate(activeVersion, latestVersion, tag, downloadUri);
             }
 
-            return UpdateCheckResult.UpToDate(activeVersion);
+            return UpdateCheckResult.Failed(activeVersion, $"Could not read the latest release version (tag: '{tag ?? "none"}').");
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException or System.Text.Json.JsonException)
         {
@@ -116,6 +124,18 @@ public static class UpdateCheckService
         {
             ownedClient?.Dispose();
         }
+    }
+
+    private static string DescribeHttpFailure(HttpResponseMessage response)
+    {
+        int status = (int)response.StatusCode;
+        string message = $"GitHub returned HTTP {status} {response.ReasonPhrase}".TrimEnd();
+
+        bool rateLimited = status == 429 ||
+            (status == 403 && response.Headers.TryGetValues("X-RateLimit-Remaining", out var remaining) && remaining.Contains("0"));
+        return rateLimited
+            ? $"{message}: the GitHub API rate limit was reached. Try again later."
+            : message;
     }
 
     [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "HttpClient owns and disposes the handler")]
