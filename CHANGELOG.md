@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Re-detecting a scan kept stale manual rotations; dropped extractions misaligned photos and boxes; resizing a box lost its manual rotation; refinement and resize desynchronised the hold-to-compare copy.
 - Undo: counter-clockwise rotations undid in the wrong direction; undoing a rotation left the compare copy and saved rotation rotated; recorded box lists could change after being recorded.
 - A new project without scans showed "Finish · Needs a project"; the status bar kept "Saving crops (0 of N)..." after the crops were saved; opening a project said "Scan acquired" instead of how many scans were loaded; the Discard confirmation ran past the edge of the scan card.
+- Closing Review mode on another scan's photo opened that scan on its first photo instead of the one reviewed.
 
 ## [2.9.0] - 2026-09-28
 
