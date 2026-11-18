@@ -333,7 +333,7 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
     /// <summary>Asks for scan files and adds them to the project (see <see cref="ImportScanFilesAsync"/>).</summary>
     public async Task ImportScansAsync()
     {
-        if (await EnsureProjectAsync(useDefaultIfCancelled: false) == null) return;
+        if (await EnsureProjectAsync() == null) return;
         var paths = await PickImageFilesAsync(LocalizationService.GetString(ResourceKeys.BtnImportScans, "Import scans…"));
         if (paths.Count == 0) return;
         ImportScanFiles(paths);

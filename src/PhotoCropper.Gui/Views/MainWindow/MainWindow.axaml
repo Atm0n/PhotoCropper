@@ -134,6 +134,8 @@
 
 		<!-- Refine Overlay -->
 		<overlays:RefineView x:Name="viewRefine" x:DataType="vm:RefineViewModel" IsVisible="{Binding IsOpen}" ZIndex="100"/>
+		<!-- Start screen: at every launch and from the project button -->
+		<overlays:StartView x:Name="viewStart" x:DataType="vm:StartViewModel" IsVisible="{Binding IsOpen}" ZIndex="180"/>
 		<!-- Loading Overlay -->
 		<Panel x:Name="pnlLoadingOverlay" Background="{DynamicResource AppOverlayScrimBrush}" IsVisible="False" ZIndex="200">
 			<Border Background="{DynamicResource AppModalBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="30,25" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="320">

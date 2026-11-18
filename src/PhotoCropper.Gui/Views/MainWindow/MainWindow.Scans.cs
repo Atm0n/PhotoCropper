@@ -31,7 +31,7 @@ internal sealed partial class MainWindow
         if (collected.Count == 0) return;
 
         // Dropped files are imported into the project like the Import button does.
-        if (await EnsureProjectAsync(useDefaultIfCancelled: false) == null) return;
+        if (await EnsureProjectAsync() == null) return;
         ImportScanFiles(collected);
     }
 

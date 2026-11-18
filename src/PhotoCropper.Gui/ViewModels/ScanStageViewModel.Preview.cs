@@ -54,11 +54,13 @@ internal sealed partial class ScanStageViewModel
     }
 
     /// <summary>Picks the row to select after the list was rebuilt: a scan that just arrived, else the same scan as before.</summary>
-    /// <remarks>A discarded scan's place goes to the scan after it (or the last one).</remarks>
+    /// <remarks>A discarded scan's place goes to the scan after it (or the last one). A newly opened project starts at its first scan.</remarks>
     private void RestoreSelection(IReadOnlyCollection<string> previousPaths, string? previousSelection, int previousIndex)
     {
         var known = previousPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var added = known.Count == 0 ? null : Scans.LastOrDefault(r => !known.Contains(r.FilePath));
+        // None of the scans were listed before: another project was opened, so start at its first scan.
+        bool sameProject = Scans.Any(r => known.Contains(r.FilePath));
+        var added = sameProject ? Scans.LastOrDefault(r => !known.Contains(r.FilePath)) : null;
 
         SelectedScan = added
             ?? Scans.FirstOrDefault(r => string.Equals(r.FilePath, previousSelection, StringComparison.OrdinalIgnoreCase))

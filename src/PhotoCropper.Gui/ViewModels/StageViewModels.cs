@@ -134,7 +134,8 @@ internal sealed partial class ScanStageViewModel : ObservableObject
         IsEmpty = Scans.Count == 0;
         Summary = LocalizationService.Format(ResourceKeys.StageScanStatus, "{0} scans", Scans.Count);
         _rebuildingList = false;
-        RestoreSelection(previousPaths, previousSelection, previousIndex);
+        RestoreSelection(previousPaths, Scans.Any(r => previousPaths.Contains(r.FilePath)) ? previousSelection : null,
+            Scans.Any(r => previousPaths.Contains(r.FilePath)) ? previousIndex : 0);
     }
 
     private async Task LoadThumbnailAsync(ScanRowViewModel row)

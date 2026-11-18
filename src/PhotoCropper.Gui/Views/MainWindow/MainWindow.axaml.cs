@@ -71,6 +71,7 @@ internal sealed partial class MainWindow : Window
         ApplySettingsToUi();
         InitializeStages();
         InitializeAutosave();
+        InitializeStartScreen();
     }
 
     /// <summary>
@@ -213,6 +214,17 @@ internal sealed partial class MainWindow : Window
         if (isLoading)
         {
             e.Handled = true;
+            return;
+        }
+
+        // The start screen's own controls get the keys (typing a project name, Enter to create); Esc goes back.
+        if (IsStartScreenOpen)
+        {
+            if (e.Key == Key.Escape)
+            {
+                _startVm.Back();
+                e.Handled = true;
+            }
             return;
         }
 

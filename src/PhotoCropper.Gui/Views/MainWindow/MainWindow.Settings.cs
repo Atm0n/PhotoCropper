@@ -13,7 +13,7 @@ internal sealed partial class MainWindow
         viewCrops.ZoomLevel = settings.ZoomLevel;
         _cropsVm.LoadFromSettings();
 
-        UpdateWorkspaceUi(settings.WorkDirectory);
+        UpdateWorkspaceUi(_openProject);
         UpdateCropStrokeColor(settings.DetectionBoxColor);
         PopulateThemeMenu();
         PopulateDetectionColorMenu();
@@ -43,7 +43,7 @@ internal sealed partial class MainWindow
                     if (s is MenuItem mi && mi.Tag is string code)
                     {
                         LocalizationService.SetLanguage(code);
-                        UpdateWorkspaceUi(SettingsManager.Instance.Settings.WorkDirectory);
+                        UpdateWorkspaceUi(_openProject);
                         _cropsVm.RefreshPhotoTexts();
                         PopulateThemeMenu();
                         PopulateDetectionColorMenu();

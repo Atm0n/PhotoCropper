@@ -14,11 +14,8 @@ internal sealed partial class MainWindow
 
     private async void MainWindow_Loaded(object? sender, RoutedEventArgs e)
     {
-        var workDir = SettingsManager.Instance.Settings.WorkDirectory;
-        if (!string.IsNullOrEmpty(workDir) && Directory.Exists(workDir) && ProjectWorkspaceService.HasRecoverableSession(workDir) && ScanSessions.Count == 0)
-        {
-            await ResumeWorkspaceSessionAsync(workDir);
-        }
+        // Every launch starts by choosing (or creating) a project.
+        ShowStartScreen();
 
         _ = RefreshScannersAsync(CancellationToken.None).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
         CheckForUpdatesOnStartupIfDue();
@@ -139,25 +136,6 @@ internal sealed partial class MainWindow
             _workspaceSession = new WorkspaceSessionState();
             string cleanName = Path.GetFileName(Path.TrimEndingDirectorySeparator(newWorkDir));
             lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgNewProjectReady, "Project '{0}' ready. Click Scan or Open Files to begin.", cleanName);
-        }
-    }
-
-
-    private async void BtnWorkDir_Click(object? sender, RoutedEventArgs e)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider == null) return;
-
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = LocalizationService.GetString(ResourceKeys.BtnWorkDir, "Select Work Directory"),
-            AllowMultiple = false
-        });
-
-        if (folders.Count > 0)
-        {
-            string chosenDir = folders[0].Path.LocalPath;
-            await SwitchToProjectAsync(chosenDir);
         }
     }
 }

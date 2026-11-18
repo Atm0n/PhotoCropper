@@ -24,6 +24,9 @@ internal sealed class UserSettings
     public bool AutoTuneOnScanChange { get; set; }
     public bool AutoAdjustOnLowCoverage { get; set; } = true;
     public string? WorkDirectory { get; set; }
+
+    /// <summary>Projects opened recently, newest first (see <see cref="RecentProjects"/>).</summary>
+    public IReadOnlyList<string> RecentProjectFolders { get; set; } = [];
     public string? SelectedScannerId { get; set; }
     public int ScannerDpi { get; set; } = AppConstants.DefaultScannerDpi;
     public string ScannerPageSize { get; set; } = AppConstants.DefaultScannerPageSize;

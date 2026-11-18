@@ -112,7 +112,8 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **Linux / macOS**: Direct integration with SANE (`libsane` / `scanimage`) and modern network eSCL / AirScan scanners.
 - **Dedicated Scanner Configuration Dialog:** Set scan resolution (150, 300, 600 DPI) and color modes with one-click hardware enumeration and hot-reloading.
 
-### 6. Project Work Directory & Automatic Crash Recovery
+### 6. Projects, Start Screen & Automatic Crash Recovery
+- **Start Screen:** Every launch starts by choosing a project: **New project** (a name and a location, by default `Pictures/PhotoCropper`; the folder is created for you), **Open project** (any project folder), **Restore photos only** (a new project that goes straight to importing already-cropped photos in the Finish stage), or one of the **recent projects**, shown with a thumbnail and how many scans and finished photos it has. The project name on the top bar brings the start screen back to switch project.
 - **Folder Pipeline (`RawScans/` → `Cropped/` → `Final/`):** Each stage of a project leaves real files in its own folder and never changes the previous one:
   - `RawScans/`: the scans, exactly as acquired.
   - `Cropped/`: one lossless PNG per photo (`scan_0003_p02.png`), straightened, cropped and rotated, with no colour restoration.
