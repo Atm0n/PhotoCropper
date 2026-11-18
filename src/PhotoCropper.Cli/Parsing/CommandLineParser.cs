@@ -25,63 +25,63 @@ internal static class CommandLineParser
             }
             else if (arg is "-q" or "--quality" && i + 1 < args.Length)
             {
-                if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int q))
+                if (TryInt(arg, args[++i], out int q))
                 {
                     options.JpegQuality = Math.Clamp(q, 1, 100);
                 }
             }
             else if (arg is "-s" or "--sensitivity" && i + 1 < args.Length)
             {
-                if (double.TryParse(args[++i], CultureInfo.InvariantCulture, out double sens))
+                if (TryDouble(arg, args[++i], out double sens))
                 {
                     options.Tolerance = PhotoCropper.Core.Models.DetectionOptions.SensitivityToTolerance(sens);
                 }
             }
             else if (arg is "-t" or "--tolerance" && i + 1 < args.Length)
             {
-                if (double.TryParse(args[++i], CultureInfo.InvariantCulture, out double tol))
+                if (TryDouble(arg, args[++i], out double tol))
                 {
                     options.Tolerance = tol;
                 }
             }
             else if (arg == "--min-size" && i + 1 < args.Length)
             {
-                if (double.TryParse(args[++i], CultureInfo.InvariantCulture, out double minSize))
+                if (TryDouble(arg, args[++i], out double minSize))
                 {
                     options.MinAreaFactor = minSize / 100.0;
                 }
             }
             else if (arg == "--max-size" && i + 1 < args.Length)
             {
-                if (double.TryParse(args[++i], CultureInfo.InvariantCulture, out double maxSize))
+                if (TryDouble(arg, args[++i], out double maxSize))
                 {
                     options.MaxAreaFactor = maxSize / 100.0;
                 }
             }
             else if (arg == "--canny-low" && i + 1 < args.Length)
             {
-                if (double.TryParse(args[++i], CultureInfo.InvariantCulture, out double canny))
+                if (TryDouble(arg, args[++i], out double canny))
                 {
                     options.CannyLow = canny;
                 }
             }
             else if (arg is "-j" or "--threads" && i + 1 < args.Length)
             {
-                if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int th))
+                if (TryInt(arg, args[++i], out int th))
                 {
                     options.Threads = Math.Max(1, th);
                 }
             }
             else if (arg is "--min-photos" or "--expected-photos" && i + 1 < args.Length)
             {
-                if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int mp))
+                if (TryInt(arg, args[++i], out int mp))
                 {
                     options.MinExpectedPhotos = Math.Max(1, mp);
                 }
             }
             else if (arg is "--max-photos" or "--max-expected-photos" && i + 1 < args.Length)
             {
-                if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int maxP))
+                if (TryInt(arg, args[++i], out int maxP))
                 {
                     options.MaxExpectedPhotos = Math.Max(1, maxP);
                 }
@@ -93,6 +93,18 @@ internal static class CommandLineParser
             else if (arg is "-v" or "--verbose")
             {
                 options.Verbose = true;
+            }
+            else if (arg == "--no-orient")
+            {
+                options.AutoOrient = false;
+            }
+            else if (arg == "--no-restore")
+            {
+                options.RestoreColors = false;
+            }
+            else if (arg == "--no-dust")
+            {
+                options.RemoveDust = false;
             }
             else if (arg == "--auto-orient")
             {
@@ -120,7 +132,16 @@ internal static class CommandLineParser
             }
             else if (arg == "--auto-tune")
             {
-                options.AutoTune = true;
+                // Optional mode; a bare --auto-tune keeps its old meaning (tune scans outside the expected count).
+                string? given = i + 1 < args.Length
+                    ? AutoTuneModes.FirstOrDefault(m => string.Equals(m, args[i + 1], StringComparison.OrdinalIgnoreCase))
+                    : null;
+                if (given != null) i++;
+                string mode = given ?? "mismatch";
+                options.AutoTune = mode == "mismatch";
+                options.AlwaysAutoTune = mode == "always";
+                options.AutoAdjustLowCoverage = mode == "low-coverage";
+                options.AutoTuneOff = mode == "off";
             }
             else if (arg == "--always-auto-tune")
             {
@@ -132,7 +153,7 @@ internal static class CommandLineParser
             }
             else if (arg == "--min-coverage" && i + 1 < args.Length)
             {
-                if (double.TryParse(args[++i], CultureInfo.InvariantCulture, out double cov))
+                if (TryDouble(arg, args[++i], out double cov))
                 {
                     options.MinCoverageThresholdPercent = Math.Clamp(cov, 1.0, 99.0);
                     options.AutoAdjustLowCoverage = true;
@@ -173,7 +194,7 @@ internal static class CommandLineParser
             }
             else if (arg == "--year" && i + 1 < args.Length)
             {
-                if (int.TryParse(args[++i], CultureInfo.InvariantCulture, out int year))
+                if (TryInt(arg, args[++i], out int year))
                 {
                     options.Year = year;
                 }
@@ -198,79 +219,110 @@ internal static class CommandLineParser
             {
                 options.Inputs.Add(arg);
             }
+            else
+            {
+                // A typo used to be ignored silently, running with defaults the user didn't mean.
+                Warn(IsValueOption(arg) ? $"'{arg}' needs a value; ignored." : $"Unknown option '{arg}' ignored (see --help).");
+            }
         }
 
         return options;
+    }
+
+    /// <summary>The modes --auto-tune accepts.</summary>
+    internal static readonly string[] AutoTuneModes = ["off", "mismatch", "always", "low-coverage"];
+
+    private static readonly string[] ValueOptions =
+    [
+        "-o", "--output", "-f", "--format", "-q", "--quality", "-s", "--sensitivity", "-t", "--tolerance", "--min-size",
+        "--max-size", "--canny-low", "-j", "--threads", "--min-photos", "--expected-photos", "--max-photos",
+        "--max-expected-photos", "--min-coverage", "--copy-undetected", "--isolate-undetected", "-p", "--pattern",
+        "--naming-pattern", "--project", "--stage", "--year", "--date", "--desc", "--description", "--comment",
+        "--photographer", "--artist", "--author", "-i", "--input"
+    ];
+
+    private static bool IsValueOption(string arg) => ValueOptions.Contains(arg, StringComparer.Ordinal);
+
+    private static void Warn(string message) =>
+        Spectre.Console.AnsiConsole.MarkupLine($"[bold yellow]Warning:[/] {Spectre.Console.Markup.Escape(message)}");
+
+    private static bool TryInt(string option, string value, out int result)
+    {
+        if (int.TryParse(value, CultureInfo.InvariantCulture, out result)) return true;
+        Warn($"{option} expects a whole number, not '{value}'; ignored.");
+        return false;
+    }
+
+    private static bool TryDouble(string option, string value, out double result)
+    {
+        if (double.TryParse(value, CultureInfo.InvariantCulture, out result)) return true;
+        Warn($"{option} expects a number, not '{value}'; ignored.");
+        return false;
     }
 
     public static void PrintHelp()
     {
         Console.WriteLine(
             """
-            PhotoCropper CLI - Automated Multi-Photo Scanner Cropper & Extractor
-        
+            PhotoCropper CLI - finds the photos on scans, crops, straightens and restores them
+
             Usage:
-              PhotoCropperCli [options] <input-file-or-directory> [more-inputs...]
-              PhotoCropperCli --project <folder> [scans-to-add...] [options]
-        
-            Options:
-              -i, --input <path>      Input image file or folder of scans (positional arguments also accepted)
-              --project <folder>      Work on a PhotoCropper project (the app's project folder): inputs are
-                                      added to RawScans/, boxes saved in the app are kept, the rest are
-                                      detected, and Cropped/ and Final/ are written. Created if missing.
-                                      --stage crop stops after Cropped/; --stage restore only renders
-                                      Final/. -o writes the final photos elsewhere. Like the app,
-                                      scans with low coverage are auto-tuned.
-              -o, --output <dir>      Output directory for extracted photos (default: <scan_dir>/cropped,
-                                      or <input_dir>/restored with --stage restore)
-              --stage <stage>         Pipeline stage to run (default: all):
-                                        all     detect, crop, restore and export
-                                        crop    detect and crop only: lossless PNGs, no restoration
-                                        restore restore existing photos (no detection); keeps file
-                                                names unless -p is given
-              -f, --format <fmt>      Output format: JPEG (default) or PNG
-              -q, --quality <1-100>   JPEG compression quality (default: 100)
-              -p, --pattern <pat>     File naming template (default: '{original}_{index}')
-                                      Tokens: {original}, {index}, {index:02}, {year}, {date}, {total}
-              --year <YYYY>           Vintage photo year taken to embed in EXIF and use in {year}
-              --date <YYYY-MM-DD>     Approximate or exact photo date to embed in EXIF and {date}
-              --desc <text>           Photo description/comment embedded into EXIF metadata
-              --photographer <name>   Photographer/artist name embedded into EXIF metadata and PNG Author
-              -s, --sensitivity <0-100> Detection sensitivity percentage (default: 50%)
-              -t, --tolerance <num>   Background color detection tolerance (default: 25)
-              -j, --threads <num>     Number of parallel CPU worker threads (default: CPU core count)
-              --min-size <percent>    Minimum photo size as % of scan area (default: 25)
-              --max-size <percent>    Maximum photo size as % of scan area (default: 90)
-              --min-photos <num>      Minimum expected photos per scan to flag for review (default: 1)
-              --max-photos <num>      Maximum expected photos per scan to flag for review (default: unlimited)
-              --canny-low <num>       Canny edge detector sensitivity threshold (default: 20)
-              --auto-tune             Automatically search optimal detection parameters on difficult scans
-              --always-auto-tune      Always run auto-tune sweep on every scan
-              --auto-adjust-low-coverage Auto-tune only scans with low detected area coverage (default: <50%)
-              --min-coverage <percent>   Set low coverage threshold percentage for auto-adjust (default: 50)
-              --copy-undetected <dir> Copy undetected scans with 0 photos to a designated review directory
-              -w, --wizard            Launch step-by-step interactive CLI wizard
-              -y, --non-interactive   Disable interactive prompts (e.g., auto-tune prompts at batch completion)
-              --auto-orient           Enable AI face & landscape auto-orientation detection (default: on)
-              --no-auto-orient        Disable auto-orientation detection and preserve raw scanner placement
-              --restore-colors        Enable auto-white balance, contrast & vibrancy color restoration (default: on)
-              --no-restore-colors     Disable color restoration and export raw scanned pixels
-              --remove-dust           Enable automated scratch and dust inpainting (default: on)
-              --no-remove-dust        Disable automated scratch and dust inpainting
-              -r, --recursive         Recursively process subdirectories when input is a folder
-              -v, --verbose           Display individual photo dimensions and debug details
-              --check-update          Check GitHub for newer versions of PhotoCropper
-              -h, --help              Show this help message and exit
-              --version               Show version information
-        
+              PhotoCropperCli <scans...> [options]                     scan files or folders
+              PhotoCropperCli --project <folder> [scans...] [options]  an app project
+              PhotoCropperCli --wizard                                 guided setup
+
+            Where things go:
+              --project <folder>      Work on a PhotoCropper project (created if missing): new scans are added,
+                                      boxes saved in the app are kept, and Cropped/ and Final/ are written.
+                                      Don't run it on a project that is open in the app.
+              -o, --output <dir>      Output folder (default: <scan folder>/cropped; with --project, Final/)
+              --stage <stage>         all (default): crop and restore; crop: lossless PNGs, no restoration;
+                                      restore: restore existing photos, no detection
+              -r, --recursive         Include subfolders of input folders
+              -f, --format <fmt>      JPEG (default) or PNG
+              -q, --quality <1-100>   JPEG quality (default: 100)
+              -p, --pattern <pat>     File names (default: '{original}_{index}'); tokens: {original}, {index},
+                                      {index:02}, {year}, {date}, {total}
+
+            Finding photos:
+              -s, --sensitivity <0-100>  Detection sensitivity (default: 50)
+              --min-size <percent>    Smallest photo, as % of the scan (default: 25)
+              --max-size <percent>    Largest photo, as % of the scan (default: 90)
+              --min-photos <n>        Flag scans with fewer photos (default: 1)
+              --max-photos <n>        Flag scans with more photos (default: no limit)
+              --auto-tune [mode]      Search for better detection settings: mismatch (scans outside
+                                      --min/--max-photos; the mode when none is given), always,
+                                      low-coverage or off. Default: low-coverage with --project, else off
+              --min-coverage <percent>  What counts as low coverage (default: 50)
+              --copy-undetected <dir> Copy scans where no photo was found to this folder
+
+            Photos:
+              --no-restore            Don't restore colours (white balance, contrast, faded colours)
+              --no-dust               Don't remove dust and scratches
+              --no-orient             Don't turn photos upright automatically
+              --year <YYYY>           Year taken, written to the photos' metadata and {year}
+              --date <YYYY-MM-DD>     Date taken, written to the metadata and {date}
+              --desc <text>           Description written to the metadata
+              --photographer <name>   Photographer written to the metadata
+
+            Other:
+              -j, --threads <n>       Scans processed in parallel (default: half the CPU cores, up to 4)
+              -y, --yes               Never ask questions (e.g. whether to auto-tune afterwards)
+              -v, --verbose           Show every photo found
+              --check-update          Check for a newer version
+              --version               Show the version
+              -h, --help              Show this help
+
             Examples:
-              PhotoCropperCli scan001.jpg
-              PhotoCropperCli D:\Scans -o D:\Cropped -f PNG -r
-              PhotoCropperCli -i scan1.jpg -i scan2.jpg -t 30 -q 95
-              PhotoCropperCli D:\Scans --stage crop -o D:\Cropped
-              PhotoCropperCli D:\Cropped --stage restore -o D:\Final
+              PhotoCropperCli D:\Scans -r
+              PhotoCropperCli D:\Scans -o D:\Photos -f PNG --auto-tune
               PhotoCropperCli --project D:\Albums\Grandma D:\NewScans
-        
+              PhotoCropperCli D:\Scans --stage crop -o D:\Cropped
+              PhotoCropperCli D:\OldPhotos --stage restore --year 1975
+
+            Older option names (--tolerance, --canny-low, --always-auto-tune, --no-restore-colors, ...)
+            still work.
+
             Acknowledgements & Licenses:
               PhotoCropper is licensed under GNU General Public License v3.0.
               AI Face Detection uses YuNet (face_detection_yunet_2023mar.onnx)
