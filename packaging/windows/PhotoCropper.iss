@@ -66,6 +66,14 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
+[UninstallDelete]
+; Files the app downloads or writes outside {app}: the AI models (the dust-removal model is downloaded on
+; demand; the face model is unpacked there) and crash reports. Settings are asked about in CurUninstallStepChanged;
+; projects and photos are never touched.
+Type: filesandordirs; Name: "{localappdata}\{#MyAppName}\models"
+Type: filesandordirs; Name: "{localappdata}\{#MyAppName}\logs"
+Type: dirifempty; Name: "{localappdata}\{#MyAppName}"
+
 [Registry]
 ; Store whether PATH task was selected during installation
 Root: HKA; Subkey: "Software\{#MyAppPublisher}\{#MyAppName}"; ValueType: dword; ValueName: "PathConfigured"; ValueData: 1; Tasks: envPath; Flags: uninsdeletekeyifempty
@@ -161,8 +169,25 @@ begin
   end;
 end;
 
+procedure RemoveSettingsIfWanted();
+var
+  SettingsDir: string;
+begin
+  SettingsDir := ExpandConstant('{userappdata}\{#MyAppName}');
+  // A silent uninstall can't ask, so it keeps them (as does answering No, the default).
+  if UninstallSilent() or not DirExists(SettingsDir) then
+    exit;
+
+  if MsgBox('Also remove your PhotoCropper settings (preferences and the list of recent projects)?' + #13#10 + #13#10 +
+            'Your projects and photos are not affected either way.',
+            mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+    DelTree(SettingsDir, True, True, True);
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
-    RemoveAppFromPath();
+    RemoveAppFromPath()
+  else if CurUninstallStep = usPostUninstall then
+    RemoveSettingsIfWanted();
 end;
