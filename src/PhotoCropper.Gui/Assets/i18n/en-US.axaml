@@ -184,7 +184,7 @@
 	<sys:String x:Key="HelpThemeTitle">Themes &amp; colorblind-friendly boxes</sys:String>
 	<sys:String x:Key="HelpThemeDesc">Switch between Dark, Light and System with the Theme button (bottom right) or the Settings menu. Box Color offers colorblind-friendly presets or any custom color.</sys:String>
 	<sys:String x:Key="HelpSafeExitTitle">Safe exit &amp; recovery</sys:String>
-	<sys:String x:Key="HelpSafeExitDesc">The project is saved in session.json as you work, so a crash or power cut loses nothing. You are warned before closing with unsaved edits, and the last 30 edits can be undone.</sys:String>
+	<sys:String x:Key="HelpSafeExitDesc">Scans are written to the project as soon as they arrive, so a crash never loses one, and Finish settings are saved as you change them. Crop edits are saved when you Save or move to Finish. You are warned before closing with unsaved edits, and the last 30 edits can be undone.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Keyboard Shortcuts</sys:String>
 	<sys:String x:Key="HelpShortcutScan">[F5] Scan from flatbed</sys:String>
 	<sys:String x:Key="HelpShortcutAutoTune">[T] Auto-tune active scan</sys:String>

@@ -7,6 +7,16 @@ An intelligent, cross-platform .NET 11 desktop application designed to automatic
 - **[Architecture & Design Details](docs/ARCHITECTURE.md)**: Explore high-level system components, auto-tuning pipelines, AI auto-orientation heuristics, and memory management strategies via Mermaid diagrams.
 - **[Changelog](CHANGELOG.md)**: Detailed history of releases and changes (Semantic Versioning).
 
+## How It Works
+
+A project goes through three stages, shown in the stage bar at the top of the window. Each stage writes real files to its own folder of the project and never changes the previous one, so you can move back and forth freely:
+
+1. **Scan → `RawScans/`**: scan pages with your flatbed scanner (`F5`) or import scan files (drag and drop works too). Scans are kept exactly as acquired; a page can be rescanned in place or discarded.
+2. **Crops → `Cropped/`**: photos are detected on each scan automatically. Fix the boxes (drag corners, rotate, delete), draw missed photos by hand, rotate, refine edges, or go through every photo full-size in **Review mode** (`V`). Each photo is saved as a lossless PNG with geometry fixes only.
+3. **Finish → `Final/`**: restore each photo (colour, dust, repair brush, optional AI fill) in a full-window editor with a before/after split, add metadata, and export as JPEG or PNG with EXIF. Only photos that changed are exported again, and photos cropped elsewhere can be imported straight into this stage.
+
+The CLI can run the same stages unattended (`--stage crop|restore`). Press `F1` in the app for the full help and shortcuts.
+
 ## Project Structure
 
 The solution consists of four main projects organized under `src/` and `tests/`:
@@ -17,18 +27,19 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **`Export/`**: Output serialization supporting lossless PNG, customizable JPEG quality, and DPI preservation (`PhotoExporter`).
   - **`IO/`**: File discovery and recursive directory scanning for supported image formats (`ImageFileCollector`).
   - **`Scanning/`**: Cross-platform hardware scanner integration (`IScannerService`, `Naps2ScannerService`, `ScannerOptions`, `ScannerDeviceInfo`) supporting TWAIN, WIA, SANE, and eSCL.
-  - **`Workspace/`**: Project folder management, raw scan disk-staging, and crash recovery session manager (`ProjectWorkspaceService`, `WorkspaceSessionState`, `WorkspaceScanEntry`).
+  - **`Workspace/`**: Project folder management, the `RawScans/` → `Cropped/` → `Final/` pipeline, raw scan disk-staging, and the crash recovery session (`ProjectWorkspaceService`, `PhotoPipelineService`, `WorkspaceSessionState`, `WorkspaceScanEntry`, `ScanSessionItem`).
   - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
-- **`src/PhotoCropper.Gui` (Avalonia Desktop App):** A high-performance GUI featuring:
-  - **`Views/`**: Modular UI architecture including `MainWindow/` (split into clean partials by responsibility) and `Dialogs/` (`HelpWindow`, `ScannerConfigDialog`, `CustomColorDialog`, `SafeExitPromptDialog`, `ExportSettingsDialog`).
-  - **`Services/`**: Bounded undo/redo history, dynamic theme manager, hardware scanner coordination, localization manager, settings persistence, and decoupled scan session navigation (`ScanSessionManager`).
-  - **`Models/`**: Clean GUI domain models such as `ScanSessionItem`.
+- **`src/PhotoCropper.Gui` (Avalonia Desktop App, MVVM with CommunityToolkit.Mvvm):**
+  - **`Views/`**: `MainWindow/` (the shell: stage bar, menus, overlays, keyboard routing, project-level work), `Stages/` (`ScanStageView`, `CropsStageView`, `FinishStageView`, `CompareImageViewer`), `Overlays/` (`ReviewView`, `RefineView`) and `Dialogs/` (`HelpWindow`, `ScannerConfigDialog`, `CustomColorDialog`, `SafeExitPromptDialog`, `ExportSettingsDialog`).
+  - **`ViewModels/`**: One view-model per stage and mode (`ScanStageViewModel`, `CropsStageViewModel`, `FinishStageViewModel`, `ReviewViewModel`, `RefineViewModel`), each reaching the window through a small host interface so they are tested without UI. See [Architecture](docs/ARCHITECTURE.md#gui-structure).
+  - **`Controls/`**: `CropBoxOverlay`, which draws the detected boxes and their handles over the untouched scan.
+  - **`Services/`**: Bounded undo/redo history, theme manager, scanner coordination, localization, settings persistence, and scan session navigation (`ScanSessionManager`).
   - Multi-language localization (EN, ES, CA), full Light/Dark/System runtime theming, and persistent configuration.
 - **`src/PhotoCropper.Cli` (Command-Line Batch Extractor):** High-throughput CLI batch processor with Spectre.Console UI, multi-threaded parallel extraction, and unattended automation.
 - **`tests/` (Modular xUnit & Shouldly Test Suites):**
   - **`PhotoCropper.Core.Tests`**: Unit tests verifying detection pipeline stages, image extraction, orientation heuristics, restoration filters, export formats, file collector, and engine lifecycle.
   - **`PhotoCropper.Cli.Tests`**: Integration tests verifying CLI command-line argument parsing and unattended batch processing.
-  - **`PhotoCropper.Gui.Tests`**: GUI domain tests verifying user settings persistence, bounded undo/redo history, and session management.
+  - **`PhotoCropper.Gui.Tests`**: View-model tests for every stage and mode, box overlay rendering, user settings persistence, bounded undo/redo history, and session management. The suite uses a temporary settings file, so it never touches your own settings.
   - **`PhotoCropper.TestHelpers`**: Shared test fixture generating synthetic test scans (tilted, flush-edge, low contrast, corner, blemished).
 
 ---
@@ -53,7 +64,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 - **Interactive Background Color Picker:** Allows manual background sampling via a noise-resistant 5x5 average neighborhood in HSV space directly from any clicked zoom/pan pixel; detection is then auto-tuned for the picked colour.
 - **Undetected Scan Tracking & Review Isolation:** Logs any uncropped scans to `undetected_scans.txt` and supports isolated directory copying (`--copy-undetected`) with an interactive post-batch CLI review prompt.
 
-#### 3. Smart Manual, Refinement & AI Orientation
+### 3. Smart Manual, Refinement & AI Orientation
 - **Hierarchical AI Face & Landscape Orientation:** Extracted photos are automatically rotated upright.
   - **Embedded YuNet Neural Face Detector:** Analyzes 4 candidate orientations (`0°`, `90°`, `180°`, `270°`) and verifies full 5-point facial landmark anatomy (eye-to-nose-to-mouth sequencing, horizontal eye span, and level tilt) with zero cloud dependencies.
   - **Landscape & Water Scene Heuristics:** Evaluates sky gradients (blue and overcast), horizon textures, ground/vegetation, and water bodies (seas, lakes, rivers) with strict non-landscape guards to prevent false indoor rotations.
@@ -76,13 +87,13 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 - **Intelligent Manual Crop Snapping:** Manually drawn selection boxes automatically snap to the nearest high-contrast photo boundary.
 
 ### 4. Interactive UX, Theming & Accessibility
-- **Dynamic Theming (Dark / Light / System Default):** Full runtime theme switching via **View → Theme** with dynamic XAML resource binding. All backgrounds, borders, cards, buttons, and text adapt instantly without restarting.
+- **Dynamic Theming (Dark / Light / System Default):** Full runtime theme switching via the **Theme** button in the status bar (or **Settings → Theme**) with dynamic XAML resource binding. All backgrounds, borders, cards, buttons, and text adapt instantly without restarting.
 - **Colorblind-Friendly Bounding Boxes & Custom Color Picker:**
   - High-contrast detection box presets (**Classic Red, Amber / Orange, Cyan / Turquoise, Magenta, Lime Green**) designed for protanopia, deuteranopia, and tritanopia accessibility.
   - Visual color indicator squares next to every option in the menu.
   - Dedicated **Custom Color...** modal dialog featuring a real-time photo simulation preview, 16 accessible quick swatches, RGB sliders, and direct hex input (`#RRGGBB`).
 - **Dual-View Inspection & Gallery Grid (`1` / `2`):** Instantly toggle between a focused single-photo carousel and an interactive thumbnail gallery overview displaying indices and pixel dimensions.
-- **Interactive Bounding Boxes:** Click a box to instantly select it in the gallery. Click the top-right Red 'X' to delete bad detections. Drag corners to manually resize the crop area, and drag the Blue circle above the box to rotate the photo by hand. Box lines, handles and their click areas scale with the scan's resolution, so they look the same at 150 or 1200 DPI.
+- **Interactive Bounding Boxes:** Click a box to instantly select it in the gallery. Click the top-right Red 'X' to delete bad detections. Drag corners to manually resize the crop area, and drag the Blue circle above the box to rotate the photo by hand. Boxes are drawn as an overlay on top of the untouched scan, so dragging one only repaints the overlay; lines, handles and their click areas scale with the scan's resolution, so they look the same at 150 or 1200 DPI.
 - **Safe Exit & Data Loss Prevention:** PhotoCropper detects unsaved photo edits or unexported scans on close, presenting a confirmation dialog with **Save & Exit**, **Discard & Exit**, or **Cancel** choices (closes silently when all work is saved). If any scan fails to export, **Save & Exit** lists the failures and keeps the app open.
 - **Dedicated Multi-Window Dialog Architecture:** Replaced embedded overlay clutter with dedicated, modular Avalonia windows:
   - `HelpWindow`: Non-modal documentation and shortcut reference (<kbd>F1</kbd>) that can be placed side-by-side or on secondary monitors.
@@ -110,7 +121,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 
   Every photo keeps a permanent ID, so re-cropping a scan keeps each photo's settings and replaces its files instead of duplicating them. `session.json` records where each file came from, so a final photo is known to be out of date when its cropped photo or restoration settings change. Projects created before this layout exported into `Cropped/`; those exports are moved to `Final/` automatically the first time the project is opened.
 - **Safe Raw Scan Auto-Staging (`RawScans/`):** When scanning or importing, images are immediately written to disk inside the project's `RawScans/` directory (`scan_0001.png`, `scan_0002.png`, etc.). Raw scans are never left stranded in volatile memory.
-- **Crash-Proof Session Persistence (`session.json`):** Tracks staged scan files as they are added, and records each scan's final crops (boxes, manual 90° rotations, auto-orientation, refinements) and exported files when it is exported. If the app is closed or interrupted by a system crash or power outage, launching the workspace prompts to resume the session. Crop edits made since a scan's last export are not yet saved.
+- **Crash-Proof Session Persistence (`session.json`):** Tracks staged scan files as they are added, and records each scan's crops (boxes, manual 90° rotations, auto-orientation, refinements) when you save, export or move to the Finish stage; Finish settings are saved as you change them. If the app is closed or interrupted by a system crash or power outage, launching the workspace prompts to resume the session. Crop edits made since the last save are not yet on disk.
 - **Crash Reports:** Unhandled errors are written to `%LocalAppData%/PhotoCropper/logs` (the last 20 are kept). Errors raised by UI actions show an error dialog pointing to the report and keep the app open so unsaved work can still be saved.
 - **Automatic Session Reconstruction:** Even if `session.json` is missing or accidentally removed, the workspace engine inspects the `RawScans/` directory on startup and reconstructs the session automatically.
 
@@ -140,30 +151,58 @@ The codebase strictly enforces the highest standard of static analysis and memor
 
 ## Keyboard Shortcuts
 
+**Anywhere**
+
 | Shortcut | Action |
 |----------|--------|
 | `F1` | 📖 Open Help & Keyboard Shortcuts window |
 | `F5` | 🖨️ Acquire scan from flatbed scanner |
-| `T` | ⚡ Auto-Tune detection parameters on active scan |
-| `V` | 🎞️ Toggle Batch Review Mode (Full-screen carousel curation) |
-| `E` / `Double Click` | Edit in Scanner (jumps from Review Mode directly to the active photo) |
-| `Mouse Wheel` | Scroll through photos (Review Mode) |
-| `Left / Right` | Navigate between cropped photos |
-| `Up / Down` / `PageUp / PageDown` | Switch between original loaded scans |
-| `R` | Rotate the current cropped photo 90° clockwise |
-| `Space` / `B` | Hold to compare with the unedited raw scan crop |
-| `X` / `Delete` | Permanently delete the currently selected photo |
-| `Shift + Delete` | 🗑️ Delete active scan from workspace and disk |
-| `Ctrl + A` | Select all photos (Gallery Grid View) |
-| `Ctrl + Z` | Undo last photo operation (delete, rotate, manual crop, refinement) |
-| `Ctrl + Y` | Redo last undone operation |
-| `N` / `Ñ` | Enter Interactive Refinement Mode |
-| `1 / 2` | Switch between Single Photo Inspection and Gallery Grid View |
-| `Enter` / `A` | Accept Refinement (while in Refinement Mode) |
-| `Backspace` / `Esc` / `C` | Reject Refinement (while in Refinement Mode) |
-| `Esc` | Close active dialog window or Refinement mode |
-| `Ctrl + Mouse Wheel` | Zoom in/out on the original scan |
-| `Ctrl + S` | Save all results |
+| `Ctrl + S` | Save (crops to `Cropped/`, finished photos to `Final/`) |
+| `Ctrl + Z` / `Ctrl + Y` | Undo / redo the last photo operation (delete, rotate, box edit, manual crop, refinement) |
+| `Esc` | Close the active dialog, overlay or mode |
+
+**Crops stage**
+
+| Shortcut | Action |
+|----------|--------|
+| `T` | ⚡ Auto-Tune detection parameters on the active scan |
+| `Up / Down` / `PageUp / PageDown` | Switch between scans |
+| `Left / Right` | Previous / next photo of the scan |
+| `R` | Rotate the selected photo(s) 90° clockwise |
+| `X` / `Delete` | Delete the selected photo(s) |
+| `Shift + Delete` | 🗑️ Delete the active scan from the project and disk |
+| `Space` / `B` (hold) | Compare with the original crop, before orientation fixes |
+| `1 / 2` | Switch between single-photo and grid view |
+| `Ctrl + A` | Select all photos (grid view) |
+| `N` / `Ñ` | Refine the selected photo's edges |
+| `V` | 🎞️ Review mode |
+| `Ctrl + Mouse Wheel` | Zoom the scan around the pointer |
+
+**Review mode**
+
+| Shortcut | Action |
+|----------|--------|
+| `Right` / `Space` / `Enter` · `Left` / `Backspace` · `Mouse Wheel` | Next · previous photo (an end slide follows the last photo) |
+| `R` / `L` | Rotate 90° clockwise / counter-clockwise |
+| `X` / `Delete` | Delete the photo |
+| `Esc` / `E` / `Double Click` | Back to the editor, on this photo's scan |
+
+**Refine mode**
+
+| Shortcut | Action |
+|----------|--------|
+| `Enter` / `A` | Accept the new crop |
+| `Esc` / `Backspace` / `C` | Cancel |
+
+**Finish photo editor**
+
+| Shortcut | Action |
+|----------|--------|
+| `Left / Right` | Previous / next photo |
+| `Space` (hold) | Show the original |
+| `B` | Repair brush on / off |
+| `F` | Fit the photo to the view |
+| `Esc` | Back to the photo grid |
 
 ---
 

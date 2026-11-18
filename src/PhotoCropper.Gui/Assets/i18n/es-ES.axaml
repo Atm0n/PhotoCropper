@@ -184,7 +184,7 @@
 	<sys:String x:Key="HelpThemeTitle">Temas y cajas para daltónicos</sys:String>
 	<sys:String x:Key="HelpThemeDesc">Cambia entre los temas Oscuro, Claro y Sistema con el botón Tema (abajo a la derecha) o el menú de configuración. Color de la caja ofrece colores predefinidos aptos para daltónicos o cualquier color personalizado.</sys:String>
 	<sys:String x:Key="HelpSafeExitTitle">Salida segura y recuperación</sys:String>
-	<sys:String x:Key="HelpSafeExitDesc">El proyecto se guarda en session.json mientras trabajas, de modo que un fallo o un corte de luz no hace perder nada. Te avisa antes de cerrar con cambios sin guardar, y se pueden deshacer las 30 últimas ediciones.</sys:String>
+	<sys:String x:Key="HelpSafeExitDesc">Los escaneos se escriben en el proyecto en cuanto llegan, de modo que un fallo no hace perder ninguno, y los ajustes del acabado se guardan a medida que los cambias. Los cambios en los recortes se guardan al Guardar o al pasar al acabado. Te avisa antes de cerrar con cambios sin guardar, y se pueden deshacer las 30 últimas ediciones.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Atajos de Teclado</sys:String>
 	<sys:String x:Key="HelpShortcutScan">[F5] Escanear desde el escáner</sys:String>
 	<sys:String x:Key="HelpShortcutAutoTune">[T] Auto-ajustar escaneo activo</sys:String>

@@ -184,7 +184,7 @@
 	<sys:String x:Key="HelpThemeTitle">Temes i caixes per a daltònics</sys:String>
 	<sys:String x:Key="HelpThemeDesc">Canvia entre els temes Fosc, Clar i Sistema amb el botó Tema (a baix a la dreta) o el menú de configuració. Color de la caixa ofereix colors predefinits aptes per a daltònics o qualsevol color personalitzat.</sys:String>
 	<sys:String x:Key="HelpSafeExitTitle">Sortida segura i recuperació</sys:String>
-	<sys:String x:Key="HelpSafeExitDesc">El projecte es desa a session.json mentre treballes, de manera que una fallada o un tall de llum no fa perdre res. T'avisa abans de tancar amb canvis sense desar, i es poden desfer les 30 últimes edicions.</sys:String>
+	<sys:String x:Key="HelpSafeExitDesc">Els escanejos s'escriuen al projecte tan bon punt arriben, de manera que una fallada no en fa perdre cap, i la configuració de l'acabat es desa a mesura que la canvies. Els canvis als retalls es desen quan fas Desa o passes a l'acabat. T'avisa abans de tancar amb canvis sense desar, i es poden desfer les 30 últimes edicions.</sys:String>
 	<sys:String x:Key="HelpShortcutsTitle">Dreceres de Teclat</sys:String>
 	<sys:String x:Key="HelpShortcutScan">[F5] Escanejar des de l'escàner</sys:String>
 	<sys:String x:Key="HelpShortcutAutoTune">[T] Auto-ajustar escaneig actiu</sys:String>
