@@ -187,7 +187,7 @@ public sealed class CropsStageViewModelTests : IDisposable
 
         vm.ClickAt(engine.AcceptedCandidates[1].Rotated.Center);
 
-        _host.Selected.ShouldBe(1);
+        vm.SelectedPhotoIndex.ShouldBe(1);
         engine.DetectedPhotos.Count.ShouldBe(2);
     }
 
@@ -256,7 +256,7 @@ public sealed class CropsStageViewModelTests : IDisposable
         await vm.AddManualCropAsync(new System.Drawing.Rectangle(1500, 150, 300, 200));
 
         engine.DetectedPhotos.Count.ShouldBe(3);
-        _host.Selected.ShouldBe(2);
+        vm.SelectedPhotoIndex.ShouldBe(2);
         _undo.UndoCount.ShouldBe(1);
     }
 
@@ -292,6 +292,109 @@ public sealed class CropsStageViewModelTests : IDisposable
         engine.CustomBackgroundColorHsv.ShouldBeNull();
         _host.Shown.ShouldHaveSingleItem();
         engine.DetectedPhotos.Count.ShouldBe(2);
+    }
+
+    // ---- photo list ----
+
+    [Fact]
+    public async Task OpeningAScan_ListsItsPhotosAndShowsTheFirst()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+
+        vm.Photos.Count.ShouldBe(2);
+        vm.HasPhotos.ShouldBeTrue();
+        vm.SelectedPhotoIndex.ShouldBe(0);
+        vm.Photos[0].IsSelected.ShouldBeTrue();
+        vm.PhotoCounterText.ShouldBe(LocalizationService.Format(ResourceKeys.PhotoCounter, "PHOTO {0} OF {1}", 1, 2));
+        vm.CanRefine.ShouldBeTrue();
+        vm.PreviousPhotoCommand.CanExecute(null).ShouldBeFalse();
+        vm.NextPhotoCommand.CanExecute(null).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task DeletingThePhotoInTheCarousel_RemovesItAndItsBox()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+        vm.NextPhotoCommand.Execute(null);
+
+        vm.DeleteSelectedPhotos();
+
+        engine.DetectedPhotos.Count.ShouldBe(1);
+        engine.AcceptedCandidates.Count.ShouldBe(1);
+        vm.Photos.Count.ShouldBe(1);
+        vm.SelectedPhotoIndex.ShouldBe(0);
+        _undo.UndoCount.ShouldBe(1);
+        _host.Shown[^1].ShouldBeSameAs(engine);
+    }
+
+    [Fact]
+    public async Task GridSelection_DrivesTheLabelsAndBatchDeleteIsOneUndoStep()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+        vm.IsGridView = true;
+        vm.IsCarouselView.ShouldBeFalse();
+
+        vm.SelectAllCommand.Execute(null);
+
+        vm.SelectedPhotoIndices().Count.ShouldBe(2);
+        vm.IsSelectionTextVisible.ShouldBeTrue();
+        vm.DeleteButtonText.ShouldBe(LocalizationService.Format(ResourceKeys.BtnDeleteCount, "Delete ({0})", 2));
+        vm.CanRefine.ShouldBeFalse();
+
+        vm.DeleteSelectedPhotos();
+
+        engine.DetectedPhotos.Count.ShouldBe(0);
+        vm.HasPhotos.ShouldBeFalse();
+        vm.IsGridVisible.ShouldBeFalse();
+        _undo.UndoCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task SelectingOneGridPhoto_ShowsItInTheCarousel()
+    {
+        var (vm, _) = await OpenScanWithTwoPhotosAsync();
+        using var __ = vm;
+        vm.IsGridView = true;
+
+        vm.Photos[0].IsSelected = false;
+        vm.Photos[1].IsSelected = true;
+
+        vm.SelectedPhotoIndex.ShouldBe(1);
+        vm.SelectedPhotoIndices().ShouldBe([1]);
+    }
+
+    [Fact]
+    public async Task RotatingTheSelectedPhoto_TurnsItAndKeepsItShown()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+        vm.SelectPhoto(1);
+        var before = engine.DetectedPhotos[1].Size;
+
+        await vm.RotateSelectedPhotosCommand.ExecuteAsync(null);
+
+        engine.DetectedPhotos[1].Width.ShouldBe(before.Height);
+        engine.DetectedPhotos[1].Height.ShouldBe(before.Width);
+        vm.SelectedPhotoIndex.ShouldBe(1);
+        _undo.UndoCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task HoldToCompare_SwapsTheShownPhotoForTheOriginalAndBack()
+    {
+        var (vm, _) = await OpenScanWithTwoPhotosAsync();
+        using var __ = vm;
+        var shown = vm.Photos[0].Image;
+
+        vm.ShowOriginal(true);
+        vm.Photos[0].Image.ShouldNotBeSameAs(shown);
+        var original = vm.Photos[0].Image;
+
+        vm.ShowOriginal(false);
+        vm.Photos[0].Image.ShouldNotBeSameAs(original);
     }
 
     [Fact]
@@ -349,8 +452,10 @@ public sealed class CropsStageViewModelTests : IDisposable
         public void ShowScanResult(PhotoCropperEngine engine) => Shown.Add(engine);
         public int BoxRepaints { get; private set; }
         public void ShowBoxes(PhotoCropperEngine engine) => BoxRepaints++;
-        public int? Selected { get; private set; }
-        public void SelectPhoto(int index) => Selected = index;
+        public void DisposeLater(IReadOnlyCollection<IDisposable> items)
+        {
+            foreach (var item in items) item.Dispose();
+        }
         public void ShowStatus(string message) => Statuses.Add(message);
     }
 }

@@ -18,14 +18,14 @@ internal interface ICropsStageHost
     /// <summary>Runs work behind the loading overlay; returns false if it failed or was skipped.</summary>
     Task<bool> RunBusyAsync(string message, Func<CancellationToken, Task> work);
 
-    /// <summary>Shows a scan that was loaded or re-detected: the image with its boxes, the photo list and counters.</summary>
+    /// <summary>Shows a scan that was loaded or re-detected: the image with its boxes (the photo list is the view-model's).</summary>
     void ShowScanResult(PhotoCropperEngine engine);
 
     /// <summary>Repaints just the boxes over the scan, while one is being dragged.</summary>
     void ShowBoxes(PhotoCropperEngine engine);
 
-    /// <summary>Selects a photo of the open scan in the photo list.</summary>
-    void SelectPhoto(int index);
+    /// <summary>Disposes bitmaps once the UI has stopped drawing them (e.g. after the carousel's slide animation).</summary>
+    void DisposeLater(IReadOnlyCollection<IDisposable> items);
 
     void ShowStatus(string message);
 }
@@ -61,6 +61,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
         _settings = settings;
         _saveSettings = saveSettings;
         LoadFromSettings();
+        RefreshPhotoTexts();
     }
 
     /// <summary>How long option changes (e.g. dragging a slider) wait before detection runs again.</summary>
@@ -276,9 +277,8 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
     private void ShowLoaded(PhotoCropperEngine engine, string fileName)
     {
         ShowOptions(engine.CurrentOptions);
-        _host.ShowScanResult(engine);
+        Present(engine);
         UpdateScanCounter();
-        UpdateCoverage();
         _host.ShowStatus(fileName);
     }
 
@@ -342,8 +342,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
         await _host.RunBusyAsync(LocalizationService.GetString(ResourceKeys.MsgDetectingPhotos, "Detecting photos..."), async ct =>
         {
             await Task.Run(engine.DetectPhotos, ct);
-            _host.ShowScanResult(engine);
-            UpdateCoverage();
+            Present(engine);
             _host.ShowStatus(LocalizationService.Format(ResourceKeys.MsgDetectionComplete, "Detection complete. Found {0} photos.", engine.DetectedPhotos.Count));
         });
     }
@@ -361,8 +360,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
             var result = await Task.Run(() => engine.AutoTune(), ct);
             session.IsModified = true;
             ShowOptions(engine.CurrentOptions);
-            _host.ShowScanResult(engine);
-            UpdateCoverage();
+            Present(engine);
 
             _host.ShowStatus(result.Improved || result.PhotoCount > 0
                 ? LocalizationService.Format(
@@ -394,8 +392,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
                 return engine.AutoTune();
             }, ct);
             ShowOptions(engine.CurrentOptions);
-            _host.ShowScanResult(engine);
-            UpdateCoverage();
+            Present(engine);
             _host.ShowStatus(LocalizationService.Format(
                 ResourceKeys.MsgBackgroundAutoTuned,
                 "Custom background color applied and detection auto-tuned: found {0} photos.",
@@ -415,8 +412,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
         await _host.RunBusyAsync(LocalizationService.GetString(ResourceKeys.MsgReprocessing, "Reprocessing with automatic background..."), async ct =>
         {
             await Task.Run(engine.DetectPhotos, ct);
-            _host.ShowScanResult(engine);
-            UpdateCoverage();
+            Present(engine);
             _host.ShowStatus(LocalizationService.Format(ResourceKeys.MsgDetectionComplete, "Detection complete. Found {0} photos.", engine.DetectedPhotos.Count));
         });
     }

@@ -148,7 +148,6 @@ internal sealed partial class MainWindow
         {
             SetMainImage(null);
             ClearGalleryBitmaps();
-            lblPhotoInfo.Text = "";
             lblStatus.Text = statusMsg;
             UpdateEmptyStateVisibility();
             RefreshStages();

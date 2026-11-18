@@ -71,7 +71,7 @@ internal sealed partial class MainWindow
 
             for (int p = 0; p < count; p++)
             {
-                if (s == CurrentIndex && initialIndex == -1 && slides?.SelectedIndex == p)
+                if (s == CurrentIndex && initialIndex == -1 && SelectedPhotoNumber == p)
                 {
                     initialIndex = _reviewItems.Count;
                 }
@@ -122,16 +122,7 @@ internal sealed partial class MainWindow
             }
             else
             {
-                LoadCroppedPhotosToSlider();
-                if (slides != null && item.PhotoIndex < slides.Items.Count)
-                {
-                    slides.SelectedIndex = item.PhotoIndex;
-                }
-                if (lstGallery != null && item.PhotoIndex < lstGallery.Items.Count)
-                {
-                    lstGallery.SelectedIndex = item.PhotoIndex;
-                }
-                UpdateSelectionUi();
+                _cropsVm.ShowPhotos(item.PhotoIndex);
             }
         }
         else if (ScanSessions.Count > 0 && CurrentIndex >= 0 && CurrentIndex < ScanSessions.Count)

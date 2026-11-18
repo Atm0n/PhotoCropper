@@ -195,17 +195,12 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost
     void ICropsStageHost.ShowScanResult(PhotoCropper.Core.PhotoCropperEngine engine)
     {
         ShowScan(engine);
-        LoadCroppedPhotosToSlider();
-        UpdatePhotoCounterLabel();
         if (btnResetBackground != null) btnResetBackground.IsEnabled = engine.CustomBackgroundColorHsv != null;
     }
 
     void ICropsStageHost.ShowBoxes(PhotoCropper.Core.PhotoCropperEngine engine) => ShowScan(engine);
 
-    void ICropsStageHost.SelectPhoto(int index)
-    {
-        if (slides != null && index >= 0) slides.SelectedIndex = index;
-    }
+    void ICropsStageHost.DisposeLater(IReadOnlyCollection<IDisposable> items) => DeferDispose(items);
 
     // ---- IStageHost ----
 

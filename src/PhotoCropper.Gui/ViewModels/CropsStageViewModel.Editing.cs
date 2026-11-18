@@ -140,8 +140,7 @@ internal sealed partial class CropsStageViewModel
         }
 
         CommitDrag(engine, index, gesture == BoxGesture.Rotate ? "Rotate Crop Box" : "Resize Crop Box");
-        _host.ShowScanResult(engine);
-        UpdateCoverage();
+        Present(engine, select: index);
     }
 
     /// <summary>A click that wasn't on a handle: on a delete badge it deletes that box, inside a box it selects its photo.</summary>
@@ -165,7 +164,7 @@ internal sealed partial class CropsStageViewModel
             using var outline = new VectorOfPointF(box.Rotated.GetVertices());
             if (CvInvoke.PointPolygonTest(outline, point, false) >= 0)
             {
-                _host.SelectPhoto(i);
+                SelectPhoto(i);
                 return;
             }
         }
@@ -191,9 +190,7 @@ internal sealed partial class CropsStageViewModel
                 CropCandidate? box = added < engine.AcceptedCandidates.Count ? engine.AcceptedCandidates[added] : null;
                 _undo.PushAdd(scanIndex, added, engine.DetectedPhotos[added], box);
             }
-            _host.ShowScanResult(engine);
-            UpdateCoverage();
-            _host.SelectPhoto(engine.DetectedPhotos.Count - 1);
+            Present(engine, select: engine.DetectedPhotos.Count - 1);
             _host.ShowStatus(LocalizationService.GetString(ResourceKeys.MsgManualCropAdded, "Manual crop added."));
         });
     }
@@ -215,8 +212,7 @@ internal sealed partial class CropsStageViewModel
         }
         engine.DeletePhoto(index);
         Current!.IsModified = true;
-        _host.ShowScanResult(engine);
-        UpdateCoverage();
+        Present(engine, select: index);
     }
 
     private void BeginDrag(PhotoCropperEngine engine, int index, BoxGesture gesture)

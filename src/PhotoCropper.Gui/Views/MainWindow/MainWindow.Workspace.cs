@@ -122,8 +122,6 @@ internal sealed partial class MainWindow
         SetMainImage(null);
         ClearGalleryBitmaps();
         _cropsVm.UpdateScanCounter();
-        lblPhotoInfo?.Text = "";
-        UpdateSelectionUi();
     }
 
     private async Task SwitchToProjectAsync(string newWorkDir)

@@ -199,8 +199,8 @@ internal sealed partial class MainWindow
 
     private void StartRefineMode()
     {
-        if (ScanSessions.Count == 0 || slides == null || slides.SelectedIndex < 0) return;
-        int photoIndex = slides.SelectedIndex;
+        if (ScanSessions.Count == 0 || SelectedPhotoNumber < 0) return;
+        int photoIndex = SelectedPhotoNumber;
 
         var photoCropper = ScanSessions[CurrentIndex].Activate();
         currentRefineRect = photoCropper.GetRefinedCropRect(photoIndex);
@@ -219,8 +219,8 @@ internal sealed partial class MainWindow
 
     private void UpdateRefinePreview()
     {
-        if (ScanSessions.Count == 0 || slides == null || slides.SelectedIndex < 0) return;
-        int photoIndex = slides.SelectedIndex;
+        if (ScanSessions.Count == 0 || SelectedPhotoNumber < 0) return;
+        int photoIndex = SelectedPhotoNumber;
 
         var photoCropper = ScanSessions[CurrentIndex].Activate();
         using Mat previewMat = photoCropper.DetectedPhotos[photoIndex].Clone();
@@ -265,7 +265,7 @@ internal sealed partial class MainWindow
         if (uiRect.Width < 5 || uiRect.Height < 5) return;
 
         var imageRect = GetRefineImageRectInsideControl();
-        int photoIndex = slides.SelectedIndex;
+        int photoIndex = SelectedPhotoNumber;
         var photo = ScanSessions[CurrentIndex].Activate().DetectedPhotos[photoIndex];
         var photoSize = new System.Drawing.Size(photo.Width, photo.Height);
 
@@ -298,7 +298,7 @@ internal sealed partial class MainWindow
     private async Task AcceptRefineAsync()
     {
         if (!isRefining) return;
-        int photoIndex = slides.SelectedIndex;
+        int photoIndex = SelectedPhotoNumber;
 
         string applyingMsg = LocalizationService.GetString(ResourceKeys.MsgApplyingRefine, "Applying refinement...");
         string successMsg = LocalizationService.GetString(ResourceKeys.MsgRefineSuccess, "Crop refined successfully.");
@@ -325,8 +325,7 @@ internal sealed partial class MainWindow
             beforeMat.Dispose();
             beforeRaw?.Dispose();
             CloseRefineMode();
-            LoadCroppedPhotosToSlider();
-            slides.SelectedIndex = photoIndex;
+            _cropsVm.ShowPhotos(photoIndex);
         }, successMsg);
     }
 
@@ -375,7 +374,6 @@ internal sealed partial class MainWindow
                 await Task.Run(() => photo.DetectPhotos(), ct);
                 ShowScan(photo);
                 LoadCroppedPhotosToSlider();
-                UpdatePhotoCounterLabel();
                 UpdateDetectionCoverageLabel();
                 lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgDetectionComplete, "Detection complete. Found {0} photos.", photo.DetectedPhotos.Count);
             });

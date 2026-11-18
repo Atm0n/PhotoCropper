@@ -15,7 +15,6 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace PhotoCropper.Gui;
 
-internal sealed record GalleryPhotoItem(Avalonia.Media.Imaging.Bitmap Image, string Label, string Dimensions, int Index);
 
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Avalonia Window lifecycle is managed by OnClosed override")]
 internal sealed partial class MainWindow : Window
@@ -31,7 +30,6 @@ internal sealed partial class MainWindow : Window
     private readonly AppNotificationService _notificationService = new();
     private bool isLoading;
     private bool isComparingRaw;
-    private bool isSyncingSelection;
     private bool _isExitingConfirmed;
     private readonly CropsStageViewModel _cropsVm;
     private bool _isNavigating => _cropsVm.IsNavigating;
@@ -381,7 +379,7 @@ internal sealed partial class MainWindow : Window
 
     private bool HandleViewKey(KeyEventArgs e)
     {
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.A && rbViewGrid?.IsChecked == true)
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.A && _cropsVm.IsGridView)
         {
             SelectAllGalleryPhotos();
             e.Handled = true;
@@ -404,18 +402,10 @@ internal sealed partial class MainWindow : Window
 
         if (!isLoading && !_isNavigating && ScanSessions.Count > 0 && (e.Key == Key.Space || e.Key == Key.B))
         {
-            if (!isComparingRaw && slides != null && slides.SelectedIndex >= 0)
+            if (!isComparingRaw && _cropsVm.SelectedPhotoIndex >= 0)
             {
-                int sel = slides.SelectedIndex;
-                var engine = ScanSessions[CurrentIndex].Activate();
-                if (sel < engine.RawDetectedPhotos.Count)
-                {
-                    isComparingRaw = true;
-                    var oldBmp = slides.Items[sel] as IDisposable;
-                    slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.RawDetectedPhotos[sel]);
-                    slides.SelectedIndex = sel;
-                    DeferDispose(oldBmp);
-                }
+                isComparingRaw = true;
+                _cropsVm.ShowOriginal(true);
             }
             e.Handled = true;
             return true;
@@ -468,7 +458,7 @@ internal sealed partial class MainWindow : Window
                 return true;
             }
 
-            if (rbViewGrid?.IsChecked == true && lstGallery?.SelectedItems != null && lstGallery.SelectedItems.Count > 1)
+            if (_cropsVm.IsGridView && _cropsVm.SelectedPhotoIndices().Count > 1)
             {
                 ClearGallerySelection();
                 e.Handled = true;
@@ -499,7 +489,7 @@ internal sealed partial class MainWindow : Window
                     if (!isLoading && !_isNavigating)
                     {
                         FocusManager?.Focus(null);
-                        if (slides != null) slides.Previous();
+                        _cropsVm.PreviousPhotoCommand.Execute(null);
                     }
                     e.Handled = true;
                     return true;
@@ -508,7 +498,7 @@ internal sealed partial class MainWindow : Window
                     if (!isLoading && !_isNavigating)
                     {
                         FocusManager?.Focus(null);
-                        if (slides != null) slides.Next();
+                        _cropsVm.NextPhotoCommand.Execute(null);
                     }
                     e.Handled = true;
                     return true;
@@ -541,17 +531,9 @@ internal sealed partial class MainWindow : Window
         if (isComparingRaw && (e.Key == Key.Space || e.Key == Key.B))
         {
             isComparingRaw = false;
-            if (!isLoading && !_isNavigating && ScanSessions.Count > 0 && slides != null && slides.SelectedIndex >= 0)
+            if (!isLoading && !_isNavigating && ScanSessions.Count > 0)
             {
-                int sel = slides.SelectedIndex;
-                var engine = ScanSessions[CurrentIndex].Activate();
-                if (sel < engine.DetectedPhotos.Count)
-                {
-                    var oldBmp = slides.Items[sel] as IDisposable;
-                    slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.DetectedPhotos[sel]);
-                    slides.SelectedIndex = sel;
-                    DeferDispose(oldBmp);
-                }
+                _cropsVm.ShowOriginal(false);
             }
             e.Handled = true;
         }
