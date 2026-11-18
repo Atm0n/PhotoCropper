@@ -229,7 +229,7 @@ internal sealed partial class MainWindow
         return panel;
     }
 
-    private async Task SetDetectionBoxColorAsync(string colorName)
+    private Task SetDetectionBoxColorAsync(string colorName)
     {
         SettingsManager.Instance.Settings.DetectionBoxColor = colorName;
         SettingsManager.Instance.Save();
@@ -244,9 +244,11 @@ internal sealed partial class MainWindow
             if (session.IsActive && session.Engine != null)
             {
                 session.Engine.BoundingBoxColor = colorName;
+                // The colour only affects the overlay, so there is nothing to re-detect.
+                ShowScan(session.Engine);
             }
-            await ReprocessCurrentScanAsync();
         }
+        return Task.CompletedTask;
     }
 
     private void UpdateCropStrokeColor(string? colorName)

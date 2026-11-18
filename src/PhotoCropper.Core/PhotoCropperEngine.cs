@@ -36,7 +36,6 @@ public class PhotoCropperEngine : IDisposable
     public string BoundingBoxColor { get; set; } = Common.AppConstants.DefaultBoundingBoxColor;
 
     public Mat Original { get; set; }
-    public Mat OriginalWithDetected { get; set; }
     public Collection<Mat> DetectedPhotos { get; } = [];
     public Collection<Mat> RawDetectedPhotos { get; } = [];
     public Dictionary<int, int> PhotoRotations { get; } = [];
@@ -68,7 +67,6 @@ public class PhotoCropperEngine : IDisposable
             throw new InvalidOperationException($"Failed to decode image from file '{originalFilePath}'. The image format may be invalid or corrupt.");
         }
         Original = NormalizeToBgr(rawMat);
-        OriginalWithDetected = Original.Clone();
     }
 
     public static Mat NormalizeToBgr(Mat source)
@@ -166,9 +164,6 @@ public class PhotoCropperEngine : IDisposable
         // Rotations are keyed by photo index, so they belong to the photos being discarded here.
         // Keeping them would apply stale user rotations to newly detected photos.
         PhotoRotations.Clear();
-
-        OriginalWithDetected?.Dispose();
-        OriginalWithDetected = Original.Clone();
     }
 
     protected virtual void Dispose(bool disposing)
@@ -178,7 +173,6 @@ public class PhotoCropperEngine : IDisposable
             if (disposing)
             {
                 Original?.Dispose();
-                OriginalWithDetected?.Dispose();
                 foreach (var photo in DetectedPhotos) photo.Dispose();
                 DetectedPhotos.Clear();
                 foreach (var raw in RawDetectedPhotos) raw.Dispose();
@@ -221,7 +215,6 @@ public class PhotoCropperEngine : IDisposable
         // the saved crop it came from rather than assuming photo i == saved crop i.
         var kept = ExtractAndProcessCandidates(candidates, knownOrientations: knownOrientations);
         AcceptedCandidates = [.. kept.Select(k => k.Candidate)];
-        DrawBoundingBoxes(AcceptedCandidates);
 
         for (int photoIdx = 0; photoIdx < kept.Count; photoIdx++)
         {
@@ -367,92 +360,6 @@ public class PhotoCropperEngine : IDisposable
     /// <summary>Scales a base overlay size (in pixels at the reference resolution) to this scan.</summary>
     public int ScaleOverlay(double basePixels) => Math.Max(1, (int)Math.Round(basePixels * OverlayScale));
 
-    private void DrawBoundingBoxes(IEnumerable<CropCandidate> candidates)
-    {
-        MCvScalar boxColor = CurrentOptions.GetBoundingBoxColorBgr();
-        MCvScalar redBadge = new(0, 0, 255); // BGR for Red
-        MCvScalar whiteText = new(255, 255, 255);
-        int radius = ScaleOverlay(45);
-        int boxThickness = ScaleOverlay(12);
-        int handleHalf = ScaleOverlay(25);
-        int handleBorder = ScaleOverlay(4);
-        int crossHalf = ScaleOverlay(15);
-        int crossThickness = ScaleOverlay(8);
-
-        foreach (var cand in candidates)
-        {
-            PointF[] vertices = cand.Rotated.GetVertices();
-            for (int j = 0; j < 4; j++)
-            {
-                CvInvoke.Line(OriginalWithDetected, Point.Round(vertices[j]), Point.Round(vertices[(j + 1) % 4]), boxColor, boxThickness);
-
-                // Draw white square for grab handles
-                Rectangle handleRect = new((int)vertices[j].X - handleHalf, (int)vertices[j].Y - handleHalf, handleHalf * 2, handleHalf * 2);
-                handleRect.Intersect(new Rectangle(0, 0, OriginalWithDetected.Width, OriginalWithDetected.Height));
-
-                if (handleRect.Width > 0 && handleRect.Height > 0)
-                {
-                    CvInvoke.Rectangle(OriginalWithDetected, handleRect, whiteText, -1);
-                    // Draw border around the handle
-                    CvInvoke.Rectangle(OriginalWithDetected, handleRect, boxColor, handleBorder);
-                }
-            }
-
-            // Find top right corner (max X - Y)
-            var sortedVertices = (PointF[])vertices.Clone();
-            Array.Sort(sortedVertices, (a, b) => (b.X - b.Y).CompareTo(a.X - a.Y));
-            var tr = Point.Round(sortedVertices[0]);
-
-            CvInvoke.Circle(OriginalWithDetected, tr, radius, redBadge, -1);
-            CvInvoke.Line(OriginalWithDetected, new Point(tr.X - crossHalf, tr.Y - crossHalf), new Point(tr.X + crossHalf, tr.Y + crossHalf), whiteText, crossThickness);
-            CvInvoke.Line(OriginalWithDetected, new Point(tr.X + crossHalf, tr.Y - crossHalf), new Point(tr.X - crossHalf, tr.Y + crossHalf), whiteText, crossThickness);
-
-            // Draw standard rotation handle at top-middle of box
-            Rectangle imageBounds = new(0, 0, OriginalWithDetected.Width, OriginalWithDetected.Height);
-            PointF[] ordered = PhotoExtractionEngine.OrderBoxPoints(vertices);
-            Point topMid = Point.Round(new PointF((ordered[0].X + ordered[1].X) / 2f, (ordered[0].Y + ordered[1].Y) / 2f));
-            Point rotHandle = Point.Round(cand.GetRotationHandlePoint((float)(RotationHandleBaseOffset * OverlayScale), imageBounds));
-
-            // Stem connecting top edge to rotation handle
-            CvInvoke.Line(OriginalWithDetected, topMid, rotHandle, boxColor, ScaleOverlay(6));
-
-            // Blue rotation handle badge
-            MCvScalar blueBadge = new(255, 0, 0); // Blue in BGR
-            CvInvoke.Circle(OriginalWithDetected, rotHandle, radius, blueBadge, -1);
-            CvInvoke.Circle(OriginalWithDetected, rotHandle, radius, whiteText, ScaleOverlay(3));
-
-            // Draw spinning rotation arrow icon inside the badge
-            int arrowRadius = ScaleOverlay(22);
-            CvInvoke.Ellipse(OriginalWithDetected, rotHandle, new Size(arrowRadius, arrowRadius), 0, 45, 315, whiteText, ScaleOverlay(5));
-
-            // Arrow head at arc termination (angle 315°)
-            double arrowAngleRad = 315.0 * Math.PI / 180.0;
-            Point tip = new(
-                rotHandle.X + (int)(arrowRadius * Math.Cos(arrowAngleRad)),
-                rotHandle.Y + (int)(arrowRadius * Math.Sin(arrowAngleRad)));
-
-            // Tangent direction at 315° is (-sin(315°), cos(315°))
-            double tx = -Math.Sin(arrowAngleRad);
-            double ty = Math.Cos(arrowAngleRad);
-            double nx = -ty;
-            double ny = tx;
-
-            double headLen = 12.0 * OverlayScale;
-            double headWidth = 8.0 * OverlayScale;
-
-            Point wing1 = new(
-                (int)(tip.X - headLen * tx + headWidth * nx),
-                (int)(tip.Y - headLen * ty + headWidth * ny));
-            Point wing2 = new(
-                (int)(tip.X - headLen * tx - headWidth * nx),
-                (int)(tip.Y - headLen * ty - headWidth * ny));
-
-            Point[] arrowPoly = [tip, wing1, wing2];
-            using var polyVec = new VectorOfPoint(arrowPoly);
-            CvInvoke.FillConvexPoly(OriginalWithDetected, polyVec, whiteText);
-        }
-    }
-
     public void DetectPhotos()
     {
         ResetState();
@@ -582,9 +489,6 @@ public class PhotoCropperEngine : IDisposable
         // Only keep candidates that produced a photo, so AcceptedCandidates[i] always matches DetectedPhotos[i].
         var kept = ExtractAndProcessCandidates(acceptedCandidates, padded, pad);
         AcceptedCandidates = [.. kept.Select(k => k.Candidate)];
-
-        // Draw bounding boxes on OriginalWithDetected
-        DrawBoundingBoxes(AcceptedCandidates);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Mat is returned to caller")]
@@ -657,20 +561,9 @@ public class PhotoCropperEngine : IDisposable
     public void RotatePhotoCounterClockwise(int index) => RotatePhotoInternal(index, RotateFlags.Rotate90CounterClockwise);
 
 
-    public void RedrawBoundingBoxes()
-    {
-        OriginalWithDetected?.Dispose();
-        OriginalWithDetected = Original.Clone();
-        if (AcceptedCandidates != null)
-        {
-            DrawBoundingBoxes(AcceptedCandidates);
-        }
-    }
-
     public void UpdateCandidates(IEnumerable<CropCandidate> newCandidates)
     {
         AcceptedCandidates = [.. newCandidates];
-        RedrawBoundingBoxes();
     }
 
 
@@ -768,7 +661,6 @@ public class PhotoCropperEngine : IDisposable
             var newList = new List<CropCandidate>(AcceptedCandidates);
             newList.RemoveAt(index);
             AcceptedCandidates = newList;
-            RedrawBoundingBoxes();
         }
     }
 
@@ -808,7 +700,6 @@ public class PhotoCropperEngine : IDisposable
             var newList = new List<CropCandidate>(AcceptedCandidates);
             newList.Insert(candTargetIndex, candidate.Value);
             AcceptedCandidates = newList;
-            RedrawBoundingBoxes();
         }
     }
 
@@ -848,7 +739,6 @@ public class PhotoCropperEngine : IDisposable
                 }
             };
             AcceptedCandidates = newList;
-            RedrawBoundingBoxes();
         }
 
         // Crop the raw copy with the same rectangle so hold-to-compare keeps showing the same region.
@@ -923,7 +813,6 @@ public class PhotoCropperEngine : IDisposable
         DetectedPhotos.Add(photo);
         RawDetectedPhotos.Add(raw);
         AcceptedCandidates = [.. AcceptedCandidates ?? [], candidate.Value with { OrientationDegrees = orientation }];
-        RedrawBoundingBoxes();
     }
 
     /// <returns>The files written; pass them back as <paramref name="previousExports"/> on the next export.</returns>

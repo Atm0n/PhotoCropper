@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:gui="using:PhotoCropper.Gui"
         xmlns:stages="using:PhotoCropper.Gui.Views.Stages"
+        xmlns:controls="using:PhotoCropper.Gui.Controls"
 		WindowState="Maximized"
 		MinWidth="1200"
 		MinHeight="650"
@@ -357,7 +358,10 @@
 								<LayoutTransformControl.LayoutTransform>
 									<ScaleTransform ScaleX="{Binding #sldZoom.Value}" ScaleY="{Binding #sldZoom.Value}"/>
 								</LayoutTransformControl.LayoutTransform>
-								<Image x:Name="img" Stretch="Uniform"/>
+								<Panel>
+									<Image x:Name="img" Stretch="Uniform"/>
+									<controls:CropBoxOverlay x:Name="cropOverlay"/>
+								</Panel>
 							</LayoutTransformControl>
 							<Canvas x:Name="cnvCrop" Background="Transparent" IsHitTestVisible="False">
 								<Rectangle x:Name="rectCrop" Stroke="{DynamicResource AppAccentBrush}" StrokeThickness="2" Fill="#333399ff" IsVisible="False"/>

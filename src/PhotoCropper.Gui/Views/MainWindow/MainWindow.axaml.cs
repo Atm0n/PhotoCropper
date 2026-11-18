@@ -2,8 +2,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using PhotoCropper.Core;
 using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
 
@@ -598,14 +600,51 @@ internal sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>The scan currently shown, so editing boxes only repaints the overlay instead of re-uploading the scan.</summary>
+    private Emgu.CV.Mat? _shownScan;
+
     internal void SetMainImage(Emgu.CV.Mat? mat)
     {
         if (img == null) return;
 
         var oldSource = img.Source as IDisposable;
         img.Source = mat != null ? MatBitmapConverter.ToAvaloniaBitmap(mat) : null;
+        _shownScan = mat;
         DeferDispose(oldSource);
         UpdateCropCanvasSize();
+        if (mat == null) ShowCropBoxes(null);
+    }
+
+    /// <summary>Shows a scan with its boxes drawn over it. The bitmap is only rebuilt when the scan itself changed.</summary>
+    internal void ShowScan(PhotoCropperEngine? engine)
+    {
+        var scan = engine?.Original;
+        if (scan == null || scan.IsEmpty)
+        {
+            SetMainImage(null);
+            return;
+        }
+
+        if (!ReferenceEquals(scan, _shownScan)) SetMainImage(scan);
+        ShowCropBoxes(engine);
+    }
+
+    private void ShowCropBoxes(PhotoCropperEngine? engine)
+    {
+        if (cropOverlay == null) return;
+        if (engine?.Original == null || engine.Original.IsEmpty)
+        {
+            cropOverlay.Candidates = null;
+            return;
+        }
+
+        cropOverlay.ScanSize = new Size(engine.Original.Width, engine.Original.Height);
+        cropOverlay.OverlayScale = engine.OverlayScale;
+        var bgr = engine.CurrentOptions.GetBoundingBoxColorBgr();
+        cropOverlay.BoxColor = Color.FromRgb((byte)bgr.V2, (byte)bgr.V1, (byte)bgr.V0);
+        cropOverlay.Candidates = engine.AcceptedCandidates;
+        // The engine may have edited the same list instance in place; repaint either way.
+        cropOverlay.InvalidateVisual();
     }
 
     internal void SetRefineImage(Emgu.CV.Mat? mat)

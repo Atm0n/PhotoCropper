@@ -93,7 +93,7 @@ internal sealed partial class MainWindow
         {
             var currentPhoto = session.Activate();
             SyncUiWithScanOptions(currentPhoto.CurrentOptions);
-            SetMainImage(currentPhoto.OriginalWithDetected);
+            ShowScan(currentPhoto);
 
             txtFileCounter.Text = LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", CurrentIndex + 1, ScanSessions.Count);
             lblStatus.Text = fileName;
@@ -133,7 +133,7 @@ internal sealed partial class MainWindow
                 }
 
                 SyncUiWithScanOptions(currentPhoto.CurrentOptions);
-                SetMainImage(currentPhoto.OriginalWithDetected);
+                ShowScan(currentPhoto);
 
                 txtFileCounter.Text = LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", CurrentIndex + 1, ScanSessions.Count);
                 lblStatus.Text = fileName;
@@ -445,7 +445,7 @@ internal sealed partial class MainWindow
             var result = await Task.Run(() => photo.AutoTune(), ct);
             ScanSessions[CurrentIndex].IsModified = true;
             SyncUiWithScanOptions(photo.CurrentOptions);
-            SetMainImage(photo.OriginalWithDetected);
+            ShowScan(photo);
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();
             UpdateDetectionCoverageLabel();
@@ -551,7 +551,7 @@ internal sealed partial class MainWindow
         await ExecuteWithLoadingAsync(LocalizationService.GetString(ResourceKeys.MsgDetectingPhotos, "Detecting photos..."), async ct =>
         {
             await Task.Run(() => photo.DetectPhotos(), ct);
-            SetMainImage(photo.OriginalWithDetected);
+            ShowScan(photo);
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();
             UpdateDetectionCoverageLabel();

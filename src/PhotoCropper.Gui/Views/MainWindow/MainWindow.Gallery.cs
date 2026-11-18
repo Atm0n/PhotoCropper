@@ -532,7 +532,7 @@ internal sealed partial class MainWindow
             var targetSession = ScanSessions[action.ScanIndex];
             var targetEngine = targetSession.Activate();
             SyncUiWithScanOptions(targetEngine.CurrentOptions);
-            SetMainImage(targetEngine.OriginalWithDetected);
+            ShowScan(targetEngine);
             txtFileCounter.Text = LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", action.ScanIndex + 1, ScanSessions.Count);
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();
@@ -543,7 +543,7 @@ internal sealed partial class MainWindow
             var engine = ScanSessions[CurrentIndex].Activate();
             int selected = slides != null ? Math.Clamp(slides.SelectedIndex, 0, Math.Max(0, engine.DetectedPhotos.Count - 1)) : 0;
             // Refresh the main scan overlay (bounding boxes) as well as the gallery thumbnails.
-            SetMainImage(engine.OriginalWithDetected);
+            ShowScan(engine);
             LoadCroppedPhotosToSlider();
             if (slides != null && engine.DetectedPhotos.Count > 0)
             {

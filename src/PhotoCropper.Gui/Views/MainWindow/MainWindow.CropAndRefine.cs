@@ -177,18 +177,14 @@ internal sealed partial class MainWindow
         var photo = ScanSessions[CurrentIndex].Activate();
         if (photo.AcceptedCandidates != null)
         {
-            var pt = CoordinateMapper.MapUiPointToImagePixel(startPoint, GetImageRectInsideControl(), new System.Drawing.Size(photo.OriginalWithDetected.Width, photo.OriginalWithDetected.Height));
+            var pt = CoordinateMapper.MapUiPointToImagePixel(startPoint, GetImageRectInsideControl(), new System.Drawing.Size(photo.Original.Width, photo.Original.Height));
             for (int i = photo.AcceptedCandidates.Count - 1; i >= 0; i--)
             {
                 var cand = photo.AcceptedCandidates[i];
-                var vertices = cand.Rotated.GetVertices();
-                var sortedVertices = (System.Drawing.PointF[])vertices.Clone();
-                System.Array.Sort(sortedVertices, (a, b) => (b.X - b.Y).CompareTo(a.X - a.Y));
-                var tr = sortedVertices[0];
-
-                // Hit-test distances scale with the overlay so they match the handles as drawn.
-                var imageBounds = new System.Drawing.Rectangle(0, 0, photo.OriginalWithDetected.Width, photo.OriginalWithDetected.Height);
-                var rotHandlePt = cand.GetRotationHandlePoint((float)(PhotoCropperEngine.RotationHandleBaseOffset * photo.OverlayScale), imageBounds);
+                // Same geometry the overlay draws, and hit distances scale with it, so clicks match the handles.
+                var geometry = Controls.CropBoxGeometry.For(cand, new System.Drawing.Size(photo.Original.Width, photo.Original.Height), photo.OverlayScale);
+                var vertices = geometry.Vertices;
+                var rotHandlePt = geometry.RotationHandle;
                 double rotateDist = Math.Sqrt(Math.Pow(rotHandlePt.X - pt.X, 2) + Math.Pow(rotHandlePt.Y - pt.Y, 2));
                 if (rotateDist <= photo.ScaleOverlay(55))
                 {
@@ -232,7 +228,7 @@ internal sealed partial class MainWindow
         if (isRotatingHandle && dragCandIndex >= 0)
         {
             var photo = ScanSessions[CurrentIndex].Activate();
-            var pt = CoordinateMapper.MapUiPointToImagePixel(e.GetPosition(pnlOriginal), GetImageRectInsideControl(), new System.Drawing.Size(photo.OriginalWithDetected.Width, photo.OriginalWithDetected.Height));
+            var pt = CoordinateMapper.MapUiPointToImagePixel(e.GetPosition(pnlOriginal), GetImageRectInsideControl(), new System.Drawing.Size(photo.Original.Width, photo.Original.Height));
             var cand = photo.AcceptedCandidates[dragCandIndex];
 
             double currentMouseAngle = Math.Atan2(pt.Y - cand.Rotated.Center.Y, pt.X - cand.Rotated.Center.X) * 180.0 / Math.PI;
@@ -248,13 +244,13 @@ internal sealed partial class MainWindow
             };
 
             photo.UpdateCandidates(newList);
-            SetMainImage(photo.OriginalWithDetected);
+            ShowScan(photo);
             return;
         }
         if (isDraggingHandle && dragCandIndex >= 0)
         {
             var photo = ScanSessions[CurrentIndex].Activate();
-            var pt = CoordinateMapper.MapUiPointToImagePixel(e.GetPosition(pnlOriginal), GetImageRectInsideControl(), new System.Drawing.Size(photo.OriginalWithDetected.Width, photo.OriginalWithDetected.Height));
+            var pt = CoordinateMapper.MapUiPointToImagePixel(e.GetPosition(pnlOriginal), GetImageRectInsideControl(), new System.Drawing.Size(photo.Original.Width, photo.Original.Height));
 
             var cand = photo.AcceptedCandidates[dragCandIndex];
             var vertices = cand.Rotated.GetVertices();
@@ -283,7 +279,7 @@ internal sealed partial class MainWindow
             };
 
             photo.UpdateCandidates(newList);
-            SetMainImage(photo.OriginalWithDetected);
+            ShowScan(photo);
             return;
         }
 
@@ -331,7 +327,7 @@ internal sealed partial class MainWindow
             var photo = ScanSessions[CurrentIndex].Activate();
             CommitDrag(photo, dragCandIndex, "Rotate Crop Box");
 
-            SetMainImage(photo.OriginalWithDetected);
+            ShowScan(photo);
             LoadCroppedPhotosToSlider();
             UpdateDetectionCoverageLabel();
         }
@@ -349,12 +345,8 @@ internal sealed partial class MainWindow
 
             if (rectRelease.Width < 5 && rectRelease.Height < 5 && dragVertexIndex >= 0)
             {
-                var cand = photo.AcceptedCandidates[dragCandIndex];
-                var vertices = cand.Rotated.GetVertices();
-                var sortedVertices = (System.Drawing.PointF[])vertices.Clone();
-                System.Array.Sort(sortedVertices, (a, b) => (b.X - b.Y).CompareTo(a.X - a.Y));
-                var tr = sortedVertices[0];
-                int trIndex = System.Array.IndexOf(vertices, tr);
+                var geometry = Controls.CropBoxGeometry.For(photo.AcceptedCandidates[dragCandIndex], new System.Drawing.Size(photo.Original.Width, photo.Original.Height), photo.OverlayScale);
+                int trIndex = System.Array.IndexOf(geometry.Vertices, geometry.DeleteBadge);
 
                 if (dragVertexIndex == trIndex)
                 {
@@ -365,7 +357,7 @@ internal sealed partial class MainWindow
                     }
                     photo.DeletePhoto(dragCandIndex);
                     ScanSessions[CurrentIndex].IsModified = true;
-                    SetMainImage(photo.OriginalWithDetected);
+                    ShowScan(photo);
                     LoadCroppedPhotosToSlider();
                     UpdatePhotoCounterLabel();
                     UpdateDetectionCoverageLabel();
@@ -377,7 +369,7 @@ internal sealed partial class MainWindow
 
             CommitDrag(photo, dragCandIndex, "Resize Crop Box");
 
-            SetMainImage(photo.OriginalWithDetected);
+            ShowScan(photo);
             LoadCroppedPhotosToSlider();
             UpdateDetectionCoverageLabel();
         }
@@ -388,7 +380,7 @@ internal sealed partial class MainWindow
     {
         var photo = ScanSessions[CurrentIndex].Activate();
         var imageRect = GetImageRectInsideControl();
-        var originalSize = new System.Drawing.Size(photo.OriginalWithDetected.Width, photo.OriginalWithDetected.Height);
+        var originalSize = new System.Drawing.Size(photo.Original.Width, photo.Original.Height);
 
         var clickRectImg = CoordinateMapper.MapUiRectToImageRect(rect, imageRect, originalSize);
         var pt = new System.Drawing.PointF(clickRectImg.X, clickRectImg.Y);
@@ -396,9 +388,7 @@ internal sealed partial class MainWindow
         for (int i = photo.AcceptedCandidates.Count - 1; i >= 0; i--)
         {
             var cand = photo.AcceptedCandidates[i];
-            var vertices = cand.Rotated.GetVertices();
-            System.Array.Sort(vertices, (a, b) => (b.X - b.Y).CompareTo(a.X - a.Y));
-            var tr = vertices[0];
+            var tr = Controls.CropBoxGeometry.For(cand, originalSize, photo.OverlayScale).DeleteBadge;
 
             double dist = Math.Sqrt(Math.Pow(tr.X - pt.X, 2) + Math.Pow(tr.Y - pt.Y, 2));
             if (dist <= photo.ScaleOverlay(60))
@@ -409,7 +399,7 @@ internal sealed partial class MainWindow
                 }
                 photo.DeletePhoto(i);
                 ScanSessions[CurrentIndex].IsModified = true;
-                SetMainImage(photo.OriginalWithDetected);
+                ShowScan(photo);
                 LoadCroppedPhotosToSlider();
                 UpdatePhotoCounterLabel();
                 UpdateDetectionCoverageLabel();
@@ -450,7 +440,7 @@ internal sealed partial class MainWindow
                     : null;
                 undoHistory.PushAdd(CurrentIndex, newIndex, photo.DetectedPhotos[newIndex], addedCand);
             }
-            SetMainImage(photo.OriginalWithDetected);
+            ShowScan(photo);
             LoadCroppedPhotosToSlider();
             slides.SelectedIndex = photo.DetectedPhotos.Count - 1;
         }, addedMsg);
@@ -595,7 +585,7 @@ internal sealed partial class MainWindow
                 "Crop Refinement",
                 beforeRaw,
                 photoIndex < currentEngine.RawDetectedPhotos.Count ? currentEngine.RawDetectedPhotos[photoIndex] : null);
-            SetMainImage(currentEngine.OriginalWithDetected);
+            ShowScan(currentEngine);
             beforeMat.Dispose();
             beforeRaw?.Dispose();
             CloseRefineMode();
@@ -647,7 +637,7 @@ internal sealed partial class MainWindow
             await ExecuteWithLoadingAsync(reprocessingMsg, async ct =>
             {
                 await Task.Run(() => photo.DetectPhotos(), ct);
-                SetMainImage(photo.OriginalWithDetected);
+                ShowScan(photo);
                 LoadCroppedPhotosToSlider();
                 UpdatePhotoCounterLabel();
                 UpdateDetectionCoverageLabel();
