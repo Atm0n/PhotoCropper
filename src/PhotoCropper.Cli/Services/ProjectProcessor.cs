@@ -202,7 +202,7 @@ internal static class ProjectProcessor
         int count = engine.DetectedPhotos.Count;
         bool outOfRange = count < options.MinExpectedPhotos || count > options.MaxExpectedPhotos;
         // Like the app: unless an auto-tune option says otherwise, scans with little of their area detected are auto-tuned.
-        bool adjustLowCoverage = options.AutoAdjustLowCoverage || (!options.AutoTune && !options.AlwaysAutoTune);
+        bool adjustLowCoverage = options.AutoAdjustLowCoverage || (!options.AutoTune && !options.AlwaysAutoTune && !options.AutoTuneOff);
         bool lowCoverage = adjustLowCoverage && engine.TotalDetectedAreaRatio < options.MinCoverageThresholdPercent / 100.0;
         if (options.AlwaysAutoTune || (options.AutoTune && outOfRange) || lowCoverage)
         {

@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Export failure report**: Bulk export lists the scans that failed to export instead of only logging them.
 - Session crops now record each photo's auto-orientation (`AutoRotationDegrees`) and each scan's exported files (`ExportedFiles`) in `session.json`. Older sessions still load.
 - **CLI project mode** (`--project <folder>`): runs the app's RawScans → Cropped → Final pipeline on a project folder. New scans are added, boxes edited in the app are kept, the rest are detected like the app does, and the project opens in the app exactly as the CLI left it. Re-running only writes what changed.
+- **Simpler CLI options**: `--auto-tune [mismatch|always|low-coverage|off]` replaces three auto-tune flags; `--no-restore`, `--no-dust` and `--no-orient` turn features off; `--help` is grouped and lists one name per option. Unknown options and invalid values now print a warning instead of being ignored silently. All older option names still work.
 
 ### Changed
 - **Start screen at every launch**: New project (name and location; the folder is created), Open project, Restore photos only (a new project that opens the Finish stage's photo import), and recent projects with a thumbnail and their scan and photo counts (missing folders are dimmed and can be removed from the list). The project button on the top bar opens it again to switch project. The last project is no longer reopened silently, and scanning or importing no longer asks for a folder.

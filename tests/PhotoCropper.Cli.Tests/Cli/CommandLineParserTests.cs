@@ -230,4 +230,48 @@ public sealed class CommandLineParserTests
         options2.AutoAdjustLowCoverage.ShouldBeTrue();
         options2.MinCoverageThresholdPercent.ShouldBe(40.0);
     }
+
+    [Theory]
+    [InlineData("mismatch", true, false, false, false)]
+    [InlineData("always", false, true, false, false)]
+    [InlineData("low-coverage", false, false, true, false)]
+    [InlineData("OFF", false, false, false, true)]
+    public void CommandLineParser_AutoTuneMode_ShouldSelectOneMode(string mode, bool mismatch, bool always, bool lowCoverage, bool off)
+    {
+        var options = CommandLineParser.Parse(["--auto-tune", mode, "scans"]);
+
+        options.AutoTune.ShouldBe(mismatch);
+        options.AlwaysAutoTune.ShouldBe(always);
+        options.AutoAdjustLowCoverage.ShouldBe(lowCoverage);
+        options.AutoTuneOff.ShouldBe(off);
+        options.Inputs.ShouldBe(["scans"]);
+    }
+
+    [Fact]
+    public void CommandLineParser_BareAutoTune_ShouldKeepItsOldMeaningAndNotEatTheInput()
+    {
+        var options = CommandLineParser.Parse(["--auto-tune", "scans_folder"]);
+
+        options.AutoTune.ShouldBeTrue();
+        options.Inputs.ShouldBe(["scans_folder"]);
+    }
+
+    [Fact]
+    public void CommandLineParser_ShortSwitches_ShouldTurnFeaturesOff()
+    {
+        var options = CommandLineParser.Parse(["--no-restore", "--no-dust", "--no-orient"]);
+
+        options.RestoreColors.ShouldBeFalse();
+        options.RemoveDust.ShouldBeFalse();
+        options.AutoOrient.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void CommandLineParser_UnknownOptionsAndBadValues_ShouldBeIgnoredNotTakenAsInputs()
+    {
+        var options = CommandLineParser.Parse(["--bogus", "-q", "abc", "scan.jpg"]);
+
+        options.Inputs.ShouldBe(["scan.jpg"]);
+        options.JpegQuality.ShouldBe(100);
+    }
 }
