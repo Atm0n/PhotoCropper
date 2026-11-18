@@ -73,7 +73,7 @@ internal static class ResourceKeys
     public const string MsgScanning = nameof(MsgScanning);
     public const string MsgScanCancelled = nameof(MsgScanCancelled);
     public const string MsgScanFailed = nameof(MsgScanFailed);
-    public const string MsgScanSuccess = nameof(MsgScanSuccess);
+    public const string MsgProjectLoaded = nameof(MsgProjectLoaded);
     public const string MsgScanDeleted = nameof(MsgScanDeleted);
     public const string MsgNoScanData = nameof(MsgNoScanData);
     public const string MsgNoScannerFound = nameof(MsgNoScannerFound);
@@ -105,6 +105,7 @@ internal static class ResourceKeys
     public const string FinishStatusStale = nameof(FinishStatusStale);
     public const string FinishStatusExported = nameof(FinishStatusExported);
     public const string MsgSavingCrops = nameof(MsgSavingCrops);
+    public const string MsgCropsSaved = nameof(MsgCropsSaved);
     public const string MsgExportingFinal = nameof(MsgExportingFinal);
     public const string MsgFinalExported = nameof(MsgFinalExported);
     public const string MsgImportingPhotos = nameof(MsgImportingPhotos);

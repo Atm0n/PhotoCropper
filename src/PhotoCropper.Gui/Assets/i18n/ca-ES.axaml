@@ -85,6 +85,7 @@
 	<sys:String x:Key="FinishStatusStale">Canviada des de l'exportació</sys:String>
 	<sys:String x:Key="FinishStatusExported">Exportada</sys:String>
 	<sys:String x:Key="MsgSavingCrops">Desant retalls ({0} de {1})...</sys:String>
+	<sys:String x:Key="MsgCropsSaved">Retalls desats de {0} escanejos.</sys:String>
 	<sys:String x:Key="MsgExportingFinal">Exportant {0} fotos...</sys:String>
 	<sys:String x:Key="MsgFinalExported">S'han exportat {0} fotos a Final.</sys:String>
 	<sys:String x:Key="MsgImportingPhotos">Important {0} fotos...</sys:String>
@@ -92,7 +93,7 @@
 	<sys:String x:Key="BtnRescan">↻ Tornar a escanejar</sys:String>
 	<sys:String x:Key="TipRescan">Escanejar aquesta pàgina de nou i substituir aquest escaneig pel nou</sys:String>
 	<sys:String x:Key="BtnDiscardScan">Descartar</sys:String>
-	<sys:String x:Key="BtnConfirmDiscard">Fes clic un altre cop per descartar</sys:String>
+	<sys:String x:Key="BtnConfirmDiscard">Confirma el descart</sys:String>
 	<sys:String x:Key="TipDiscardScan">Eliminar aquest escaneig i les seves fotos del projecte</sys:String>
 	<sys:String x:Key="MsgScanReplaced">S'ha substituït '{0}' per un escaneig nou.</sys:String>
 	<sys:String x:Key="LblBefore">Abans</sys:String>
@@ -305,7 +306,7 @@
 	<sys:String x:Key="BtnWorkDir">Carpeta</sys:String>
 	<sys:String x:Key="TipWorkDir">Seleccionar una carpeta de treball per a emmagatzematge automàtic i recuperació de sessió</sys:String>
 	<sys:String x:Key="MsgScanning">Escanejant imatge des de {0}...</sys:String>
-	<sys:String x:Key="MsgScanSuccess">Escaneig adquirit i desat a l'espai de treball: {0}</sys:String>
+	<sys:String x:Key="MsgProjectLoaded">Projecte carregat: {0} escanejos.</sys:String>
 	<sys:String x:Key="MsgNoScannerFound">No s'ha detectat cap escàner. Asseguri's que estigui encès i connectat.</sys:String>
 	<sys:String x:Key="MsgScanFailed">Error en escanejar: {0}</sys:String>
 	<sys:String x:Key="MsgNoScanData">L'escàner no ha retornat cap imatge.</sys:String>

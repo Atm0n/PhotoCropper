@@ -85,6 +85,7 @@
 	<sys:String x:Key="FinishStatusStale">Cambiada desde la exportación</sys:String>
 	<sys:String x:Key="FinishStatusExported">Exportada</sys:String>
 	<sys:String x:Key="MsgSavingCrops">Guardando recortes ({0} de {1})...</sys:String>
+	<sys:String x:Key="MsgCropsSaved">Recortes guardados de {0} escaneos.</sys:String>
 	<sys:String x:Key="MsgExportingFinal">Exportando {0} fotos...</sys:String>
 	<sys:String x:Key="MsgFinalExported">Se han exportado {0} fotos a Final.</sys:String>
 	<sys:String x:Key="MsgImportingPhotos">Importando {0} fotos...</sys:String>
@@ -92,7 +93,7 @@
 	<sys:String x:Key="BtnRescan">↻ Volver a escanear</sys:String>
 	<sys:String x:Key="TipRescan">Escanear esta página de nuevo y sustituir este escaneo por el nuevo</sys:String>
 	<sys:String x:Key="BtnDiscardScan">Descartar</sys:String>
-	<sys:String x:Key="BtnConfirmDiscard">Pulsa otra vez para descartar</sys:String>
+	<sys:String x:Key="BtnConfirmDiscard">Confirmar descarte</sys:String>
 	<sys:String x:Key="TipDiscardScan">Eliminar este escaneo y sus fotos del proyecto</sys:String>
 	<sys:String x:Key="MsgScanReplaced">Se ha sustituido '{0}' por un nuevo escaneo.</sys:String>
 	<sys:String x:Key="LblBefore">Antes</sys:String>
@@ -305,7 +306,7 @@
 	<sys:String x:Key="BtnWorkDir">Carpeta</sys:String>
 	<sys:String x:Key="TipWorkDir">Seleccionar una carpeta de trabajo para almacenamiento automático y recuperación de sesión</sys:String>
 	<sys:String x:Key="MsgScanning">Escaneando imagen desde {0}...</sys:String>
-	<sys:String x:Key="MsgScanSuccess">Escaneo adquirido y guardado en el espacio de trabajo: {0}</sys:String>
+	<sys:String x:Key="MsgProjectLoaded">Proyecto cargado: {0} escaneos.</sys:String>
 	<sys:String x:Key="MsgNoScannerFound">No se detectó ningún escáner. Asegúrese de que esté encendido y conectado.</sys:String>
 	<sys:String x:Key="MsgScanFailed">Error al escanear: {0}</sys:String>
 	<sys:String x:Key="MsgNoScanData">El escáner no devolvió ninguna imagen.</sys:String>

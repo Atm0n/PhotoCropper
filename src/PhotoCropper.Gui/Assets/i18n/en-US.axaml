@@ -85,6 +85,7 @@
 	<sys:String x:Key="FinishStatusStale">Changed since export</sys:String>
 	<sys:String x:Key="FinishStatusExported">Exported</sys:String>
 	<sys:String x:Key="MsgSavingCrops">Saving crops ({0} of {1})...</sys:String>
+	<sys:String x:Key="MsgCropsSaved">Crops saved for {0} scans.</sys:String>
 	<sys:String x:Key="MsgExportingFinal">Exporting {0} photos...</sys:String>
 	<sys:String x:Key="MsgFinalExported">Exported {0} photos to Final.</sys:String>
 	<sys:String x:Key="MsgImportingPhotos">Importing {0} photos...</sys:String>
@@ -92,7 +93,7 @@
 	<sys:String x:Key="BtnRescan">↻ Rescan</sys:String>
 	<sys:String x:Key="TipRescan">Scan this page again and replace this scan with the new one</sys:String>
 	<sys:String x:Key="BtnDiscardScan">Discard</sys:String>
-	<sys:String x:Key="BtnConfirmDiscard">Click again to discard</sys:String>
+	<sys:String x:Key="BtnConfirmDiscard">Confirm discard</sys:String>
 	<sys:String x:Key="TipDiscardScan">Delete this scan and its photos from the project</sys:String>
 	<sys:String x:Key="MsgScanReplaced">Replaced '{0}' with a new scan.</sys:String>
 	<sys:String x:Key="LblBefore">Before</sys:String>
@@ -305,7 +306,7 @@
 	<sys:String x:Key="BtnWorkDir">Folder</sys:String>
 	<sys:String x:Key="TipWorkDir">Select a work directory for automatic raw scan staging and session recovery</sys:String>
 	<sys:String x:Key="MsgScanning">Scanning image from {0}...</sys:String>
-	<sys:String x:Key="MsgScanSuccess">Scan acquired and saved to workspace: {0}</sys:String>
+	<sys:String x:Key="MsgProjectLoaded">Project loaded: {0} scans.</sys:String>
 	<sys:String x:Key="MsgNoScannerFound">No scanner detected. Please make sure your scanner is turned on and connected.</sys:String>
 	<sys:String x:Key="MsgScanFailed">Scanning failed: {0}</sys:String>
 	<sys:String x:Key="MsgNoScanData">No image was returned by the scanner.</sys:String>

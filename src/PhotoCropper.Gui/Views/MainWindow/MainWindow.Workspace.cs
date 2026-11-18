@@ -46,7 +46,7 @@ internal sealed partial class MainWindow
             if (rawPaths.Count > 0)
             {
                 await LoadScansFromPathsAsync(rawPaths);
-                lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgScanSuccess, "Workspace: loaded {0} scans.", rawPaths.Count);
+                lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgProjectLoaded, "Project loaded: {0} scans.", rawPaths.Count);
             }
         }
     }
