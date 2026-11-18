@@ -62,6 +62,8 @@
 	<sys:String x:Key="BtnImportScans">Importar escanejos…</sys:String>
 	<sys:String x:Key="ScanStageEmpty">Encara no hi ha escanejos. Escaneja amb l'escàner o importa fitxers per començar.&#x0a;Fes doble clic en un escaneig per ajustar-ne els retalls.</sys:String>
 	<sys:String x:Key="ScanStatusNotChecked">Sense revisar</sys:String>
+	<sys:String x:Key="ScanPreviewDetecting">Cercant fotos…</sys:String>
+	<sys:String x:Key="TipScanPreview">Fes doble clic per ajustar els retalls d'aquest escaneig</sys:String>
 	<sys:String x:Key="ScanStatusNoPhotos">No s'han trobat fotos</sys:String>
 	<sys:String x:Key="ScanStatusPhotos">{0} fotos</sys:String>
 	<sys:String x:Key="BtnExportFinal">Exportar a Final</sys:String>
@@ -230,7 +232,7 @@
 	<sys:String x:Key="HelpWorkflowTitle">Com funciona</sys:String>
 	<sys:String x:Key="HelpWorkflowIntro">Un projecte passa per tres etapes, que es mostren a la barra de dalt. Cadascuna deixa fitxers reals a la seva pròpia carpeta del projecte i no modifica mai l'anterior, així que pots anar endavant i enrere lliurement.</sys:String>
 	<sys:String x:Key="HelpStageScanTitle">1 · Escaneja  →  RawScans/</sys:String>
-	<sys:String x:Key="HelpStageScanDesc">Escaneja pàgines amb l'escàner (F5) o importa fitxers d'escaneig; també pots arrossegar-los. Cada escaneig es conserva sense canvis. Torna a escanejar una pàgina per substituir-la, o descarta-la. Fes doble clic en un escaneig per ajustar-ne els retalls.</sys:String>
+	<sys:String x:Key="HelpStageScanDesc">Escaneja pàgines amb l'escàner (F5) o importa fitxers d'escaneig; també pots arrossegar-los. L'últim escaneig es mostra gran amb les fotos marcades, de manera que pots tornar a escanejar de seguida una pàgina torta, o descartar-la. Cada escaneig es conserva sense canvis. Fes doble clic en un escaneig per ajustar-ne els retalls.</sys:String>
 	<sys:String x:Key="HelpStageCropsTitle">2 · Retalls  →  Cropped/</sys:String>
 	<sys:String x:Key="HelpStageCropsDesc">Les fotos de cada escaneig es detecten automàticament. Corregeix les caixes, afegeix les fotos que faltin, gira-les i afina-les. Els retalls es desen en PNG sense pèrdua, només amb correccions de geometria: encara sense canvis de color.</sys:String>
 	<sys:String x:Key="HelpStageFinishTitle">3 · Acabat  →  Final/</sys:String>

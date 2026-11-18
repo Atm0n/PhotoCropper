@@ -264,5 +264,6 @@ internal sealed partial class MainWindow
         var fill = Color.FromArgb(0x33, stroke.R, stroke.G, stroke.B);
         viewCrops.SetSelectionColor(stroke, fill);
         viewRefine?.SetSelectionColor(stroke, fill);
+        viewScanStage?.SetBoxColor(stroke);
     }
 }

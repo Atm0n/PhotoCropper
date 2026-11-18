@@ -91,6 +91,8 @@ internal static class ResourceKeys
     public const string BtnImportScans = nameof(BtnImportScans);
     public const string BtnImportPhotos = nameof(BtnImportPhotos);
     public const string ScanStatusNotChecked = nameof(ScanStatusNotChecked);
+    public const string ScanPreviewDetecting = nameof(ScanPreviewDetecting);
+    public const string TipScanPreview = nameof(TipScanPreview);
     public const string ScanStatusNoPhotos = nameof(ScanStatusNoPhotos);
     public const string ScanStatusPhotos = nameof(ScanStatusPhotos);
     public const string FinishSourceImported = nameof(FinishSourceImported);

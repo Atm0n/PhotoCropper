@@ -16,25 +16,7 @@ namespace PhotoCropper.Gui;
 internal sealed partial class MainWindow
 {
     /// <summary>The engine's boxes, with each photo's manual and auto rotation, as saved in session.json.</summary>
-    private static List<WorkspaceCropData> BuildCropData(PhotoCropperEngine engine)
-    {
-        var crops = new List<WorkspaceCropData>(engine.AcceptedCandidates.Count);
-        for (int i = 0; i < engine.AcceptedCandidates.Count; i++)
-        {
-            var cand = engine.AcceptedCandidates[i];
-            crops.Add(new WorkspaceCropData
-            {
-                CenterX = cand.Rotated.Center.X,
-                CenterY = cand.Rotated.Center.Y,
-                Width = cand.Rotated.Size.Width,
-                Height = cand.Rotated.Size.Height,
-                Angle = cand.Rotated.Angle,
-                RotationDegrees = engine.PhotoRotations.TryGetValue(i, out int r) ? r : 0,
-                AutoRotationDegrees = cand.OrientationDegrees
-            });
-        }
-        return crops;
-    }
+    private static List<WorkspaceCropData> BuildCropData(PhotoCropperEngine engine) => [.. WorkspaceCropData.FromEngine(engine)];
 
     /// <summary>
     /// Builds a bullet list of failed scans for the error dialog, capped so a large batch of

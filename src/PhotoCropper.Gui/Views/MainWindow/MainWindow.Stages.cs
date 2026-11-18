@@ -262,6 +262,11 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
 
     public Task ConfigureScannerAsync() => ShowScannerConfigAsync();
 
+    public Task<IReadOnlyList<WorkspaceCropData>> PrepareScanAsync(int scanIndex, CancellationToken ct) =>
+        scanIndex >= 0 && scanIndex < ScanSessions.Count
+            ? _cropsVm.PrepareScanAsync(ScanSessions[scanIndex], ct)
+            : Task.FromResult<IReadOnlyList<WorkspaceCropData>>([]);
+
     public async Task DiscardScanAsync(int scanIndex)
     {
         await DeleteScanAtAsync(scanIndex);

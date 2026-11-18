@@ -62,6 +62,8 @@
 	<sys:String x:Key="BtnImportScans">Import scans…</sys:String>
 	<sys:String x:Key="ScanStageEmpty">No scans yet. Scan with your scanner or import scan files to begin.&#x0a;Double-click a scan to adjust its crops.</sys:String>
 	<sys:String x:Key="ScanStatusNotChecked">Not checked yet</sys:String>
+	<sys:String x:Key="ScanPreviewDetecting">Looking for photos…</sys:String>
+	<sys:String x:Key="TipScanPreview">Double-click to adjust this scan's crops</sys:String>
 	<sys:String x:Key="ScanStatusNoPhotos">No photos found</sys:String>
 	<sys:String x:Key="ScanStatusPhotos">{0} photos</sys:String>
 	<sys:String x:Key="BtnExportFinal">Export to Final</sys:String>
@@ -230,7 +232,7 @@
 	<sys:String x:Key="HelpWorkflowTitle">How it works</sys:String>
 	<sys:String x:Key="HelpWorkflowIntro">A project goes through three stages, shown in the bar at the top. Each one leaves real files in its own folder of the project and never changes the previous one, so you can go back and forth freely.</sys:String>
 	<sys:String x:Key="HelpStageScanTitle">1 · Scan  →  RawScans/</sys:String>
-	<sys:String x:Key="HelpStageScanDesc">Scan pages with your scanner (F5) or import scan files; drag and drop works too. Every scan is kept unchanged. Rescan a page to replace it, or discard it. Double-click a scan to adjust its crops.</sys:String>
+	<sys:String x:Key="HelpStageScanDesc">Scan pages with your scanner (F5) or import scan files; drag and drop works too. The newest scan is shown large with its photos outlined, so a crooked page can be rescanned at once, or discarded. Every scan is kept unchanged. Double-click a scan to adjust its crops.</sys:String>
 	<sys:String x:Key="HelpStageCropsTitle">2 · Crops  →  Cropped/</sys:String>
 	<sys:String x:Key="HelpStageCropsDesc">Photos are found on each scan automatically. Fix the boxes, add missed photos, rotate and refine them. Crops are saved as lossless PNGs with only geometry fixes: no color changes yet.</sys:String>
 	<sys:String x:Key="HelpStageFinishTitle">3 · Finish  →  Final/</sys:String>

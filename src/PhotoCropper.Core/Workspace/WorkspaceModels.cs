@@ -22,6 +22,28 @@ public sealed class WorkspaceCropData
     /// was recorded, in which case orientation is detected again.
     /// </summary>
     public int? AutoRotationDegrees { get; set; }
+
+    /// <summary>The engine's boxes, with each photo's manual and auto rotation, as saved in session.json.</summary>
+    public static IReadOnlyList<WorkspaceCropData> FromEngine(PhotoCropperEngine engine)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        var crops = new List<WorkspaceCropData>(engine.AcceptedCandidates.Count);
+        for (int i = 0; i < engine.AcceptedCandidates.Count; i++)
+        {
+            var cand = engine.AcceptedCandidates[i];
+            crops.Add(new WorkspaceCropData
+            {
+                CenterX = cand.Rotated.Center.X,
+                CenterY = cand.Rotated.Center.Y,
+                Width = cand.Rotated.Size.Width,
+                Height = cand.Rotated.Size.Height,
+                Angle = cand.Rotated.Angle,
+                RotationDegrees = engine.PhotoRotations.TryGetValue(i, out int r) ? r : 0,
+                AutoRotationDegrees = cand.OrientationDegrees
+            });
+        }
+        return crops;
+    }
 }
 
 public sealed class WorkspaceScanEntry

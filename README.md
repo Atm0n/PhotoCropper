@@ -11,7 +11,7 @@ An intelligent, cross-platform .NET 11 desktop application designed to automatic
 
 A project goes through three stages, shown in the stage bar at the top of the window. Each stage writes real files to its own folder of the project and never changes the previous one, so you can move back and forth freely:
 
-1. **Scan → `RawScans/`**: scan pages with your flatbed scanner (`F5`) or import scan files (drag and drop works too). Scans are kept exactly as acquired; a page can be rescanned in place or discarded.
+1. **Scan → `RawScans/`**: scan pages with your flatbed scanner (`F5`) or import scan files (drag and drop works too). Each new scan is shown large with the photos found on it outlined, so a crooked or overlapping page can be rescanned in place (or discarded) straight away. Scans are kept exactly as acquired.
 2. **Crops → `Cropped/`**: photos are detected on each scan automatically. Fix the boxes (drag corners, rotate, delete), draw missed photos by hand, rotate, refine edges, or go through every photo full-size in **Review mode**. Each photo is saved as a lossless PNG with geometry fixes only.
 3. **Finish → `Final/`**: restore each photo (colour, dust, repair brush, optional AI fill) in a full-window editor with a before/after split, add metadata, and export as JPEG or PNG with EXIF. Only photos that changed are exported again, and photos cropped elsewhere can be imported straight into this stage.
 

@@ -32,6 +32,9 @@ internal interface IStageHost
     /// <summary>Opens the scanner settings (device, resolution, page size).</summary>
     Task ConfigureScannerAsync();
 
+    /// <summary>Finds a scan's photos as the Crops stage does (it is then ready there) and returns their boxes.</summary>
+    Task<IReadOnlyList<WorkspaceCropData>> PrepareScanAsync(int scanIndex, CancellationToken ct);
+
     Task ImportScansAsync();
     void OpenScanInCrops(int scanIndex);
 
@@ -64,10 +67,12 @@ internal sealed partial class ScanRowViewModel(int index, string fileName, strin
     public int Index { get; } = index;
     public string FileName { get; } = fileName;
     public string FilePath { get; } = filePath;
-    public string PhotosText { get; } = photosText;
+    [ObservableProperty]
+    public partial string PhotosText { get; set; } = photosText;
 
     /// <summary>True when the scan needs attention in the Crops stage (e.g. no photos found).</summary>
-    public bool IsFlagged { get; } = isFlagged;
+    [ObservableProperty]
+    public partial bool IsFlagged { get; set; } = isFlagged;
 
     [ObservableProperty]
     public partial Bitmap? Thumbnail { get; set; }
@@ -104,19 +109,17 @@ internal sealed partial class ScanStageViewModel : ObservableObject
 
     public void Refresh()
     {
+        var previousPaths = Scans.Select(r => r.FilePath).ToList();
+        string? previousSelection = SelectedScan?.FilePath;
+        int previousIndex = SelectedScan?.Index ?? 0;
+        _rebuildingList = true;
         Scans.Clear();
         var sessions = _host.Scans;
         for (int i = 0; i < sessions.Count; i++)
         {
             var scan = sessions[i];
             int? count = KnownPhotoCount(_host.Workspace, _host.WorkDirectory, scan);
-            string text = count switch
-            {
-                null => LocalizationService.GetString(ResourceKeys.ScanStatusNotChecked, "Not checked yet"),
-                0 => LocalizationService.GetString(ResourceKeys.ScanStatusNoPhotos, "No photos found"),
-                _ => LocalizationService.Format(ResourceKeys.ScanStatusPhotos, "{0} photos", count.Value)
-            };
-            var row = new ScanRowViewModel(i, Path.GetFileName(scan.FilePath), text, count == 0, scan.FilePath);
+            var row = new ScanRowViewModel(i, Path.GetFileName(scan.FilePath), PhotoCountText(count), count == 0, scan.FilePath);
             Scans.Add(row);
             _ = LoadThumbnailAsync(row);
         }
@@ -130,6 +133,8 @@ internal sealed partial class ScanStageViewModel : ObservableObject
 
         IsEmpty = Scans.Count == 0;
         Summary = LocalizationService.Format(ResourceKeys.StageScanStatus, "{0} scans", Scans.Count);
+        _rebuildingList = false;
+        RestoreSelection(previousPaths, previousSelection, previousIndex);
     }
 
     private async Task LoadThumbnailAsync(ScanRowViewModel row)
@@ -160,7 +165,13 @@ internal sealed partial class ScanStageViewModel : ObservableObject
         }
     }
 
-    /// <summary>Photos known for a scan: from its saved crops, or from detection if it has run; null if never checked.</summary>
+    private static string PhotoCountText(int? count) => count switch
+    {
+        null => LocalizationService.GetString(ResourceKeys.ScanStatusNotChecked, "Not checked yet"),
+        0 => LocalizationService.GetString(ResourceKeys.ScanStatusNoPhotos, "No photos found"),
+        _ => LocalizationService.Format(ResourceKeys.ScanStatusPhotos, "{0} photos", count.Value)
+    };
+
     /// <summary>How many photos the scan has, or null when it hasn't been detected yet ("not checked").</summary>
     internal static int? KnownPhotoCount(WorkspaceSessionState? workspace, string? workDirectory, Core.Workspace.ScanSessionItem scan)
     {

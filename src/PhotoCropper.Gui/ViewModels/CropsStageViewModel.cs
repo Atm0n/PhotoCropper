@@ -519,6 +519,43 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
     }
 
     /// <summary>
+    /// Prepares one scan as the look-ahead does (loads it, auto-tuning when the settings ask) and returns its boxes,
+    /// e.g. for the Scan stage's preview. Waits for the look-ahead, so the two never work on an engine at once.
+    /// </summary>
+    public async Task<IReadOnlyList<WorkspaceCropData>> PrepareScanAsync(ScanSessionItem session, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        await _lookaheadLock.WaitAsync(ct);
+        try
+        {
+            return await Task.Run(() =>
+            {
+                session.IsProcessing = true;
+                try
+                {
+                    var engine = session.Activate();
+                    if (!session.IsAutoTuned && ShouldAutoTune(session, engine))
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        var result = engine.AutoTune();
+                        if (result.Improved || result.PhotoCount > 0) session.IsModified = true;
+                    }
+                    session.IsAutoTuned = true;
+                    return WorkspaceCropData.FromEngine(engine);
+                }
+                finally
+                {
+                    session.IsProcessing = false;
+                }
+            }, ct);
+        }
+        finally
+        {
+            _lookaheadLock.Release();
+        }
+    }
+
+    /// <summary>
     /// Cancels the look-ahead and waits (up to 3 s) until it has let go of its engine, so the caller can move,
     /// load or remove scans without a background task using them at the same time.
     /// </summary>
