@@ -62,6 +62,26 @@ public sealed class WorkspaceScanEntry
     [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]
     public Collection<WorkspaceCropData> FinalCrops { get; } = [];
 
+    /// <summary>
+    /// True once <see cref="FinalCrops"/> has been written for this scan, so an empty list means every photo was
+    /// deleted rather than "never detected". Sessions written before this field rely on a non-empty list.
+    /// </summary>
+    public bool CropsReviewed { get; set; }
+
+    /// <summary>Whether this scan's boxes are saved and should be restored instead of detected again.</summary>
+    [JsonIgnore]
+    public bool HasSavedCrops => CropsReviewed || FinalCrops.Count > 0;
+
+    /// <summary>Replaces the saved boxes (possibly with none) and marks them as reviewed.</summary>
+    public void SetFinalCrops(IEnumerable<WorkspaceCropData> crops)
+    {
+        ArgumentNullException.ThrowIfNull(crops);
+        var list = crops.ToList();
+        FinalCrops.Clear();
+        foreach (var crop in list) FinalCrops.Add(crop);
+        CropsReviewed = true;
+    }
+
     /// <summary>The files the last export of this scan wrote, replaced on re-export.</summary>
     [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]
     public Collection<PhotoCropper.Core.Export.ExportedFile> ExportedFiles { get; } = [];

@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: warnings are treated as errors again; solution-wide preview features removed; `System.Drawing.Common` pinned to 11.0.0; unused `Avalonia.Diagnostics` removed.
 
 ### Fixed
+- A scan whose photos were all deleted is no longer detected again when the project is reopened; it stays empty.
 - The Zoom entry in the Help window had no description in any language.
 - Photos deleted or rotated in Review mode now also update the open scan's boxes and coverage when review closes.
 - Deleting photos from the photo panel left their boxes drawn on the scan until it was reloaded; the boxes and coverage now update at once. Editing, deleting or refining a box keeps that photo shown instead of jumping back to the first one.

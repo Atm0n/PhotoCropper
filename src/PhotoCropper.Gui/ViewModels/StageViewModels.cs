@@ -187,7 +187,7 @@ internal sealed partial class ScanStageViewModel : ObservableObject
         }
 
         // Boxes saved as they were edited.
-        if (scan.SavedCrops is { Count: > 0 } crops) return crops.Count;
+        if (scan.SavedCrops is { } crops) return crops.Count;
         return scan.PhotoCount > 0 ? scan.PhotoCount : null;
     }
 

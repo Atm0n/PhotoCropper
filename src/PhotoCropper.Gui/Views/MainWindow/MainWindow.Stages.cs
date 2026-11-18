@@ -161,8 +161,7 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
 
                             PhotoPipelineService.SaveCroppedPhotos(workDir, workspace, entry, inputs, restoration);
 
-                            entry.FinalCrops.Clear();
-                            foreach (var crop in crops) entry.FinalCrops.Add(crop);
+                            entry.SetFinalCrops(crops);
                         }
                         finally
                         {

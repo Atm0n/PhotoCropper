@@ -55,9 +55,9 @@ internal sealed partial class MainWindow
 
             // Boxes saved in session.json (autosaved on every edit) are restored as they were; scans without
             // them are detected afresh.
-            bool hasSavedCrops = entry != null && entry.FinalCrops.Count > 0;
+            bool hasSavedCrops = entry is { HasSavedCrops: true };
 
-            newSessions.Add(new ScanSessionItem(path, options, isSaved: hasSavedCrops, isModified: !hasSavedCrops, savedCrops: entry?.FinalCrops)
+            newSessions.Add(new ScanSessionItem(path, options, isSaved: hasSavedCrops, isModified: !hasSavedCrops, savedCrops: hasSavedCrops ? entry!.FinalCrops : null)
             {
                 ExportedFiles = entry != null ? [.. entry.ExportedFiles] : []
             });

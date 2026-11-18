@@ -65,7 +65,8 @@ public sealed class ScanSessionItem : IDisposable
                 var engine = new PhotoCropperEngine(FilePath);
                 engine.ApplyOptions(Options);
 
-                if (SavedCrops != null && SavedCrops.Count > 0 && IsSaved && !IsModified)
+                // An empty saved list is kept as empty: every photo on the scan was deleted.
+                if (SavedCrops != null && IsSaved && !IsModified)
                 {
                     engine.RestoreFromSavedCrops(SavedCrops);
                 }
