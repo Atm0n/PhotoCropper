@@ -50,7 +50,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 - **Resolution-Aware Morphology:** Morphological opening and elliptical closing kernels dynamically scale according to the scan's resolution, preserving narrow gaps between close photos.
 - **Adaptive Shadow Tolerance:** Brightness thresholds are scaled dynamically for light backgrounds, allowing the engine to absorb scanner lid gradients and shadows while preserving photo integrity.
 - **Geometric Overlap Verification:** Measures true polygon intersection area in unmanaged masks to prevent duplicate or invading bounding boxes while allowing tilted adjacent photos.
-- **Interactive Background Color Picker:** Allows manual background sampling via a noise-resistant 5x5 average neighborhood in HSV space directly from any clicked zoom/pan pixel.
+- **Interactive Background Color Picker:** Allows manual background sampling via a noise-resistant 5x5 average neighborhood in HSV space directly from any clicked zoom/pan pixel; detection is then auto-tuned for the picked colour.
 - **Undetected Scan Tracking & Review Isolation:** Logs any uncropped scans to `undetected_scans.txt` and supports isolated directory copying (`--copy-undetected`) with an interactive post-batch CLI review prompt.
 
 #### 3. Smart Manual, Refinement & AI Orientation

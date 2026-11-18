@@ -2,17 +2,19 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using PhotoCropper.Core;
 using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
 
 using PhotoCropper.Gui.Services;
+using PhotoCropper.Gui.ViewModels;
 using System.Diagnostics.CodeAnalysis;
 
 namespace PhotoCropper.Gui;
 
-internal sealed record GalleryPhotoItem(Avalonia.Media.Imaging.Bitmap Image, string Label, string Dimensions, int Index);
 
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Avalonia Window lifecycle is managed by OnClosed override")]
 internal sealed partial class MainWindow : Window
@@ -28,10 +30,9 @@ internal sealed partial class MainWindow : Window
     private readonly AppNotificationService _notificationService = new();
     private bool isLoading;
     private bool isComparingRaw;
-    private bool isSyncingSelection;
-    private bool isUpdatingUiFromScan;
     private bool _isExitingConfirmed;
-    private bool _isNavigating;
+    private readonly CropsStageViewModel _cropsVm;
+    private bool _isNavigating => _cropsVm.IsNavigating;
     private CancellationTokenSource? _activeOperationCts;
 
     public MainWindow() : this(new Naps2ScannerService())
@@ -46,6 +47,13 @@ internal sealed partial class MainWindow : Window
 
         InitializeComponent();
         _notificationService.Initialize(this);
+
+        _cropsVm = new CropsStageViewModel(this, _sessionManager, undoHistory, () => SettingsManager.Instance.Settings, SettingsManager.Instance.Save);
+        grdMainWorkspace.DataContext = _cropsVm;
+        _reviewVm = new ReviewViewModel(this, undoHistory);
+        _refineVm = new RefineViewModel(this, undoHistory);
+        viewReview.DataContext = _reviewVm;
+        viewRefine.DataContext = _refineVm;
 
         // Invalidate undo/redo entries for a scan when its engine is deactivated.
         // Re-activating the engine recreates it from scratch (DetectPhotos), so any
@@ -293,22 +301,8 @@ internal sealed partial class MainWindow : Window
 
     private async ValueTask<bool> HandleRefinementKey(KeyEventArgs e)
     {
-        if (!isRefining) return false;
-
-        switch (e.Key)
-        {
-            case Key.Enter:
-            case Key.A:
-                await AcceptRefineAsync();
-                e.Handled = true;
-                break;
-            case Key.Back:
-            case Key.Escape:
-            case Key.C:
-                RejectRefine();
-                e.Handled = true;
-                break;
-        }
+        if (!await _refineVm.HandleKeyAsync(e.Key)) return false;
+        e.Handled = true;
         return true;
     }
 
@@ -375,7 +369,7 @@ internal sealed partial class MainWindow : Window
 
     private bool HandleViewKey(KeyEventArgs e)
     {
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.A && rbViewGrid?.IsChecked == true)
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.A && _cropsVm.IsGridView)
         {
             SelectAllGalleryPhotos();
             e.Handled = true;
@@ -398,18 +392,10 @@ internal sealed partial class MainWindow : Window
 
         if (!isLoading && !_isNavigating && ScanSessions.Count > 0 && (e.Key == Key.Space || e.Key == Key.B))
         {
-            if (!isComparingRaw && slides != null && slides.SelectedIndex >= 0)
+            if (!isComparingRaw && _cropsVm.SelectedPhotoIndex >= 0)
             {
-                int sel = slides.SelectedIndex;
-                var engine = ScanSessions[CurrentIndex].Activate();
-                if (sel < engine.RawDetectedPhotos.Count)
-                {
-                    isComparingRaw = true;
-                    var oldBmp = slides.Items[sel] as IDisposable;
-                    slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.RawDetectedPhotos[sel]);
-                    slides.SelectedIndex = sel;
-                    DeferDispose(oldBmp);
-                }
+                isComparingRaw = true;
+                _cropsVm.ShowOriginal(true);
             }
             e.Handled = true;
             return true;
@@ -462,7 +448,7 @@ internal sealed partial class MainWindow : Window
                 return true;
             }
 
-            if (rbViewGrid?.IsChecked == true && lstGallery?.SelectedItems != null && lstGallery.SelectedItems.Count > 1)
+            if (_cropsVm.IsGridView && _cropsVm.SelectedPhotoIndices().Count > 1)
             {
                 ClearGallerySelection();
                 e.Handled = true;
@@ -493,7 +479,7 @@ internal sealed partial class MainWindow : Window
                     if (!isLoading && !_isNavigating)
                     {
                         FocusManager?.Focus(null);
-                        if (slides != null) slides.Previous();
+                        _cropsVm.PreviousPhotoCommand.Execute(null);
                     }
                     e.Handled = true;
                     return true;
@@ -502,7 +488,7 @@ internal sealed partial class MainWindow : Window
                     if (!isLoading && !_isNavigating)
                     {
                         FocusManager?.Focus(null);
-                        if (slides != null) slides.Next();
+                        _cropsVm.NextPhotoCommand.Execute(null);
                     }
                     e.Handled = true;
                     return true;
@@ -512,64 +498,17 @@ internal sealed partial class MainWindow : Window
         return false;
     }
 
-    /// <summary>
-    /// Cancels any in-flight background lookahead and waits (up to 3 s) for it to fully
-    /// release the <see cref="_lookaheadSemaphore"/>. This guarantees no background task
-    /// is concurrently accessing a <see cref="PhotoCropper.Core.Engine.PhotoCropperEngine"/>
-    /// when the caller is about to move or load sessions.
-    /// </summary>
-    private async Task DrainLookaheadAsync()
+    /// <summary>Moves to the next or previous scan and opens it.</summary>
+    private Task NavigateScanAsync(bool forward)
     {
-        if (_lookaheadCts != null) await _lookaheadCts.CancelAsync();
-        bool acquired = await _lookaheadSemaphore.WaitAsync(3000, CancellationToken.None);
-        if (acquired) _lookaheadSemaphore.Release();
+        FocusManager?.Focus(null);
+        return _cropsVm.NavigateAsync(forward);
     }
 
-    /// <summary>
-    /// Moves to the next or previous scan and loads it into the GUI.
-    /// Sets <see cref="_isNavigating"/> synchronously before any await so that
-    /// re-entrant key events on the UI thread see the flag immediately and bail out.
-    /// Then drains the lookahead to prevent concurrent <c>AutoTune</c> calls on the
-    /// same engine from this task and the background lookahead task.
-    /// </summary>
-    private async Task NavigateScanAsync(bool forward)
+    private Task NavigateToScanIndexAsync(int targetIndex)
     {
-        _isNavigating = true;
         FocusManager?.Focus(null);
-        await DrainLookaheadAsync();
-
-        bool moved = forward ? _sessionManager.MoveNext() : _sessionManager.MovePrevious();
-        if (!moved)
-        {
-            _isNavigating = false;
-            return;
-        }
-
-        try
-        {
-            await LoadPhotosToGuiAsync();
-        }
-        finally
-        {
-            _isNavigating = false;
-        }
-    }
-
-    private async Task NavigateToScanIndexAsync(int targetIndex)
-    {
-        if (targetIndex < 0 || targetIndex >= ScanSessions.Count || targetIndex == CurrentIndex) return;
-        _isNavigating = true;
-        FocusManager?.Focus(null);
-        await DrainLookaheadAsync();
-        _sessionManager.MoveTo(targetIndex);
-        try
-        {
-            await LoadPhotosToGuiAsync();
-        }
-        finally
-        {
-            _isNavigating = false;
-        }
+        return _cropsVm.NavigateToAsync(targetIndex);
     }
 
     private void Window_KeyUp(object? sender, KeyEventArgs e)
@@ -582,21 +521,16 @@ internal sealed partial class MainWindow : Window
         if (isComparingRaw && (e.Key == Key.Space || e.Key == Key.B))
         {
             isComparingRaw = false;
-            if (!isLoading && !_isNavigating && ScanSessions.Count > 0 && slides != null && slides.SelectedIndex >= 0)
+            if (!isLoading && !_isNavigating && ScanSessions.Count > 0)
             {
-                int sel = slides.SelectedIndex;
-                var engine = ScanSessions[CurrentIndex].Activate();
-                if (sel < engine.DetectedPhotos.Count)
-                {
-                    var oldBmp = slides.Items[sel] as IDisposable;
-                    slides.Items[sel] = MatBitmapConverter.ToAvaloniaBitmap(engine.DetectedPhotos[sel]);
-                    slides.SelectedIndex = sel;
-                    DeferDispose(oldBmp);
-                }
+                _cropsVm.ShowOriginal(false);
             }
             e.Handled = true;
         }
     }
+
+    /// <summary>The scan currently shown, so editing boxes only repaints the overlay instead of re-uploading the scan.</summary>
+    private Emgu.CV.Mat? _shownScan;
 
     internal void SetMainImage(Emgu.CV.Mat? mat)
     {
@@ -604,17 +538,42 @@ internal sealed partial class MainWindow : Window
 
         var oldSource = img.Source as IDisposable;
         img.Source = mat != null ? MatBitmapConverter.ToAvaloniaBitmap(mat) : null;
+        _shownScan = mat;
         DeferDispose(oldSource);
         UpdateCropCanvasSize();
+        if (mat == null) ShowCropBoxes(null);
     }
 
-    internal void SetRefineImage(Emgu.CV.Mat? mat)
+    /// <summary>Shows a scan with its boxes drawn over it. The bitmap is only rebuilt when the scan itself changed.</summary>
+    internal void ShowScan(PhotoCropperEngine? engine)
     {
-        if (imgRefine == null) return;
+        var scan = engine?.Original;
+        if (scan == null || scan.IsEmpty)
+        {
+            SetMainImage(null);
+            return;
+        }
 
-        var oldSource = imgRefine.Source as IDisposable;
-        imgRefine.Source = mat != null ? MatBitmapConverter.ToAvaloniaBitmap(mat) : null;
-        DeferDispose(oldSource);
+        if (!ReferenceEquals(scan, _shownScan)) SetMainImage(scan);
+        ShowCropBoxes(engine);
+    }
+
+    private void ShowCropBoxes(PhotoCropperEngine? engine)
+    {
+        if (cropOverlay == null) return;
+        if (engine?.Original == null || engine.Original.IsEmpty)
+        {
+            cropOverlay.Candidates = null;
+            return;
+        }
+
+        cropOverlay.ScanSize = new Size(engine.Original.Width, engine.Original.Height);
+        cropOverlay.OverlayScale = engine.OverlayScale;
+        var bgr = engine.CurrentOptions.GetBoundingBoxColorBgr();
+        cropOverlay.BoxColor = Color.FromRgb((byte)bgr.V2, (byte)bgr.V1, (byte)bgr.V0);
+        cropOverlay.Candidates = engine.AcceptedCandidates;
+        // The engine may have edited the same list instance in place; repaint either way.
+        cropOverlay.InvalidateVisual();
     }
 
     internal static void DeferDispose(IDisposable? obj, int delayMs = 300)
@@ -644,11 +603,11 @@ internal sealed partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         var settings = SettingsManager.Instance.Settings;
-        settings.BackgroundTolerance = PhotoCropper.Core.Models.DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
+        settings.BackgroundTolerance = PhotoCropper.Core.Models.DetectionOptions.SensitivityToTolerance(_cropsVm.Sensitivity);
         settings.ZoomLevel = sldZoom.Value;
-        settings.MinAreaFactor = sldMinArea.Value;
-        settings.MaxAreaFactor = sldMaxArea.Value;
-        settings.CannyLowThreshold = sldEdge.Value;
+        settings.MinAreaFactor = _cropsVm.MinAreaPercent;
+        settings.MaxAreaFactor = _cropsVm.MaxAreaPercent;
+        settings.CannyLowThreshold = _cropsVm.EdgeThreshold;
 
         if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory) && _workspaceSession != null)
         {
@@ -659,12 +618,14 @@ internal sealed partial class MainWindow : Window
 
         base.OnClosed(e);
         SetMainImage(null);
-        SetRefineImage(null);
-        ClearGalleryBitmaps();
+        _refineVm.Reject();
+        _reviewVm.Close();
+        _cropsVm.ClearPhotos();
         _scannerService.Dispose();
         undoHistory.Dispose();
         _sessionManager.Dispose();
         PhotoCropper.Core.Extraction.FaceOrientationService.ReleaseCachedDetectors();
         _finishStageVm?.Dispose();
+        _cropsVm.Dispose();
     }
 }

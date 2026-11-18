@@ -135,6 +135,7 @@ internal static class ResourceKeys
     public const string TxtScanningSearching = nameof(TxtScanningSearching);
     public const string MsgClickToSample = nameof(MsgClickToSample);
     public const string MsgBackgroundSampled = nameof(MsgBackgroundSampled);
+    public const string MsgBackgroundAutoTuned = nameof(MsgBackgroundAutoTuned);
 
     public const string ColorCustom = nameof(ColorCustom);
     public const string AppButtonActionBrush = nameof(AppButtonActionBrush);

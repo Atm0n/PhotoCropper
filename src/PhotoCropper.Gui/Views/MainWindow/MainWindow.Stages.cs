@@ -14,7 +14,7 @@ namespace PhotoCropper.Gui;
 /// The three-stage workflow: 1 Scan (RawScans) → 2 Crops (Cropped) → 3 Finish (Final). The Crops stage is the
 /// existing scan editor; Scan and Finish are MVVM views whose view-models reach the window through IStageHost.
 /// </summary>
-internal sealed partial class MainWindow : IStageHost
+internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineHost
 {
     private AppStage _stage = AppStage.Crops;
     private ScanStageViewModel? _scanStageVm;
@@ -186,6 +186,37 @@ internal sealed partial class MainWindow : IStageHost
         return completed;
     }
 
+    // ---- ICropsStageHost ----
+
+    bool ICropsStageHost.IsBusy => isLoading;
+
+    Task<bool> ICropsStageHost.RunBusyAsync(string message, Func<CancellationToken, Task> work) => ExecuteWithLoadingAsync(message, work);
+
+    void ICropsStageHost.ShowScanResult(PhotoCropper.Core.PhotoCropperEngine engine)
+    {
+        ShowScan(engine);
+        if (btnResetBackground != null) btnResetBackground.IsEnabled = engine.CustomBackgroundColorHsv != null;
+    }
+
+    void ICropsStageHost.ShowBoxes(PhotoCropper.Core.PhotoCropperEngine engine) => ShowScan(engine);
+
+    void ICropsStageHost.DisposeLater(IReadOnlyCollection<IDisposable> items) => DeferDispose(items);
+
+    // ---- IRefineHost ----
+
+    private RefineViewModel _refineVm = null!;
+
+    Task<bool> IRefineHost.RunBusyAsync(string message, Func<CancellationToken, Task> work) => ExecuteWithLoadingAsync(message, work);
+
+    void IRefineHost.DisposeLater(IReadOnlyCollection<IDisposable> items) => DeferDispose(items);
+
+    void IRefineHost.Refined(PhotoCropper.Core.PhotoCropperEngine engine, int photoIndex)
+    {
+        ShowScan(engine);
+        _cropsVm.ShowPhotos(photoIndex);
+        _cropsVm.UpdateCoverage();
+    }
+
     // ---- IStageHost ----
 
     public string? WorkDirectory
@@ -305,7 +336,7 @@ internal sealed partial class MainWindow : IStageHost
 
         if (workspace != null && workDir != null) ProjectWorkspaceService.SaveSession(workDir, workspace);
 
-        var options = GetDetectionOptionsFromUi();
+        var options = _cropsVm.GetDetectionOptions();
         bool wasEmpty = ScanSessions.Count == 0;
         _sessionManager.AddRange([.. added.Select(p => new ScanSessionItem(p, options, isSaved: false, isModified: true))]);
         if (wasEmpty && ScanSessions.Count > 0) CurrentIndex = 0;

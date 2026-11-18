@@ -10,17 +10,8 @@ internal sealed partial class MainWindow
     private void ApplySettingsToUi()
     {
         var settings = SettingsManager.Instance.Settings;
-        sldSensitivity.Value = PhotoCropper.Core.Models.DetectionOptions.ToleranceToSensitivity(settings.BackgroundTolerance);
         sldZoom.Value = settings.ZoomLevel;
-        sldMinArea.Value = settings.MinAreaFactor;
-        sldMaxArea.Value = settings.MaxAreaFactor;
-        sldEdge.Value = settings.CannyLowThreshold;
-
-        chkAutoOrient?.IsChecked = settings.AutoOrientPhotos;
-        chkRestoreColors?.IsChecked = settings.RestoreVintageColors;
-        chkRemoveDust?.IsChecked = settings.RemoveDustAndScratches;
-        chkAutoTuneOnPass?.IsChecked = settings.AutoTuneOnScanChange;
-        chkAutoAdjustOnLowCoverage?.IsChecked = settings.AutoAdjustOnLowCoverage;
+        _cropsVm.LoadFromSettings();
 
         UpdateWorkspaceUi(settings.WorkDirectory);
         UpdateCropStrokeColor(settings.DetectionBoxColor);
@@ -53,7 +44,7 @@ internal sealed partial class MainWindow
                     {
                         LocalizationService.SetLanguage(code);
                         UpdateWorkspaceUi(SettingsManager.Instance.Settings.WorkDirectory);
-                        UpdateSelectionUi();
+                        _cropsVm.RefreshPhotoTexts();
                         PopulateThemeMenu();
                         PopulateDetectionColorMenu();
                         FocusManager?.Focus(null);
@@ -229,7 +220,7 @@ internal sealed partial class MainWindow
         return panel;
     }
 
-    private async Task SetDetectionBoxColorAsync(string colorName)
+    private Task SetDetectionBoxColorAsync(string colorName)
     {
         SettingsManager.Instance.Settings.DetectionBoxColor = colorName;
         SettingsManager.Instance.Save();
@@ -244,9 +235,11 @@ internal sealed partial class MainWindow
             if (session.IsActive && session.Engine != null)
             {
                 session.Engine.BoundingBoxColor = colorName;
+                // The colour only affects the overlay, so there is nothing to re-detect.
+                ShowScan(session.Engine);
             }
-            await ReprocessCurrentScanAsync();
         }
+        return Task.CompletedTask;
     }
 
     private void UpdateCropStrokeColor(string? colorName)
@@ -274,11 +267,7 @@ internal sealed partial class MainWindow
         rectCrop.Stroke = new SolidColorBrush(stroke);
         rectCrop.Fill = new SolidColorBrush(fill);
 
-        if (rectRefineCrop != null)
-        {
-            rectRefineCrop.Stroke = new SolidColorBrush(stroke);
-            rectRefineCrop.Fill = new SolidColorBrush(fill);
-        }
+        viewRefine?.SetSelectionColor(stroke, fill);
 
         if (rectCurrentDetectionColor != null)
         {

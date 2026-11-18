@@ -120,10 +120,8 @@ internal sealed partial class MainWindow
         undoHistory.Clear();
         _sessionManager.Clear();
         SetMainImage(null);
-        ClearGalleryBitmaps();
-        txtFileCounter?.Text = LocalizationService.GetString(ResourceKeys.TxtNoFiles, "No files loaded");
-        lblPhotoInfo?.Text = "";
-        UpdateSelectionUi();
+        _cropsVm.ClearPhotos();
+        _cropsVm.UpdateScanCounter();
     }
 
     private async Task SwitchToProjectAsync(string newWorkDir)

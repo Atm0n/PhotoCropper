@@ -32,7 +32,7 @@ internal sealed partial class MainWindow
             colSplitter.Width = new GridLength(0);
             if (brdRightPanelContent != null) brdRightPanelContent.IsVisible = false;
             if (pnlRightPanelHeader != null) pnlRightPanelHeader.IsVisible = false;
-            if (txtGallerySelection != null) txtGallerySelection.IsVisible = false;
+            if (pnlGallerySelection != null) pnlGallerySelection.IsVisible = false;
 
             // Flip arrow to point right (expand)
             if (txtToggleRightPanelIcon != null) txtToggleRightPanelIcon.Text = "▶";
@@ -46,6 +46,7 @@ internal sealed partial class MainWindow
             colSplitter.Width = GridLength.Auto;
             if (brdRightPanelContent != null) brdRightPanelContent.IsVisible = true;
             if (pnlRightPanelHeader != null) pnlRightPanelHeader.IsVisible = true;
+            if (pnlGallerySelection != null) pnlGallerySelection.IsVisible = true;
 
             // Flip arrow to point left (collapse)
             if (txtToggleRightPanelIcon != null) txtToggleRightPanelIcon.Text = "◀";
