@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-11-18
+
 > **Upgrading from 2.x:** a project is converted the first time 3.0 opens it (exports move from `Cropped/` to `Final/`, and `session.json` gains each photo's history and Finish settings). Back up a project before opening it if you may need 2.x again: version 2.9 still opens a converted project, but saving it there drops the photo list, Finish settings and export records; 3.0 then crops the photos again from the scans, with default Finish settings.
 
 ### Added
