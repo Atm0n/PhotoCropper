@@ -14,7 +14,7 @@
 		<Grid Grid.Column="0" RowDefinitions="Auto, *">
 			<DockPanel Grid.Row="0" Margin="15,0,10,5" VerticalAlignment="Center">
 				<StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-					<Border x:Name="bdrLookaheadStatus" IsVisible="{Binding IsPreloaded}" Background="{DynamicResource AppSubtleCardBrush}" BorderBrush="#3db85a" BorderThickness="1" CornerRadius="4" Padding="5,2" VerticalAlignment="Center" ToolTip.Tip="Pre-processed in background thread for 0ms navigation">
+					<Border x:Name="bdrLookaheadStatus" IsVisible="{Binding IsPreloaded}" Background="{DynamicResource AppSubtleCardBrush}" BorderBrush="#3db85a" BorderThickness="1" CornerRadius="4" Padding="5,2" VerticalAlignment="Center" ToolTip.Tip="{DynamicResource TipPreloaded}">
 						<TextBlock x:Name="txtLookaheadBadge" Text="{DynamicResource LblLookaheadPreloaded}" FontSize="10" FontWeight="Bold" Foreground="#3db85a" VerticalAlignment="Center"/>
 					</Border>
 					<Border Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
@@ -50,17 +50,17 @@
 							</Button>
 						<Border Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="4,2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 							<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="2,0">
-								<TextBlock Text="Background:" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,2,0"/>
+								<TextBlock Text="{DynamicResource LblBackgroundPicker}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,2,0"/>
 								<ToggleButton x:Name="tglColorPicker" Click="TglColorPicker_Click" Padding="6,3" Focusable="False" ToolTip.Tip="{DynamicResource BtnSampleBackground}" CornerRadius="4">
 									<StackPanel Orientation="Horizontal" Spacing="4">
 										<TextBlock Text="🎨" FontSize="11" VerticalAlignment="Center"/>
-										<TextBlock Text="Pick Color" FontSize="10" VerticalAlignment="Center"/>
+										<TextBlock Text="{DynamicResource BtnPickColor}" FontSize="10" VerticalAlignment="Center"/>
 									</StackPanel>
 								</ToggleButton>
 								<Button x:Name="btnResetBackground" Click="BtnResetBackground_Click" Padding="6,3" Focusable="False" IsEnabled="False" ToolTip.Tip="{DynamicResource BtnResetBackground}" CornerRadius="4">
 									<StackPanel Orientation="Horizontal" Spacing="4">
 										<TextBlock Text="↺" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
-										<TextBlock Text="Reset" FontSize="10" VerticalAlignment="Center"/>
+										<TextBlock Text="{DynamicResource BtnResetColor}" FontSize="10" VerticalAlignment="Center"/>
 									</StackPanel>
 								</Button>
 							</StackPanel>
@@ -69,7 +69,7 @@
 							<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
 								<Rectangle x:Name="rectCurrentDetectionColor" Width="12" Height="12" RadiusX="2" RadiusY="2" Stroke="{DynamicResource AppBorderBrush}" StrokeThickness="1"/>
 								<Menu Background="Transparent" VerticalAlignment="Center" Margin="0" Focusable="False" IsTabStop="False" KeyboardNavigation.TabNavigation="None">
-									<MenuItem Header="Box Color" x:Name="menuDetectionColor" Focusable="False" IsTabStop="False" FontSize="11" FontWeight="SemiBold"/>
+									<MenuItem Header="{DynamicResource BtnBoxColor}" x:Name="menuDetectionColor" Focusable="False" IsTabStop="False" FontSize="11" FontWeight="SemiBold"/>
 								</Menu>
 							</StackPanel>
 						</Border>
@@ -91,7 +91,7 @@
 				<Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
 					<Button Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0" ZIndex="10"
 							x:Name="btnPrevScan" Command="{Binding PreviousScanCommand}"
-							Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="40" Height="80" CornerRadius="4" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ToolTip.Tip="Previous Scan (PageUp / ↑)">
+							Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="40" Height="80" CornerRadius="4" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ToolTip.Tip="{DynamicResource TipPreviousScan}">
 						<TextBlock Text="◀" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 					</Button>
 
@@ -122,13 +122,13 @@
 					<Border Grid.Column="1" x:Name="pnlLocalLoading" Background="{DynamicResource AppModalBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="20" Padding="15,8" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsDetectionPending}" ZIndex="20">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<TextBlock Text="⏳" FontSize="16" VerticalAlignment="Center"/>
-							<TextBlock Text="Calculating..." FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
+							<TextBlock Text="{DynamicResource LblCalculating}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
 						</StackPanel>
 					</Border>
 					
 					<Button Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="10,0" ZIndex="10"
 							x:Name="btnNextScan" Command="{Binding NextScanCommand}"
-							Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="40" Height="80" CornerRadius="4" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ToolTip.Tip="Next Scan (PageDown / ↓)">
+							Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="40" Height="80" CornerRadius="4" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ToolTip.Tip="{DynamicResource TipNextScan}">
 						<TextBlock Text="▶" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 					</Button>
 				</Grid>
@@ -151,7 +151,7 @@
 						<!-- Sensitivity Toggle Pill -->
 						<ToggleButton x:Name="tglDetectionOptions" IsChecked="True" 
 						              Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" 
-						              CornerRadius="12" Padding="12,3" Focusable="False" Cursor="Hand" ToolTip.Tip="Toggle Detection Tuning Sliders">
+						              CornerRadius="12" Padding="12,3" Focusable="False" Cursor="Hand" ToolTip.Tip="{DynamicResource TipToggleTuning}">
 							<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
 								<TextBlock Text="🎛️" FontSize="11" VerticalAlignment="Center"/>
 								<TextBlock Text="{DynamicResource LblDetectionSensitivity}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}" VerticalAlignment="Center"/>
@@ -311,14 +311,14 @@
 					<Border x:Name="pnlNoDetectionsState" Background="{DynamicResource AppEmptyStateBrush}" CornerRadius="6" Margin="10" IsVisible="{Binding !HasPhotos}">
 						<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Margin="20">
 							<TextBlock Text="🔍" FontSize="44" HorizontalAlignment="Center" Opacity="0.8"/>
-							<TextBlock Text="No Photos Detected" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}" HorizontalAlignment="Center"/>
-							<TextBlock Text="Try lowering the Minimum Size slider or clicking Auto-Tune to find photos." FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}" TextWrapping="Wrap" MaxWidth="320" TextAlignment="Center"/>
+							<TextBlock Text="{DynamicResource LblNoPhotosDetected}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}" HorizontalAlignment="Center"/>
+							<TextBlock Text="{DynamicResource LblNoPhotosHint}" FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}" TextWrapping="Wrap" MaxWidth="320" TextAlignment="Center"/>
 						</StackPanel>
 					</Border>
 					<!-- 1. Single Photo Carousel View -->
 					<Grid x:Name="pnlCarouselView" IsVisible="{Binding IsCarouselVisible}" ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
 						<Button Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0"
-								Command="{Binding PreviousPhotoCommand}" ToolTip.Tip="Previous Crop (Left Arrow / ←)"
+								Command="{Binding PreviousPhotoCommand}" ToolTip.Tip="{DynamicResource TipPreviousPhoto}"
 								Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="40" Height="80" CornerRadius="4" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 							<TextBlock Text="◀" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 						</Button>
@@ -347,7 +347,7 @@
 						</Carousel>
 						
 						<Button Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="10,0"
-								Command="{Binding NextPhotoCommand}" ToolTip.Tip="Next Crop (Right Arrow / →)"
+								Command="{Binding NextPhotoCommand}" ToolTip.Tip="{DynamicResource TipNextPhoto}"
 								Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="40" Height="80" CornerRadius="4" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 							<TextBlock Text="▶" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 						</Button>
@@ -418,7 +418,7 @@
 
 				<!-- Action Buttons (Bottom of Right Panel) -->
 				<Grid Grid.Row="2" ColumnDefinitions="Auto, *, Auto" Margin="12,6,12,10">
-					<Button Grid.Column="0" x:Name="btnDelete" Click="BtnDelete_Click" Padding="12,8" CornerRadius="6" Background="{DynamicResource AppButtonDangerBrush}" Foreground="{DynamicResource AppButtonDangerTextBrush}" BorderThickness="0" Focusable="False" VerticalAlignment="Center" ToolTip.Tip="Delete crop (Del)">
+					<Button Grid.Column="0" x:Name="btnDelete" Click="BtnDelete_Click" Padding="12,8" CornerRadius="6" Background="{DynamicResource AppButtonDangerBrush}" Foreground="{DynamicResource AppButtonDangerTextBrush}" BorderThickness="0" Focusable="False" VerticalAlignment="Center" ToolTip.Tip="{DynamicResource TipDeletePhoto}">
 						<StackPanel Orientation="Horizontal" Spacing="6">
 							<TextBlock Text="🗑️" FontSize="13" VerticalAlignment="Center"/>
 							<TextBlock x:Name="txtBtnDelete" Text="{Binding DeleteButtonText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
@@ -426,7 +426,7 @@
 					</Button>
 					
 					<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
-						<Button x:Name="btnRotate" Click="BtnRotate_Click" Padding="15,10" CornerRadius="20" Background="{DynamicResource AppButtonActionBrush}" Foreground="{DynamicResource AppButtonActionTextBrush}" Focusable="False" ToolTip.Tip="Rotate (R)">
+						<Button x:Name="btnRotate" Click="BtnRotate_Click" Padding="15,10" CornerRadius="20" Background="{DynamicResource AppButtonActionBrush}" Foreground="{DynamicResource AppButtonActionTextBrush}" Focusable="False" ToolTip.Tip="{DynamicResource TipRotateCw}">
 							<StackPanel Orientation="Horizontal" Spacing="6">
 								<TextBlock Text="↻" FontSize="15" VerticalAlignment="Center"/>
 								<TextBlock x:Name="txtBtnRotate" Text="{Binding RotateButtonText}" FontWeight="Bold" VerticalAlignment="Center"/>

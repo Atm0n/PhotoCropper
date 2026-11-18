@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> **Upgrading from 2.x:** a project is converted the first time 3.0 opens it (exports move from `Cropped/` to `Final/`, and `session.json` gains each photo's history and Finish settings). Back up a project before opening it if you may need 2.x again: version 2.9 still opens a converted project, but saving it there drops the photo list, Finish settings and export records; 3.0 then crops the photos again from the scans, with default Finish settings.
+
 ### Added
 - **Folder pipeline for projects**: `RawScans/` → `Cropped/` (one lossless PNG per photo, geometry only) → `Final/` (restored, with metadata). Photos get permanent IDs (`scan_0003_p02`), so re-cropping keeps their settings and replaces their files; `session.json` (format 2.0) records each photo's history and knows when a final photo is out of date. Existing projects are migrated automatically: their exports move from `Cropped/` to `Final/`.
 - **Stage bar in the GUI (1 Scan → 2 Crops → 3 Finish)**: Scan shows every scan as a thumbnail card with its photo count, imports scan files into the project, and lets you **rescan** a page (the new scan takes its place) or **discard** it (two clicks; removes the file and its photos) while scanning; Crops is the scan editor (restoration moved out of it); Finish shows every cropped photo with its own restoration settings and status, a **before/after preview** of the selected photo (updating as settings change), exports what changed to `Final/`, and imports photos that are already cropped. Moving to Finish saves the crops of changed scans to `Cropped/`.
@@ -20,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session crops now record each photo's auto-orientation (`AutoRotationDegrees`) and each scan's exported files (`ExportedFiles`) in `session.json`. Older sessions still load.
 
 ### Changed
+- **Remaining English-only interface text is now translated** (Catalan, Spanish): the main menu titles, Undo/Redo, the window titles, the Crops stage and review mode tooltips and labels, the "no photos detected" message, the custom colour, export and scanner dialogs, and the single-photo export messages.
+- **Help window rewritten for the new workflow**: a "How it works" overview of the three stages and their folders, cards grouped by stage (new: background colour, review mode, photo editor, repair brush and AI fill), corrected texts (where Save writes, box editing, per-photo restoration), and separate shortcut lists for the Crops stage and the Finish editor. The Crops toolbar labels (Background, Pick Color, Reset, Box Color) are now translated, and English labels consistently use "color".
 - **Picking a background colour auto-tunes detection** for that colour instead of re-detecting with the previous settings, and the scan, boxes and settings now refresh after picking or resetting the colour (before, the view could stay on the old result).
 - **Box overlays are drawn by the GUI** over the untouched scan instead of being painted into a copy of it by the engine. Dragging, resizing or rotating a box only repaints the overlay (the scan bitmap is no longer rebuilt on every mouse move), changing the box colour no longer re-runs detection, and each loaded scan no longer keeps a second full-resolution copy in memory. Lines are anti-aliased, and clicks are tested against the same geometry the overlay draws.
 - **Re-export cleanup** only removes files this scan previously exported: the files recorded by its last export (if unchanged on disk and still in the output folder). Without a record it falls back to files named exactly as the current pattern produces, except for patterns without `{original}`/`{filename}` and scans sharing a base name and output folder with another scan. Unrelated files and other scans' exports are no longer deleted, and the source scan is never deleted.
@@ -31,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: warnings are treated as errors again; solution-wide preview features removed; `System.Drawing.Common` pinned to 11.0.0; unused `Avalonia.Diagnostics` removed.
 
 ### Fixed
+- The Zoom entry in the Help window had no description in any language.
 - Photos deleted or rotated in Review mode now also update the open scan's boxes and coverage when review closes.
 - Deleting photos from the photo panel left their boxes drawn on the scan until it was reloaded; the boxes and coverage now update at once. Editing, deleting or refining a box keeps that photo shown instead of jumping back to the first one.
 - **Dust removal removed almost nothing**: its edge guard cancelled every candidate, because a speck's own outline is an edge. Candidates are now only kept when other edges run past them, and the detection size scales with resolution, so larger dust on high-resolution scans is found too.
@@ -46,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Scanner errors ("scanner not found", timeouts) showed a generic error and skipped the scanner reset.
 - Re-detecting a scan kept stale manual rotations; dropped extractions misaligned photos and boxes; resizing a box lost its manual rotation; refinement and resize desynchronised the hold-to-compare copy.
 - Undo: counter-clockwise rotations undid in the wrong direction; undoing a rotation left the compare copy and saved rotation rotated; recorded box lists could change after being recorded.
+- A new project without scans showed "Finish · Needs a project"; the status bar kept "Saving crops (0 of N)..." after the crops were saved; opening a project said "Scan acquired" instead of how many scans were loaded; the Discard confirmation ran past the edge of the scan card.
+- Closing Review mode on another scan's photo opened that scan on its first photo instead of the one reviewed.
 
 ## [2.9.0] - 2026-09-28
 

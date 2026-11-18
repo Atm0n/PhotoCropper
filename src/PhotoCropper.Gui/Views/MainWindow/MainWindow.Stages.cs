@@ -83,17 +83,21 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
 
         var workspace = Workspace;
         string? workDir = WorkDirectory;
-        if (workspace != null && workDir != null)
+        if (workDir != null)
         {
-            int scansWithCrops;
-            int photos;
-            int toExport;
-            lock (workspace)
+            // A project without scans has no session yet: it simply has nothing saved.
+            int scansWithCrops = 0;
+            int photos = 0;
+            int toExport = 0;
+            if (workspace != null)
             {
-                scansWithCrops = workspace.Photos.Where(p => p.ScanRelativePath != null)
-                    .Select(p => p.ScanRelativePath!).Distinct(StringComparer.OrdinalIgnoreCase).Count();
-                photos = workspace.Photos.Count(p => p.Cropped != null);
-                toExport = workspace.Photos.Count(p => p.Cropped != null && p.IsFinalStale);
+                lock (workspace)
+                {
+                    scansWithCrops = workspace.Photos.Where(p => p.ScanRelativePath != null)
+                        .Select(p => p.ScanRelativePath!).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+                    photos = workspace.Photos.Count(p => p.Cropped != null);
+                    toExport = workspace.Photos.Count(p => p.Cropped != null && p.IsFinalStale);
+                }
             }
             lblStageCropsStatus.Text = LocalizationService.Format(ResourceKeys.StageCropsStatus, "{0} of {1} scans saved", scansWithCrops, ScanSessions.Count);
             lblStageFinishStatus.Text = LocalizationService.Format(ResourceKeys.StageFinishStatus, "{0} photos · {1} to export", photos, toExport);
@@ -175,6 +179,12 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
 
                 ProjectWorkspaceService.SaveSession(workDir, workspace);
             }));
+
+        if (completed)
+        {
+            // Otherwise the status bar keeps the "Saving crops (0 of N)..." text the operation started with.
+            lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgCropsSaved, "Crops saved for {0} scans.", pending.Count - failures.Count);
+        }
 
         if (!failures.IsEmpty)
         {

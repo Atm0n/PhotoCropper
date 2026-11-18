@@ -43,7 +43,7 @@ internal sealed partial class MainWindow : IReviewHost
         if (ScanSessions.Count == 0) return;
         if (scanIndex >= 0 && scanIndex != CurrentIndex)
         {
-            _ = NavigateToScanIndexAsync(scanIndex);
+            _ = ShowReviewedScanAsync(scanIndex, photoIndex);
             return;
         }
 
@@ -51,5 +51,19 @@ internal sealed partial class MainWindow : IReviewHost
         ShowScan(engine);
         _cropsVm.ShowPhotos(Math.Max(0, photoIndex));
         _cropsVm.UpdateCoverage();
+    }
+
+    /// <summary>Opens the scan review ended on, then selects its photo (loading a scan selects the first one).</summary>
+    private async Task ShowReviewedScanAsync(int scanIndex, int photoIndex)
+    {
+        try
+        {
+            await NavigateToScanIndexAsync(scanIndex);
+            if (CurrentIndex == scanIndex) _cropsVm.SelectPhoto(Math.Max(0, photoIndex));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.TraceError($"[PhotoCropper] Opening the reviewed scan failed: {ex}");
+        }
     }
 }

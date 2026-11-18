@@ -59,7 +59,7 @@
 								<Slider x:Name="sldJpegQuality" Minimum="50" Maximum="100" Value="100" Width="100" 
 										TickFrequency="5" IsSnapToTickEnabled="True"
 										ValueChanged="SldJpegQuality_ValueChanged" VerticalAlignment="Center" Focusable="False"/>
-								<TextBlock x:Name="txtQualityValue" Text="100% (Max)" FontSize="11" VerticalAlignment="Center" Width="75"/>
+								<TextBlock x:Name="txtQualityValue" Text="{DynamicResource LblQualityMax}" FontSize="11" VerticalAlignment="Center" Width="75"/>
 							</StackPanel>
 						</WrapPanel>
 					</StackPanel>

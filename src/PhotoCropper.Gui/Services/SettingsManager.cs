@@ -51,6 +51,9 @@ internal sealed class SettingsManager
     private readonly string _settingsFilePath;
     private readonly JsonSerializerOptions _jsonOptions;
 
+    /// <summary>Environment variable that points the settings file somewhere else (the test suites set it).</summary>
+    public const string SettingsPathVariable = "PHOTOCROPPER_SETTINGS_PATH";
+
     public UserSettings Settings { get; private set; } = new();
 
     // Public constructor for testing/mocking
@@ -60,6 +63,12 @@ internal sealed class SettingsManager
         {
             _settingsFilePath = customPath;
             _settingsDirectory = Path.GetDirectoryName(customPath) ?? "";
+        }
+        else if (Environment.GetEnvironmentVariable(SettingsPathVariable) is { Length: > 0 } overridePath)
+        {
+            // Used by the test suites so they never touch the real settings file.
+            _settingsFilePath = overridePath;
+            _settingsDirectory = Path.GetDirectoryName(overridePath) ?? "";
         }
         else
         {

@@ -440,13 +440,13 @@ internal sealed partial class MainWindow
                 byte[] fileBytes = PhotoExporter.EncodePhoto(engine.DetectedPhotos[photoIndex], format, settings.JpegQuality, scanMetadata, xDpi, yDpi);
                 await File.WriteAllBytesAsync(targetPath, fileBytes, cancellationToken);
 
-                string exportMsg = $"Exported photo to {Path.GetFileName(targetPath)}";
+                string exportMsg = LocalizationService.Format(ResourceKeys.MsgPhotoExported, "Exported photo to {0}", Path.GetFileName(targetPath));
                 lblStatus.Text = exportMsg;
                 _notificationService.ShowSuccess("PhotoCropper", exportMsg);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
             {
-                string errorMsg = $"Failed to export photo: {ex.Message}";
+                string errorMsg = LocalizationService.Format(ResourceKeys.MsgPhotoExportFailed, "Failed to export photo: {0}", ex.Message);
                 lblStatus.Text = errorMsg;
                 _notificationService.ShowError("PhotoCropper", errorMsg);
             }
