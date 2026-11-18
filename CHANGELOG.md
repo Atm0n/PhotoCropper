@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session crops now record each photo's auto-orientation (`AutoRotationDegrees`) and each scan's exported files (`ExportedFiles`) in `session.json`. Older sessions still load.
 
 ### Changed
+- **Help window rewritten for the new workflow**: a "How it works" overview of the three stages and their folders, cards grouped by stage (new: background colour, review mode, photo editor, repair brush and AI fill), corrected texts (where Save writes, box editing, per-photo restoration), and separate shortcut lists for the Crops stage and the Finish editor. The Crops toolbar labels (Background, Pick Color, Reset, Box Color) are now translated, and English labels consistently use "color".
 - **Picking a background colour auto-tunes detection** for that colour instead of re-detecting with the previous settings, and the scan, boxes and settings now refresh after picking or resetting the colour (before, the view could stay on the old result).
 - **Box overlays are drawn by the GUI** over the untouched scan instead of being painted into a copy of it by the engine. Dragging, resizing or rotating a box only repaints the overlay (the scan bitmap is no longer rebuilt on every mouse move), changing the box colour no longer re-runs detection, and each loaded scan no longer keeps a second full-resolution copy in memory. Lines are anti-aliased, and clicks are tested against the same geometry the overlay draws.
 - **Re-export cleanup** only removes files this scan previously exported: the files recorded by its last export (if unchanged on disk and still in the output folder). Without a record it falls back to files named exactly as the current pattern produces, except for patterns without `{original}`/`{filename}` and scans sharing a base name and output folder with another scan. Unrelated files and other scans' exports are no longer deleted, and the source scan is never deleted.
@@ -31,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: warnings are treated as errors again; solution-wide preview features removed; `System.Drawing.Common` pinned to 11.0.0; unused `Avalonia.Diagnostics` removed.
 
 ### Fixed
+- The Zoom entry in the Help window had no description in any language.
 - Photos deleted or rotated in Review mode now also update the open scan's boxes and coverage when review closes.
 - Deleting photos from the photo panel left their boxes drawn on the scan until it was reloaded; the boxes and coverage now update at once. Editing, deleting or refining a box keeps that photo shown instead of jumping back to the first one.
 - **Dust removal removed almost nothing**: its edge guard cancelled every candidate, because a speck's own outline is an edge. Candidates are now only kept when other edges run past them, and the detection size scales with resolution, so larger dust on high-resolution scans is found too.

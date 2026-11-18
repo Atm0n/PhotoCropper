@@ -50,17 +50,17 @@
 							</Button>
 						<Border Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="4,2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 							<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="2,0">
-								<TextBlock Text="Background:" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,2,0"/>
+								<TextBlock Text="{DynamicResource LblBackgroundPicker}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,2,0"/>
 								<ToggleButton x:Name="tglColorPicker" Click="TglColorPicker_Click" Padding="6,3" Focusable="False" ToolTip.Tip="{DynamicResource BtnSampleBackground}" CornerRadius="4">
 									<StackPanel Orientation="Horizontal" Spacing="4">
 										<TextBlock Text="🎨" FontSize="11" VerticalAlignment="Center"/>
-										<TextBlock Text="Pick Color" FontSize="10" VerticalAlignment="Center"/>
+										<TextBlock Text="{DynamicResource BtnPickColor}" FontSize="10" VerticalAlignment="Center"/>
 									</StackPanel>
 								</ToggleButton>
 								<Button x:Name="btnResetBackground" Click="BtnResetBackground_Click" Padding="6,3" Focusable="False" IsEnabled="False" ToolTip.Tip="{DynamicResource BtnResetBackground}" CornerRadius="4">
 									<StackPanel Orientation="Horizontal" Spacing="4">
 										<TextBlock Text="↺" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
-										<TextBlock Text="Reset" FontSize="10" VerticalAlignment="Center"/>
+										<TextBlock Text="{DynamicResource BtnResetColor}" FontSize="10" VerticalAlignment="Center"/>
 									</StackPanel>
 								</Button>
 							</StackPanel>
@@ -69,7 +69,7 @@
 							<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
 								<Rectangle x:Name="rectCurrentDetectionColor" Width="12" Height="12" RadiusX="2" RadiusY="2" Stroke="{DynamicResource AppBorderBrush}" StrokeThickness="1"/>
 								<Menu Background="Transparent" VerticalAlignment="Center" Margin="0" Focusable="False" IsTabStop="False" KeyboardNavigation.TabNavigation="None">
-									<MenuItem Header="Box Color" x:Name="menuDetectionColor" Focusable="False" IsTabStop="False" FontSize="11" FontWeight="SemiBold"/>
+									<MenuItem Header="{DynamicResource BtnBoxColor}" x:Name="menuDetectionColor" Focusable="False" IsTabStop="False" FontSize="11" FontWeight="SemiBold"/>
 								</Menu>
 							</StackPanel>
 						</Border>
