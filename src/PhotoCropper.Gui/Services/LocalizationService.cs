@@ -101,6 +101,7 @@ internal static class ResourceKeys
     public const string MsgCropsSaved = nameof(MsgCropsSaved);
     public const string MsgAutosaveFailed = nameof(MsgAutosaveFailed);
     public const string MenuScannerSettings = nameof(MenuScannerSettings);
+    public const string TipScanF5 = nameof(TipScanF5);
     public const string MenuExportSettings = nameof(MenuExportSettings);
     public const string MenuResetDetection = nameof(MenuResetDetection);
     public const string TipHelpF1 = nameof(TipHelpF1);

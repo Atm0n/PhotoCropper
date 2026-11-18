@@ -546,6 +546,7 @@ public sealed class StageViewModelTests : IDisposable
         public List<int> Rescanned { get; } = [];
 
         public Task ScanAsync() => Task.CompletedTask;
+        public Task ConfigureScannerAsync() => Task.CompletedTask;
         public Task ImportScansAsync() => Task.CompletedTask;
         public void OpenScanInCrops(int scanIndex) => OpenedScan = scanIndex;
         public Task DiscardScanAsync(int scanIndex) { Discarded.Add(scanIndex); return Task.CompletedTask; }

@@ -28,6 +28,10 @@ internal interface IStageHost
     IReadOnlyList<Core.Workspace.ScanSessionItem> Scans { get; }
 
     Task ScanAsync();
+
+    /// <summary>Opens the scanner settings (device, resolution, page size).</summary>
+    Task ConfigureScannerAsync();
+
     Task ImportScansAsync();
     void OpenScanInCrops(int scanIndex);
 
@@ -177,6 +181,9 @@ internal sealed partial class ScanStageViewModel : ObservableObject
 
     [RelayCommand]
     private Task Scan() => _host.ScanAsync();
+
+    [RelayCommand]
+    private Task ConfigureScanner() => _host.ConfigureScannerAsync();
 
     [RelayCommand]
     private Task ImportScans() => _host.ImportScansAsync();

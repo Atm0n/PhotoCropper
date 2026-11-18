@@ -260,6 +260,8 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
         RefreshStages();
     }
 
+    public Task ConfigureScannerAsync() => ShowScannerConfigAsync();
+
     public async Task DiscardScanAsync(int scanIndex)
     {
         await DeleteScanAtAsync(scanIndex);

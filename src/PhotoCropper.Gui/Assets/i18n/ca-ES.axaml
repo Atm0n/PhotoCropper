@@ -190,6 +190,7 @@
 	<sys:String x:Key="TitleHelpWindow">PhotoCropper - Ajuda i dreceres</sys:String>
 	<sys:String x:Key="MenuSettings">Configuració</sys:String>
 	<sys:String x:Key="MenuScannerSettings">Configuració de l'escàner...</sys:String>
+	<sys:String x:Key="TipScanF5">Escaneja una pàgina amb l'escàner (F5)</sys:String>
 	<sys:String x:Key="MenuExportSettings">Configuració d'exportació...</sys:String>
 	<sys:String x:Key="MenuResetDetection">Restableix la configuració de detecció</sys:String>
 	<sys:String x:Key="TipHelpF1">Ajuda i dreceres de teclat (F1)</sys:String>

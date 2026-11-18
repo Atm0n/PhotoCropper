@@ -190,6 +190,7 @@
 	<sys:String x:Key="TitleHelpWindow">PhotoCropper - Ayuda y atajos</sys:String>
 	<sys:String x:Key="MenuSettings">Configuración</sys:String>
 	<sys:String x:Key="MenuScannerSettings">Configuración del escáner...</sys:String>
+	<sys:String x:Key="TipScanF5">Escanea una página con el escáner (F5)</sys:String>
 	<sys:String x:Key="MenuExportSettings">Configuración de exportación...</sys:String>
 	<sys:String x:Key="MenuResetDetection">Restablecer la configuración de detección</sys:String>
 	<sys:String x:Key="TipHelpF1">Ayuda y atajos de teclado (F1)</sys:String>
