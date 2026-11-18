@@ -1,6 +1,7 @@
 using PhotoCropper.Core;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
+using PhotoCropper.Gui.Controls;
 using PhotoCropper.Gui.Services;
 using PhotoCropper.Gui.ViewModels;
 using PhotoCropper.TestHelpers;
@@ -12,6 +13,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     private readonly string _dir;
     private readonly ScanSessionManager _sessions = new();
     private readonly FakeCropsHost _host = new();
+    private readonly UndoRedoHistory _undo = new();
     private readonly UserSettings _settings = new() { AutoTuneOnScanChange = false, AutoAdjustOnLowCoverage = false };
     private int _settingsSaves;
 
@@ -24,19 +26,20 @@ public sealed class CropsStageViewModelTests : IDisposable
     public void Dispose()
     {
         _sessions.Dispose();
+        _undo.Dispose();
         try { Directory.Delete(_dir, recursive: true); } catch (IOException) { }
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The session manager owns and disposes its sessions")]
-    private CropsStageViewModel CreateViewModel(int scanCount)
+    private CropsStageViewModel CreateViewModel(int scanCount, int scanSize = 800)
     {
         for (int i = 0; i < scanCount; i++)
         {
             string path = Path.Combine(_dir, $"scan_{i + 1:0000}.png");
-            TestImageFactory.CreateStandardTwoPhotoScan(path, 800, 800);
+            TestImageFactory.CreateStandardTwoPhotoScan(path, scanSize, scanSize);
             _sessions.Add(new ScanSessionItem(path, new DetectionOptions()));
         }
-        return new CropsStageViewModel(_host, _sessions, () => _settings, () => _settingsSaves++)
+        return new CropsStageViewModel(_host, _sessions, _undo, () => _settings, () => _settingsSaves++)
         {
             OptionsDebounce = TimeSpan.FromMilliseconds(30),
         };
@@ -148,6 +151,134 @@ public sealed class CropsStageViewModelTests : IDisposable
         LookaheadPlan.ScansToRelease(10, 0, ahead: 4).ShouldBeEmpty();
     }
 
+    // ---- box editing ----
+
+    private async Task<(CropsStageViewModel Vm, PhotoCropperEngine Engine)> OpenScanWithTwoPhotosAsync()
+    {
+        var vm = CreateViewModel(1, scanSize: 2000);
+        await vm.LoadCurrentScanAsync();
+        var engine = _sessions.Sessions[0].Engine!;
+        engine.DetectedPhotos.Count.ShouldBe(2);
+        return (vm, engine);
+    }
+
+    private static CropBoxGeometry Geometry(PhotoCropperEngine engine, int index) =>
+        CropBoxGeometry.For(engine.AcceptedCandidates[index], new System.Drawing.Size(engine.Original.Width, engine.Original.Height), engine.OverlayScale);
+
+    [Fact]
+    public async Task ClickOnDeleteBadge_DeletesThatPhotoAndCanBeUndone()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+
+        vm.ClickAt(Geometry(engine, 0).DeleteBadge);
+
+        engine.DetectedPhotos.Count.ShouldBe(1);
+        engine.AcceptedCandidates.Count.ShouldBe(1);
+        _undo.CanUndo.ShouldBeTrue();
+        _sessions.Sessions[0].IsModified.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ClickInsideBox_SelectsItsPhoto()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+
+        vm.ClickAt(engine.AcceptedCandidates[1].Rotated.Center);
+
+        _host.Selected.ShouldBe(1);
+        engine.DetectedPhotos.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task DraggingTheRotationHandle_TurnsTheBoxAndRecordsUndo()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+        var box = engine.AcceptedCandidates[0];
+        var center = box.Rotated.Center;
+        var handle = Geometry(engine, 0).RotationHandle;
+
+        vm.PressAt(handle).ShouldBe(BoxGesture.Rotate);
+        // Swing the handle a quarter turn around the box's centre.
+        var turned = new System.Drawing.PointF(center.X + (center.Y - handle.Y), center.Y + (handle.X - center.X));
+        vm.DragTo(turned);
+        _host.BoxRepaints.ShouldBeGreaterThan(0);
+        vm.Release(wasTap: false);
+
+        Math.Abs(engine.AcceptedCandidates[0].Rotated.Angle - box.Rotated.Angle).ShouldBeGreaterThan(45);
+        _undo.UndoCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task DraggingACorner_ResizesTheBoxAndReExtractsThePhoto()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+        int index = engine.AcceptedCandidates.ToList().FindIndex(c => Math.Abs(c.Rotated.Angle % 90) < 1);
+        index.ShouldBeGreaterThanOrEqualTo(0);
+        var geometry = Geometry(engine, index);
+        int corner = Array.FindIndex(geometry.Vertices, v => !v.Equals(geometry.DeleteBadge));
+        var start = geometry.Vertices[corner];
+        var opposite = geometry.Vertices[(corner + 2) % 4];
+        int before = engine.DetectedPhotos[index].Width * engine.DetectedPhotos[index].Height;
+
+        vm.PressAt(start).ShouldBe(BoxGesture.Resize);
+        // Pull the corner 20 % towards the opposite one: the box shrinks.
+        vm.DragTo(new System.Drawing.PointF(start.X + (opposite.X - start.X) * 0.2f, start.Y + (opposite.Y - start.Y) * 0.2f));
+        vm.Release(wasTap: false);
+
+        int after = engine.DetectedPhotos[index].Width * engine.DetectedPhotos[index].Height;
+        after.ShouldBeLessThan(before);
+        _undo.UndoCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task TapOnTheTopRightCorner_DeletesTheBox()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+
+        vm.PressAt(Geometry(engine, 0).DeleteBadge).ShouldBe(BoxGesture.Resize);
+        vm.Release(wasTap: true);
+
+        engine.DetectedPhotos.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task DrawingARectangle_AddsAManualCropAndSelectsIt()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+
+        vm.PressAt(new System.Drawing.PointF(1600, 200)).ShouldBe(BoxGesture.Draw);
+        await vm.AddManualCropAsync(new System.Drawing.Rectangle(1500, 150, 300, 200));
+
+        engine.DetectedPhotos.Count.ShouldBe(3);
+        _host.Selected.ShouldBe(2);
+        _undo.UndoCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void ResizeFromCorner_KeepsTheOppositeCorner()
+    {
+        var box = new CropCandidate
+        {
+            Rotated = new Emgu.CV.Structure.RotatedRect(new System.Drawing.PointF(100, 100), new System.Drawing.SizeF(100, 50), 0),
+            ShapePoints = [],
+        };
+        var vertices = box.Rotated.GetVertices();
+        int corner = 0;
+        var opposite = vertices[2];
+
+        var resized = BoxEditMath.ResizeFromCorner(box, corner, new System.Drawing.PointF(opposite.X - 200, opposite.Y - 80));
+
+        resized.Rotated.Size.Width.ShouldBe(200, 0.01);
+        resized.Rotated.Size.Height.ShouldBe(80, 0.01);
+        resized.Rotated.GetVertices().ShouldContain(v => Math.Abs(v.X - opposite.X) < 0.01 && Math.Abs(v.Y - opposite.Y) < 0.01);
+    }
+
     private static async Task WaitUntil(Func<bool> condition, int timeoutMs = 10_000)
     {
         var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
@@ -182,6 +313,10 @@ public sealed class CropsStageViewModelTests : IDisposable
         }
 
         public void ShowScanResult(PhotoCropperEngine engine) => Shown.Add(engine);
+        public int BoxRepaints { get; private set; }
+        public void ShowBoxes(PhotoCropperEngine engine) => BoxRepaints++;
+        public int? Selected { get; private set; }
+        public void SelectPhoto(int index) => Selected = index;
         public void ShowStatus(string message) => Statuses.Add(message);
     }
 }

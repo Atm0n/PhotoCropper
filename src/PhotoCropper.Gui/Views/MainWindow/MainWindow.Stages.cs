@@ -200,6 +200,13 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost
         if (btnResetBackground != null) btnResetBackground.IsEnabled = engine.CustomBackgroundColorHsv != null;
     }
 
+    void ICropsStageHost.ShowBoxes(PhotoCropper.Core.PhotoCropperEngine engine) => ShowScan(engine);
+
+    void ICropsStageHost.SelectPhoto(int index)
+    {
+        if (slides != null && index >= 0) slides.SelectedIndex = index;
+    }
+
     // ---- IStageHost ----
 
     public string? WorkDirectory

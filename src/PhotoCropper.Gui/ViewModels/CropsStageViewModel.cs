@@ -21,6 +21,12 @@ internal interface ICropsStageHost
     /// <summary>Shows a scan that was loaded or re-detected: the image with its boxes, the photo list and counters.</summary>
     void ShowScanResult(PhotoCropperEngine engine);
 
+    /// <summary>Repaints just the boxes over the scan, while one is being dragged.</summary>
+    void ShowBoxes(PhotoCropperEngine engine);
+
+    /// <summary>Selects a photo of the open scan in the photo list.</summary>
+    void SelectPhoto(int index);
+
     void ShowStatus(string message);
 }
 
@@ -35,6 +41,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
     private readonly ScanSessionManager _sessions;
     private readonly Func<UserSettings> _settings;
     private readonly Action _saveSettings;
+    private readonly UndoRedoHistory _undo;
 
     // Lets the background look-ahead and navigation take turns on an engine; see DrainLookaheadAsync.
     private readonly SemaphoreSlim _lookaheadLock = new(1, 1);
@@ -46,10 +53,11 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
     private bool _restoreColors;
     private bool _removeDust;
 
-    public CropsStageViewModel(ICropsStageHost host, ScanSessionManager sessions, Func<UserSettings> settings, Action saveSettings)
+    public CropsStageViewModel(ICropsStageHost host, ScanSessionManager sessions, UndoRedoHistory undo, Func<UserSettings> settings, Action saveSettings)
     {
         _host = host;
         _sessions = sessions;
+        _undo = undo;
         _settings = settings;
         _saveSettings = saveSettings;
         LoadFromSettings();
@@ -309,6 +317,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
     {
         if (IsNavigating || _host.IsBusy || Scans.Count == 0) return;
         IsNavigating = true;
+        CancelGesture();
         try
         {
             await DrainLookaheadAsync();
@@ -473,6 +482,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
 
     public void Dispose()
     {
+        ClearDragSnapshot();
         _lookaheadCts?.Cancel();
         _lookaheadCts?.Dispose();
         _optionsDebounceCts?.Cancel();

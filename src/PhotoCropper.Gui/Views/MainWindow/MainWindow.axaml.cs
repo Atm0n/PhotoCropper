@@ -50,7 +50,7 @@ internal sealed partial class MainWindow : Window
         InitializeComponent();
         _notificationService.Initialize(this);
 
-        _cropsVm = new CropsStageViewModel(this, _sessionManager, () => SettingsManager.Instance.Settings, SettingsManager.Instance.Save);
+        _cropsVm = new CropsStageViewModel(this, _sessionManager, undoHistory, () => SettingsManager.Instance.Settings, SettingsManager.Instance.Save);
         grdMainWorkspace.DataContext = _cropsVm;
 
         // Invalidate undo/redo entries for a scan when its engine is deactivated.
