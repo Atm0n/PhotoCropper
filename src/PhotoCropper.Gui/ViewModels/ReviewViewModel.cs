@@ -183,12 +183,11 @@ internal sealed partial class ReviewViewModel(IReviewHost host, UndoRedoHistory 
         if (!IsOpen) return false;
         switch (key)
         {
-            case Key.Escape or Key.E: Close(); break;
+            case Key.Escape: Close(); break;
             case Key.R: RotateClockwise(); break;
-            case Key.L: RotateCounterClockwise(); break;
-            case Key.Right or Key.Space or Key.Enter: Next(); break;
-            case Key.Left or Key.Back: Previous(); break;
-            case Key.Delete or Key.X: Delete(); break;
+            case Key.Right or Key.Space: Next(); break;
+            case Key.Left: Previous(); break;
+            case Key.Delete: Delete(); break;
         }
         return true;
     }

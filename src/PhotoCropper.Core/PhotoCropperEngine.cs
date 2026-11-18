@@ -213,7 +213,26 @@ public class PhotoCropperEngine : IDisposable
 
         // Saved crops whose extraction comes back empty are dropped, so map each kept photo back to
         // the saved crop it came from rather than assuming photo i == saved crop i.
-        var kept = ExtractAndProcessCandidates(candidates, knownOrientations: knownOrientations);
+        // A box reaching past the scan's edge was extracted from the padded detection image: do the same, so the
+        // restored photo matches the detected one pixel for pixel.
+        Mat? padded = null;
+        int pad = 0;
+        if (Original.NumberOfChannels == 3 && candidates.Any(c => !IsInside(c.Rotated, Original)))
+        {
+            var preparation = PreparePaddedDetectionImage();
+            padded = preparation.Padded;
+            pad = preparation.Pad;
+        }
+
+        List<(int SourceIndex, CropCandidate Candidate)> kept;
+        try
+        {
+            kept = ExtractAndProcessCandidates(candidates, padded, pad, knownOrientations);
+        }
+        finally
+        {
+            padded?.Dispose();
+        }
         AcceptedCandidates = [.. kept.Select(k => k.Candidate)];
 
         for (int photoIdx = 0; photoIdx < kept.Count; photoIdx++)
@@ -225,6 +244,9 @@ public class PhotoCropperEngine : IDisposable
             }
         }
     }
+
+    private static bool IsInside(RotatedRect rect, Mat image) =>
+        rect.GetVertices().All(p => p.X >= 0 && p.Y >= 0 && p.X <= image.Width - 1 && p.Y <= image.Height - 1);
 
     private static int NormalizeRightAngle(int degrees) => ((degrees % 360) + 360) % 360 / 90 * 90;
 
@@ -298,7 +320,10 @@ public class PhotoCropperEngine : IDisposable
         {
             System.Threading.Tasks.Parallel.For(0, candidates.Count, i =>
             {
-                Mat extracted = (padded != null && !padded.IsEmpty && pad > 0)
+                // The padded image is only needed for a box that reaches past the scan's edge. Inside it, extracting
+                // from the original gives the same pixels as restoring the saved box later, so a reopened project
+                // doesn't rewrite its cropped photos (and re-render their finals) for sub-pixel differences.
+                Mat extracted = (padded != null && !padded.IsEmpty && pad > 0 && !IsInside(candidates[i].Rotated, Original))
                     ? PhotoExtractionEngine.ExtractPhotoFromRotatedRect(candidates[i].Rotated, Original, padded, pad)
                     : PhotoExtractionEngine.ExtractPhotoFromRotatedRect(candidates[i].Rotated, Original);
 

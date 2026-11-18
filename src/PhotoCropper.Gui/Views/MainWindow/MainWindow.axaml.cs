@@ -30,7 +30,6 @@ internal sealed partial class MainWindow : Window
     private readonly AppNotificationService _notificationService = new();
     private bool isLoading;
     private bool isComparingRaw;
-    private bool _isExitingConfirmed;
     private readonly CropsStageViewModel _cropsVm;
     private bool _isNavigating => _cropsVm.IsNavigating;
     private CancellationTokenSource? _activeOperationCts;
@@ -66,44 +65,13 @@ internal sealed partial class MainWindow : Window
         AddHandler(KeyUpEvent, Window_KeyUp, RoutingStrategies.Tunnel);
 
         // Register Drag & Drop event handlers
-        Closing += Window_Closing;
         Loaded += MainWindow_Loaded;
 
         PopulateLanguageMenu();
         ApplySettingsToUi();
         InitializeStages();
-    }
-
-    private void Window_Closing(object? sender, WindowClosingEventArgs e)
-    {
-        if (_isExitingConfirmed) return;
-
-        if (HasUnsavedChanges())
-        {
-            e.Cancel = true;
-            if (pnlUnsavedOverlay != null)
-            {
-                pnlUnsavedOverlay.IsVisible = true;
-            }
-        }
-    }
-
-    private async void BtnSaveAndExit_Click(object? sender, RoutedEventArgs e)
-    {
-        if (pnlUnsavedOverlay != null) pnlUnsavedOverlay.IsVisible = false;
-        await SavePendingScansAsync(closeAfterSave: true);
-    }
-
-    private void BtnDiscardAndExit_Click(object? sender, RoutedEventArgs e)
-    {
-        if (pnlUnsavedOverlay != null) pnlUnsavedOverlay.IsVisible = false;
-        _isExitingConfirmed = true;
-        Close();
-    }
-
-    private void BtnCancelExit_Click(object? sender, RoutedEventArgs e)
-    {
-        if (pnlUnsavedOverlay != null) pnlUnsavedOverlay.IsVisible = false;
+        InitializeAutosave();
+        InitializeStartScreen();
     }
 
     /// <summary>
@@ -213,21 +181,8 @@ internal sealed partial class MainWindow : Window
         _activeOperationCts?.Cancel();
     }
 
-    private void ToggleMenuBar()
-    {
-        if (pnlMenuBar != null)
-        {
-            pnlMenuBar.IsVisible = !pnlMenuBar.IsVisible;
-        }
-    }
-
-    private void MenuExit_Click(object? sender, RoutedEventArgs e) => Close();
     private async void MenuUndo_Click(object? sender, RoutedEventArgs e) => await PerformUndoAsync();
     private async void MenuRedo_Click(object? sender, RoutedEventArgs e) => await PerformRedoAsync();
-    private void MenuViewCarousel_Click(object? sender, RoutedEventArgs e) => SetViewMode(false);
-    private void MenuViewGrid_Click(object? sender, RoutedEventArgs e) => SetViewMode(true);
-
-    private void BtnReset_Click(object? sender, RoutedEventArgs e) => BtnResetDefaults_Click(sender, e);
 
     private Dialogs.HelpWindow? _helpWindow;
 
@@ -262,6 +217,17 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
+        // The start screen's own controls get the keys (typing a project name, Enter to create); Esc goes back.
+        if (IsStartScreenOpen)
+        {
+            if (e.Key == Key.Escape)
+            {
+                _startVm.Back();
+                e.Handled = true;
+            }
+            return;
+        }
+
         if (HandleTextInputGuard(e)) return;
 
         // The editing shortcuts act on the scan editor, which only the Crops stage shows. Elsewhere only the
@@ -286,17 +252,6 @@ internal sealed partial class MainWindow : Window
             return true;
         }
 
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
-        {
-            if (e.Key == Key.S)
-            {
-                BtnSaveImages_Click(null, new RoutedEventArgs());
-                e.Handled = true;
-                return true;
-            }
-
-        }
-
         return true;
     }
 
@@ -313,11 +268,6 @@ internal sealed partial class MainWindow : Window
         {
             switch (e.Key)
             {
-                case Key.S:
-                    BtnSaveImages_Click(null, new RoutedEventArgs());
-                    e.Handled = true;
-                    return true;
-
                 case Key.Z:
                     await PerformUndoAsync();
                     e.Handled = true;
@@ -331,32 +281,13 @@ internal sealed partial class MainWindow : Window
 
         if (ScanSessions.Count > 0)
         {
-            if (e.Key == Key.Delete && e.KeyModifiers.HasFlag(KeyModifiers.Shift))
-            {
-                await DeleteCurrentScanAsync();
-                e.Handled = true;
-                return true;
-            }
-
             switch (e.Key)
             {
-                case Key.N:
-                case Key.Oem3:
-                    FocusManager?.Focus(null);
-                    StartRefineMode();
-                    e.Handled = true;
-                    return true;
                 case Key.R:
                     FocusManager?.Focus(null);
                     await RotateSelectedPhotosAsync();
                     e.Handled = true;
                     return true;
-                case Key.V:
-                    FocusManager?.Focus(null);
-                    await OpenReviewModeAsync();
-                    e.Handled = true;
-                    return true;
-                case Key.X:
                 case Key.Delete:
                     FocusManager?.Focus(null);
                     DeleteSelectedPhotos();
@@ -370,7 +301,7 @@ internal sealed partial class MainWindow : Window
 
     private bool HandleViewKey(KeyEventArgs e)
     {
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.A && _cropsVm.IsGridView)
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.A)
         {
             SelectAllGalleryPhotos();
             e.Handled = true;
@@ -391,7 +322,7 @@ internal sealed partial class MainWindow : Window
             return true;
         }
 
-        if (!isLoading && !_isNavigating && ScanSessions.Count > 0 && (e.Key == Key.Space || e.Key == Key.B))
+        if (!isLoading && !_isNavigating && ScanSessions.Count > 0 && e.Key == Key.Space)
         {
             if (!isComparingRaw && _cropsVm.SelectedPhotoIndex >= 0)
             {
@@ -407,32 +338,8 @@ internal sealed partial class MainWindow : Window
 
     private async ValueTask<bool> HandleNavigationKey(KeyEventArgs e)
     {
-        if (e.Key == Key.LeftAlt || e.Key == Key.RightAlt || e.Key == Key.F10)
-        {
-            if (!e.KeyModifiers.HasFlag(KeyModifiers.Control) && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
-            {
-                ToggleMenuBar();
-                e.Handled = true;
-                return true;
-            }
-        }
-
         if (e.Key == Key.Escape)
         {
-            if (pnlMenuBar != null && pnlMenuBar.IsVisible)
-            {
-                pnlMenuBar.IsVisible = false;
-                e.Handled = true;
-                return true;
-            }
-
-            if (pnlUnsavedOverlay != null && pnlUnsavedOverlay.IsVisible)
-            {
-                pnlUnsavedOverlay.IsVisible = false;
-                e.Handled = true;
-                return true;
-            }
-
             if (pnlErrorOverlay.IsVisible)
             {
                 pnlErrorOverlay.IsVisible = false;
@@ -449,7 +356,7 @@ internal sealed partial class MainWindow : Window
                 return true;
             }
 
-            if (_cropsVm.IsGridView && _cropsVm.SelectedPhotoIndices().Count > 1)
+            if (_cropsVm.SelectedPhotoIndices().Count > 1)
             {
                 ClearGallerySelection();
                 e.Handled = true;
@@ -463,14 +370,12 @@ internal sealed partial class MainWindow : Window
             switch (e.Key)
             {
                 case Key.Up:
-                case Key.PageUp:
                     if (isLoading || _isNavigating) { e.Handled = true; return true; }
                     e.Handled = true;
                     await NavigateScanAsync(forward: false);
                     return true;
 
                 case Key.Down:
-                case Key.PageDown:
                     if (isLoading || _isNavigating) { e.Handled = true; return true; }
                     e.Handled = true;
                     await NavigateScanAsync(forward: true);
@@ -519,7 +424,7 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        if (isComparingRaw && (e.Key == Key.Space || e.Key == Key.B))
+        if (isComparingRaw && e.Key == Key.Space)
         {
             isComparingRaw = false;
             if (!isLoading && !_isNavigating && ScanSessions.Count > 0)
@@ -546,6 +451,7 @@ internal sealed partial class MainWindow : Window
         settings.MaxAreaFactor = _cropsVm.MaxAreaPercent;
         settings.CannyLowThreshold = _cropsVm.EdgeThreshold;
 
+        FlushAutosave();
         if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory) && _workspaceSession != null)
         {
             ProjectWorkspaceService.SaveSession(settings.WorkDirectory, _workspaceSession);

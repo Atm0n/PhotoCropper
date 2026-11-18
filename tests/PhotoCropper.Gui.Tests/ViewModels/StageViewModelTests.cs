@@ -3,6 +3,7 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
+using PhotoCropper.Gui.Services;
 using PhotoCropper.Gui.ViewModels;
 using PhotoCropper.TestHelpers;
 
@@ -520,6 +521,77 @@ public sealed class StageViewModelTests : IDisposable
         vm.Scans[0].Thumbnail!.PixelSize.Width.ShouldBe(ScanStageViewModel.ThumbnailWidth);
     }
 
+    private string AddScan(string name, int width = 400, int height = 300)
+    {
+        string scanPath = Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), name);
+        using (var scan = new Mat(height, width, DepthType.Cv8U, 3)) { scan.SetTo(new MCvScalar(200, 180, 160)); scan.Save(scanPath); }
+        _host.ScanItems.Add(new ScanSessionItem(scanPath, new DetectionOptions()));
+        return scanPath;
+    }
+
+    [Fact]
+    public void ScanStage_Refresh_ShouldSelectANewScanAsSoonAsItArrives()
+    {
+        AddScan("scan_0001.png");
+        AddScan("scan_0002.png");
+        var vm = new ScanStageViewModel(_host);
+
+        vm.Refresh();
+        vm.SelectedScan!.FileName.ShouldBe("scan_0001.png");
+
+        vm.SelectedScan = vm.Scans[1];
+        vm.Refresh();
+        vm.SelectedScan!.FileName.ShouldBe("scan_0002.png"); // same scan after a rebuild
+
+        AddScan("scan_0003.png");
+        vm.Refresh();
+        vm.SelectedScan!.FileName.ShouldBe("scan_0003.png"); // the one just scanned
+
+        _host.ScanItems[2].Dispose();
+        _host.ScanItems.RemoveAt(2);
+        vm.Refresh();
+        vm.SelectedScan!.FileName.ShouldBe("scan_0002.png"); // a discarded scan's place goes to its neighbour
+    }
+
+    [Fact]
+    public void ScanStage_Preview_ShouldOutlineSavedBoxesWithoutDetecting()
+    {
+        string path = AddScan("scan_0001.png", width: 400, height: 200);
+        _host.Workspace!.Scans.Add(new WorkspaceScanEntry
+        {
+            RelativePath = Path.GetRelativePath(_workDir, path),
+            FinalCrops = { new WorkspaceCropData { CenterX = 100, CenterY = 50, Width = 100, Height = 50 } }
+        });
+        var vm = new ScanStageViewModel(_host);
+
+        vm.Refresh();
+
+        SpinWait.SpinUntil(() => vm.PreviewBoxes != null, TimeSpan.FromSeconds(5)).ShouldBeTrue();
+        vm.Preview.ShouldNotBeNull();
+        _host.PrepareCalls.ShouldBe(0);
+        var corners = vm.PreviewBoxes!.ShouldHaveSingleItem();
+        corners.Min(p => p.X).ShouldBe(0.125, 0.01); // (100 - 50) / 400
+        corners.Max(p => p.X).ShouldBe(0.375, 0.01);
+        corners.Min(p => p.Y).ShouldBe(0.125, 0.01); // (50 - 25) / 200
+        corners.Max(p => p.Y).ShouldBe(0.375, 0.01);
+        vm.Scans[0].PhotosText.ShouldBe(LocalizationService.Format(ResourceKeys.ScanStatusPhotos, "{0} photos", 1));
+    }
+
+    [Fact]
+    public void ScanStage_Preview_ShouldAskTheCropsStageToFindPhotosOnANewScan()
+    {
+        AddScan("scan_0001.png");
+        _host.PreparedBoxes[0] = [new WorkspaceCropData { CenterX = 200, CenterY = 150, Width = 80, Height = 60 }, new WorkspaceCropData { CenterX = 60, CenterY = 60, Width = 40, Height = 40 }];
+        var vm = new ScanStageViewModel(_host);
+
+        vm.Refresh();
+
+        SpinWait.SpinUntil(() => vm.PreviewBoxes != null, TimeSpan.FromSeconds(5)).ShouldBeTrue();
+        _host.PrepareCalls.ShouldBe(1);
+        vm.PreviewBoxes!.Count.ShouldBe(2);
+        vm.Scans[0].PhotosText.ShouldBe(LocalizationService.Format(ResourceKeys.ScanStatusPhotos, "{0} photos", 2));
+    }
+
     public void Dispose()
     {
         foreach (var item in _host.ScanItems) item.Dispose();
@@ -546,6 +618,17 @@ public sealed class StageViewModelTests : IDisposable
         public List<int> Rescanned { get; } = [];
 
         public Task ScanAsync() => Task.CompletedTask;
+        public Task ConfigureScannerAsync() => Task.CompletedTask;
+
+        /// <summary>Boxes PrepareScanAsync returns, by scan index; how often it was called.</summary>
+        public Dictionary<int, IReadOnlyList<WorkspaceCropData>> PreparedBoxes { get; } = [];
+        public int PrepareCalls { get; private set; }
+
+        public Task<IReadOnlyList<WorkspaceCropData>> PrepareScanAsync(int scanIndex, CancellationToken ct)
+        {
+            PrepareCalls++;
+            return Task.FromResult(PreparedBoxes.TryGetValue(scanIndex, out var boxes) ? boxes : (IReadOnlyList<WorkspaceCropData>)[]);
+        }
         public Task ImportScansAsync() => Task.CompletedTask;
         public void OpenScanInCrops(int scanIndex) => OpenedScan = scanIndex;
         public Task DiscardScanAsync(int scanIndex) { Discarded.Add(scanIndex); return Task.CompletedTask; }

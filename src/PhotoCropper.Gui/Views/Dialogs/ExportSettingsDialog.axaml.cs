@@ -12,31 +12,26 @@ namespace PhotoCropper.Gui.Dialogs;
 internal enum ExportSettingsResult
 {
     Cancel,
-    SaveSettings,
-    SaveAndExport
+    SaveSettings
 }
 
 internal sealed partial class ExportSettingsDialog : Window
 {
     private readonly string _sampleOriginal;
-    private readonly bool _hasScans;
     private bool _isInitializing;
 
-    public ExportSettingsDialog() : this(false, "Scan001")
+    public ExportSettingsDialog() : this("Scan001")
     {
     }
 
-    public ExportSettingsDialog(bool hasScans, string sampleOriginal)
+    public ExportSettingsDialog(string sampleOriginal)
     {
-        _hasScans = hasScans;
         _sampleOriginal = string.IsNullOrWhiteSpace(sampleOriginal) ? "Scan001" : sampleOriginal;
 
         InitializeComponent();
 
         KeyDown += ExportSettingsDialog_KeyDown;
         Loaded += ExportSettingsDialog_Loaded;
-
-        btnExportNow?.IsEnabled = _hasScans;
     }
 
     private void ExportSettingsDialog_KeyDown(object? sender, KeyEventArgs e)
@@ -90,7 +85,6 @@ internal sealed partial class ExportSettingsDialog : Window
         // Notifications & prompt
         chkShowNotifications?.IsChecked = settings.ShowNotifications;
         chkFlashTaskbar?.IsChecked = settings.FlashTaskbarOnCompletion;
-        chkPromptBeforeExport?.IsChecked = settings.PromptBeforeExport;
     }
 
     private void SaveAllSettings()
@@ -126,7 +120,6 @@ internal sealed partial class ExportSettingsDialog : Window
         // Alerts & Prompts
         settings.ShowNotifications = chkShowNotifications?.IsChecked ?? true;
         settings.FlashTaskbarOnCompletion = chkFlashTaskbar?.IsChecked ?? true;
-        settings.PromptBeforeExport = chkPromptBeforeExport?.IsChecked ?? false;
 
         SettingsManager.Instance.Save();
     }
@@ -260,11 +253,5 @@ internal sealed partial class ExportSettingsDialog : Window
     {
         SaveAllSettings();
         Close(ExportSettingsResult.SaveSettings);
-    }
-
-    private void BtnExportNow_Click(object? sender, RoutedEventArgs e)
-    {
-        SaveAllSettings();
-        Close(ExportSettingsResult.SaveAndExport);
     }
 }

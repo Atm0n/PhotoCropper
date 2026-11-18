@@ -76,14 +76,6 @@ internal sealed partial class FinishStageView : UserControl
                 vm.ClosePreviewCommand.Execute(null);
                 e.Handled = true;
                 break;
-            case Key.B:
-                vm.IsRepairMode = !vm.IsRepairMode;
-                e.Handled = true;
-                break;
-            case Key.F:
-                viewer.FitToView();
-                e.Handled = true;
-                break;
         }
     }
 

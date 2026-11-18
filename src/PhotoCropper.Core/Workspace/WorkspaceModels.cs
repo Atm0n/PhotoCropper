@@ -22,6 +22,28 @@ public sealed class WorkspaceCropData
     /// was recorded, in which case orientation is detected again.
     /// </summary>
     public int? AutoRotationDegrees { get; set; }
+
+    /// <summary>The engine's boxes, with each photo's manual and auto rotation, as saved in session.json.</summary>
+    public static IReadOnlyList<WorkspaceCropData> FromEngine(PhotoCropperEngine engine)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        var crops = new List<WorkspaceCropData>(engine.AcceptedCandidates.Count);
+        for (int i = 0; i < engine.AcceptedCandidates.Count; i++)
+        {
+            var cand = engine.AcceptedCandidates[i];
+            crops.Add(new WorkspaceCropData
+            {
+                CenterX = cand.Rotated.Center.X,
+                CenterY = cand.Rotated.Center.Y,
+                Width = cand.Rotated.Size.Width,
+                Height = cand.Rotated.Size.Height,
+                Angle = cand.Rotated.Angle,
+                RotationDegrees = engine.PhotoRotations.TryGetValue(i, out int r) ? r : 0,
+                AutoRotationDegrees = cand.OrientationDegrees
+            });
+        }
+        return crops;
+    }
 }
 
 public sealed class WorkspaceScanEntry
@@ -39,6 +61,26 @@ public sealed class WorkspaceScanEntry
 
     [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]
     public Collection<WorkspaceCropData> FinalCrops { get; } = [];
+
+    /// <summary>
+    /// True once <see cref="FinalCrops"/> has been written for this scan, so an empty list means every photo was
+    /// deleted rather than "never detected". Sessions written before this field rely on a non-empty list.
+    /// </summary>
+    public bool CropsReviewed { get; set; }
+
+    /// <summary>Whether this scan's boxes are saved and should be restored instead of detected again.</summary>
+    [JsonIgnore]
+    public bool HasSavedCrops => CropsReviewed || FinalCrops.Count > 0;
+
+    /// <summary>Replaces the saved boxes (possibly with none) and marks them as reviewed.</summary>
+    public void SetFinalCrops(IEnumerable<WorkspaceCropData> crops)
+    {
+        ArgumentNullException.ThrowIfNull(crops);
+        var list = crops.ToList();
+        FinalCrops.Clear();
+        foreach (var crop in list) FinalCrops.Add(crop);
+        CropsReviewed = true;
+    }
 
     /// <summary>The files the last export of this scan wrote, replaced on re-export.</summary>
     [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]

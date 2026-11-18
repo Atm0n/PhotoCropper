@@ -127,8 +127,8 @@ internal sealed partial class RefineViewModel(IRefineHost host, UndoRedoHistory 
         if (!IsOpen) return false;
         switch (key)
         {
-            case Key.Enter or Key.A: await AcceptAsync(); break;
-            case Key.Back or Key.Escape or Key.C: Reject(); break;
+            case Key.Enter: await AcceptAsync(); break;
+            case Key.Escape: Reject(); break;
         }
         return true;
     }

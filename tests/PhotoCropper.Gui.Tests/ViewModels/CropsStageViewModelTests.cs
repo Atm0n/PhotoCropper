@@ -334,14 +334,12 @@ public sealed class CropsStageViewModelTests : IDisposable
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
-        vm.IsGridView = true;
-        vm.IsCarouselView.ShouldBeFalse();
 
         vm.SelectAllCommand.Execute(null);
 
         vm.SelectedPhotoIndices().Count.ShouldBe(2);
         vm.IsSelectionTextVisible.ShouldBeTrue();
-        vm.DeleteButtonText.ShouldBe(LocalizationService.Format(ResourceKeys.BtnDeleteCount, "Delete ({0})", 2));
+        vm.DeleteButtonText.ShouldBe(LocalizationService.Format(ResourceKeys.BtnDeleteCount, "Delete {0} photos", 2));
         vm.CanRefine.ShouldBeFalse();
 
         vm.DeleteSelectedPhotos();
@@ -353,11 +351,10 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task SelectingOneGridPhoto_ShowsItInTheCarousel()
+    public async Task SelectingOneGridPhoto_MakesItTheSelectedPhoto()
     {
         var (vm, _) = await OpenScanWithTwoPhotosAsync();
         using var __ = vm;
-        vm.IsGridView = true;
 
         vm.Photos[0].IsSelected = false;
         vm.Photos[1].IsSelected = true;

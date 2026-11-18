@@ -55,6 +55,12 @@ internal static class Program
             return 0;
         }
 
+        // A project has its own scans: input files are optional and are added to it.
+        if (options.ProjectDirectory != null)
+        {
+            return ProjectProcessor.Execute(options);
+        }
+
         if (options.Inputs.Count == 0)
         {
             Spectre.Console.AnsiConsole.MarkupLine("[bold red]Error:[/] No input files or directories specified.");

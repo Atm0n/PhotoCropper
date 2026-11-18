@@ -131,20 +131,14 @@
 						<TextBlock Text="{DynamicResource HelpShortcutsCropsTitle}" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" Margin="5,5,5,0"/>
 						<UniformGrid Columns="2">
 							<TextBlock Text="{DynamicResource HelpShortcutScan}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-							<TextBlock Text="{DynamicResource HelpShortcutAutoTune}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutRotate}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutDelete}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-							<TextBlock Text="{DynamicResource HelpShortcutDeleteScan}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutNextScan}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutNextPhoto}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutCompare}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-							<TextBlock Text="{DynamicResource HelpShortcutRefine}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-							<TextBlock Text="{DynamicResource HelpShortcutReview}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-							<TextBlock Text="{DynamicResource HelpShortcutToggleView}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutSelectAll}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutUndo}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutRedo}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-							<TextBlock Text="{DynamicResource HelpShortcutSave}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutClose}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutF1}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 						</UniformGrid>
@@ -152,8 +146,6 @@
 						<UniformGrid Columns="2">
 							<TextBlock Text="{DynamicResource HelpShortcutFinishNav}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutFinishCompare}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-							<TextBlock Text="{DynamicResource HelpShortcutFinishBrush}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
-							<TextBlock Text="{DynamicResource HelpShortcutFinishFit}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 							<TextBlock Text="{DynamicResource HelpShortcutFinishBack}" Margin="5" TextWrapping="Wrap" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 						</UniformGrid>
 					</StackPanel>

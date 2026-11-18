@@ -46,49 +46,10 @@ internal sealed partial class MainWindow
     {
         if (isLoading) return [];
 
-        // 1. Ensure Work Directory
+        // 1. Scans always go into a project.
+        string workDir = await EnsureProjectAsync() ?? string.Empty;
+        if (workDir.Length == 0) return [];
         var settings = SettingsManager.Instance.Settings;
-        string? workDir = settings.WorkDirectory;
-        if (string.IsNullOrEmpty(workDir) || !Directory.Exists(workDir))
-        {
-            var topLevel = TopLevel.GetTopLevel(this);
-            if (topLevel?.StorageProvider != null)
-            {
-                var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-                {
-                    Title = LocalizationService.GetString(ResourceKeys.BtnWorkDir, "Select Work Directory for Raw Scans"),
-                    AllowMultiple = false
-                });
-
-                if (folders.Count > 0)
-                {
-                    workDir = folders[0].Path.LocalPath;
-                    settings.WorkDirectory = workDir;
-                    SettingsManager.Instance.Save();
-                    UpdateWorkspaceUi(workDir);
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(workDir))
-            {
-                string picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-                if (string.IsNullOrWhiteSpace(picturesDir))
-                {
-                    picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                }
-                if (string.IsNullOrWhiteSpace(picturesDir))
-                {
-                    picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                }
-
-                workDir = Path.Combine(picturesDir, "PhotoCropper_Workspace");
-                settings.WorkDirectory = workDir;
-                SettingsManager.Instance.Save();
-                UpdateWorkspaceUi(workDir);
-            }
-        }
-
-        ProjectWorkspaceService.InitializeWorkspace(workDir);
 
         // 2. Discover scanner if needed
         if (_availableScanners.Count == 0)
@@ -106,6 +67,25 @@ internal sealed partial class MainWindow
 
         int dpi = settings.ScannerDpi > 0 ? settings.ScannerDpi : 300;
         return await ExecuteScanAsync(workDir, selectedDevice, dpi);
+    }
+
+    /// <summary>
+    /// The open project's folder. Everything added (scans, imports) goes into a project, since the Crops and Finish
+    /// stages write there; the start screen makes sure one is open, so this only shows it again if not.
+    /// </summary>
+    /// <returns>The project folder, or null when none is open.</returns>
+    private Task<string?> EnsureProjectAsync()
+    {
+        string? workDir = _openProject;
+        if (workDir == null || !Directory.Exists(workDir))
+        {
+            ShowStartScreen();
+            return Task.FromResult<string?>(null);
+        }
+
+        ProjectWorkspaceService.InitializeWorkspace(workDir);
+        _workspaceSession ??= new WorkspaceSessionState();
+        return Task.FromResult<string?>(workDir);
     }
 
     private async void BtnScannerConfig_Click(object? sender, RoutedEventArgs e)
@@ -146,7 +126,6 @@ internal sealed partial class MainWindow
         var stagedPaths = new List<string>();
         try
         {
-            btnScan.IsEnabled = false;
             var scannerService = _scannerService;
             await ExecuteWithLoadingAsync(scanningMsg, async (token) =>
             {
@@ -217,10 +196,6 @@ internal sealed partial class MainWindow
             lblStatus.Text = failedTemplate;
             ShowScannerError(errorTitle, errorDetails);
             return [];
-        }
-        finally
-        {
-            btnScan.IsEnabled = true;
         }
 
         if (stagedPaths.Count > 0)

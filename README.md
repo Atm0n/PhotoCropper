@@ -11,11 +11,11 @@ An intelligent, cross-platform .NET 11 desktop application designed to automatic
 
 A project goes through three stages, shown in the stage bar at the top of the window. Each stage writes real files to its own folder of the project and never changes the previous one, so you can move back and forth freely:
 
-1. **Scan → `RawScans/`**: scan pages with your flatbed scanner (`F5`) or import scan files (drag and drop works too). Scans are kept exactly as acquired; a page can be rescanned in place or discarded.
-2. **Crops → `Cropped/`**: photos are detected on each scan automatically. Fix the boxes (drag corners, rotate, delete), draw missed photos by hand, rotate, refine edges, or go through every photo full-size in **Review mode** (`V`). Each photo is saved as a lossless PNG with geometry fixes only.
+1. **Scan → `RawScans/`**: scan pages with your flatbed scanner (`F5`) or import scan files (drag and drop works too). Each new scan is shown large with the photos found on it outlined, so a crooked or overlapping page can be rescanned in place (or discarded) straight away. Scans are kept exactly as acquired.
+2. **Crops → `Cropped/`**: photos are detected on each scan automatically. Fix the boxes (drag corners, rotate, delete), draw missed photos by hand, rotate, refine edges, or go through every photo full-size in **Review mode**. Each photo is saved as a lossless PNG with geometry fixes only.
 3. **Finish → `Final/`**: restore each photo (colour, dust, repair brush, optional AI fill) in a full-window editor with a before/after split, add metadata, and export as JPEG or PNG with EXIF. Only photos that changed are exported again, and photos cropped elsewhere can be imported straight into this stage.
 
-The CLI can run the same stages unattended (`--stage crop|restore`). Press `F1` in the app for the full help and shortcuts.
+The CLI can run the same stages unattended (`--stage crop|restore`), on loose files or on a project with `--project`, so the app and the CLI can share work. Press `F1` in the app for the full help and shortcuts.
 
 ## Project Structure
 
@@ -30,7 +30,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **`Workspace/`**: Project folder management, the `RawScans/` → `Cropped/` → `Final/` pipeline, raw scan disk-staging, and the crash recovery session (`ProjectWorkspaceService`, `PhotoPipelineService`, `WorkspaceSessionState`, `WorkspaceScanEntry`, `ScanSessionItem`).
   - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
 - **`src/PhotoCropper.Gui` (Avalonia Desktop App, MVVM with CommunityToolkit.Mvvm):**
-  - **`Views/`**: `MainWindow/` (the shell: stage bar, menus, overlays, keyboard routing, project-level work), `Stages/` (`ScanStageView`, `CropsStageView`, `FinishStageView`, `CompareImageViewer`), `Overlays/` (`ReviewView`, `RefineView`) and `Dialogs/` (`HelpWindow`, `ScannerConfigDialog`, `CustomColorDialog`, `SafeExitPromptDialog`, `ExportSettingsDialog`).
+  - **`Views/`**: `MainWindow/` (the shell: top bar with the stages and Settings menu, overlays, autosave, keyboard routing, project-level work), `Stages/` (`ScanStageView`, `CropsStageView`, `FinishStageView`, `CompareImageViewer`), `Overlays/` (`ReviewView`, `RefineView`) and `Dialogs/` (`HelpWindow`, `ScannerConfigDialog`, `CustomColorDialog`, `SafeExitPromptDialog`, `ExportSettingsDialog`).
   - **`ViewModels/`**: One view-model per stage and mode (`ScanStageViewModel`, `CropsStageViewModel`, `FinishStageViewModel`, `ReviewViewModel`, `RefineViewModel`), each reaching the window through a small host interface so they are tested without UI. See [Architecture](docs/ARCHITECTURE.md#gui-structure).
   - **`Controls/`**: `CropBoxOverlay`, which draws the detected boxes and their handles over the untouched scan.
   - **`Services/`**: Bounded undo/redo history, theme manager, scanner coordination, localization, settings persistence, and scan session navigation (`ScanSessionManager`).
@@ -52,7 +52,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 - **Parallel Photo Extraction:** Uses `Parallel.For` to process, rotate, and refine multiple detected photos simultaneously across CPU cores.
 
 ### 2. Intelligent Auto-Detection & Auto-Tuning Engine
-- **Multi-Parameter Auto-Tuning (`⚡ Auto-Tune` / `T`):** Sweeps background tolerances (`10`–`85`), Canny edge thresholds (`10`–`40`), and minimum area factors (`0.5%`–`10%`) to automatically discover difficult or low-contrast photos without manual trial-and-error.
+- **Multi-Parameter Auto-Tuning (`⚡ Auto-Tune`):** Sweeps background tolerances (`10`–`85`), Canny edge thresholds (`10`–`40`), and minimum area factors (`0.5%`–`10%`) to automatically discover difficult or low-contrast photos without manual trial-and-error.
 - **Per-Scan Settings Isolation:** Each loaded scan retains its own independent detection parameters; adjusting sliders on one scan re-evaluates only that scan without altering other images in the queue.
 - **Multi-Pass Sensitivity Search:** Evaluates progressive tolerance steps around the base background tolerance to automatically recover subtle, low-contrast photos without manual threshold tuning.
 - **Composite Candidate Resolution (Parent-Child Splitting):** Automatically detects when two adjacent photos are fused into a composite bounding box during high-tolerance passes and resolves them into their distinct individual photos.
@@ -74,33 +74,32 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **Black & white handling:** black-and-white and sepia prints are detected automatically and skip white balance and saturation, keeping their tone; or choose "neutral grey" to remove tinting.
   - **Manual adjustments:** brightness, contrast, warmth, tint and saturation (-100 to 100).
   - **Photo editor:** clicking a photo opens it full-window with its settings in a sidebar and a filmstrip of the other photos (‹ › or ←/→ to switch, Esc back to the grid). Zoom with the mouse wheel (Fit, 100%), drag to move, and compare with a **before/after split** you drag across the photo; hold Space to see the original. The preview is rendered up to 2048 px and updates as settings change (from the full photo when dust removal or repairs need it).
-- **Repair Brush (Finish stage):** Paint over scratches, creases, tears or stains on the photo in the editor (B toggles the brush; zoom in for precision) and they are filled in from their surroundings (Telea inpainting) with grain matched to the area around them, so repairs don't look smooth or blurred on grainy photos, before colour restoration. Strokes are stored per photo in `session.json` relative to the photo's size, so they apply identically to the preview and the full-size export, can be undone or cleared, and are never baked into `Cropped/`. Strokes painted on an earlier crop of a different size are kept but not applied.
+- **Repair Brush (Finish stage):** Paint over scratches, creases, tears or stains on the photo in the editor (zoom in for precision) and they are filled in from their surroundings (Telea inpainting) with grain matched to the area around them, so repairs don't look smooth or blurred on grainy photos, before colour restoration. Strokes are stored per photo in `session.json` relative to the photo's size, so they apply identically to the preview and the full-size export, can be undone or cleared, and are never baked into `Cropped/`. Strokes painted on an earlier crop of a different size are kept but not applied.
   - **AI fill (optional):** choose *Fill: AI* to have new strokes filled by [LaMa](https://github.com/advimman/lama), a large-mask inpainting network, which continues edges and structures (walls, sky, window frames, grass) instead of blending colours — best for large damage and torn corners; it invents detail, so it is not suited to faces or text. The 208 MB model is downloaded once on request from a pinned revision of [Carve/LaMa-ONNX](https://huggingface.co/Carve/LaMa-ONNX), verified against its SHA-256 checksum, stored in `%LocalAppData%/PhotoCropper/models` (`~/.local/share/PhotoCropper/models` on Linux), and run locally with ONNX Runtime — photos are never uploaded. Each damaged area is cut out with its surroundings, filled at 512×512, scaled back, and only the painted pixels are replaced (about 2 s per area on a CPU; results are cached so preview updates don't recompute them). Without the model (e.g. CLI on another machine), AI strokes fall back to the quick fill.
 - **Automated Dust, Hair & Scratch Inpainting** (independent of the colour settings):
   - **Dual Morphological Defect Detection:** Combines Black-Hat and Top-Hat filters with median pre-smoothing to isolate dark hair/fibers, dust specks, and bright white specks. The detection size scales with resolution (5 to 15 px).
   - **Edge-Aware Protection:** A candidate is only removed when it stands alone; specks with other edges running past them (eyes, contours, text) are left untouched.
   - **Fast Marching Method Inpainting:** Uses `CvInvoke.Inpaint` (Alexandru Telea / FMM) within a localized 2.5px radius to blend detected blemishes into surrounding textures.
-- **Hold-to-Compare (`Space` / `B`):** Instant zero-latency toggle between the pristine restored photo and the original unedited scan crop for effortless quality inspection.
+- **Hold-to-Compare (`Space`):** Instant zero-latency toggle between the pristine restored photo and the original unedited scan crop for effortless quality inspection.
 - **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm, automatically detecting and removing scanner glass/bed white borders. The refined area is mapped back onto the scan, so the box overlay follows it and it is kept with the session.
 - **Local ROI Perspective Warp:** Instead of rotating the entire giant scan, only the region of interest is extracted and warped with `Inter.Cubic` interpolation with transparent alpha margins.
 - **Subtle Deskew Regularization:** Snaps near-straight photos (within ±1.5° of right angles) to exact axis-aligned rectangles, avoiding resampling blur while maintaining exact dimensions.
 - **Intelligent Manual Crop Snapping:** Manually drawn selection boxes automatically snap to the nearest high-contrast photo boundary.
 
 ### 4. Interactive UX, Theming & Accessibility
-- **Dynamic Theming (Dark / Light / System Default):** Full runtime theme switching via the **Theme** button in the status bar (or **Settings → Theme**) with dynamic XAML resource binding. All backgrounds, borders, cards, buttons, and text adapt instantly without restarting.
+- **Dynamic Theming (Dark / Light / System Default):** Full runtime theme switching via **Settings → Theme** on the top bar with dynamic XAML resource binding. All backgrounds, borders, cards, buttons, and text adapt instantly without restarting.
 - **Colorblind-Friendly Bounding Boxes & Custom Color Picker:**
   - High-contrast detection box presets (**Classic Red, Amber / Orange, Cyan / Turquoise, Magenta, Lime Green**) designed for protanopia, deuteranopia, and tritanopia accessibility.
   - Visual color indicator squares next to every option in the menu.
   - Dedicated **Custom Color...** modal dialog featuring a real-time photo simulation preview, 16 accessible quick swatches, RGB sliders, and direct hex input (`#RRGGBB`).
-- **Dual-View Inspection & Gallery Grid (`1` / `2`):** Instantly toggle between a focused single-photo carousel and an interactive thumbnail gallery overview displaying indices and pixel dimensions.
+- **Photo Grid:** Each scan's photos are shown as a thumbnail grid with their index and pixel size; the arrow keys move the selection, actions apply to the selected photos, and Review mode shows them full size.
 - **Interactive Bounding Boxes:** Click a box to instantly select it in the gallery. Click the top-right Red 'X' to delete bad detections. Drag corners to manually resize the crop area, and drag the Blue circle above the box to rotate the photo by hand. Boxes are drawn as an overlay on top of the untouched scan, so dragging one only repaints the overlay; lines, handles and their click areas scale with the scan's resolution, so they look the same at 150 or 1200 DPI.
-- **Safe Exit & Data Loss Prevention:** PhotoCropper detects unsaved photo edits or unexported scans on close, presenting a confirmation dialog with **Save & Exit**, **Discard & Exit**, or **Cancel** choices (closes silently when all work is saved). If any scan fails to export, **Save & Exit** lists the failures and keeps the app open.
+- **Automatic Saving:** There is no Save button. Every crop edit is written to `session.json` a moment after it is made (and before closing or switching project), so closing the app or a crash loses nothing and reopening a project shows the boxes exactly as they were left.
 - **Dedicated Multi-Window Dialog Architecture:** Replaced embedded overlay clutter with dedicated, modular Avalonia windows:
   - `HelpWindow`: Non-modal documentation and shortcut reference (<kbd>F1</kbd>) that can be placed side-by-side or on secondary monitors.
   - `ScannerConfigDialog`: Hardware device selection, DPI configuration, and network scanner discovery.
   - `CustomColorDialog`: Interactive bounding box color adjustment.
-  - `ExportSettingsDialog`: Dedicated Save & Export preferences (output directory, format, quality, naming tokens, live preview, EXIF metadata).
-  - `SafeExitPromptDialog`: Unsaved changes confirmation dialog.
+  - `ExportSettingsDialog`: Export preferences (output directory, format, quality, naming tokens, live preview, EXIF metadata).
 - **Bounded Undo/Redo Memory Management (`Ctrl+Z` / `Ctrl+Y`):** Bounded 30-action double-ended queue that automatically evicts and disposes the oldest cloned OpenCV `Mat`s, preventing memory growth during intensive editing sessions.
 - **Native Avalonia `Bitmap` Disposal:** Proactively disposes underlying unmanaged SKBitmap buffers on image replacement, re-detection, and scan navigation, keeping memory footprint low.
 - **Original Scanner DPI Preservation:** Preserves original scanner resolution metadata (JFIF APP0 markers for JPEG, `pHYs` chunks for PNG) for 1:1 physical printing scale (e.g., 300, 600, 1200 DPI).
@@ -113,7 +112,8 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **Linux / macOS**: Direct integration with SANE (`libsane` / `scanimage`) and modern network eSCL / AirScan scanners.
 - **Dedicated Scanner Configuration Dialog:** Set scan resolution (150, 300, 600 DPI) and color modes with one-click hardware enumeration and hot-reloading.
 
-### 6. Project Work Directory & Automatic Crash Recovery
+### 6. Projects, Start Screen & Automatic Crash Recovery
+- **Start Screen:** Every launch starts by choosing a project: **New project** (a name and a location, by default `Pictures/PhotoCropper`; the folder is created for you), **Open project** (any project folder), **Restore photos only** (a new project that goes straight to importing already-cropped photos in the Finish stage), or one of the **recent projects**, shown with a thumbnail and how many scans and finished photos it has. The project name on the top bar brings the start screen back to switch project.
 - **Folder Pipeline (`RawScans/` → `Cropped/` → `Final/`):** Each stage of a project leaves real files in its own folder and never changes the previous one:
   - `RawScans/`: the scans, exactly as acquired.
   - `Cropped/`: one lossless PNG per photo (`scan_0003_p02.png`), straightened, cropped and rotated, with no colour restoration.
@@ -121,7 +121,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 
   Every photo keeps a permanent ID, so re-cropping a scan keeps each photo's settings and replaces its files instead of duplicating them. `session.json` records where each file came from, so a final photo is known to be out of date when its cropped photo or restoration settings change. Projects created before this layout exported into `Cropped/`; those exports are moved to `Final/` automatically the first time the project is opened.
 - **Safe Raw Scan Auto-Staging (`RawScans/`):** When scanning or importing, images are immediately written to disk inside the project's `RawScans/` directory (`scan_0001.png`, `scan_0002.png`, etc.). Raw scans are never left stranded in volatile memory.
-- **Crash-Proof Session Persistence (`session.json`):** Tracks staged scan files as they are added, and records each scan's crops (boxes, manual 90° rotations, auto-orientation, refinements) when you save, export or move to the Finish stage; Finish settings are saved as you change them. If the app is closed or interrupted by a system crash or power outage, launching the workspace prompts to resume the session. Crop edits made since the last save are not yet on disk.
+- **Crash-Proof Session Persistence (`session.json`):** Tracks staged scan files as they are added, and each scan's crops (boxes, manual 90° rotations, auto-orientation, refinements) as they are edited; Finish settings are saved as you change them. If the app is closed or interrupted by a system crash or power outage, reopening the project restores everything.
 - **Crash Reports:** Unhandled errors are written to `%LocalAppData%/PhotoCropper/logs` (the last 20 are kept). Errors raised by UI actions show an error dialog pointing to the report and keep the app open so unsaved work can still be saved.
 - **Automatic Session Reconstruction:** Even if `session.json` is missing or accidentally removed, the workspace engine inspects the `RawScans/` directory on startup and reconstructs the session automatically.
 
@@ -151,13 +151,14 @@ The codebase strictly enforces the highest standard of static analysis and memor
 
 ## Keyboard Shortcuts
 
+One key per action; everything else has a button.
+
 **Anywhere**
 
 | Shortcut | Action |
 |----------|--------|
 | `F1` | 📖 Open Help & Keyboard Shortcuts window |
 | `F5` | 🖨️ Acquire scan from flatbed scanner |
-| `Ctrl + S` | Save (crops to `Cropped/`, finished photos to `Final/`) |
 | `Ctrl + Z` / `Ctrl + Y` | Undo / redo the last photo operation (delete, rotate, box edit, manual crop, refinement) |
 | `Esc` | Close the active dialog, overlay or mode |
 
@@ -165,34 +166,29 @@ The codebase strictly enforces the highest standard of static analysis and memor
 
 | Shortcut | Action |
 |----------|--------|
-| `T` | ⚡ Auto-Tune detection parameters on the active scan |
-| `Up / Down` / `PageUp / PageDown` | Switch between scans |
+| `Up / Down` | Previous / next scan |
 | `Left / Right` | Previous / next photo of the scan |
 | `R` | Rotate the selected photo(s) 90° clockwise |
-| `X` / `Delete` | Delete the selected photo(s) |
-| `Shift + Delete` | 🗑️ Delete the active scan from the project and disk |
-| `Space` / `B` (hold) | Compare with the original crop, before orientation fixes |
-| `1 / 2` | Switch between single-photo and grid view |
-| `Ctrl + A` | Select all photos (grid view) |
-| `N` / `Ñ` | Refine the selected photo's edges |
-| `V` | 🎞️ Review mode |
+| `Delete` | Delete the selected photo(s) |
+| `Space` (hold) | Compare with the original crop, before orientation fixes |
+| `Ctrl + A` | Select all photos |
 | `Ctrl + Mouse Wheel` | Zoom the scan around the pointer |
 
 **Review mode**
 
 | Shortcut | Action |
 |----------|--------|
-| `Right` / `Space` / `Enter` · `Left` / `Backspace` · `Mouse Wheel` | Next · previous photo (an end slide follows the last photo) |
-| `R` / `L` | Rotate 90° clockwise / counter-clockwise |
-| `X` / `Delete` | Delete the photo |
-| `Esc` / `E` / `Double Click` | Back to the editor, on this photo's scan |
+| `Right` / `Space` · `Left` · `Mouse Wheel` | Next · previous photo (an end slide follows the last photo) |
+| `R` | Rotate 90° clockwise |
+| `Delete` | Delete the photo |
+| `Esc` / `Double Click` | Back to the editor, on this photo's scan |
 
 **Refine mode**
 
 | Shortcut | Action |
 |----------|--------|
-| `Enter` / `A` | Accept the new crop |
-| `Esc` / `Backspace` / `C` | Cancel |
+| `Enter` | Accept the new crop |
+| `Esc` | Cancel |
 
 **Finish photo editor**
 
@@ -200,8 +196,6 @@ The codebase strictly enforces the highest standard of static analysis and memor
 |----------|--------|
 | `Left / Right` | Previous / next photo |
 | `Space` (hold) | Show the original |
-| `B` | Repair brush on / off |
-| `F` | Fit the photo to the view |
 | `Esc` | Back to the photo grid |
 
 ---
@@ -242,6 +236,9 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans -o
 dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans --stage crop -o D:\Cropped
 dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Cropped --stage restore -o D:\Final
 
+# Work on an app project: add new scans, keep boxes edited in the app, write Cropped/ and Final/
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --project D:\Albums\Grandma D:\NewScans
+
 # Restore photos that were already cropped elsewhere (no detection)
 dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\OldPhotos --stage restore --year 1975
 
@@ -255,37 +252,36 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 |---|---|---|
 | `-i, --input <path>` | Input image file or directory of scans (positional arguments accepted) | *Required* |
 | `-o, --output <dir>` | Output destination directory for extracted photos | `<scan_dir>/cropped` (`<input_dir>/restored` with `--stage restore`) |
+| `--project <folder>` | Work on a PhotoCropper project: inputs are added to `RawScans/`, boxes saved in the app are kept, other scans are detected (low-coverage scans auto-tuned, as in the app), and `Cropped/`, `Final/` and `session.json` are updated. Scans where nothing was found stay flagged and are tried again next run. With `--stage crop` it stops after `Cropped/`; `--stage restore` only renders missing or out-of-date final photos. Don't run it on a project that is open in the app | — |
 | `--stage <all\|crop\|restore>` | Pipeline stage to run: `all` detects, crops, restores and exports; `crop` writes lossless PNGs with geometry fixes only (no restoration); `restore` restores existing photo files without detection, keeping their names unless `-p` is given | `all` |
 | `-f, --format <fmt>` | Output file format: `JPEG` or `PNG` | `JPEG` |
 | `-q, --quality <1-100>` | JPEG compression quality | `100` |
-| `-p, --pattern, --naming-pattern <pat>` | Output naming template (`{original}`, `{index:02}`, `{year}`, `{date}`, `{total}`) | `{original}_{index}` |
+| `-p, --pattern <pat>` | Output naming template (`{original}`, `{index:02}`, `{year}`, `{date}`, `{total}`) | `{original}_{index}` |
 | `--year <YYYY>` | Vintage photo year taken to embed in EXIF and use in `{year}` | `null` |
 | `--date <YYYY-MM-DD>` | Approximate or exact photo date to embed in EXIF and use in `{date}` | `null` |
-| `--desc, --description, --comment <text>` | Photo description/comment embedded into EXIF metadata | `null` |
-| `--photographer, --artist, --author <name>` | Photographer or studio name embedded into EXIF Artist & PNG Author | `null` |
+| `--desc <text>` | Photo description written to the metadata | — |
+| `--photographer <name>` | Photographer written to EXIF Artist and PNG Author | — |
 | `-s, --sensitivity <0-100>` | Detection sensitivity percentage (maps inversely to tolerance) | `50%` |
-| `-t, --tolerance <num>` | Background color detection tolerance | `25` (CLI) / `30` (Core) |
 | `-j, --threads <num>` | Number of concurrent CPU worker threads for batch processing | *CPU Cores / 2* (1-4) |
 | `--min-size <percent>` | Minimum photo size as % of total scan area | `25%` (CLI) / `1%` (Core) |
 | `--max-size <percent>` | Maximum photo size as % of total scan area | `90%` |
-| `--min-photos, --expected-photos <num>` | Minimum expected photos per scan to flag for review | `1` |
-| `--max-photos, --max-expected-photos <num>` | Maximum expected photos per scan to flag for review | *Unlimited* |
-| `--canny-low <num>` | Canny edge detector sensitivity threshold | `20` |
-| `--auto-tune` | Automatically search optimal detection parameters on difficult scans (outside expected bounds) | `false` |
-| `--always-auto-tune` | Always run auto-tune sweep on every scan | `false` |
-| `--auto-adjust-low-coverage` | Auto-tune only scans where detected area coverage is lower than threshold | `false` |
-| `--min-coverage <percent>` | Set low coverage threshold percentage for auto-adjust | `50` |
-| `--copy-undetected, --isolate-undetected <dir>` | Copy scans with 0 detected photos to a designated review directory | `null` |
-| `-w, --wizard, --interactive` | Launch step-by-step interactive CLI setup wizard | `false` |
-| `-y, --yes, --non-interactive` | Disable interactive prompts (e.g. post-batch auto-tune review prompt) | `false` |
-| `--auto-orient` / `--no-auto-orient` | Enable or disable AI face & landscape orientation detection | `true` |
-| `--restore-colors` / `--no-restore-colors` | Enable or disable vintage photo color & contrast restoration | `true` (CLI) / `false` (GUI) |
-| `--remove-dust` / `--no-remove-dust` | Enable or disable automated dust and hairline scratch inpainting | `true` (CLI) / `false` (GUI) |
+| `--min-photos <num>` | Flag scans with fewer photos | `1` |
+| `--max-photos <num>` | Flag scans with more photos | *Unlimited* |
+| `--auto-tune [mode]` | Search for better detection settings: `mismatch` (scans outside `--min/--max-photos`; used when no mode is given), `always`, `low-coverage` or `off` | `low-coverage` with `--project`, otherwise `off` |
+| `--min-coverage <percent>` | What counts as low coverage for `--auto-tune low-coverage` | `50` |
+| `--copy-undetected <dir>` | Copy scans where no photo was found to this folder | — |
+| `-w, --wizard` | Step-by-step interactive setup | — |
+| `-y, --yes` | Never ask questions (e.g. the post-batch auto-tune prompt) | — |
+| `--no-orient` | Don't turn photos upright automatically (face and landscape detection) | on |
+| `--no-restore` | Don't restore colours and contrast | on |
+| `--no-dust` | Don't remove dust and hairline scratches | on |
 | `-r, --recursive` | Recursively process subdirectories when input is a folder | `false` |
 | `-v, --verbose` | Display individual photo dimensions and debug details | `false` |
 | `-h, --help` | Display usage instructions and examples | — |
 | `--version` | Display application version | — |
 | `--check-update` | Check GitHub for newer versions of PhotoCropper | — |
+
+Older option names still work: `--tolerance`, `--canny-low`, `--always-auto-tune`, `--auto-adjust-low-coverage`, `--auto-orient`/`--no-auto-orient`, `--restore-colors`/`--no-restore-colors`, `--remove-dust`/`--no-remove-dust`, and the aliases `--naming-pattern`, `--expected-photos`, `--max-expected-photos`, `--description`, `--comment`, `--artist`, `--author`, `--isolate-undetected`, `--interactive` and `--non-interactive`. Unknown options and invalid values are reported instead of silently ignored.
 
 ### Run Tests
 To execute the unit and integration test suites:

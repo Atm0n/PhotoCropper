@@ -13,7 +13,7 @@ internal sealed partial class MainWindow
         viewCrops.ZoomLevel = settings.ZoomLevel;
         _cropsVm.LoadFromSettings();
 
-        UpdateWorkspaceUi(settings.WorkDirectory);
+        UpdateWorkspaceUi(_openProject);
         UpdateCropStrokeColor(settings.DetectionBoxColor);
         PopulateThemeMenu();
         PopulateDetectionColorMenu();
@@ -21,7 +21,7 @@ internal sealed partial class MainWindow
 
     private void PopulateLanguageMenu()
     {
-        var menus = new[] { menuLanguage, menuAltLanguage };
+        var menus = new[] { menuLanguage };
         var languages = LocalizationService.GetAvailableLanguages();
 
         foreach (var menu in menus)
@@ -43,7 +43,7 @@ internal sealed partial class MainWindow
                     if (s is MenuItem mi && mi.Tag is string code)
                     {
                         LocalizationService.SetLanguage(code);
-                        UpdateWorkspaceUi(SettingsManager.Instance.Settings.WorkDirectory);
+                        UpdateWorkspaceUi(_openProject);
                         _cropsVm.RefreshPhotoTexts();
                         PopulateThemeMenu();
                         PopulateDetectionColorMenu();
@@ -57,7 +57,7 @@ internal sealed partial class MainWindow
 
     private void PopulateThemeMenu()
     {
-        var menus = new[] { menuTheme, menuAltTheme };
+        var menus = new[] { menuTheme };
         var currentTheme = SettingsManager.Instance.Settings.Theme ?? "Dark";
 
         var themeItems = new (string Key, string Value)[]
@@ -110,7 +110,7 @@ internal sealed partial class MainWindow
 
     private void PopulateDetectionColorMenu()
     {
-        var menus = new[] { viewCrops.DetectionColorMenu, menuAltDetectionColor };
+        var menus = new[] { viewCrops.DetectionColorMenu };
         var currentColor = SettingsManager.Instance.Settings.DetectionBoxColor ?? "Red";
 
         var colorItems = new (string Key, string Value, string Hex)[]
@@ -264,5 +264,6 @@ internal sealed partial class MainWindow
         var fill = Color.FromArgb(0x33, stroke.R, stroke.G, stroke.B);
         viewCrops.SetSelectionColor(stroke, fill);
         viewRefine?.SetSelectionColor(stroke, fill);
+        viewScanStage?.SetBoxColor(stroke);
     }
 }
