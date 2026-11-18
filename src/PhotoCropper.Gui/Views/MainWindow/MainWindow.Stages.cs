@@ -14,7 +14,7 @@ namespace PhotoCropper.Gui;
 /// The three-stage workflow: 1 Scan (RawScans) → 2 Crops (Cropped) → 3 Finish (Final). The Crops stage is the
 /// existing scan editor; Scan and Finish are MVVM views whose view-models reach the window through IStageHost.
 /// </summary>
-internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineHost
+internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineHost, Views.Stages.ICropsViewActions
 {
     private AppStage _stage = AppStage.Crops;
     private ScanStageViewModel? _scanStageVm;
@@ -58,7 +58,7 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
     {
         _stage = stage;
         viewScanStage.IsVisible = stage == AppStage.Scan;
-        grdMainWorkspace.IsVisible = stage == AppStage.Crops;
+        viewCrops.IsVisible = stage == AppStage.Crops;
         viewFinishStage.IsVisible = stage == AppStage.Finish;
 
         if (stage == AppStage.Scan) _scanStageVm?.Refresh();
@@ -195,12 +195,21 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
     void ICropsStageHost.ShowScanResult(PhotoCropper.Core.PhotoCropperEngine engine)
     {
         ShowScan(engine);
-        if (btnResetBackground != null) btnResetBackground.IsEnabled = engine.CustomBackgroundColorHsv != null;
     }
 
     void ICropsStageHost.ShowBoxes(PhotoCropper.Core.PhotoCropperEngine engine) => ShowScan(engine);
 
     void ICropsStageHost.DisposeLater(IReadOnlyCollection<IDisposable> items) => DeferDispose(items);
+
+    // ---- ICropsViewActions (buttons and menus inside the Crops view) ----
+
+    void Views.Stages.ICropsViewActions.StartRefine() => StartRefineMode();
+
+    Task Views.Stages.ICropsViewActions.OpenReviewAsync() => OpenReviewModeAsync();
+
+    Task Views.Stages.ICropsViewActions.ExportSinglePhotoAsync(int photoIndex) => ExportSinglePhotoAsync(photoIndex, CancellationToken.None);
+
+    Task Views.Stages.ICropsViewActions.DeleteCurrentScanAsync() => DeleteCurrentScanAsync();
 
     // ---- IRefineHost ----
 

@@ -76,6 +76,9 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private bool _autoAdjustOnLowCoverage = true;
 
     [ObservableProperty] private string _scanCounterText = string.Empty;
+
+    /// <summary>At least one scan is loaded (otherwise the view shows its empty state).</summary>
+    [ObservableProperty] private bool _hasScans;
     [ObservableProperty] private string _coverageText = string.Empty;
 
     /// <summary>The open scan was prepared in the background, so it opened without waiting.</summary>
@@ -93,6 +96,9 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
     private ScanSessionItem? Current => _sessions.CurrentSession;
 
     private bool CanStartWork => !_host.IsBusy && !IsNavigating && Current != null;
+
+    /// <summary>The open scan's engine, loading it if needed; null when no scan is open.</summary>
+    public PhotoCropperEngine? ActivateCurrentScan() => Current?.Activate();
 
     // ---- settings ----
 
@@ -424,6 +430,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
             ? LocalizationService.GetString(ResourceKeys.TxtNoFiles, "No files loaded")
             : LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", _sessions.CurrentIndex + 1, Scans.Count);
         if (Scans.Count == 0) IsPreloaded = false;
+        HasScans = Scans.Count > 0;
         PreviousScanCommand.NotifyCanExecuteChanged();
         NextScanCommand.NotifyCanExecuteChanged();
     }

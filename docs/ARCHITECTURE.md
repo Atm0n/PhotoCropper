@@ -50,12 +50,12 @@ The GUI is a three-stage workflow over the project folders: **1 Scan** (`RawScan
 | Piece | View | View-model | Host interface |
 |---|---|---|---|
 | Scan stage | `Views/Stages/ScanStageView` | `ScanStageViewModel` | `IStageHost` |
-| Crops stage | `grdMainWorkspace` in `MainWindow.axaml` (scan view, photo panel) | `CropsStageViewModel` (`.Editing`, `.Photos`) | `ICropsStageHost` |
+| Crops stage | `Views/Stages/CropsStageView` (scan view, photo panel) | `CropsStageViewModel` (`.Editing`, `.Photos`) | `ICropsStageHost`; the view asks the window through `ICropsViewActions` |
 | Finish stage | `Views/Stages/FinishStageView` | `FinishStageViewModel` | `IStageHost` |
 | Review mode | `Views/Overlays/ReviewView` | `ReviewViewModel` | `IReviewHost` |
 | Refine mode | `Views/Overlays/RefineView` | `RefineViewModel` | `IRefineHost` |
 
-`CropsStageViewModel` owns the open scan and navigation, the detection settings, the background look-ahead (`LookaheadPlan`), box editing in scan pixels (`PressAt`/`DragTo`/`Release`/`ClickAt`, geometry in `BoxEditMath`) and the photo list (`CropPhotoItem`, carousel and grid selection, delete/rotate with undo). The window's code for the Crops stage only maps the pointer to scan pixels, zooms, and draws the selection rectangle.
+`CropsStageViewModel` owns the open scan and navigation, the detection settings, the background look-ahead (`LookaheadPlan`), box editing in scan pixels (`PressAt`/`DragTo`/`Release`/`ClickAt`, geometry in `BoxEditMath`) and the photo list (`CropPhotoItem`, carousel and grid selection, delete/rotate with undo). `CropsStageView`'s code-behind only maps the pointer to scan pixels, zooms, draws the selection rectangle and collapses the photo panel.
 
 Box outlines, handles and badges are drawn by `Controls/CropBoxOverlay` over the untouched scan, from the same `CropBoxGeometry` that hit-testing uses; the engine no longer paints them into a copy of the scan, so dragging a box only repaints the overlay.
 

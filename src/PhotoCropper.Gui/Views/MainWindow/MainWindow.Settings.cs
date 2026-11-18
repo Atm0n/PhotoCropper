@@ -10,7 +10,7 @@ internal sealed partial class MainWindow
     private void ApplySettingsToUi()
     {
         var settings = SettingsManager.Instance.Settings;
-        sldZoom.Value = settings.ZoomLevel;
+        viewCrops.ZoomLevel = settings.ZoomLevel;
         _cropsVm.LoadFromSettings();
 
         UpdateWorkspaceUi(settings.WorkDirectory);
@@ -110,7 +110,7 @@ internal sealed partial class MainWindow
 
     private void PopulateDetectionColorMenu()
     {
-        var menus = new[] { menuDetectionColor, menuAltDetectionColor };
+        var menus = new[] { viewCrops.DetectionColorMenu, menuAltDetectionColor };
         var currentColor = SettingsManager.Instance.Settings.DetectionBoxColor ?? "Red";
 
         var colorItems = new (string Key, string Value, string Hex)[]
@@ -244,8 +244,6 @@ internal sealed partial class MainWindow
 
     private void UpdateCropStrokeColor(string? colorName)
     {
-        if (rectCrop == null) return;
-
         Color stroke;
         if (!string.IsNullOrWhiteSpace(colorName) && colorName is ['#', ..] && Color.TryParse(colorName, out var parsed))
         {
@@ -264,14 +262,7 @@ internal sealed partial class MainWindow
         }
 
         var fill = Color.FromArgb(0x33, stroke.R, stroke.G, stroke.B);
-        rectCrop.Stroke = new SolidColorBrush(stroke);
-        rectCrop.Fill = new SolidColorBrush(fill);
-
+        viewCrops.SetSelectionColor(stroke, fill);
         viewRefine?.SetSelectionColor(stroke, fill);
-
-        if (rectCurrentDetectionColor != null)
-        {
-            rectCurrentDetectionColor.Fill = new SolidColorBrush(stroke);
-        }
     }
 }

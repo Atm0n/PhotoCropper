@@ -82,19 +82,7 @@ internal sealed partial class MainWindow
         await _cropsVm.LoadCurrentScanAsync();
     }
 
-    private void UpdateEmptyStateVisibility()
-    {
-        bool hasScans = ScanSessions.Count > 0;
-        if (pnlEmptyState != null)
-        {
-            pnlEmptyState.IsVisible = !hasScans;
-        }
-        if (scrollOriginal != null)
-        {
-            scrollOriginal.IsVisible = hasScans;
-        }
-        _cropsVm.UpdateScanCounter();
-    }
+    private void UpdateEmptyStateVisibility() => _cropsVm.UpdateScanCounter();
 
     private async void BtnDeleteScan_Click(object? sender, RoutedEventArgs e)
     {
@@ -144,7 +132,7 @@ internal sealed partial class MainWindow
 
         if (!_sessionManager.HasScans)
         {
-            SetMainImage(null);
+            ShowScan(null);
             _cropsVm.ClearPhotos();
             lblStatus.Text = statusMsg;
             UpdateEmptyStateVisibility();
