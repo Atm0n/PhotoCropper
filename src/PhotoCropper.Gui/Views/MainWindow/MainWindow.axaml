@@ -5,6 +5,7 @@
         xmlns:gui="using:PhotoCropper.Gui"
         xmlns:stages="using:PhotoCropper.Gui.Views.Stages"
         xmlns:controls="using:PhotoCropper.Gui.Controls"
+        xmlns:vm="using:PhotoCropper.Gui.ViewModels"
 		WindowState="Maximized"
 		MinWidth="1200"
 		MinHeight="650"
@@ -255,7 +256,7 @@
 		<stages:FinishStageView x:Name="viewFinishStage" IsVisible="False"/>
 
 		<!-- Main Workspace (Crops stage) -->
-		<Grid x:Name="grdMainWorkspace">
+		<Grid x:Name="grdMainWorkspace" x:DataType="vm:CropsStageViewModel">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="*" MinWidth="640"/>
 				<ColumnDefinition Width="Auto"/>
@@ -265,26 +266,26 @@
 			<Grid Grid.Column="0" RowDefinitions="Auto, *">
 				<DockPanel Grid.Row="0" Margin="15,0,10,5" VerticalAlignment="Center">
 					<StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-						<Border x:Name="bdrLookaheadStatus" IsVisible="False" Background="{DynamicResource AppSubtleCardBrush}" BorderBrush="#3db85a" BorderThickness="1" CornerRadius="4" Padding="5,2" VerticalAlignment="Center" ToolTip.Tip="Pre-processed in background thread for 0ms navigation">
+						<Border x:Name="bdrLookaheadStatus" IsVisible="{Binding IsPreloaded}" Background="{DynamicResource AppSubtleCardBrush}" BorderBrush="#3db85a" BorderThickness="1" CornerRadius="4" Padding="5,2" VerticalAlignment="Center" ToolTip.Tip="Pre-processed in background thread for 0ms navigation">
 							<TextBlock x:Name="txtLookaheadBadge" Text="{DynamicResource LblLookaheadPreloaded}" FontSize="10" FontWeight="Bold" Foreground="#3db85a" VerticalAlignment="Center"/>
 						</Border>
 						<Border Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
 							<StackPanel Orientation="Horizontal" Spacing="4">
 								<TextBlock Text="🎯" FontSize="10" VerticalAlignment="Center"/>
-								<TextBlock x:Name="lblDetectionCoverage" Text="" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
+								<TextBlock x:Name="lblDetectionCoverage" Text="{Binding CoverageText}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
 							</StackPanel>
 						</Border>
 					</StackPanel>
 					<StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
 						<TextBlock Text="{DynamicResource HeaderOriginal}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
-						<TextBlock x:Name="txtFileCounter" Text="{DynamicResource TxtNoFiles}" FontSize="11" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+						<TextBlock x:Name="txtFileCounter" Text="{Binding ScanCounterText}" FontSize="11" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
 					</StackPanel>
 				</DockPanel>
 				<Border Grid.Row="1" Margin="10,0,4,10" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="8" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
 					<Grid RowDefinitions="Auto, *, Auto">
 						<DockPanel Grid.Row="0" Margin="10,5">
 							<!-- Auto Tune Button (Prominent) -->
-							<Button DockPanel.Dock="Right" x:Name="btnAutoTune" Click="BtnAutoTune_Click" Padding="16,8" Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}" ToolTip.Tip="{DynamicResource TipAutoTune}" Focusable="False" CornerRadius="8" VerticalAlignment="Center" Margin="10,0,0,0">
+							<Button DockPanel.Dock="Right" x:Name="btnAutoTune" Command="{Binding AutoTuneCommand}" Padding="16,8" Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}" ToolTip.Tip="{DynamicResource TipAutoTune}" Focusable="False" CornerRadius="8" VerticalAlignment="Center" Margin="10,0,0,0">
 								<StackPanel Orientation="Horizontal" Spacing="6">
 									<TextBlock Text="⚡" FontSize="14" VerticalAlignment="Center"/>
 									<TextBlock Text="{DynamicResource BtnAutoTune}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
@@ -341,7 +342,7 @@
 					<!-- Active Scan View -->
 					<Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
 						<Button Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0" ZIndex="10"
-								x:Name="btnPrevScan" Click="BtnPrevScan_Click"
+								x:Name="btnPrevScan" Command="{Binding PreviousScanCommand}"
 								Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="40" Height="80" CornerRadius="4" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ToolTip.Tip="Previous Scan (PageUp / ↑)">
 							<TextBlock Text="◀" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 						</Button>
@@ -370,7 +371,7 @@
 					</ScrollViewer>
 						
 						<!-- Localized "Thinking" indicator for Live Preview -->
-						<Border Grid.Column="1" x:Name="pnlLocalLoading" Background="{DynamicResource AppModalBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="20" Padding="15,8" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" ZIndex="20">
+						<Border Grid.Column="1" x:Name="pnlLocalLoading" Background="{DynamicResource AppModalBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="20" Padding="15,8" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsDetectionPending}" ZIndex="20">
 							<StackPanel Orientation="Horizontal" Spacing="8">
 								<TextBlock Text="⏳" FontSize="16" VerticalAlignment="Center"/>
 								<TextBlock Text="Calculating..." FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
@@ -378,7 +379,7 @@
 						</Border>
 						
 						<Button Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="10,0" ZIndex="10"
-								x:Name="btnNextScan" Click="BtnNextScan_Click"
+								x:Name="btnNextScan" Command="{Binding NextScanCommand}"
 								Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="40" Height="80" CornerRadius="4" Focusable="False" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ToolTip.Tip="Next Scan (PageDown / ↓)">
 							<TextBlock Text="▶" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 						</Button>
@@ -426,8 +427,7 @@
 									<TextBlock Grid.Column="0" Text="{DynamicResource LblDetectionSensitivity}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
 									<TextBlock Grid.Column="1" Text="{Binding #sldSensitivity.Value, StringFormat='{}{0:0}%'}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" Margin="8,0,0,0" VerticalAlignment="Center"/>
 								</Grid>
-								<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="50" Width="100" Margin="0,-4,0,-4"
-										PropertyChanged="SldSensitivity_PropertyChanged" Focusable="False"/>
+								<Slider x:Name="sldSensitivity" Minimum="0" Maximum="100" Value="{Binding Sensitivity}" Width="100" Margin="0,-4,0,-4" Focusable="False"/>
 							</StackPanel>
 
 							<Rectangle Width="1" Height="24" Fill="{DynamicResource AppSeparatorBrush}" Margin="2,0"/>
@@ -438,8 +438,7 @@
 									<TextBlock Grid.Column="0" Text="{DynamicResource LblMinPhotoSize}" FontSize="10" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
 									<TextBlock Grid.Column="1" Text="{Binding #sldMinArea.Value, StringFormat='{}{0:0}%'}" FontSize="10" FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Center"/>
 								</Grid>
-								<Slider x:Name="sldMinArea" Minimum="5" Maximum="50" Value="25" Width="80" Margin="0,-4,0,-4"
-										PropertyChanged="SldSensitivity_PropertyChanged" Focusable="False"/>
+								<Slider x:Name="sldMinArea" Minimum="5" Maximum="50" Value="{Binding MinAreaPercent}" Width="80" Margin="0,-4,0,-4" Focusable="False"/>
 							</StackPanel>
 							
 							<!-- Max Area -->
@@ -448,8 +447,7 @@
 									<TextBlock Grid.Column="0" Text="{DynamicResource LblMaxPhotoSize}" FontSize="10" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
 									<TextBlock Grid.Column="1" Text="{Binding #sldMaxArea.Value, StringFormat='{}{0:0}%'}" FontSize="10" FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Center"/>
 								</Grid>
-								<Slider x:Name="sldMaxArea" Minimum="20" Maximum="100" Value="90" Width="80" Margin="0,-4,0,-4"
-										PropertyChanged="SldSensitivity_PropertyChanged" Focusable="False"/>
+								<Slider x:Name="sldMaxArea" Minimum="20" Maximum="100" Value="{Binding MaxAreaPercent}" Width="80" Margin="0,-4,0,-4" Focusable="False"/>
 							</StackPanel>
 							
 							<!-- Edge -->
@@ -458,15 +456,14 @@
 									<TextBlock Grid.Column="0" Text="{DynamicResource LblEdgeThreshold}" FontSize="10" Foreground="{DynamicResource AppTextSecondaryBrush}" VerticalAlignment="Center"/>
 									<TextBlock Grid.Column="1" Text="{Binding #sldEdge.Value, StringFormat='{}{0:0}'}" FontSize="10" FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Center"/>
 								</Grid>
-								<Slider x:Name="sldEdge" Minimum="1" Maximum="100" Value="20" Width="80" Margin="0,-4,0,-4"
-										PropertyChanged="SldSensitivity_PropertyChanged" Focusable="False"/>
+								<Slider x:Name="sldEdge" Minimum="1" Maximum="100" Value="{Binding EdgeThreshold}" Width="80" Margin="0,-4,0,-4" Focusable="False"/>
 							</StackPanel>
 
 							<Rectangle Width="1" Height="24" Fill="{DynamicResource AppSeparatorBrush}" Margin="2,0"/>
 							
 							<StackPanel Orientation="Vertical" Spacing="4" VerticalAlignment="Center" Margin="4,0">
-								<CheckBox x:Name="chkAutoTuneOnPass" Content="{DynamicResource LblAutoTuneOnPass}" ToolTip.Tip="{DynamicResource TipAutoTuneOnPass}" IsCheckedChanged="ChkAutoTuneOnPass_IsCheckedChanged" FontSize="9" Focusable="False" Margin="0,-3,0,-3"/>
-								<CheckBox x:Name="chkAutoAdjustOnLowCoverage" Content="{DynamicResource LblAutoAdjustOnLowCoverage}" ToolTip.Tip="{DynamicResource TipAutoAdjustOnLowCoverage}" IsCheckedChanged="ChkAutoAdjustOnLowCoverage_IsCheckedChanged" FontSize="9" Focusable="False" Margin="0,-3,0,-3"/>
+								<CheckBox x:Name="chkAutoTuneOnPass" Content="{DynamicResource LblAutoTuneOnPass}" ToolTip.Tip="{DynamicResource TipAutoTuneOnPass}" IsChecked="{Binding AutoTuneOnScanChange}" FontSize="9" Focusable="False" Margin="0,-3,0,-3"/>
+								<CheckBox x:Name="chkAutoAdjustOnLowCoverage" Content="{DynamicResource LblAutoAdjustOnLowCoverage}" ToolTip.Tip="{DynamicResource TipAutoAdjustOnLowCoverage}" IsChecked="{Binding AutoAdjustOnLowCoverage}" FontSize="9" Focusable="False" Margin="0,-3,0,-3"/>
 							</StackPanel>
 									</StackPanel>
 								</ScrollViewer>
@@ -537,9 +534,7 @@
 							<!-- Processing Filters (Inline with View Mode) -->
 							<ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="10,0">
 								<StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center" HorizontalAlignment="Center">
-									<CheckBox x:Name="chkAutoOrient" Content="{DynamicResource LblAutoOrient}" ToolTip.Tip="{DynamicResource TipAutoOrient}" IsCheckedChanged="ChkAutoOrient_IsCheckedChanged" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
-									<CheckBox x:Name="chkRestoreColors" IsVisible="False" Content="{DynamicResource LblRestoreColors}" ToolTip.Tip="{DynamicResource TipRestoreColors}" IsCheckedChanged="ChkRestoreColors_IsCheckedChanged" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
-									<CheckBox x:Name="chkRemoveDust" IsVisible="False" Content="{DynamicResource LblRemoveDust}" ToolTip.Tip="{DynamicResource TipRemoveDust}" IsCheckedChanged="ChkRemoveDust_IsCheckedChanged" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
+									<CheckBox x:Name="chkAutoOrient" Content="{DynamicResource LblAutoOrient}" ToolTip.Tip="{DynamicResource TipAutoOrient}" IsChecked="{Binding AutoOrient}" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
 								</StackPanel>
 							</ScrollViewer>
 						

@@ -121,7 +121,7 @@ internal sealed partial class MainWindow
         _sessionManager.Clear();
         SetMainImage(null);
         ClearGalleryBitmaps();
-        txtFileCounter?.Text = LocalizationService.GetString(ResourceKeys.TxtNoFiles, "No files loaded");
+        _cropsVm.UpdateScanCounter();
         lblPhotoInfo?.Text = "";
         UpdateSelectionUi();
     }

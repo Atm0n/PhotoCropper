@@ -73,226 +73,16 @@ internal sealed partial class MainWindow
     }
 
 
+    /// <summary>Opens the current scan in the Crops editor (see <see cref="CropsStageViewModel.LoadCurrentScanAsync"/>).</summary>
     private async Task LoadPhotosToGuiAsync()
     {
         UpdateEmptyStateVisibility();
         RefreshStages();
         if (ScanSessions.Count == 0 || isLoading) return;
-
-        var session = ScanSessions[CurrentIndex];
-        string fileName = Path.GetFileName(session.FilePath);
-        string processingMsg = LocalizationService.GetString(ResourceKeys.ProcessingScan, "Processing...");
-
-        bool isPreprocessed = session.IsActive && session.IsAutoTuned;
-        if (bdrLookaheadStatus != null)
-        {
-            bdrLookaheadStatus.IsVisible = isPreprocessed;
-        }
-
-        if (isPreprocessed)
-        {
-            var currentPhoto = session.Activate();
-            SyncUiWithScanOptions(currentPhoto.CurrentOptions);
-            ShowScan(currentPhoto);
-
-            txtFileCounter.Text = LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", CurrentIndex + 1, ScanSessions.Count);
-            lblStatus.Text = fileName;
-
-            LoadCroppedPhotosToSlider();
-            UpdatePhotoCounterLabel();
-            UpdateDetectionCoverageLabel();
-
-            if (btnResetBackground != null)
-            {
-                btnResetBackground.IsEnabled = currentPhoto.CustomBackgroundColorHsv != null;
-            }
-        }
-        else
-        {
-            await ExecuteWithLoadingAsync($"{processingMsg} {fileName}", async ct =>
-            {
-                var currentPhoto = await Task.Run(() => session.Activate(), ct);
-
-                bool shouldAutoTune = !session.IsAutoTuned && !session.IsSaved && (
-                    SettingsManager.Instance.Settings.AutoTuneOnScanChange ||
-                    (SettingsManager.Instance.Settings.AutoAdjustOnLowCoverage && currentPhoto.TotalDetectedAreaRatio < AppConstants.LowCoverageThreshold)
-                );
-
-                if (shouldAutoTune)
-                {
-                    var tuneResult = await Task.Run(() => currentPhoto.AutoTune(), ct);
-                    session.IsAutoTuned = true;
-                    if (tuneResult.Improved || tuneResult.PhotoCount > 0)
-                    {
-                        session.IsModified = true;
-                    }
-                }
-                else
-                {
-                    session.IsAutoTuned = true;
-                }
-
-                SyncUiWithScanOptions(currentPhoto.CurrentOptions);
-                ShowScan(currentPhoto);
-
-                txtFileCounter.Text = LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", CurrentIndex + 1, ScanSessions.Count);
-                lblStatus.Text = fileName;
-
-                LoadCroppedPhotosToSlider();
-                UpdatePhotoCounterLabel();
-                UpdateDetectionCoverageLabel();
-
-                if (btnResetBackground != null)
-                {
-                    btnResetBackground.IsEnabled = currentPhoto.CustomBackgroundColorHsv != null;
-                }
-            });
-        }
-
-        UpdateScanNavigationButtons();
-        TriggerBackgroundLookahead(CurrentIndex);
+        await _cropsVm.LoadCurrentScanAsync();
     }
 
-    private void UpdateScanNavigationButtons()
-    {
-        if (btnPrevScan != null)
-        {
-            btnPrevScan.IsEnabled = ScanSessions.Count > 1 && CurrentIndex > 0;
-        }
-        if (btnNextScan != null)
-        {
-            btnNextScan.IsEnabled = ScanSessions.Count > 1 && CurrentIndex < ScanSessions.Count - 1;
-        }
-    }
-
-    private void UpdateDetectionCoverageLabel()
-    {
-        if (lblDetectionCoverage == null) return;
-        if (ScanSessions.Count == 0 || CurrentIndex < 0 || CurrentIndex >= ScanSessions.Count)
-        {
-            lblDetectionCoverage.Text = "";
-            return;
-        }
-
-        var session = ScanSessions[CurrentIndex];
-        if (session.IsActive && session.Engine != null)
-        {
-            int percent = (int)Math.Round(session.Engine.TotalDetectedAreaRatio * 100.0);
-            lblDetectionCoverage.Text = LocalizationService.Format(ResourceKeys.LblCoveragePercent, "Coverage: {0}%", percent);
-        }
-        else
-        {
-            lblDetectionCoverage.Text = "";
-        }
-    }
-
-    private CancellationTokenSource? _lookaheadCts;
-    private readonly SemaphoreSlim _lookaheadSemaphore = new(1, 1);
-
-    private void TriggerBackgroundLookahead(int currentIndex, int lookaheadAhead = AppConstants.DefaultLookaheadAhead, int lookaheadBehind = AppConstants.DefaultLookaheadBehind)
-    {
-        if (ScanSessions.Count == 0 || currentIndex < 0 || currentIndex >= ScanSessions.Count) return;
-
-        _lookaheadCts?.Cancel();
-        var cts = new CancellationTokenSource();
-        _lookaheadCts = cts;
-        var ct = cts.Token;
-
-        var sessionsToProcess = new List<ScanSessionItem>();
-
-        for (int offset = 1; offset <= lookaheadAhead; offset++)
-        {
-            int idx = (currentIndex + offset) % ScanSessions.Count;
-            if (idx >= 0 && idx < ScanSessions.Count)
-            {
-                var s = ScanSessions[idx];
-                if (!s.IsActive || !s.IsAutoTuned)
-                {
-                    sessionsToProcess.Add(s);
-                }
-            }
-        }
-
-        int prevIdx = (currentIndex - lookaheadBehind + ScanSessions.Count) % ScanSessions.Count;
-        if (prevIdx >= 0 && prevIdx < ScanSessions.Count)
-        {
-            var prevS = ScanSessions[prevIdx];
-            if (!prevS.IsActive || !prevS.IsAutoTuned)
-            {
-                sessionsToProcess.Add(prevS);
-            }
-        }
-
-        for (int i = 0; i < ScanSessions.Count; i++)
-        {
-            if (i == currentIndex) continue;
-            int dist = Math.Min(Math.Abs(i - currentIndex), ScanSessions.Count - Math.Abs(i - currentIndex));
-            if (dist > lookaheadAhead + 1 && ScanSessions[i].IsActive)
-            {
-                ScanSessions[i].TryDeactivateIfUnmodified();
-            }
-        }
-
-        if (sessionsToProcess.Count == 0) return;
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await _lookaheadSemaphore.WaitAsync(ct);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-
-            try
-            {
-                var settings = SettingsManager.Instance.Settings;
-                foreach (var session in sessionsToProcess)
-                {
-                    if (ct.IsCancellationRequested) break;
-                    session.IsProcessing = true;
-                    try
-                    {
-                        var photo = session.Activate();
-                        if (ct.IsCancellationRequested) break;
-
-                        bool shouldAutoTune = !session.IsAutoTuned && !session.IsSaved && (
-                            settings.AutoTuneOnScanChange ||
-                            (settings.AutoAdjustOnLowCoverage && photo.TotalDetectedAreaRatio < AppConstants.LowCoverageThreshold)
-                        );
-
-                        if (shouldAutoTune && !ct.IsCancellationRequested)
-                        {
-                            var tuneResult = photo.AutoTune();
-                            session.IsAutoTuned = true;
-                            if (tuneResult.Improved || tuneResult.PhotoCount > 0)
-                            {
-                                session.IsModified = true;
-                            }
-                        }
-                        else
-                        {
-                            session.IsAutoTuned = true;
-                        }
-                    }
-                    catch (Exception ex) when (ex is IOException or InvalidOperationException)
-                    {
-                        Trace.TraceWarning($"[PhotoCropper] Background lookahead failed for session: {ex.GetType().Name}: {ex.Message}");
-                    }
-                    finally
-                    {
-                        session.IsProcessing = false;
-                    }
-                }
-            }
-            finally
-            {
-                _lookaheadSemaphore.Release();
-            }
-        }, ct).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
-    }
+    private void UpdateDetectionCoverageLabel() => _cropsVm.UpdateCoverage();
 
     private void UpdateEmptyStateVisibility()
     {
@@ -305,19 +95,7 @@ internal sealed partial class MainWindow
         {
             scrollOriginal.IsVisible = hasScans;
         }
-        UpdateScanNavigationButtons();
-    }
-
-    private async void BtnPrevScan_Click(object? sender, RoutedEventArgs e)
-    {
-        if (isLoading || _isNavigating || !_sessionManager.HasScans) return;
-        await NavigateScanAsync(forward: false);
-    }
-
-    private async void BtnNextScan_Click(object? sender, RoutedEventArgs e)
-    {
-        if (isLoading || _isNavigating || !_sessionManager.HasScans) return;
-        await NavigateScanAsync(forward: true);
+        _cropsVm.UpdateScanCounter();
     }
 
     private async void BtnDeleteScan_Click(object? sender, RoutedEventArgs e)
@@ -370,10 +148,8 @@ internal sealed partial class MainWindow
         {
             SetMainImage(null);
             ClearGalleryBitmaps();
-            txtFileCounter.Text = LocalizationService.GetString(ResourceKeys.TxtNoFiles, "No files loaded");
             lblPhotoInfo.Text = "";
             lblStatus.Text = statusMsg;
-            if (bdrLookaheadStatus != null) bdrLookaheadStatus.IsVisible = false;
             UpdateEmptyStateVisibility();
             RefreshStages();
         }
@@ -384,216 +160,17 @@ internal sealed partial class MainWindow
         }
     }
 
-    private CancellationTokenSource? _sliderDebounceCts;
+    // Menu items sit outside the Crops view's DataContext, so they reach its commands through these.
+    private async void BtnPrevScan_Click(object? sender, RoutedEventArgs e) => await NavigateScanAsync(forward: false);
+    private async void BtnNextScan_Click(object? sender, RoutedEventArgs e) => await NavigateScanAsync(forward: true);
+    private async void BtnAutoTune_Click(object? sender, RoutedEventArgs e) => await _cropsVm.AutoTuneCommand.ExecuteAsync(null);
 
-    private async void SldSensitivity_PropertyChanged(object? sender, Avalonia.AvaloniaPropertyChangedEventArgs e)
-    {
-        if (e.Property.Name != "Value") return;
-        if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
+    private void MenuAutoTuneOnPass_Click(object? sender, RoutedEventArgs e) =>
+        _cropsVm.AutoTuneOnScanChange = !_cropsVm.AutoTuneOnScanChange;
 
-        _sliderDebounceCts?.Cancel();
-        _sliderDebounceCts?.Dispose();
-        _sliderDebounceCts = new CancellationTokenSource();
-        var ct = _sliderDebounceCts.Token;
+    private Task ReprocessCurrentScanAsync() => _cropsVm.ReprocessAsync();
 
-        var settings = SettingsManager.Instance.Settings;
-        settings.BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
-        settings.MinAreaFactor = sldMinArea.Value;
-        settings.MaxAreaFactor = sldMaxArea.Value;
-        settings.CannyLowThreshold = sldEdge.Value;
+    private void SyncUiWithScanOptions(DetectionOptions options) => _cropsVm.ShowOptions(options);
 
-        var session = ScanSessions[CurrentIndex];
-        session.Options.BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
-        session.Options.MinAreaFactor = sldMinArea.Value / 100.0;
-        session.Options.MaxAreaFactor = sldMaxArea.Value / 100.0;
-        session.Options.CannyLowThreshold = sldEdge.Value;
-        session.Options.CannyHighThreshold = sldEdge.Value * AppConstants.DefaultCannyHighRatio;
-
-        try
-        {
-            if (pnlLocalLoading != null) pnlLocalLoading.IsVisible = true;
-            await Task.Delay(150, ct);
-
-            // Only save to disk once the user pauses dragging
-            SettingsManager.Instance.Save();
-
-            await ReprocessCurrentScanAsync();
-        }
-        catch (TaskCanceledException)
-        {
-            // Ignored - user is still dragging
-        }
-        finally
-        {
-            // Only hide the indicator if THIS specific task was the final one to run
-            if (pnlLocalLoading != null && !ct.IsCancellationRequested)
-            {
-                pnlLocalLoading.IsVisible = false;
-            }
-        }
-    }
-
-    private async void BtnAutoTune_Click(object? sender, RoutedEventArgs e)
-    {
-        if (isLoading || _isNavigating || ScanSessions.Count == 0) return;
-
-        var photo = ScanSessions[CurrentIndex].Activate();
-        string tuningMsg = LocalizationService.GetString(ResourceKeys.MsgAutoTuning, "Auto-tuning detection parameters...");
-
-        await ExecuteWithLoadingAsync(tuningMsg, async ct =>
-        {
-            var result = await Task.Run(() => photo.AutoTune(), ct);
-            ScanSessions[CurrentIndex].IsModified = true;
-            SyncUiWithScanOptions(photo.CurrentOptions);
-            ShowScan(photo);
-            LoadCroppedPhotosToSlider();
-            UpdatePhotoCounterLabel();
-            UpdateDetectionCoverageLabel();
-
-            if (result.Improved || result.PhotoCount > 0)
-            {
-                lblStatus.Text = LocalizationService.Format(
-                    ResourceKeys.MsgAutoTuneSuccess,
-                    "Auto-tuned: found {0} photos (Sensitivity: {1:0}%, Edge: {2:0}).",
-                    result.PhotoCount,
-                    DetectionOptions.ToleranceToSensitivity(result.BestOptions.BackgroundTolerance),
-                    result.BestOptions.CannyLowThreshold);
-            }
-            else
-            {
-                lblStatus.Text = LocalizationService.GetString(ResourceKeys.MsgAutoTuneFailed, "Auto-tune did not find additional photos.");
-            }
-        });
-    }
-
-    private async void ChkAutoOrient_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
-        SettingsManager.Instance.Settings.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
-        SettingsManager.Instance.Save();
-        var session = ScanSessions[CurrentIndex];
-        session.Options.AutoOrientPhotos = chkAutoOrient?.IsChecked == true;
-        await ReprocessCurrentScanAsync();
-    }
-
-    private async void ChkRestoreColors_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
-        SettingsManager.Instance.Settings.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
-        SettingsManager.Instance.Save();
-        var session = ScanSessions[CurrentIndex];
-        session.Options.RestoreVintageColors = chkRestoreColors?.IsChecked == true;
-        await ReprocessCurrentScanAsync();
-    }
-
-    private async void ChkRemoveDust_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (isUpdatingUiFromScan || isLoading || _isNavigating || ScanSessions.Count == 0) return;
-        SettingsManager.Instance.Settings.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
-        SettingsManager.Instance.Save();
-        var session = ScanSessions[CurrentIndex];
-        session.Options.RemoveDustAndScratches = chkRemoveDust?.IsChecked == true;
-        await ReprocessCurrentScanAsync();
-    }
-
-    private void ChkAutoTuneOnPass_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (isUpdatingUiFromScan || isLoading) return;
-        bool isChecked = chkAutoTuneOnPass?.IsChecked == true;
-        SettingsManager.Instance.Settings.AutoTuneOnScanChange = isChecked;
-        SettingsManager.Instance.Save();
-        if (isChecked && ScanSessions.Count > 0)
-        {
-            BtnAutoTune_Click(sender, e);
-        }
-    }
-
-    private void MenuAutoTuneOnPass_Click(object? sender, RoutedEventArgs e)
-    {
-        bool newValue = !SettingsManager.Instance.Settings.AutoTuneOnScanChange;
-        SettingsManager.Instance.Settings.AutoTuneOnScanChange = newValue;
-        SettingsManager.Instance.Save();
-        if (chkAutoTuneOnPass != null)
-        {
-            chkAutoTuneOnPass.IsChecked = newValue;
-        }
-        if (newValue && ScanSessions.Count > 0)
-        {
-            BtnAutoTune_Click(sender, e);
-        }
-    }
-
-    private void ChkAutoAdjustOnLowCoverage_IsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (isUpdatingUiFromScan || isLoading) return;
-        bool isChecked = chkAutoAdjustOnLowCoverage?.IsChecked == true;
-        SettingsManager.Instance.Settings.AutoAdjustOnLowCoverage = isChecked;
-        SettingsManager.Instance.Save();
-        if (isChecked && ScanSessions.Count > 0)
-        {
-            var photo = ScanSessions[CurrentIndex].Activate();
-            if (photo.TotalDetectedAreaRatio < AppConstants.LowCoverageThreshold)
-            {
-                BtnAutoTune_Click(sender, e);
-            }
-        }
-    }
-
-    private async Task ReprocessCurrentScanAsync()
-    {
-        if (isLoading || _isNavigating || ScanSessions.Count == 0) return;
-
-        var session = ScanSessions[CurrentIndex];
-        session.IsModified = true;
-        var photo = session.Activate();
-        photo.ApplyOptions(GetDetectionOptionsFromUi());
-
-        await ExecuteWithLoadingAsync(LocalizationService.GetString(ResourceKeys.MsgDetectingPhotos, "Detecting photos..."), async ct =>
-        {
-            await Task.Run(() => photo.DetectPhotos(), ct);
-            ShowScan(photo);
-            LoadCroppedPhotosToSlider();
-            UpdatePhotoCounterLabel();
-            UpdateDetectionCoverageLabel();
-            lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgDetectionComplete, "Detection complete. Found {0} photos.", photo.DetectedPhotos.Count);
-        });
-    }
-
-    private void SyncUiWithScanOptions(DetectionOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-        isUpdatingUiFromScan = true;
-        try
-        {
-            sldSensitivity.Value = DetectionOptions.ToleranceToSensitivity(options.BackgroundTolerance);
-            sldMinArea.Value = options.MinAreaFactor * 100.0;
-            sldMaxArea.Value = options.MaxAreaFactor * 100.0;
-            sldEdge.Value = options.CannyLowThreshold;
-            if (chkAutoOrient != null) chkAutoOrient.IsChecked = options.AutoOrientPhotos;
-            if (chkRestoreColors != null) chkRestoreColors.IsChecked = options.RestoreVintageColors;
-            if (chkRemoveDust != null) chkRemoveDust.IsChecked = options.RemoveDustAndScratches;
-            if (chkAutoTuneOnPass != null) chkAutoTuneOnPass.IsChecked = SettingsManager.Instance.Settings.AutoTuneOnScanChange;
-            if (chkAutoAdjustOnLowCoverage != null) chkAutoAdjustOnLowCoverage.IsChecked = SettingsManager.Instance.Settings.AutoAdjustOnLowCoverage;
-        }
-        finally
-        {
-            isUpdatingUiFromScan = false;
-        }
-    }
-
-    private DetectionOptions GetDetectionOptionsFromUi()
-    {
-        return new DetectionOptions
-        {
-            BackgroundTolerance = DetectionOptions.SensitivityToTolerance(sldSensitivity.Value),
-            MinAreaFactor = sldMinArea.Value / 100.0,
-            MaxAreaFactor = sldMaxArea.Value / 100.0,
-            CannyLowThreshold = sldEdge.Value,
-            CannyHighThreshold = sldEdge.Value * AppConstants.DefaultCannyHighRatio,
-            AutoOrientPhotos = chkAutoOrient?.IsChecked == true,
-            RestoreVintageColors = chkRestoreColors?.IsChecked == true,
-            RemoveDustAndScratches = chkRemoveDust?.IsChecked == true,
-            BoundingBoxColor = SettingsManager.Instance.Settings.DetectionBoxColor
-        };
-    }
+    private DetectionOptions GetDetectionOptionsFromUi() => _cropsVm.GetDetectionOptions();
 }

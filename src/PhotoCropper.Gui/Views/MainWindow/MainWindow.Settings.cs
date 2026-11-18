@@ -10,17 +10,8 @@ internal sealed partial class MainWindow
     private void ApplySettingsToUi()
     {
         var settings = SettingsManager.Instance.Settings;
-        sldSensitivity.Value = PhotoCropper.Core.Models.DetectionOptions.ToleranceToSensitivity(settings.BackgroundTolerance);
         sldZoom.Value = settings.ZoomLevel;
-        sldMinArea.Value = settings.MinAreaFactor;
-        sldMaxArea.Value = settings.MaxAreaFactor;
-        sldEdge.Value = settings.CannyLowThreshold;
-
-        chkAutoOrient?.IsChecked = settings.AutoOrientPhotos;
-        chkRestoreColors?.IsChecked = settings.RestoreVintageColors;
-        chkRemoveDust?.IsChecked = settings.RemoveDustAndScratches;
-        chkAutoTuneOnPass?.IsChecked = settings.AutoTuneOnScanChange;
-        chkAutoAdjustOnLowCoverage?.IsChecked = settings.AutoAdjustOnLowCoverage;
+        _cropsVm.LoadFromSettings();
 
         UpdateWorkspaceUi(settings.WorkDirectory);
         UpdateCropStrokeColor(settings.DetectionBoxColor);

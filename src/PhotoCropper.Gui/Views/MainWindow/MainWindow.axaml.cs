@@ -10,6 +10,7 @@ using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
 
 using PhotoCropper.Gui.Services;
+using PhotoCropper.Gui.ViewModels;
 using System.Diagnostics.CodeAnalysis;
 
 namespace PhotoCropper.Gui;
@@ -31,9 +32,9 @@ internal sealed partial class MainWindow : Window
     private bool isLoading;
     private bool isComparingRaw;
     private bool isSyncingSelection;
-    private bool isUpdatingUiFromScan;
     private bool _isExitingConfirmed;
-    private bool _isNavigating;
+    private readonly CropsStageViewModel _cropsVm;
+    private bool _isNavigating => _cropsVm.IsNavigating;
     private CancellationTokenSource? _activeOperationCts;
 
     public MainWindow() : this(new Naps2ScannerService())
@@ -48,6 +49,9 @@ internal sealed partial class MainWindow : Window
 
         InitializeComponent();
         _notificationService.Initialize(this);
+
+        _cropsVm = new CropsStageViewModel(this, _sessionManager, () => SettingsManager.Instance.Settings, SettingsManager.Instance.Save);
+        grdMainWorkspace.DataContext = _cropsVm;
 
         // Invalidate undo/redo entries for a scan when its engine is deactivated.
         // Re-activating the engine recreates it from scratch (DetectPhotos), so any
@@ -514,64 +518,17 @@ internal sealed partial class MainWindow : Window
         return false;
     }
 
-    /// <summary>
-    /// Cancels any in-flight background lookahead and waits (up to 3 s) for it to fully
-    /// release the <see cref="_lookaheadSemaphore"/>. This guarantees no background task
-    /// is concurrently accessing a <see cref="PhotoCropper.Core.Engine.PhotoCropperEngine"/>
-    /// when the caller is about to move or load sessions.
-    /// </summary>
-    private async Task DrainLookaheadAsync()
+    /// <summary>Moves to the next or previous scan and opens it.</summary>
+    private Task NavigateScanAsync(bool forward)
     {
-        if (_lookaheadCts != null) await _lookaheadCts.CancelAsync();
-        bool acquired = await _lookaheadSemaphore.WaitAsync(3000, CancellationToken.None);
-        if (acquired) _lookaheadSemaphore.Release();
+        FocusManager?.Focus(null);
+        return _cropsVm.NavigateAsync(forward);
     }
 
-    /// <summary>
-    /// Moves to the next or previous scan and loads it into the GUI.
-    /// Sets <see cref="_isNavigating"/> synchronously before any await so that
-    /// re-entrant key events on the UI thread see the flag immediately and bail out.
-    /// Then drains the lookahead to prevent concurrent <c>AutoTune</c> calls on the
-    /// same engine from this task and the background lookahead task.
-    /// </summary>
-    private async Task NavigateScanAsync(bool forward)
+    private Task NavigateToScanIndexAsync(int targetIndex)
     {
-        _isNavigating = true;
         FocusManager?.Focus(null);
-        await DrainLookaheadAsync();
-
-        bool moved = forward ? _sessionManager.MoveNext() : _sessionManager.MovePrevious();
-        if (!moved)
-        {
-            _isNavigating = false;
-            return;
-        }
-
-        try
-        {
-            await LoadPhotosToGuiAsync();
-        }
-        finally
-        {
-            _isNavigating = false;
-        }
-    }
-
-    private async Task NavigateToScanIndexAsync(int targetIndex)
-    {
-        if (targetIndex < 0 || targetIndex >= ScanSessions.Count || targetIndex == CurrentIndex) return;
-        _isNavigating = true;
-        FocusManager?.Focus(null);
-        await DrainLookaheadAsync();
-        _sessionManager.MoveTo(targetIndex);
-        try
-        {
-            await LoadPhotosToGuiAsync();
-        }
-        finally
-        {
-            _isNavigating = false;
-        }
+        return _cropsVm.NavigateToAsync(targetIndex);
     }
 
     private void Window_KeyUp(object? sender, KeyEventArgs e)
@@ -683,11 +640,11 @@ internal sealed partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         var settings = SettingsManager.Instance.Settings;
-        settings.BackgroundTolerance = PhotoCropper.Core.Models.DetectionOptions.SensitivityToTolerance(sldSensitivity.Value);
+        settings.BackgroundTolerance = PhotoCropper.Core.Models.DetectionOptions.SensitivityToTolerance(_cropsVm.Sensitivity);
         settings.ZoomLevel = sldZoom.Value;
-        settings.MinAreaFactor = sldMinArea.Value;
-        settings.MaxAreaFactor = sldMaxArea.Value;
-        settings.CannyLowThreshold = sldEdge.Value;
+        settings.MinAreaFactor = _cropsVm.MinAreaPercent;
+        settings.MaxAreaFactor = _cropsVm.MaxAreaPercent;
+        settings.CannyLowThreshold = _cropsVm.EdgeThreshold;
 
         if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory) && _workspaceSession != null)
         {
@@ -705,5 +662,6 @@ internal sealed partial class MainWindow : Window
         _sessionManager.Dispose();
         PhotoCropper.Core.Extraction.FaceOrientationService.ReleaseCachedDetectors();
         _finishStageVm?.Dispose();
+        _cropsVm.Dispose();
     }
 }

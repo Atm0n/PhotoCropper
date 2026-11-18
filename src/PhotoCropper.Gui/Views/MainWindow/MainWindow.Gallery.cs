@@ -533,7 +533,7 @@ internal sealed partial class MainWindow
             var targetEngine = targetSession.Activate();
             SyncUiWithScanOptions(targetEngine.CurrentOptions);
             ShowScan(targetEngine);
-            txtFileCounter.Text = LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", action.ScanIndex + 1, ScanSessions.Count);
+            _cropsVm.UpdateScanCounter();
             LoadCroppedPhotosToSlider();
             UpdatePhotoCounterLabel();
             UpdateDetectionCoverageLabel();
