@@ -30,7 +30,6 @@ internal sealed partial class MainWindow : Window
     private readonly AppNotificationService _notificationService = new();
     private bool isLoading;
     private bool isComparingRaw;
-    private bool _isExitingConfirmed;
     private readonly CropsStageViewModel _cropsVm;
     private bool _isNavigating => _cropsVm.IsNavigating;
     private CancellationTokenSource? _activeOperationCts;
@@ -66,44 +65,12 @@ internal sealed partial class MainWindow : Window
         AddHandler(KeyUpEvent, Window_KeyUp, RoutingStrategies.Tunnel);
 
         // Register Drag & Drop event handlers
-        Closing += Window_Closing;
         Loaded += MainWindow_Loaded;
 
         PopulateLanguageMenu();
         ApplySettingsToUi();
         InitializeStages();
-    }
-
-    private void Window_Closing(object? sender, WindowClosingEventArgs e)
-    {
-        if (_isExitingConfirmed) return;
-
-        if (HasUnsavedChanges())
-        {
-            e.Cancel = true;
-            if (pnlUnsavedOverlay != null)
-            {
-                pnlUnsavedOverlay.IsVisible = true;
-            }
-        }
-    }
-
-    private async void BtnSaveAndExit_Click(object? sender, RoutedEventArgs e)
-    {
-        if (pnlUnsavedOverlay != null) pnlUnsavedOverlay.IsVisible = false;
-        await SavePendingScansAsync(closeAfterSave: true);
-    }
-
-    private void BtnDiscardAndExit_Click(object? sender, RoutedEventArgs e)
-    {
-        if (pnlUnsavedOverlay != null) pnlUnsavedOverlay.IsVisible = false;
-        _isExitingConfirmed = true;
-        Close();
-    }
-
-    private void BtnCancelExit_Click(object? sender, RoutedEventArgs e)
-    {
-        if (pnlUnsavedOverlay != null) pnlUnsavedOverlay.IsVisible = false;
+        InitializeAutosave();
     }
 
     /// <summary>
@@ -273,17 +240,6 @@ internal sealed partial class MainWindow : Window
             return true;
         }
 
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
-        {
-            if (e.Key == Key.S)
-            {
-                BtnSaveImages_Click(null, new RoutedEventArgs());
-                e.Handled = true;
-                return true;
-            }
-
-        }
-
         return true;
     }
 
@@ -300,11 +256,6 @@ internal sealed partial class MainWindow : Window
         {
             switch (e.Key)
             {
-                case Key.S:
-                    BtnSaveImages_Click(null, new RoutedEventArgs());
-                    e.Handled = true;
-                    return true;
-
                 case Key.Z:
                     await PerformUndoAsync();
                     e.Handled = true;
@@ -396,13 +347,6 @@ internal sealed partial class MainWindow : Window
     {
         if (e.Key == Key.Escape)
         {
-            if (pnlUnsavedOverlay != null && pnlUnsavedOverlay.IsVisible)
-            {
-                pnlUnsavedOverlay.IsVisible = false;
-                e.Handled = true;
-                return true;
-            }
-
             if (pnlErrorOverlay.IsVisible)
             {
                 pnlErrorOverlay.IsVisible = false;
@@ -516,6 +460,7 @@ internal sealed partial class MainWindow : Window
         settings.MaxAreaFactor = _cropsVm.MaxAreaPercent;
         settings.CannyLowThreshold = _cropsVm.EdgeThreshold;
 
+        FlushAutosave();
         if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory) && _workspaceSession != null)
         {
             ProjectWorkspaceService.SaveSession(settings.WorkDirectory, _workspaceSession);

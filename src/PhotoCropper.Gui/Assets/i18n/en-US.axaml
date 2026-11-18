@@ -53,18 +53,15 @@
 	<sys:String x:Key="PhotoCounter">PHOTO {0} OF {1}</sys:String>
 	<sys:String x:Key="ScanCounter">Scan {0} of {1}</sys:String>
 	<sys:String x:Key="ProcessingScan">Processing Scan...</sys:String>
-	<sys:String x:Key="MsgSavingProgress">Exporting photo {0} of {1}...</sys:String>
-	<sys:String x:Key="MsgSaved">Successfully saved {0} photos to 'cropped' folders.</sys:String>
 	<sys:String x:Key="TitleExportFailed">Some Scans Could Not Be Exported</sys:String>
 	<sys:String x:Key="MsgExportFailedStatus">Saved {0} photos; {1} scan(s) failed to export.</sys:String>
-	<sys:String x:Key="MsgExportFailedDetails">{0} of {1} scans could not be exported. PhotoCropper stayed open so no work is lost.&#x0a;&#x0a;{2}</sys:String>
 	<sys:String x:Key="TitleUnexpectedError">Unexpected Error</sys:String>
 	<sys:String x:Key="MsgUnexpectedError">Something went wrong: {0}&#x0a;&#x0a;Your work is still open; consider saving it now.&#x0a;A crash report was saved to:&#x0a;{1}</sys:String>
 	<sys:String x:Key="StageScan">1  Scan</sys:String>
 	<sys:String x:Key="StageCrops">2  Crops</sys:String>
 	<sys:String x:Key="StageFinish">3  Finish</sys:String>
 	<sys:String x:Key="StageScanStatus">{0} scans</sys:String>
-	<sys:String x:Key="StageCropsStatus">{0} of {1} scans saved</sys:String>
+	<sys:String x:Key="StageCropsStatus">{0} of {1} scans checked</sys:String>
 	<sys:String x:Key="StageFinishStatus">{0} photos · {1} to export</sys:String>
 	<sys:String x:Key="StageNeedsProject">Needs a project</sys:String>
 	<sys:String x:Key="BtnScanStage">🖨  Scan</sys:String>
@@ -84,6 +81,7 @@
 	<sys:String x:Key="FinishStatusExported">Exported</sys:String>
 	<sys:String x:Key="MsgSavingCrops">Saving crops ({0} of {1})...</sys:String>
 	<sys:String x:Key="MsgCropsSaved">Crops saved for {0} scans.</sys:String>
+	<sys:String x:Key="MsgAutosaveFailed">Could not save your changes: {0}</sys:String>
 	<sys:String x:Key="MsgExportingFinal">Exporting {0} photos...</sys:String>
 	<sys:String x:Key="MsgFinalExported">Exported {0} photos to Final.</sys:String>
 	<sys:String x:Key="MsgImportingPhotos">Importing {0} photos...</sys:String>
@@ -147,7 +145,6 @@
 	<sys:String x:Key="TipNextPhoto">Next photo (→)</sys:String>
 	<sys:String x:Key="BtnZoomFit">Fit</sys:String>
 	<sys:String x:Key="TipViewerControls">Mouse wheel: zoom · drag: move the photo · drag the divider: compare before and after · hold Space: show the original · F: fit · B: repair brush</sys:String>
-	<sys:String x:Key="MsgAllScansAlreadySaved">All {0} scans are already saved to 'Cropped'. No changes to export.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessing scan with new settings...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detecting photos...</sys:String>
 	<sys:String x:Key="MsgDetectionComplete">Detection complete. Found {0} photos.</sys:String>
@@ -354,10 +351,6 @@
 	<sys:String x:Key="MsgBatchRotated">{0} photos rotated.</sys:String>
 	<sys:String x:Key="MsgBatchDeleted">{0} photos deleted.</sys:String>
 	<sys:String x:Key="TipRefineMultiDisabled">Select a single photo to refine edges</sys:String>
-	<sys:String x:Key="TitleUnsavedChanges">Unsaved Changes</sys:String>
-	<sys:String x:Key="MsgUnsavedChanges">You have unsaved changes or unexported photos. Would you like to save your work before exiting?</sys:String>
-	<sys:String x:Key="BtnSaveAndExit">Save &amp; Exit</sys:String>
-	<sys:String x:Key="BtnDiscardAndExit">Discard &amp; Exit</sys:String>
 	<sys:String x:Key="MenuTheme">Theme</sys:String>
 	<sys:String x:Key="ThemeDark">Dark</sys:String>
 	<sys:String x:Key="ThemeLight">Light</sys:String>
@@ -399,8 +392,6 @@
 	<sys:String x:Key="TipDetectionSettings">Fine-tune photo size limits, edge detection, and image restoration</sys:String>
 	<sys:String x:Key="TabExport">Save &amp; Export</sys:String>
 	<sys:String x:Key="TabDetection">Detection &amp; Restoration</sys:String>
-	<sys:String x:Key="ChkPromptBeforeExport">Always show these options before saving</sys:String>
-	<sys:String x:Key="BtnExportNow">Save Photos</sys:String>
 	<sys:String x:Key="BtnSavePreferences">Save Settings</sys:String>
 	<sys:String x:Key="MenuCheckUpdates">Check for updates...</sys:String>
 	<sys:String x:Key="BtnCheckUpdates">Check for Updates</sys:String>

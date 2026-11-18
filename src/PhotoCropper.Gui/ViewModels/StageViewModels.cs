@@ -105,7 +105,7 @@ internal sealed partial class ScanStageViewModel : ObservableObject
         for (int i = 0; i < sessions.Count; i++)
         {
             var scan = sessions[i];
-            int? count = KnownPhotoCount(scan);
+            int? count = KnownPhotoCount(_host.Workspace, _host.WorkDirectory, scan);
             string text = count switch
             {
                 null => LocalizationService.GetString(ResourceKeys.ScanStatusNotChecked, "Not checked yet"),
@@ -157,17 +157,22 @@ internal sealed partial class ScanStageViewModel : ObservableObject
     }
 
     /// <summary>Photos known for a scan: from its saved crops, or from detection if it has run; null if never checked.</summary>
-    private int? KnownPhotoCount(Core.Workspace.ScanSessionItem scan)
+    /// <summary>How many photos the scan has, or null when it hasn't been detected yet ("not checked").</summary>
+    internal static int? KnownPhotoCount(WorkspaceSessionState? workspace, string? workDirectory, Core.Workspace.ScanSessionItem scan)
     {
-        var workspace = _host.Workspace;
-        if (workspace != null && _host.WorkDirectory != null)
+        ArgumentNullException.ThrowIfNull(scan);
+        if (scan.IsActive) return scan.PhotoCount;
+
+        if (workspace != null && workDirectory != null)
         {
-            string relative = Path.GetRelativePath(_host.WorkDirectory, scan.FilePath);
+            string relative = Path.GetRelativePath(workDirectory, scan.FilePath);
             int saved = PhotoPipelineService.GetScanPhotos(workspace, relative).Count;
             if (saved > 0) return saved;
         }
 
-        return scan.IsActive || scan.PhotoCount > 0 ? scan.PhotoCount : null;
+        // Boxes saved as they were edited.
+        if (scan.SavedCrops is { Count: > 0 } crops) return crops.Count;
+        return scan.PhotoCount > 0 ? scan.PhotoCount : null;
     }
 
     [RelayCommand]

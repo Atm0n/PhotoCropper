@@ -46,49 +46,10 @@ internal sealed partial class MainWindow
     {
         if (isLoading) return [];
 
-        // 1. Ensure Work Directory
+        // 1. Scans always go into a project.
+        string workDir = await EnsureProjectAsync(useDefaultIfCancelled: true) ?? string.Empty;
+        if (workDir.Length == 0) return [];
         var settings = SettingsManager.Instance.Settings;
-        string? workDir = settings.WorkDirectory;
-        if (string.IsNullOrEmpty(workDir) || !Directory.Exists(workDir))
-        {
-            var topLevel = TopLevel.GetTopLevel(this);
-            if (topLevel?.StorageProvider != null)
-            {
-                var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-                {
-                    Title = LocalizationService.GetString(ResourceKeys.BtnWorkDir, "Select Work Directory for Raw Scans"),
-                    AllowMultiple = false
-                });
-
-                if (folders.Count > 0)
-                {
-                    workDir = folders[0].Path.LocalPath;
-                    settings.WorkDirectory = workDir;
-                    SettingsManager.Instance.Save();
-                    UpdateWorkspaceUi(workDir);
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(workDir))
-            {
-                string picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-                if (string.IsNullOrWhiteSpace(picturesDir))
-                {
-                    picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                }
-                if (string.IsNullOrWhiteSpace(picturesDir))
-                {
-                    picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                }
-
-                workDir = Path.Combine(picturesDir, "PhotoCropper_Workspace");
-                settings.WorkDirectory = workDir;
-                SettingsManager.Instance.Save();
-                UpdateWorkspaceUi(workDir);
-            }
-        }
-
-        ProjectWorkspaceService.InitializeWorkspace(workDir);
 
         // 2. Discover scanner if needed
         if (_availableScanners.Count == 0)
@@ -106,6 +67,48 @@ internal sealed partial class MainWindow
 
         int dpi = settings.ScannerDpi > 0 ? settings.ScannerDpi : 300;
         return await ExecuteScanAsync(workDir, selectedDevice, dpi);
+    }
+
+    /// <summary>
+    /// Makes sure a project is open, asking for its folder if none is. Everything added (scans, imports) goes into a
+    /// project, since the Crops and Finish stages write there.
+    /// </summary>
+    /// <param name="useDefaultIfCancelled">Use a "PhotoCropper_Workspace" folder in Pictures if no folder is chosen.</param>
+    /// <returns>The project folder, or null when none was chosen.</returns>
+    private async Task<string?> EnsureProjectAsync(bool useDefaultIfCancelled)
+    {
+        var settings = SettingsManager.Instance.Settings;
+        string? workDir = settings.WorkDirectory;
+        if (string.IsNullOrEmpty(workDir) || !Directory.Exists(workDir))
+        {
+            workDir = null;
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel?.StorageProvider != null)
+            {
+                var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+                {
+                    Title = LocalizationService.GetString(ResourceKeys.BtnWorkDir, "Select Work Directory for Raw Scans"),
+                    AllowMultiple = false
+                });
+                if (folders.Count > 0) workDir = folders[0].Path.LocalPath;
+            }
+
+            if (string.IsNullOrWhiteSpace(workDir))
+            {
+                if (!useDefaultIfCancelled) return null;
+                string picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                if (string.IsNullOrWhiteSpace(picturesDir)) picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                if (string.IsNullOrWhiteSpace(picturesDir)) picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                workDir = Path.Combine(picturesDir, "PhotoCropper_Workspace");
+            }
+
+            // Opens the folder as a project, loading its session if it already is one.
+            await SwitchToProjectAsync(workDir);
+        }
+
+        ProjectWorkspaceService.InitializeWorkspace(workDir);
+        _workspaceSession ??= new WorkspaceSessionState();
+        return workDir;
     }
 
     private async void BtnScannerConfig_Click(object? sender, RoutedEventArgs e)

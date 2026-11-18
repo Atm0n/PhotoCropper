@@ -86,20 +86,23 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
         if (workDir != null)
         {
             // A project without scans has no session yet: it simply has nothing saved.
-            int scansWithCrops = 0;
+            int scansChecked;
             int photos = 0;
             int toExport = 0;
             if (workspace != null)
             {
                 lock (workspace)
                 {
-                    scansWithCrops = workspace.Photos.Where(p => p.ScanRelativePath != null)
-                        .Select(p => p.ScanRelativePath!).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+                    scansChecked = ScanSessions.Count(s => ScanStageViewModel.KnownPhotoCount(workspace, workDir, s) != null);
                     photos = workspace.Photos.Count(p => p.Cropped != null);
                     toExport = workspace.Photos.Count(p => p.Cropped != null && p.IsFinalStale);
                 }
             }
-            lblStageCropsStatus.Text = LocalizationService.Format(ResourceKeys.StageCropsStatus, "{0} of {1} scans saved", scansWithCrops, ScanSessions.Count);
+            else
+            {
+                scansChecked = ScanSessions.Count(s => ScanStageViewModel.KnownPhotoCount(null, null, s) != null);
+            }
+            lblStageCropsStatus.Text = LocalizationService.Format(ResourceKeys.StageCropsStatus, "{0} of {1} scans checked", scansChecked, ScanSessions.Count);
             lblStageFinishStatus.Text = LocalizationService.Format(ResourceKeys.StageFinishStatus, "{0} photos · {1} to export", photos, toExport);
         }
         else
@@ -320,15 +323,21 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
         return -1;
     }
 
-    /// <summary>
-    /// Adds scan files. In a project they are copied into RawScans/ first, like scanned pages, so the project
-    /// keeps its own copy.
-    /// </summary>
+    /// <summary>Asks for scan files and adds them to the project (see <see cref="ImportScanFilesAsync"/>).</summary>
     public async Task ImportScansAsync()
     {
+        if (await EnsureProjectAsync(useDefaultIfCancelled: false) == null) return;
         var paths = await PickImageFilesAsync(LocalizationService.GetString(ResourceKeys.BtnImportScans, "Import scans…"));
         if (paths.Count == 0) return;
+        ImportScanFiles(paths);
+    }
 
+    /// <summary>
+    /// Adds scan files (picked or dropped). In a project they are copied into RawScans/ first, like scanned pages,
+    /// so the project keeps its own copy.
+    /// </summary>
+    private void ImportScanFiles(IEnumerable<string> paths)
+    {
         var collected = ImageFileCollector.CollectFiles(paths, recursive: false);
         var workspace = Workspace;
         string? workDir = WorkDirectory;

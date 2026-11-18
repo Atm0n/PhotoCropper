@@ -53,18 +53,15 @@
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
 	<sys:String x:Key="ScanCounter">Escaneo {0} de {1}</sys:String>
 	<sys:String x:Key="ProcessingScan">Procesando...</sys:String>
-	<sys:String x:Key="MsgSavingProgress">Exportando foto {0} de {1}...</sys:String>
-	<sys:String x:Key="MsgSaved">Se han guardado {0} fotos con éxito.</sys:String>
 	<sys:String x:Key="TitleExportFailed">No se han podido exportar algunos escaneos</sys:String>
 	<sys:String x:Key="MsgExportFailedStatus">Se han guardado {0} fotos; {1} escaneo(s) no se han podido exportar.</sys:String>
-	<sys:String x:Key="MsgExportFailedDetails">No se han podido exportar {0} de {1} escaneos. PhotoCropper sigue abierto para que no se pierda ningún trabajo.&#x0a;&#x0a;{2}</sys:String>
 	<sys:String x:Key="TitleUnexpectedError">Error inesperado</sys:String>
 	<sys:String x:Key="MsgUnexpectedError">Algo ha fallado: {0}&#x0a;&#x0a;Tu trabajo sigue abierto; te recomendamos guardarlo ahora.&#x0a;Se ha guardado un informe del error en:&#x0a;{1}</sys:String>
 	<sys:String x:Key="StageScan">1  Escanear</sys:String>
 	<sys:String x:Key="StageCrops">2  Recortes</sys:String>
 	<sys:String x:Key="StageFinish">3  Acabado</sys:String>
 	<sys:String x:Key="StageScanStatus">{0} escaneos</sys:String>
-	<sys:String x:Key="StageCropsStatus">{0} de {1} escaneos guardados</sys:String>
+	<sys:String x:Key="StageCropsStatus">{0} de {1} escaneos revisados</sys:String>
 	<sys:String x:Key="StageFinishStatus">{0} fotos · {1} por exportar</sys:String>
 	<sys:String x:Key="StageNeedsProject">Necesita un proyecto</sys:String>
 	<sys:String x:Key="BtnScanStage">🖨  Escanear</sys:String>
@@ -84,6 +81,7 @@
 	<sys:String x:Key="FinishStatusExported">Exportada</sys:String>
 	<sys:String x:Key="MsgSavingCrops">Guardando recortes ({0} de {1})...</sys:String>
 	<sys:String x:Key="MsgCropsSaved">Recortes guardados de {0} escaneos.</sys:String>
+	<sys:String x:Key="MsgAutosaveFailed">No se han podido guardar los cambios: {0}</sys:String>
 	<sys:String x:Key="MsgExportingFinal">Exportando {0} fotos...</sys:String>
 	<sys:String x:Key="MsgFinalExported">Se han exportado {0} fotos a Final.</sys:String>
 	<sys:String x:Key="MsgImportingPhotos">Importando {0} fotos...</sys:String>
@@ -147,7 +145,6 @@
 	<sys:String x:Key="TipNextPhoto">Foto siguiente (→)</sys:String>
 	<sys:String x:Key="BtnZoomFit">Ajustar</sys:String>
 	<sys:String x:Key="TipViewerControls">Rueda del ratón: zoom · arrastrar: mover la foto · arrastrar el divisor: comparar antes y después · mantener Espacio: ver el original · F: ajustar · B: pincel de reparación</sys:String>
-	<sys:String x:Key="MsgAllScansAlreadySaved">Todos los {0} escaneos ya están guardados en 'Cropped'. No hay cambios por exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocesando escaneo con nuevos ajustes...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detectando fotos...</sys:String>
 	<sys:String x:Key="MsgDetectionComplete">Detección finalizada. Encontradas {0} fotos.</sys:String>
@@ -354,10 +351,6 @@
 	<sys:String x:Key="MsgBatchRotated">{0} fotos rotadas.</sys:String>
 	<sys:String x:Key="MsgBatchDeleted">{0} fotos eliminadas.</sys:String>
 	<sys:String x:Key="TipRefineMultiDisabled">Seleccione una sola foto para ajustar bordes</sys:String>
-	<sys:String x:Key="TitleUnsavedChanges">Cambios no guardados</sys:String>
-	<sys:String x:Key="MsgUnsavedChanges">Tiene cambios sin guardar o fotos no exportadas. ¿Desea guardar su trabajo antes de salir?</sys:String>
-	<sys:String x:Key="BtnSaveAndExit">Guardar y Salir</sys:String>
-	<sys:String x:Key="BtnDiscardAndExit">Descartar y Salir</sys:String>
 	<sys:String x:Key="MenuTheme">Tema</sys:String>
 	<sys:String x:Key="ThemeDark">Oscuro</sys:String>
 	<sys:String x:Key="ThemeLight">Claro</sys:String>
@@ -399,8 +392,6 @@
 	<sys:String x:Key="TipDetectionSettings">Ajustar límites de tamaño, bordes y restauración</sys:String>
 	<sys:String x:Key="TabExport">Guardado y Exportación</sys:String>
 	<sys:String x:Key="TabDetection">Detección y Restauración</sys:String>
-	<sys:String x:Key="ChkPromptBeforeExport">Mostrar siempre estas opciones antes de guardar</sys:String>
-	<sys:String x:Key="BtnExportNow">Guardar fotos</sys:String>
 	<sys:String x:Key="BtnSavePreferences">Guardar configuración</sys:String>
 	<sys:String x:Key="MenuCheckUpdates">Buscar actualizaciones...</sys:String>
 	<sys:String x:Key="BtnCheckUpdates">Buscar actualizaciones</sys:String>

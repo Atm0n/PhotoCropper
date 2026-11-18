@@ -20,8 +20,6 @@ internal static class ResourceKeys
     public const string BtnRotateCount = nameof(BtnRotateCount);
     public const string BtnSelectAll = nameof(BtnSelectAll);
     public const string BtnClearSelection = nameof(BtnClearSelection);
-    public const string BtnSaveAndExit = nameof(BtnSaveAndExit);
-    public const string BtnDiscardAndExit = nameof(BtnDiscardAndExit);
     public const string BtnCancel = nameof(BtnCancel);
     public const string BtnOk = nameof(BtnOk);
     public const string BtnReviewPhotos = nameof(BtnReviewPhotos);
@@ -82,11 +80,8 @@ internal static class ResourceKeys
     public const string MsgDetectionComplete = nameof(MsgDetectionComplete);
     public const string MsgNewProjectReady = nameof(MsgNewProjectReady);
     public const string MsgReprocessing = nameof(MsgReprocessing);
-    public const string MsgSavingProgress = nameof(MsgSavingProgress);
-    public const string MsgSaved = nameof(MsgSaved);
     public const string TitleExportFailed = nameof(TitleExportFailed);
     public const string MsgExportFailedStatus = nameof(MsgExportFailedStatus);
-    public const string MsgExportFailedDetails = nameof(MsgExportFailedDetails);
     public const string TitleUnexpectedError = nameof(TitleUnexpectedError);
     public const string MsgUnexpectedError = nameof(MsgUnexpectedError);
     public const string StageScanStatus = nameof(StageScanStatus);
@@ -104,6 +99,7 @@ internal static class ResourceKeys
     public const string FinishStatusExported = nameof(FinishStatusExported);
     public const string MsgSavingCrops = nameof(MsgSavingCrops);
     public const string MsgCropsSaved = nameof(MsgCropsSaved);
+    public const string MsgAutosaveFailed = nameof(MsgAutosaveFailed);
     public const string MenuScannerSettings = nameof(MenuScannerSettings);
     public const string MenuExportSettings = nameof(MenuExportSettings);
     public const string MenuResetDetection = nameof(MenuResetDetection);
@@ -112,7 +108,6 @@ internal static class ResourceKeys
     public const string MsgFinalExported = nameof(MsgFinalExported);
     public const string MsgImportingPhotos = nameof(MsgImportingPhotos);
     public const string MsgScanReplaced = nameof(MsgScanReplaced);
-    public const string MsgAllScansAlreadySaved = nameof(MsgAllScansAlreadySaved);
     public const string MsgScannerNotFoundDetails = nameof(MsgScannerNotFoundDetails);
     public const string MsgScannerErrorDetails = nameof(MsgScannerErrorDetails);
     public const string MsgExtractingCrop = nameof(MsgExtractingCrop);
@@ -122,13 +117,11 @@ internal static class ResourceKeys
     public const string MsgRefineSuccess = nameof(MsgRefineSuccess);
     public const string MsgRefineCancelled = nameof(MsgRefineCancelled);
     public const string MsgResumeSession = nameof(MsgResumeSession);
-    public const string MsgUnsavedChanges = nameof(MsgUnsavedChanges);
 
     public const string TitleScannerNotFound = nameof(TitleScannerNotFound);
     public const string TitleScannerError = nameof(TitleScannerError);
     public const string TitleNoScanner = nameof(TitleNoScanner);
     public const string TitleResumeSession = nameof(TitleResumeSession);
-    public const string TitleUnsavedChanges = nameof(TitleUnsavedChanges);
 
     public const string MenuExportSingle = nameof(MenuExportSingle);
     public const string LblOutputDir = nameof(LblOutputDir);

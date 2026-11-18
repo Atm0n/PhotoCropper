@@ -26,28 +26,24 @@ internal sealed partial class MainWindow
         var files = asyncTransfer != null ? await asyncTransfer.TryGetFilesAsync() : null;
         if (files == null) return;
 
-        var rawPaths = files.Select(f => f.Path.LocalPath);
+        var rawPaths = files.Select(f => f.Path.LocalPath).ToList();
         var collected = ImageFileCollector.CollectFiles(rawPaths, recursive: true);
-        if (collected.Count > 0)
-        {
-            await LoadScansFromPathsAsync(collected);
-        }
+        if (collected.Count == 0) return;
+
+        // Dropped files are imported into the project like the Import button does.
+        if (await EnsureProjectAsync(useDefaultIfCancelled: false) == null) return;
+        ImportScanFiles(collected);
     }
 
     private async Task LoadScansFromPathsAsync(IEnumerable<string> paths)
     {
         undoHistory.Clear();
         var options = _cropsVm.GetDetectionOptions();
-        var settings = SettingsManager.Instance.Settings;
         var newSessions = new List<ScanSessionItem>();
 
         foreach (var path in paths)
         {
             if (!File.Exists(path)) continue;
-            bool isAlreadyExported = ExportPathResolver.IsScanExported(
-                path,
-                settings.CustomOutputDirectory,
-                settings.WorkDirectory);
 
             PhotoCropper.Core.Workspace.WorkspaceScanEntry? entry = null;
             if (_workspaceSession != null)
@@ -57,11 +53,11 @@ internal sealed partial class MainWindow
                     string.Equals(Path.GetFileName(s.RelativePath), Path.GetFileName(path), StringComparison.OrdinalIgnoreCase));
             }
 
+            // Boxes saved in session.json (autosaved on every edit) are restored as they were; scans without
+            // them are detected afresh.
             bool hasSavedCrops = entry != null && entry.FinalCrops.Count > 0;
-            bool treatAsSaved = isAlreadyExported && hasSavedCrops;
-            bool isModified = !treatAsSaved;
 
-            newSessions.Add(new ScanSessionItem(path, options, isSaved: treatAsSaved, isModified: isModified, savedCrops: entry?.FinalCrops)
+            newSessions.Add(new ScanSessionItem(path, options, isSaved: hasSavedCrops, isModified: !hasSavedCrops, savedCrops: entry?.FinalCrops)
             {
                 ExportedFiles = entry != null ? [.. entry.ExportedFiles] : []
             });

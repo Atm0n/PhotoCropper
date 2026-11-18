@@ -53,18 +53,15 @@
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
 	<sys:String x:Key="ScanCounter">Escaneig {0} de {1}</sys:String>
 	<sys:String x:Key="ProcessingScan">Processant...</sys:String>
-	<sys:String x:Key="MsgSavingProgress">Exportant foto {0} de {1}...</sys:String>
-	<sys:String x:Key="MsgSaved">S'han guardat {0} fotos correctament.</sys:String>
 	<sys:String x:Key="TitleExportFailed">No s'han pogut exportar alguns escanejos</sys:String>
 	<sys:String x:Key="MsgExportFailedStatus">S'han guardat {0} fotos; {1} escaneig(s) no s'han pogut exportar.</sys:String>
-	<sys:String x:Key="MsgExportFailedDetails">No s'han pogut exportar {0} de {1} escanejos. PhotoCropper continua obert perquè no es perdi cap feina.&#x0a;&#x0a;{2}</sys:String>
 	<sys:String x:Key="TitleUnexpectedError">Error inesperat</sys:String>
 	<sys:String x:Key="MsgUnexpectedError">Alguna cosa ha fallat: {0}&#x0a;&#x0a;La teva feina continua oberta; et recomanem desar-la ara.&#x0a;S'ha desat un informe de l'error a:&#x0a;{1}</sys:String>
 	<sys:String x:Key="StageScan">1  Escanejar</sys:String>
 	<sys:String x:Key="StageCrops">2  Retalls</sys:String>
 	<sys:String x:Key="StageFinish">3  Acabat</sys:String>
 	<sys:String x:Key="StageScanStatus">{0} escanejos</sys:String>
-	<sys:String x:Key="StageCropsStatus">{0} de {1} escanejos desats</sys:String>
+	<sys:String x:Key="StageCropsStatus">{0} de {1} escanejos revisats</sys:String>
 	<sys:String x:Key="StageFinishStatus">{0} fotos · {1} per exportar</sys:String>
 	<sys:String x:Key="StageNeedsProject">Cal un projecte</sys:String>
 	<sys:String x:Key="BtnScanStage">🖨  Escanejar</sys:String>
@@ -84,6 +81,7 @@
 	<sys:String x:Key="FinishStatusExported">Exportada</sys:String>
 	<sys:String x:Key="MsgSavingCrops">Desant retalls ({0} de {1})...</sys:String>
 	<sys:String x:Key="MsgCropsSaved">Retalls desats de {0} escanejos.</sys:String>
+	<sys:String x:Key="MsgAutosaveFailed">No s'han pogut desar els canvis: {0}</sys:String>
 	<sys:String x:Key="MsgExportingFinal">Exportant {0} fotos...</sys:String>
 	<sys:String x:Key="MsgFinalExported">S'han exportat {0} fotos a Final.</sys:String>
 	<sys:String x:Key="MsgImportingPhotos">Important {0} fotos...</sys:String>
@@ -147,7 +145,6 @@
 	<sys:String x:Key="TipNextPhoto">Foto següent (→)</sys:String>
 	<sys:String x:Key="BtnZoomFit">Ajustar</sys:String>
 	<sys:String x:Key="TipViewerControls">Roda del ratolí: zoom · arrossegar: moure la foto · arrossegar el divisor: comparar abans i després · mantenir Espai: veure l'original · F: ajustar · B: pinzell de reparació</sys:String>
-	<sys:String x:Key="MsgAllScansAlreadySaved">Tots els {0} escanejos ja estan guardats a 'Cropped'. No hi ha canvis per exportar.</sys:String>
 	<sys:String x:Key="MsgReprocessing">Reprocessant amb nous ajustos...</sys:String>
 	<sys:String x:Key="MsgDetectingPhotos">Detectant fotos...</sys:String>
 	<sys:String x:Key="MsgDetectionComplete">Detecció finalitzada. Trobades {0} fotos.</sys:String>
@@ -354,10 +351,6 @@
 	<sys:String x:Key="MsgBatchRotated">{0} fotos girades.</sys:String>
 	<sys:String x:Key="MsgBatchDeleted">{0} fotos eliminades.</sys:String>
 	<sys:String x:Key="TipRefineMultiDisabled">Seleccioneu una sola foto per ajustar vores</sys:String>
-	<sys:String x:Key="TitleUnsavedChanges">Canvis no desats</sys:String>
-	<sys:String x:Key="MsgUnsavedChanges">Teniu canvis no desats o fotos no exportades. Voleu desar el vostre treball abans de sortir?</sys:String>
-	<sys:String x:Key="BtnSaveAndExit">Desar i Sortir</sys:String>
-	<sys:String x:Key="BtnDiscardAndExit">Descartar i Sortir</sys:String>
 	<sys:String x:Key="MenuTheme">Tema</sys:String>
 	<sys:String x:Key="ThemeDark">Fosc</sys:String>
 	<sys:String x:Key="ThemeLight">Clar</sys:String>
@@ -399,8 +392,6 @@
 	<sys:String x:Key="TipDetectionSettings">Ajustar límits de mida, vores i restauració</sys:String>
 	<sys:String x:Key="TabExport">Desat i Exportació</sys:String>
 	<sys:String x:Key="TabDetection">Detecció i Restauració</sys:String>
-	<sys:String x:Key="ChkPromptBeforeExport">Mostra sempre aquestes opcions abans de desar</sys:String>
-	<sys:String x:Key="BtnExportNow">Desa les fotos</sys:String>
 	<sys:String x:Key="BtnSavePreferences">Desa la configuració</sys:String>
 	<sys:String x:Key="MenuCheckUpdates">Comprova si hi ha actualitzacions...</sys:String>
 	<sys:String x:Key="BtnCheckUpdates">Comprovar actualitzacions</sys:String>

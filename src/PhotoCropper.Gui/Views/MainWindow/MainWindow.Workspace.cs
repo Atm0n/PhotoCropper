@@ -114,6 +114,7 @@ internal sealed partial class MainWindow
         string? oldWorkDir = settings.WorkDirectory;
 
         // 1. Save existing session before switching
+        FlushAutosave();
         if (!string.IsNullOrEmpty(oldWorkDir) && Directory.Exists(oldWorkDir) && _workspaceSession != null)
         {
             ProjectWorkspaceService.SaveSession(oldWorkDir, _workspaceSession);
