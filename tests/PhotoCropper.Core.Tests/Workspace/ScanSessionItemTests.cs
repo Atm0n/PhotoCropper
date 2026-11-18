@@ -53,6 +53,42 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
+    public void ScanSessionItem_WithEmptySavedCrops_ShouldKeepTheScanEmpty()
+    {
+        // Every photo was deleted and that was saved: reopening must not detect them again.
+        using var item = new ScanSessionItem(_scanPath, new DetectionOptions(), isSaved: true, isModified: false, savedCrops: []);
+
+        var engine = item.Activate();
+
+        engine.DetectedPhotos.Count.ShouldBe(0);
+        item.PhotoCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void ScanEntry_SetFinalCrops_ShouldMarkAnEmptyListAsSaved()
+    {
+        var entry = new WorkspaceScanEntry();
+        entry.HasSavedCrops.ShouldBeFalse();
+
+        entry.SetFinalCrops([]);
+
+        entry.HasSavedCrops.ShouldBeTrue();
+        var json = System.Text.Json.JsonSerializer.Serialize(entry);
+        System.Text.Json.JsonSerializer.Deserialize<WorkspaceScanEntry>(json)!.HasSavedCrops.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ScanEntry_FromAnOlderSession_ShouldCountOnlyANonEmptyListAsSaved()
+    {
+        var old = System.Text.Json.JsonSerializer.Deserialize<WorkspaceScanEntry>("""{"RelativePath":"a.png","FinalCrops":[]}""")!;
+        old.HasSavedCrops.ShouldBeFalse();
+
+        var withBoxes = System.Text.Json.JsonSerializer.Deserialize<WorkspaceScanEntry>(
+            """{"RelativePath":"a.png","FinalCrops":[{"CenterX":5,"CenterY":5,"Width":4,"Height":4}]}""")!;
+        withBoxes.HasSavedCrops.ShouldBeTrue();
+    }
+
+    [Fact]
     public void ScanSessionItem_Activate_ShouldInstantiateEngineAndDetectPhotos()
     {
         var options = new DetectionOptions { BackgroundTolerance = 30.0 };

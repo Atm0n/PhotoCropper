@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Crash reports**: Unhandled errors are written to `%LocalAppData%/PhotoCropper/logs` (last 20 kept). Errors raised by UI actions show an error dialog with the report location and keep the app open so unsaved work can be saved.
 - **Export failure report**: Bulk export lists the scans that failed to export instead of only logging them.
 - Session crops now record each photo's auto-orientation (`AutoRotationDegrees`) and each scan's exported files (`ExportedFiles`) in `session.json`. Older sessions still load.
+- **CLI project mode** (`--project <folder>`): runs the app's RawScans → Cropped → Final pipeline on a project folder. New scans are added, boxes edited in the app are kept, the rest are detected like the app does, and the project opens in the app exactly as the CLI left it. Re-running only writes what changed.
+- **Simpler CLI options**: `--auto-tune [mismatch|always|low-coverage|off]` replaces three auto-tune flags; `--no-restore`, `--no-dust` and `--no-orient` turn features off; `--help` is grouped and lists one name per option. Unknown options and invalid values now print a warning instead of being ignored silently. All older option names still work.
 
 ### Changed
 - **Start screen at every launch**: New project (name and location; the folder is created), Open project, Restore photos only (a new project that opens the Finish stage's photo import), and recent projects with a thumbnail and their scan and photo counts (missing folders are dimmed and can be removed from the list). The project button on the top bar opens it again to switch project. The last project is no longer reopened silently, and scanning or importing no longer asks for a folder.
@@ -42,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: warnings are treated as errors again; solution-wide preview features removed; `System.Drawing.Common` pinned to 11.0.0; unused `Avalonia.Diagnostics` removed.
 
 ### Fixed
+- A scan whose photos were all deleted is no longer detected again when the project is reopened; it stays empty.
+- Reopening a project no longer rewrites some cropped photos (and re-renders their final photos) because restoring a saved box gave slightly different pixels than detecting it.
 - The Zoom entry in the Help window had no description in any language.
 - Photos deleted or rotated in Review mode now also update the open scan's boxes and coverage when review closes.
 - Deleting photos from the photo panel left their boxes drawn on the scan until it was reloaded; the boxes and coverage now update at once. Editing, deleting or refining a box keeps that photo shown instead of jumping back to the first one.

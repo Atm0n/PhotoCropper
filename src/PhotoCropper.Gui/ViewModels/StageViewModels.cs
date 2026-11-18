@@ -125,10 +125,13 @@ internal sealed partial class ScanStageViewModel : ObservableObject
         }
 
         // Free thumbnails of scans that are gone (discarded or replaced).
-        foreach (string stale in _thumbnails.Keys.Where(k => !sessions.Any(s => string.Equals(s.FilePath, k, StringComparison.OrdinalIgnoreCase))).ToList())
+        lock (_thumbnails)
         {
-            _thumbnails[stale].Bitmap.Dispose();
-            _thumbnails.Remove(stale);
+            foreach (string stale in _thumbnails.Keys.Where(k => !sessions.Any(s => string.Equals(s.FilePath, k, StringComparison.OrdinalIgnoreCase))).ToList())
+            {
+                _thumbnails[stale].Bitmap.Dispose();
+                _thumbnails.Remove(stale);
+            }
         }
 
         IsEmpty = Scans.Count == 0;
@@ -144,10 +147,13 @@ internal sealed partial class ScanStageViewModel : ObservableObject
         {
             if (!File.Exists(row.FilePath)) return;
             DateTime writeTime = File.GetLastWriteTimeUtc(row.FilePath);
-            if (_thumbnails.TryGetValue(row.FilePath, out var cached) && cached.WriteTime == writeTime)
+            lock (_thumbnails)
             {
-                row.Thumbnail = cached.Bitmap;
-                return;
+                if (_thumbnails.TryGetValue(row.FilePath, out var cached) && cached.WriteTime == writeTime)
+                {
+                    row.Thumbnail = cached.Bitmap;
+                    return;
+                }
             }
 
             var bitmap = await Task.Run(() =>
@@ -156,8 +162,12 @@ internal sealed partial class ScanStageViewModel : ObservableObject
                 return Bitmap.DecodeToWidth(stream, ThumbnailWidth);
             });
 
-            if (_thumbnails.TryGetValue(row.FilePath, out var replaced)) replaced.Bitmap.Dispose();
-            _thumbnails[row.FilePath] = (writeTime, bitmap);
+            // A load that outlives a rebuild may finish off the UI thread (always in tests): keep the cache consistent.
+            lock (_thumbnails)
+            {
+                if (_thumbnails.TryGetValue(row.FilePath, out var replaced)) replaced.Bitmap.Dispose();
+                _thumbnails[row.FilePath] = (writeTime, bitmap);
+            }
             row.Thumbnail = bitmap;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
@@ -187,7 +197,7 @@ internal sealed partial class ScanStageViewModel : ObservableObject
         }
 
         // Boxes saved as they were edited.
-        if (scan.SavedCrops is { Count: > 0 } crops) return crops.Count;
+        if (scan.SavedCrops is { } crops) return crops.Count;
         return scan.PhotoCount > 0 ? scan.PhotoCount : null;
     }
 

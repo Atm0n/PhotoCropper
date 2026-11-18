@@ -70,6 +70,36 @@ public sealed class EngineConsistencyTests : IDisposable
         engine.DetectedPhotos[1].Width.ShouldBeGreaterThan(engine.DetectedPhotos[1].Height);
     }
 
+    [Theory]
+    [InlineData("standard")]
+    [InlineData("flush")]
+    [InlineData("corner")]
+    public void RestoreFromSavedCrops_OfDetectedBoxes_ShouldGiveTheSamePixels(string kind)
+    {
+        // Reopening a project restores the saved boxes; the photos must come out exactly as detected, or the
+        // project's cropped files are rewritten and their final photos rendered again for nothing.
+        string path = Path.Combine(_tempDir, $"{kind}.png");
+        switch (kind)
+        {
+            case "flush": TestImageFactory.CreateFlushEdgeScan(path); break;
+            case "corner": TestImageFactory.CreateCornerPhotoScan(path); break;
+            default: TestImageFactory.CreateStandardTwoPhotoScan(path); break;
+        }
+
+        using var detected = new PhotoCropperEngine(path);
+        detected.DetectPhotos();
+        detected.RawDetectedPhotos.ShouldNotBeEmpty();
+
+        using var restored = new PhotoCropperEngine(path);
+        restored.RestoreFromSavedCrops(WorkspaceCropData.FromEngine(detected));
+
+        restored.RawDetectedPhotos.Count.ShouldBe(detected.RawDetectedPhotos.Count);
+        for (int i = 0; i < detected.RawDetectedPhotos.Count; i++)
+        {
+            AreIdentical(restored.RawDetectedPhotos[i], detected.RawDetectedPhotos[i]).ShouldBeTrue($"photo {i}");
+        }
+    }
+
     [Fact]
     public void RestoreFromSavedCrops_WithNegativeRotation_ShouldNormalizeToClockwiseSteps()
     {

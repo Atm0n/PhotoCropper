@@ -21,6 +21,9 @@ internal sealed class CliOptions
     public bool FileNamePatternSpecified { get; set; }
 
     public List<string> Inputs { get; } = [];
+
+    /// <summary>--project: a project folder to run the app's RawScans → Cropped → Final pipeline on.</summary>
+    public string? ProjectDirectory { get; set; }
     public string? OutputDirectory { get; set; }
     public string Format { get; set; } = "JPEG";
     public int JpegQuality { get; set; } = 100;
@@ -37,6 +40,9 @@ internal sealed class CliOptions
     public bool AutoTune { get; set; }
     public bool AlwaysAutoTune { get; set; }
     public bool AutoAdjustLowCoverage { get; set; }
+
+    /// <summary>--auto-tune off: never auto-tune, not even project mode's low-coverage default.</summary>
+    public bool AutoTuneOff { get; set; }
     public double MinCoverageThresholdPercent { get; set; } = PhotoCropper.Core.Common.AppConstants.LowCoverageThreshold * 100.0;
     public string? CopyUndetectedDirectory { get; set; }
     public bool NonInteractive { get; set; }

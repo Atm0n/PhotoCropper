@@ -191,9 +191,9 @@ internal sealed partial class ScanStageViewModel
         {
             string relative = Path.GetRelativePath(workDir, path);
             var entry = workspace.Scans.FirstOrDefault(s => string.Equals(s.RelativePath, relative, StringComparison.OrdinalIgnoreCase));
-            if (entry is { FinalCrops.Count: > 0 }) saved = entry.FinalCrops;
+            if (entry is { HasSavedCrops: true }) saved = entry.FinalCrops;
         }
-        saved ??= session?.SavedCrops is { Count: > 0 } crops ? crops : null;
+        saved ??= session?.SavedCrops;
 
         return saved?.Select(ToCorners).ToList();
     }

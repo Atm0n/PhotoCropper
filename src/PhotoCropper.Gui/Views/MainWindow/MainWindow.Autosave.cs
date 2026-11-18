@@ -66,11 +66,7 @@ internal sealed partial class MainWindow
             if (entry == null) continue;
 
             var crops = BuildCropData(engine);
-            lock (workspace)
-            {
-                entry.FinalCrops.Clear();
-                foreach (var crop in crops) entry.FinalCrops.Add(crop);
-            }
+            lock (workspace) entry.SetFinalCrops(crops);
 
             // Reloading the scan (after a restart, or once it is unloaded) restores these boxes.
             session.SavedCrops = crops;

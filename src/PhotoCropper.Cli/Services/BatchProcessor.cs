@@ -430,7 +430,7 @@ internal static class BatchProcessor
                 .BorderColor(Color.Cyan1));
     }
 
-    private static DetectionOptions CreateDetectionOptions(CliOptions options)
+    internal static DetectionOptions CreateDetectionOptions(CliOptions options)
     {
         return new DetectionOptions
         {
@@ -445,7 +445,7 @@ internal static class BatchProcessor
         };
     }
 
-    private static PhotoExportMetadata? CreateExportMetadata(CliOptions options)
+    internal static PhotoExportMetadata? CreateExportMetadata(CliOptions options)
     {
         DateTime? parsedDate = null;
         if (!string.IsNullOrWhiteSpace(options.Date) && DateTime.TryParse(options.Date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
