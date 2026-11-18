@@ -1,7 +1,25 @@
 namespace PhotoCropper.Cli.Models;
 
+/// <summary>Which part of the RawScans → Cropped → Final pipeline the CLI runs.</summary>
+internal enum PipelineStage
+{
+    /// <summary>Detect, crop, restore and export in one go (the default).</summary>
+    All,
+
+    /// <summary>Detect and crop only: lossless PNGs with geometry fixes but no restoration.</summary>
+    Crop,
+
+    /// <summary>Restore existing photo files (no detection), e.g. photos already cropped.</summary>
+    Restore
+}
+
 internal sealed class CliOptions
 {
+    public PipelineStage Stage { get; set; } = PipelineStage.All;
+
+    /// <summary>True when -p/--pattern was given; the restore stage keeps file names otherwise.</summary>
+    public bool FileNamePatternSpecified { get; set; }
+
     public List<string> Inputs { get; } = [];
     public string? OutputDirectory { get; set; }
     public string Format { get; set; } = "JPEG";

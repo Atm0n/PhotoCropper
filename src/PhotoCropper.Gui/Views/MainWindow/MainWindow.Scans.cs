@@ -76,6 +76,7 @@ internal sealed partial class MainWindow
     private async Task LoadPhotosToGuiAsync()
     {
         UpdateEmptyStateVisibility();
+        RefreshStages();
         if (ScanSessions.Count == 0 || isLoading) return;
 
         var session = ScanSessions[CurrentIndex];
@@ -324,21 +325,32 @@ internal sealed partial class MainWindow
         await DeleteCurrentScanAsync();
     }
 
-    private async Task DeleteCurrentScanAsync()
+    private Task DeleteCurrentScanAsync() => DeleteScanAtAsync(CurrentIndex);
+
+    /// <summary>
+    /// Deletes a scan from the session and from disk. In a project its photos are also removed from the pipeline
+    /// (records, and Cropped/Final files that are unchanged).
+    /// </summary>
+    private async Task DeleteScanAtAsync(int index)
     {
-        if (isLoading || _isNavigating || !_sessionManager.HasScans) return;
+        if (isLoading || _isNavigating || index < 0 || index >= ScanSessions.Count) return;
 
-        var sessionItem = _sessionManager.CurrentSession;
-        if (sessionItem == null) return;
-
-        string filePath = sessionItem.FilePath;
+        string filePath = ScanSessions[index].FilePath;
         string fileName = Path.GetFileName(filePath);
 
-        _sessionManager.RemoveCurrent();
+        _sessionManager.RemoveAt(index);
+
+        // Undo entries refer to scans by position, which just shifted.
+        undoHistory.Clear();
 
         var settings = SettingsManager.Instance.Settings;
         if (!string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory))
         {
+            if (_workspaceSession != null)
+            {
+                PhotoPipelineService.RemoveScanPhotos(settings.WorkDirectory, _workspaceSession,
+                    Path.GetRelativePath(settings.WorkDirectory, filePath));
+            }
             ProjectWorkspaceService.DeleteScan(settings.WorkDirectory, filePath, _workspaceSession);
         }
         else if (File.Exists(filePath))
@@ -363,6 +375,7 @@ internal sealed partial class MainWindow
             lblStatus.Text = statusMsg;
             if (bdrLookaheadStatus != null) bdrLookaheadStatus.IsVisible = false;
             UpdateEmptyStateVisibility();
+            RefreshStages();
         }
         else
         {

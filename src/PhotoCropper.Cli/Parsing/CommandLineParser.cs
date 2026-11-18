@@ -153,6 +153,19 @@ internal static class CommandLineParser
             else if (arg is "-p" or "--pattern" or "--naming-pattern" && i + 1 < args.Length)
             {
                 options.FileNamePattern = args[++i];
+                options.FileNamePatternSpecified = true;
+            }
+            else if (arg == "--stage" && i + 1 < args.Length)
+            {
+                string stage = args[++i];
+                if (Enum.TryParse(stage, ignoreCase: true, out Models.PipelineStage parsed) && Enum.IsDefined(parsed))
+                {
+                    options.Stage = parsed;
+                }
+                else
+                {
+                    Spectre.Console.AnsiConsole.MarkupLine($"[bold yellow]Warning:[/] Unknown stage '{Spectre.Console.Markup.Escape(stage)}' (use all, crop or restore); running all stages.");
+                }
             }
             else if (arg == "--year" && i + 1 < args.Length)
             {
@@ -197,7 +210,13 @@ internal static class CommandLineParser
         
             Options:
               -i, --input <path>      Input image file or folder of scans (positional arguments also accepted)
-              -o, --output <dir>      Output directory for extracted photos (default: <scan_dir>/cropped)
+              -o, --output <dir>      Output directory for extracted photos (default: <scan_dir>/cropped,
+                                      or <input_dir>/restored with --stage restore)
+              --stage <stage>         Pipeline stage to run (default: all):
+                                        all     detect, crop, restore and export
+                                        crop    detect and crop only: lossless PNGs, no restoration
+                                        restore restore existing photos (no detection); keeps file
+                                                names unless -p is given
               -f, --format <fmt>      Output format: JPEG (default) or PNG
               -q, --quality <1-100>   JPEG compression quality (default: 100)
               -p, --pattern <pat>     File naming template (default: '{original}_{index}')
@@ -237,6 +256,8 @@ internal static class CommandLineParser
               PhotoCropperCli scan001.jpg
               PhotoCropperCli D:\Scans -o D:\Cropped -f PNG -r
               PhotoCropperCli -i scan1.jpg -i scan2.jpg -t 30 -q 95
+              PhotoCropperCli D:\Scans --stage crop -o D:\Cropped
+              PhotoCropperCli D:\Cropped --stage restore -o D:\Final
         
             Acknowledgements & Licenses:
               PhotoCropper is licensed under GNU General Public License v3.0.
@@ -249,6 +270,6 @@ internal static class CommandLineParser
     public static void PrintVersion()
     {
         var ver = PhotoCropper.Core.Updates.UpdateCheckService.GetCurrentVersion();
-        Console.WriteLine($"PhotoCropper CLI v{ver.Major}.{ver.Minor}.{Math.Max(0, ver.Build)} (.NET 10 / OpenCV)");
+        Console.WriteLine($"PhotoCropper CLI v{ver.Major}.{ver.Minor}.{Math.Max(0, ver.Build)} (.NET 11 / OpenCV)");
     }
 }

@@ -247,9 +247,6 @@ public static class PhotoExporter
         ClaimedExportPaths.TryRemove(path, out _);
     }
 
-    /// <summary>Drops all outstanding claims. Not needed in normal use; claims are released as files are written.</summary>
-    public static void ClearClaimedExportPaths() => ClaimedExportPaths.Clear();
-
     private static readonly string[] ExportExtensions = [".jpg", ".png"];
 
     /// <summary>Upper bound on photo indices probed when looking for previous exports.</summary>

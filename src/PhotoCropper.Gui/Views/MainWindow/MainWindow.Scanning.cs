@@ -38,9 +38,13 @@ internal sealed partial class MainWindow
         _scannerService = new Naps2ScannerService();
     }
 
-    private async void BtnScan_Click(object? sender, RoutedEventArgs e)
+    private async void BtnScan_Click(object? sender, RoutedEventArgs e) => await ScanNewAsync();
+
+    /// <summary>Scans from the configured scanner into the project.</summary>
+    /// <returns>The staged scan files (empty if nothing was scanned).</returns>
+    private async Task<IReadOnlyList<string>> ScanNewAsync()
     {
-        if (isLoading) return;
+        if (isLoading) return [];
 
         // 1. Ensure Work Directory
         var settings = SettingsManager.Instance.Settings;
@@ -97,11 +101,11 @@ internal sealed partial class MainWindow
         if (selectedDevice == null || string.IsNullOrEmpty(settings.SelectedScannerId) || _availableScanners.Count == 0)
         {
             await ShowScannerConfigAsync();
-            return;
+            return [];
         }
 
         int dpi = settings.ScannerDpi > 0 ? settings.ScannerDpi : 300;
-        await ExecuteScanAsync(workDir, selectedDevice, dpi);
+        return await ExecuteScanAsync(workDir, selectedDevice, dpi);
     }
 
     private async void BtnScannerConfig_Click(object? sender, RoutedEventArgs e)
@@ -120,12 +124,12 @@ internal sealed partial class MainWindow
         }
     }
 
-    private async Task ExecuteScanAsync(string workDir, ScannerDeviceInfo? selectedDevice, int dpi)
+    private async Task<IReadOnlyList<string>> ExecuteScanAsync(string workDir, ScannerDeviceInfo? selectedDevice, int dpi)
     {
         if (selectedDevice == null)
         {
             await ShowScannerConfigAsync();
-            return;
+            return [];
         }
 
         var settings = SettingsManager.Instance.Settings;
@@ -184,7 +188,7 @@ internal sealed partial class MainWindow
             ResetScannerService();
             string cancelledMsg = LocalizationService.GetString(ResourceKeys.MsgScanCancelled, "Scanning was cancelled or timed out.");
             lblStatus.Text = cancelledMsg;
-            return;
+            return [];
         }
         catch (ScannerNotFoundException ex)
         {
@@ -197,7 +201,7 @@ internal sealed partial class MainWindow
 
             lblStatus.Text = ex.Message;
             ShowScannerError(notFoundTitle, notFoundDetails);
-            return;
+            return [];
         }
         catch (Exception ex)
         {
@@ -212,7 +216,7 @@ internal sealed partial class MainWindow
 
             lblStatus.Text = failedTemplate;
             ShowScannerError(errorTitle, errorDetails);
-            return;
+            return [];
         }
         finally
         {
@@ -253,6 +257,8 @@ internal sealed partial class MainWindow
         {
             lblStatus.Text = LocalizationService.GetString(ResourceKeys.MsgNoScanData, "No image was returned by the scanner.");
         }
+
+        return stagedPaths;
     }
 
     private async Task RefreshScannersAsync(CancellationToken cancellationToken = default)

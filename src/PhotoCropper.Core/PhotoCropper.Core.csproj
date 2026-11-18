@@ -11,6 +11,7 @@
 		<PackageReference Include="Emgu.CV.Bitmap" />
 		<PackageReference Include="NAPS2.Sdk" />
 		<PackageReference Include="NAPS2.Images.ImageSharp" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime" />
 	</ItemGroup>
 
 	<ItemGroup>

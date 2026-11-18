@@ -69,7 +69,9 @@ internal static class Program
             return 0;
         }
 
-        return BatchProcessor.Execute(options, scanFiles);
+        return options.Stage == PhotoCropper.Cli.Models.PipelineStage.Restore
+            ? RestoreProcessor.Execute(options, scanFiles)
+            : BatchProcessor.Execute(options, scanFiles);
     }
 
     private static int PerformUpdateCheck()

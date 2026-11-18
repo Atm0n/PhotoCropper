@@ -62,6 +62,7 @@ internal sealed partial class MainWindow : Window
 
         PopulateLanguageMenu();
         ApplySettingsToUi();
+        InitializeStages();
     }
 
     private void Window_Closing(object? sender, WindowClosingEventArgs e)
@@ -253,6 +254,10 @@ internal sealed partial class MainWindow : Window
         }
 
         if (HandleTextInputGuard(e)) return;
+
+        // The editing shortcuts act on the scan editor, which only the Crops stage shows. Elsewhere only the
+        // global keys apply (F1 help, F5 scan); everything else goes to the stage's own controls.
+        if (_stage != ViewModels.AppStage.Crops && e.Key is not (Key.F1 or Key.F5)) return;
 
         if (await HandleReviewKey(e)) return;
         if (await HandleRefinementKey(e)) return;
@@ -660,5 +665,6 @@ internal sealed partial class MainWindow : Window
         undoHistory.Dispose();
         _sessionManager.Dispose();
         PhotoCropper.Core.Extraction.FaceOrientationService.ReleaseCachedDetectors();
+        _finishStageVm?.Dispose();
     }
 }

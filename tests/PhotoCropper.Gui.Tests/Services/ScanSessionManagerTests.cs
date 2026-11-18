@@ -27,6 +27,22 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
+    public void Move_ShouldReorderAndKeepTheSameScanSelected()
+    {
+        using var manager = new ScanSessionManager();
+        manager.AddRange([
+            new ScanSessionItem(_scan1, new DetectionOptions()),
+            new ScanSessionItem(_scan2, new DetectionOptions()),
+            new ScanSessionItem(_scan3, new DetectionOptions())]);
+        manager.MoveTo(2);
+
+        manager.Move(2, 0);
+
+        manager.Sessions.Select(s => Path.GetFileName(s.FilePath)).ShouldBe(["scan3.png", "scan1.png", "scan2.png"]);
+        manager.CurrentSession!.FilePath.ShouldBe(_scan3);
+    }
+
+    [Fact]
     public void ScanSessionManager_InitialState_ShouldBeEmpty()
     {
         using var manager = new ScanSessionManager();

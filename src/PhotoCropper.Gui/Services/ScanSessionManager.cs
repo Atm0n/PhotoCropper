@@ -115,6 +115,20 @@ internal sealed class ScanSessionManager : IDisposable
         CurrentIndex = 0;
     }
 
+    /// <summary>Moves a scan to another position (e.g. a rescan taking the place of the scan it replaces).</summary>
+    public void Move(int fromIndex, int toIndex)
+    {
+        if (fromIndex < 0 || fromIndex >= _sessions.Count || toIndex < 0 || toIndex >= _sessions.Count || fromIndex == toIndex) return;
+
+        var current = CurrentSession;
+        var item = _sessions[fromIndex];
+        _sessions.RemoveAt(fromIndex);
+        _sessions.Insert(toIndex, item);
+
+        // Keep the same scan selected.
+        if (current != null) CurrentIndex = _sessions.IndexOf(current);
+    }
+
     public ScanSessionItem? RemoveCurrent()
     {
         if (!HasScans) return null;

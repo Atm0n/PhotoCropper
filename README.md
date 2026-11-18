@@ -57,14 +57,18 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 - **Hierarchical AI Face & Landscape Orientation:** Extracted photos are automatically rotated upright.
   - **Embedded YuNet Neural Face Detector:** Analyzes 4 candidate orientations (`0°`, `90°`, `180°`, `270°`) and verifies full 5-point facial landmark anatomy (eye-to-nose-to-mouth sequencing, horizontal eye span, and level tilt) with zero cloud dependencies.
   - **Landscape & Water Scene Heuristics:** Evaluates sky gradients (blue and overcast), horizon textures, ground/vegetation, and water bodies (seas, lakes, rivers) with strict non-landscape guards to prevent false indoor rotations.
-- **Vintage Photo Color & Contrast Restoration:**
-  - **Warmth-Preserving White Balance:** Damped gray-world channel normalization (`[0.85, 1.18]`) neutralizes yellowing, aged paper, and dark storage discolouration without turning warm vintage memories icy blue.
-  - **LAB Contrast-Limited Adaptive Histogram Equalization (CLAHE):** Enhances local luminance dynamic range (`clipLimit: 1.3`) across shadow and highlight regions without channel clipping or artifacts.
-  - **Vibrancy Revival:** Gentle HSV saturation enhancement revives faded pigments while preserving natural skin tones.
-- **Automated Dust, Hair & Scratch Inpainting:**
-  - **Dual Morphological Defect Detection:** Combines Black-Hat and Top-Hat filters with median pre-smoothing to isolate dark hair/fibers, dust specks, and bright white hairline scratches.
-  - **Canny Edge Protection Masking:** Subtracts dilated high-frequency structural edges so fine photo contours, eyes, and sharp boundaries are strictly preserved without smearing or blurring.
-  - **Fast Marching Method Inpainting:** Uses `CvInvoke.Inpaint` (Alexandru Telea / FMM) within a localized 2.5px radius to invisibly blend away detected blemishes into surrounding textures.
+- **Vintage Photo Color & Contrast Restoration (per photo, in the Finish stage):**
+  - **Presets:** Faded colour print, Black & white, Sepia, Only clean dust, None. Apply one, tweak it, then "Copy settings to all".
+  - **Automatic restoration** at Gentle, Normal or Strong, with each part optional: colour cast removal (damped gray-world white balance, gains limited to `[0.85, 1.18]`), contrast (levels stretch and CLAHE on lightness only, so colour casts are not amplified) and faded-colour revival (vibrancy that spares skin tones).
+  - **Black & white handling:** black-and-white and sepia prints are detected automatically and skip white balance and saturation, keeping their tone; or choose "neutral grey" to remove tinting.
+  - **Manual adjustments:** brightness, contrast, warmth, tint and saturation (-100 to 100).
+  - **Photo editor:** clicking a photo opens it full-window with its settings in a sidebar and a filmstrip of the other photos (‹ › or ←/→ to switch, Esc back to the grid). Zoom with the mouse wheel (Fit, 100%), drag to move, and compare with a **before/after split** you drag across the photo; hold Space to see the original. The preview is rendered up to 2048 px and updates as settings change (from the full photo when dust removal or repairs need it).
+- **Repair Brush (Finish stage):** Paint over scratches, creases, tears or stains on the photo in the editor (B toggles the brush; zoom in for precision) and they are filled in from their surroundings (Telea inpainting) with grain matched to the area around them, so repairs don't look smooth or blurred on grainy photos, before colour restoration. Strokes are stored per photo in `session.json` relative to the photo's size, so they apply identically to the preview and the full-size export, can be undone or cleared, and are never baked into `Cropped/`. Strokes painted on an earlier crop of a different size are kept but not applied.
+  - **AI fill (optional):** choose *Fill: AI* to have new strokes filled by [LaMa](https://github.com/advimman/lama), a large-mask inpainting network, which continues edges and structures (walls, sky, window frames, grass) instead of blending colours — best for large damage and torn corners; it invents detail, so it is not suited to faces or text. The 208 MB model is downloaded once on request from a pinned revision of [Carve/LaMa-ONNX](https://huggingface.co/Carve/LaMa-ONNX), verified against its SHA-256 checksum, stored in `%LocalAppData%/PhotoCropper/models` (`~/.local/share/PhotoCropper/models` on Linux), and run locally with ONNX Runtime — photos are never uploaded. Each damaged area is cut out with its surroundings, filled at 512×512, scaled back, and only the painted pixels are replaced (about 2 s per area on a CPU; results are cached so preview updates don't recompute them). Without the model (e.g. CLI on another machine), AI strokes fall back to the quick fill.
+- **Automated Dust, Hair & Scratch Inpainting** (independent of the colour settings):
+  - **Dual Morphological Defect Detection:** Combines Black-Hat and Top-Hat filters with median pre-smoothing to isolate dark hair/fibers, dust specks, and bright white specks. The detection size scales with resolution (5 to 15 px).
+  - **Edge-Aware Protection:** A candidate is only removed when it stands alone; specks with other edges running past them (eyes, contours, text) are left untouched.
+  - **Fast Marching Method Inpainting:** Uses `CvInvoke.Inpaint` (Alexandru Telea / FMM) within a localized 2.5px radius to blend detected blemishes into surrounding textures.
 - **Hold-to-Compare (`Space` / `B`):** Instant zero-latency toggle between the pristine restored photo and the original unedited scan crop for effortless quality inspection.
 - **Interactive Refinement Mode:** Shrink-wraps the crop box around physical photos using an adaptive border-trimming algorithm, automatically detecting and removing scanner glass/bed white borders. The refined area is mapped back onto the scan, so the box overlay follows it and it is kept with the session.
 - **Local ROI Perspective Warp:** Instead of rotating the entire giant scan, only the region of interest is extracted and warped with `Inter.Cubic` interpolation with transparent alpha margins.
@@ -99,6 +103,12 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 - **Dedicated Scanner Configuration Dialog:** Set scan resolution (150, 300, 600 DPI) and color modes with one-click hardware enumeration and hot-reloading.
 
 ### 6. Project Work Directory & Automatic Crash Recovery
+- **Folder Pipeline (`RawScans/` → `Cropped/` → `Final/`):** Each stage of a project leaves real files in its own folder and never changes the previous one:
+  - `RawScans/`: the scans, exactly as acquired.
+  - `Cropped/`: one lossless PNG per photo (`scan_0003_p02.png`), straightened, cropped and rotated, with no colour restoration.
+  - `Final/`: the restored photos in your export format, with metadata and your naming pattern.
+
+  Every photo keeps a permanent ID, so re-cropping a scan keeps each photo's settings and replaces its files instead of duplicating them. `session.json` records where each file came from, so a final photo is known to be out of date when its cropped photo or restoration settings change. Projects created before this layout exported into `Cropped/`; those exports are moved to `Final/` automatically the first time the project is opened.
 - **Safe Raw Scan Auto-Staging (`RawScans/`):** When scanning or importing, images are immediately written to disk inside the project's `RawScans/` directory (`scan_0001.png`, `scan_0002.png`, etc.). Raw scans are never left stranded in volatile memory.
 - **Crash-Proof Session Persistence (`session.json`):** Tracks staged scan files as they are added, and records each scan's final crops (boxes, manual 90° rotations, auto-orientation, refinements) and exported files when it is exported. If the app is closed or interrupted by a system crash or power outage, launching the workspace prompts to resume the session. Crop edits made since a scan's last export are not yet saved.
 - **Crash Reports:** Unhandled errors are written to `%LocalAppData%/PhotoCropper/logs` (the last 20 are kept). Errors raised by UI actions show an error dialog pointing to the report and keep the app open so unsaved work can still be saved.
@@ -189,6 +199,13 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans -o
 # Batch process and isolate undetected scans for review
 dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans -o D:\Cropped --copy-undetected D:\NeedsReview
 
+# Run the pipeline in two steps: crop everything first (lossless PNG), restore later
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans --stage crop -o D:\Cropped
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Cropped --stage restore -o D:\Final
+
+# Restore photos that were already cropped elsewhere (no detection)
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\OldPhotos --stage restore --year 1975
+
 # Display all CLI options and flags
 dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 ```
@@ -198,7 +215,8 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | Option | Description | Default |
 |---|---|---|
 | `-i, --input <path>` | Input image file or directory of scans (positional arguments accepted) | *Required* |
-| `-o, --output <dir>` | Output destination directory for extracted photos | `<scan_dir>/cropped` |
+| `-o, --output <dir>` | Output destination directory for extracted photos | `<scan_dir>/cropped` (`<input_dir>/restored` with `--stage restore`) |
+| `--stage <all\|crop\|restore>` | Pipeline stage to run: `all` detects, crops, restores and exports; `crop` writes lossless PNGs with geometry fixes only (no restoration); `restore` restores existing photo files without detection, keeping their names unless `-p` is given | `all` |
 | `-f, --format <fmt>` | Output file format: `JPEG` or `PNG` | `JPEG` |
 | `-q, --quality <1-100>` | JPEG compression quality | `100` |
 | `-p, --pattern, --naming-pattern <pat>` | Output naming template (`{original}`, `{index:02}`, `{year}`, `{date}`, `{total}`) | `{original}_{index}` |
@@ -296,6 +314,10 @@ dotnet publish src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -c Release -r linux-
 - **YuNet Face Detection Model (`face_detection_yunet_2023mar.onnx`)**:
   - Developed by Shiqi Yu & OpenCV Zoo contributors ([opencv/opencv_zoo](https://github.com/opencv/opencv_zoo)).
   - Licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+- **LaMa inpainting model (`lama_fp32.onnx`, optional download)**:
+  - "Resolution-robust Large Mask Inpainting with Fourier Convolutions" by Roman Suvorov et al., Samsung AI Center ([advimman/lama](https://github.com/advimman/lama)); ONNX export by Carve ([Carve/LaMa-ONNX](https://huggingface.co/Carve/LaMa-ONNX)).
+  - Licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+- **ONNX Runtime**: runs the LaMa model ([microsoft/onnxruntime](https://github.com/microsoft/onnxruntime), MIT License).
 - **Emgu.CV**: .NET cross-platform wrapper for OpenCV ([Emgu CV](https://www.emgu.com/)).
 - **Avalonia UI**: Cross-platform desktop XAML UI framework ([Avalonia UI](https://avaloniaui.net/)).
 - **NAPS2.Sdk**: Cross-platform scanning framework supporting TWAIN, WIA, SANE, and eSCL by Ben Olden-Cooligan ([NAPS2](https://www.naps2.com/sdk)).

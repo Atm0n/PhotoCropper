@@ -47,13 +47,32 @@ public sealed class WorkspaceScanEntry
     public bool IsProcessed { get; set; }
     public int ExtractedPhotoCount { get; set; }
     public PhotoExportMetadata? Metadata { get; set; }
+
+    /// <summary>Next unused photo number for this scan; numbers are never reused, so photo IDs stay unique.</summary>
+    public int NextPhotoNumber { get; set; } = 1;
 }
 
 public sealed class WorkspaceSessionState
 {
+    /// <summary>Current session format: 2.0 adds the RawScans → Cropped → Final pipeline (<see cref="Photos"/>).</summary>
+    public const string CurrentVersion = "2.0";
+
+    /// <summary>
+    /// Format of this session. Defaults to "1.0" so files written before versions 2+ (which lack the field
+    /// or say "1.0") are recognised and migrated; new sessions are stamped with <see cref="CurrentVersion"/>.
+    /// </summary>
     public string Version { get; set; } = "1.0";
     public DateTime LastUpdatedUtc { get; set; } = DateTime.UtcNow;
 
     [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]
     public Collection<WorkspaceScanEntry> Scans { get; } = [];
+
+    /// <summary>Every photo in the pipeline, from scans and imports.</summary>
+    [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]
+    public Collection<ProjectPhoto> Photos { get; } = [];
+
+    /// <summary>Next unused number for imported photos.</summary>
+    public int NextImportNumber { get; set; } = 1;
+
+    public static WorkspaceSessionState CreateNew() => new() { Version = CurrentVersion };
 }
