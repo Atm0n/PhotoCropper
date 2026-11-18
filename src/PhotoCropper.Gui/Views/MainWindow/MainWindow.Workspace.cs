@@ -106,7 +106,7 @@ internal sealed partial class MainWindow
                 ToolTip.SetTip(lblCurrentProject, defaultTip);
             }
 
-            Title = "PhotoCropper - Intelligent Photo Extractor";
+            Title = LocalizationService.GetString(ResourceKeys.AppTitle, "PhotoCropper - Intelligent Photo Extractor");
         }
     }
 

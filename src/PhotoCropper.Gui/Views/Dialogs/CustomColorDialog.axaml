@@ -33,20 +33,20 @@
 				<!-- Bounding Box Miniature Simulation -->
 				<Border Grid.Column="1" Height="48" CornerRadius="6" Background="#1a1a1a" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Padding="8,6" Margin="0,0,14,0">
 					<Border x:Name="borderBoxSim" BorderThickness="2" CornerRadius="3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-						<TextBlock Text="Sample Photo" FontSize="10" Foreground="#888888" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						<TextBlock Text="{DynamicResource LblSamplePhoto}" FontSize="10" Foreground="#888888" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 					</Border>
 				</Border>
 
 				<!-- Hex Code Input -->
 				<StackPanel Grid.Column="2" Width="100" VerticalAlignment="Center" Spacing="3">
-					<TextBlock Text="Hex Code" FontSize="10" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+					<TextBlock Text="{DynamicResource LblHexCode}" FontSize="10" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 					<TextBox x:Name="txtHex" Text="#00D4FF" FontSize="12" FontFamily="Consolas, monospace" HorizontalContentAlignment="Center" TextChanged="TxtHex_TextChanged"/>
 				</StackPanel>
 			</Grid>
 
 			<!-- Quick Preset Swatches -->
 			<StackPanel Spacing="6" Margin="0,4">
-				<TextBlock Text="High-Contrast Presets" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+				<TextBlock Text="{DynamicResource LblHighContrastPresets}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 				<WrapPanel x:Name="pnlSwatches" Margin="0,2"/>
 			</StackPanel>
 
@@ -56,21 +56,21 @@
 			<StackPanel Spacing="8">
 				<!-- Red -->
 				<Grid ColumnDefinitions="45, *, 35">
-					<TextBlock Grid.Column="0" Text="Red" FontSize="11" VerticalAlignment="Center" Foreground="#ff5555"/>
+					<TextBlock Grid.Column="0" Text="{DynamicResource LblRed}" FontSize="11" VerticalAlignment="Center" Foreground="#ff5555"/>
 					<Slider Grid.Column="1" x:Name="sliderR" Minimum="0" Maximum="255" SmallChange="1" LargeChange="10" ValueChanged="Slider_ValueChanged" VerticalAlignment="Center"/>
 					<TextBlock Grid.Column="2" x:Name="txtValR" Text="0" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 				</Grid>
 
 				<!-- Green -->
 				<Grid ColumnDefinitions="45, *, 35">
-					<TextBlock Grid.Column="0" Text="Green" FontSize="11" VerticalAlignment="Center" Foreground="#00e676"/>
+					<TextBlock Grid.Column="0" Text="{DynamicResource LblGreen}" FontSize="11" VerticalAlignment="Center" Foreground="#00e676"/>
 					<Slider Grid.Column="1" x:Name="sliderG" Minimum="0" Maximum="255" SmallChange="1" LargeChange="10" ValueChanged="Slider_ValueChanged" VerticalAlignment="Center"/>
 					<TextBlock Grid.Column="2" x:Name="txtValG" Text="212" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 				</Grid>
 
 				<!-- Blue -->
 				<Grid ColumnDefinitions="45, *, 35">
-					<TextBlock Grid.Column="0" Text="Blue" FontSize="11" VerticalAlignment="Center" Foreground="#3399ff"/>
+					<TextBlock Grid.Column="0" Text="{DynamicResource LblBlue}" FontSize="11" VerticalAlignment="Center" Foreground="#3399ff"/>
 					<Slider Grid.Column="1" x:Name="sliderB" Minimum="0" Maximum="255" SmallChange="1" LargeChange="10" ValueChanged="Slider_ValueChanged" VerticalAlignment="Center"/>
 					<TextBlock Grid.Column="2" x:Name="txtValB" Text="255" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 				</Grid>

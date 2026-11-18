@@ -170,7 +170,7 @@ internal sealed partial class ExportSettingsDialog : Window
     {
         if (sldJpegQuality == null || txtQualityValue == null) return;
         int val = (int)Math.Round(sldJpegQuality.Value);
-        txtQualityValue.Text = val >= 100 ? "100% (Max)" : $"{val}%";
+        txtQualityValue.Text = val >= 100 ? LocalizationService.GetString(ResourceKeys.LblQualityMax, "100% (Max)") : $"{val}%";
     }
 
     private void CbNamingPreset_SelectionChanged(object? sender, SelectionChangedEventArgs e)
