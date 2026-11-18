@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> **Upgrading from 2.x:** a project is converted the first time 3.0 opens it (exports move from `Cropped/` to `Final/`, and `session.json` gains each photo's history and Finish settings). Back up a project before opening it if you may need 2.x again: version 2.9 still opens a converted project, but saving it there drops the photo list, Finish settings and export records; 3.0 then crops the photos again from the scans, with default Finish settings.
+
 ### Added
 - **Folder pipeline for projects**: `RawScans/` → `Cropped/` (one lossless PNG per photo, geometry only) → `Final/` (restored, with metadata). Photos get permanent IDs (`scan_0003_p02`), so re-cropping keeps their settings and replaces their files; `session.json` (format 2.0) records each photo's history and knows when a final photo is out of date. Existing projects are migrated automatically: their exports move from `Cropped/` to `Final/`.
 - **Stage bar in the GUI (1 Scan → 2 Crops → 3 Finish)**: Scan shows every scan as a thumbnail card with its photo count, imports scan files into the project, and lets you **rescan** a page (the new scan takes its place) or **discard** it (two clicks; removes the file and its photos) while scanning; Crops is the scan editor (restoration moved out of it); Finish shows every cropped photo with its own restoration settings and status, a **before/after preview** of the selected photo (updating as settings change), exports what changed to `Final/`, and imports photos that are already cropped. Moving to Finish saves the crops of changed scans to `Cropped/`.
