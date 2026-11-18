@@ -1,0 +1,29 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PhotoCropper.Gui.ViewModels"
+             x:Class="PhotoCropper.Gui.Views.Overlays.RefineView"
+             x:DataType="vm:RefineViewModel"
+             Background="{DynamicResource AppOverlayScrimBrush}">
+	<Grid RowDefinitions="*, Auto" Margin="50">
+		<Border Grid.Row="0" Margin="20" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource AppWorkspaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+			<Panel x:Name="pnlRefineImage" Background="Transparent"
+				   PointerPressed="OnPointerPressed"
+				   PointerMoved="OnPointerMoved"
+				   PointerReleased="OnPointerReleased">
+				<Image x:Name="imgRefine" Source="{Binding Preview}" Stretch="Uniform" Margin="20"
+					   VerticalAlignment="Center" HorizontalAlignment="Center"/>
+				<Canvas x:Name="cnvRefineCrop" Background="Transparent" IsHitTestVisible="False">
+					<Rectangle x:Name="rectRefineCrop" Stroke="{DynamicResource AppAccentBrush}" StrokeThickness="2" Fill="#333399ff" IsVisible="False"/>
+				</Canvas>
+			</Panel>
+		</Border>
+		<StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="30" Margin="20">
+			<Button x:Name="btnAcceptRefine" Command="{Binding AcceptCommand}" Padding="40,15" CornerRadius="8" Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}" Focusable="False">
+				<TextBlock Text="{DynamicResource BtnAccept}" FontSize="18" FontWeight="Bold"/>
+			</Button>
+			<Button x:Name="btnRejectRefine" Command="{Binding RejectCommand}" Padding="40,15" CornerRadius="8" Background="{DynamicResource AppButtonDangerBrush}" Foreground="{DynamicResource AppButtonDangerTextBrush}" Focusable="False">
+				<TextBlock Text="{DynamicResource BtnReject}" FontSize="18" FontWeight="Bold"/>
+			</Button>
+		</StackPanel>
+	</Grid>
+</UserControl>

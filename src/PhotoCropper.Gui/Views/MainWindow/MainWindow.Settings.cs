@@ -267,11 +267,7 @@ internal sealed partial class MainWindow
         rectCrop.Stroke = new SolidColorBrush(stroke);
         rectCrop.Fill = new SolidColorBrush(fill);
 
-        if (rectRefineCrop != null)
-        {
-            rectRefineCrop.Stroke = new SolidColorBrush(stroke);
-            rectRefineCrop.Fill = new SolidColorBrush(fill);
-        }
+        viewRefine?.SetSelectionColor(stroke, fill);
 
         if (rectCurrentDetectionColor != null)
         {

@@ -50,6 +50,10 @@ internal sealed partial class MainWindow : Window
 
         _cropsVm = new CropsStageViewModel(this, _sessionManager, undoHistory, () => SettingsManager.Instance.Settings, SettingsManager.Instance.Save);
         grdMainWorkspace.DataContext = _cropsVm;
+        _reviewVm = new ReviewViewModel(this, undoHistory);
+        _refineVm = new RefineViewModel(this, undoHistory);
+        viewReview.DataContext = _reviewVm;
+        viewRefine.DataContext = _refineVm;
 
         // Invalidate undo/redo entries for a scan when its engine is deactivated.
         // Re-activating the engine recreates it from scratch (DetectPhotos), so any
@@ -297,22 +301,8 @@ internal sealed partial class MainWindow : Window
 
     private async ValueTask<bool> HandleRefinementKey(KeyEventArgs e)
     {
-        if (!isRefining) return false;
-
-        switch (e.Key)
-        {
-            case Key.Enter:
-            case Key.A:
-                await AcceptRefineAsync();
-                e.Handled = true;
-                break;
-            case Key.Back:
-            case Key.Escape:
-            case Key.C:
-                RejectRefine();
-                e.Handled = true;
-                break;
-        }
+        if (!await _refineVm.HandleKeyAsync(e.Key)) return false;
+        e.Handled = true;
         return true;
     }
 
@@ -586,15 +576,6 @@ internal sealed partial class MainWindow : Window
         cropOverlay.InvalidateVisual();
     }
 
-    internal void SetRefineImage(Emgu.CV.Mat? mat)
-    {
-        if (imgRefine == null) return;
-
-        var oldSource = imgRefine.Source as IDisposable;
-        imgRefine.Source = mat != null ? MatBitmapConverter.ToAvaloniaBitmap(mat) : null;
-        DeferDispose(oldSource);
-    }
-
     internal static void DeferDispose(IDisposable? obj, int delayMs = 300)
     {
         if (obj == null) return;
@@ -637,7 +618,8 @@ internal sealed partial class MainWindow : Window
 
         base.OnClosed(e);
         SetMainImage(null);
-        SetRefineImage(null);
+        _refineVm.Reject();
+        _reviewVm.Close();
         ClearGalleryBitmaps();
         _scannerService.Dispose();
         undoHistory.Dispose();

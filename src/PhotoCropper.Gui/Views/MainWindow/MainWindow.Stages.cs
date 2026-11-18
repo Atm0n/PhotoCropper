@@ -14,7 +14,7 @@ namespace PhotoCropper.Gui;
 /// The three-stage workflow: 1 Scan (RawScans) → 2 Crops (Cropped) → 3 Finish (Final). The Crops stage is the
 /// existing scan editor; Scan and Finish are MVVM views whose view-models reach the window through IStageHost.
 /// </summary>
-internal sealed partial class MainWindow : IStageHost, ICropsStageHost
+internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineHost
 {
     private AppStage _stage = AppStage.Crops;
     private ScanStageViewModel? _scanStageVm;
@@ -201,6 +201,21 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost
     void ICropsStageHost.ShowBoxes(PhotoCropper.Core.PhotoCropperEngine engine) => ShowScan(engine);
 
     void ICropsStageHost.DisposeLater(IReadOnlyCollection<IDisposable> items) => DeferDispose(items);
+
+    // ---- IRefineHost ----
+
+    private RefineViewModel _refineVm = null!;
+
+    Task<bool> IRefineHost.RunBusyAsync(string message, Func<CancellationToken, Task> work) => ExecuteWithLoadingAsync(message, work);
+
+    void IRefineHost.DisposeLater(IReadOnlyCollection<IDisposable> items) => DeferDispose(items);
+
+    void IRefineHost.Refined(PhotoCropper.Core.PhotoCropperEngine engine, int photoIndex)
+    {
+        ShowScan(engine);
+        _cropsVm.ShowPhotos(photoIndex);
+        UpdateDetectionCoverageLabel();
+    }
 
     // ---- IStageHost ----
 
