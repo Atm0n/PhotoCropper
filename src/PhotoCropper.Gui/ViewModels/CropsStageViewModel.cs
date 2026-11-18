@@ -375,6 +375,52 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
         });
     }
 
+    /// <summary>
+    /// Uses the colour at <paramref name="pixel"/> (scan pixels) as the scan's background and auto-tunes detection
+    /// for it: a picked background usually means automatic detection struggled, so the old settings rarely fit.
+    /// </summary>
+    public async Task UseBackgroundColorAtAsync(System.Drawing.Point pixel)
+    {
+        if (!CanStartWork) return;
+
+        var session = Current!;
+        var engine = session.Activate();
+        await _host.RunBusyAsync(LocalizationService.GetString(ResourceKeys.MsgAutoTuning, "Auto-tuning detection parameters..."), async ct =>
+        {
+            session.IsModified = true;
+            var result = await Task.Run(() =>
+            {
+                engine.SetCustomBackgroundFromPixel(pixel.X, pixel.Y);
+                return engine.AutoTune();
+            }, ct);
+            ShowOptions(engine.CurrentOptions);
+            _host.ShowScanResult(engine);
+            UpdateCoverage();
+            _host.ShowStatus(LocalizationService.Format(
+                ResourceKeys.MsgBackgroundAutoTuned,
+                "Custom background color applied and detection auto-tuned: found {0} photos.",
+                result.PhotoCount));
+        });
+    }
+
+    /// <summary>Goes back to the automatically sampled background and detects again.</summary>
+    public async Task ResetBackgroundColorAsync()
+    {
+        if (!CanStartWork) return;
+
+        var session = Current!;
+        var engine = session.Activate();
+        engine.CustomBackgroundColorHsv = null;
+        session.IsModified = true;
+        await _host.RunBusyAsync(LocalizationService.GetString(ResourceKeys.MsgReprocessing, "Reprocessing with automatic background..."), async ct =>
+        {
+            await Task.Run(engine.DetectPhotos, ct);
+            _host.ShowScanResult(engine);
+            UpdateCoverage();
+            _host.ShowStatus(LocalizationService.Format(ResourceKeys.MsgDetectionComplete, "Detection complete. Found {0} photos.", engine.DetectedPhotos.Count));
+        });
+    }
+
     /// <summary>"Scan 3 of 12", or "No files loaded".</summary>
     public void UpdateScanCounter()
     {

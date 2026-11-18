@@ -392,47 +392,19 @@ internal sealed partial class MainWindow
 
     private async Task SampleBackgroundColorAtPointerAsync(Point uiPoint)
     {
-        if (ScanSessions.Count == 0 || tglColorPicker == null || btnResetBackground == null) return;
+        if (ScanSessions.Count == 0 || tglColorPicker == null) return;
         var photo = ScanSessions[CurrentIndex].Activate();
-        var imageRect = GetImageRectInsideControl();
-        var originalSize = new System.Drawing.Size(photo.Original.Width, photo.Original.Height);
-        var pixel = CoordinateMapper.MapUiPointToImagePixel(uiPoint, imageRect, originalSize);
+        var pixel = CoordinateMapper.MapUiPointToImagePixel(uiPoint, GetImageRectInsideControl(), new System.Drawing.Size(photo.Original.Width, photo.Original.Height));
 
         pnlOriginal.Cursor = Cursor.Default;
         tglColorPicker.IsChecked = false;
 
-        string samplingMsg = LocalizationService.GetString(ResourceKeys.MsgClickToSample, "Sampling background color...");
-        string completeMsg = LocalizationService.GetString(ResourceKeys.MsgBackgroundSampled, "Custom background color applied.");
-
-        await ExecuteWithLoadingAsync(samplingMsg, async ct =>
-        {
-            ScanSessions[CurrentIndex].IsModified = true;
-            await Task.Run(() =>
-            {
-                photo.SetCustomBackgroundFromPixel(pixel.X, pixel.Y);
-                photo.DetectPhotos();
-            }, ct);
-            btnResetBackground.IsEnabled = true;
-            await LoadPhotosToGuiAsync();
-        }, completeMsg);
+        await _cropsVm.UseBackgroundColorAtAsync(pixel);
     }
 
     private async void BtnResetBackground_Click(object? sender, RoutedEventArgs e)
     {
-        if (ScanSessions.Count == 0 || btnResetBackground == null) return;
-        var photo = ScanSessions[CurrentIndex].Activate();
-
-        photo.CustomBackgroundColorHsv = null;
-        ScanSessions[CurrentIndex].IsModified = true;
-        btnResetBackground.IsEnabled = false;
-
-        string reprocessingMsg = LocalizationService.GetString(ResourceKeys.MsgReprocessing, "Reprocessing with automatic background...");
-        string completeMsg = LocalizationService.GetString(ResourceKeys.MsgDetectionComplete, "Detection complete.");
-
-        await ExecuteWithLoadingAsync(reprocessingMsg, async ct =>
-        {
-            await Task.Run(() => photo.DetectPhotos(), ct);
-            await LoadPhotosToGuiAsync();
-        }, completeMsg);
+        if (ScanSessions.Count == 0) return;
+        await _cropsVm.ResetBackgroundColorAsync();
     }
 }

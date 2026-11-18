@@ -219,6 +219,7 @@
 	<sys:String x:Key="BtnResetBackground">Fons Automàtic</sys:String>
 	<sys:String x:Key="MsgClickToSample">Faci clic a qualsevol part del fons de l'escaneig per mostrejar-ne el color...</sys:String>
 	<sys:String x:Key="MsgBackgroundSampled">Color de fons personalitzat aplicat.</sys:String>
+	<sys:String x:Key="MsgBackgroundAutoTuned">Color de fons personalitzat aplicat i detecció ajustada automàticament: {0} fotos trobades.</sys:String>
 	<sys:String x:Key="BtnAutoTune">Auto-Ajustar</sys:String>
 	<sys:String x:Key="TipAutoTune">Cerca automàticament els paràmetres de detecció òptims per a aquest escaneig. (Drecera: T)</sys:String>
 	<sys:String x:Key="MsgAutoTuning">Auto-ajustant paràmetres de detecció...</sys:String>

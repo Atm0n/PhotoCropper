@@ -261,6 +261,40 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task PickingABackgroundColor_AutoTunesDetectionForIt()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+        _host.BusyMessages.Clear();
+        _host.Shown.Clear();
+
+        await vm.UseBackgroundColorAtAsync(new System.Drawing.Point(20, 20));
+
+        engine.CustomBackgroundColorHsv.ShouldNotBeNull();
+        engine.CurrentOptions.CustomBackgroundColorHsv.ShouldNotBeNull("auto-tune must keep the picked colour");
+        engine.DetectedPhotos.Count.ShouldBe(2);
+        _host.BusyMessages.Count.ShouldBe(1);
+        _host.Shown.ShouldHaveSingleItem().ShouldBeSameAs(engine);
+        _host.Statuses[^1].ShouldContain("2");
+        _sessions.Sessions[0].IsModified.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ResettingTheBackgroundColor_DetectsWithTheAutomaticBackground()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+        await vm.UseBackgroundColorAtAsync(new System.Drawing.Point(20, 20));
+        _host.Shown.Clear();
+
+        await vm.ResetBackgroundColorAsync();
+
+        engine.CustomBackgroundColorHsv.ShouldBeNull();
+        _host.Shown.ShouldHaveSingleItem();
+        engine.DetectedPhotos.Count.ShouldBe(2);
+    }
+
+    [Fact]
     public void ResizeFromCorner_KeepsTheOppositeCorner()
     {
         var box = new CropCandidate
