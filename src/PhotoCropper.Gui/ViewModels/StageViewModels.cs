@@ -767,7 +767,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         if (result == null || !needsExactPass) return;
         if (FullQualityDelay > TimeSpan.Zero)
         {
-            await Task.Delay(FullQualityDelay);
+            await Task.Delay(FullQualityDelay, CancellationToken.None);
             if (version != _previewVersion) return;
         }
 
@@ -919,7 +919,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
                         failures.Add($"{row.Title}: {ex.Message}");
                     }
                 }
-            }));
+            }, CancellationToken.None));
 
         _host.SaveWorkspace();
         foreach (var row in stale) row.NotifyRecordChanged();
@@ -950,7 +950,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
                 {
                     PhotoPipelineService.ImportPhoto(workDir, workspace, path, restoration);
                 }
-            }));
+            }, CancellationToken.None));
 
         _host.SaveWorkspace();
         Refresh();

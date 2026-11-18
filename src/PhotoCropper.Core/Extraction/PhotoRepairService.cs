@@ -279,7 +279,7 @@ public static class PhotoRepairService
         Rectangle area = Rectangle.Inflate(CvInvoke.BoundingRectangle(points), 4, 4);
         area.Intersect(new Rectangle(Point.Empty, size));
 
-        var random = new Random(20241117);
+        var random = new Random(20241117); // NOSONAR: visual film grain with a fixed seed, not security
         var values = new float[area.Width * area.Height];
         for (int i = 0; i < values.Length; i++)
         {
