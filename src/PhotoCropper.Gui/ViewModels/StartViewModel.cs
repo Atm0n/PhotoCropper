@@ -48,6 +48,12 @@ internal sealed partial class RecentProjectItem(string folder, string details, b
 /// </summary>
 internal sealed partial class StartViewModel(IStartHost host) : ObservableObject
 {
+    /// <summary>
+    /// Characters a project name can't contain: those Windows forbids in a folder name on every platform (Linux only
+    /// forbids '/'), so a project stays usable when its folder is copied between systems.
+    /// </summary>
+    private static readonly char[] InvalidNameChars = [.. Path.GetInvalidFileNameChars().Union("\\/:*?\"<>|")];
+
     internal const int ThumbnailWidth = 160;
 
     public ObservableCollection<RecentProjectItem> Recent { get; } = [];
@@ -193,7 +199,7 @@ internal sealed partial class StartViewModel(IStartHost host) : ObservableObject
     private async Task Create()
     {
         string name = NewName.Trim();
-        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name is "." or "..")
+        if (name.IndexOfAny(InvalidNameChars) >= 0 || name is "." or "..")
         {
             CreateError = LocalizationService.GetString(ResourceKeys.MsgProjectNameInvalid, "A project name can't contain \\ / : * ? \" < > |");
             return;
