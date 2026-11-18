@@ -289,7 +289,7 @@ internal sealed partial class MainWindow : Window
 
     private bool HandleViewKey(KeyEventArgs e)
     {
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.A && _cropsVm.IsGridView)
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.A)
         {
             SelectAllGalleryPhotos();
             e.Handled = true;
@@ -344,7 +344,7 @@ internal sealed partial class MainWindow : Window
                 return true;
             }
 
-            if (_cropsVm.IsGridView && _cropsVm.SelectedPhotoIndices().Count > 1)
+            if (_cropsVm.SelectedPhotoIndices().Count > 1)
             {
                 ClearGallerySelection();
                 e.Handled = true;

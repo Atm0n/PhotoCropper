@@ -17,6 +17,8 @@ internal static class ResourceKeys
     public const string BtnDelete = nameof(BtnDelete);
     public const string BtnRotate = nameof(BtnRotate);
     public const string BtnDeleteCount = nameof(BtnDeleteCount);
+    public const string BtnDeletePhoto = nameof(BtnDeletePhoto);
+    public const string LblDetectionSettings = nameof(LblDetectionSettings);
     public const string BtnRotateCount = nameof(BtnRotateCount);
     public const string BtnSelectAll = nameof(BtnSelectAll);
     public const string BtnClearSelection = nameof(BtnClearSelection);

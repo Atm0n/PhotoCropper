@@ -27,10 +27,6 @@
 	<sys:String x:Key="TxtNoFiles">Sense fitxers</sys:String>
 	<sys:String x:Key="HeaderOriginal">ESCANEIG ORIGINAL (CLIC I ARROSSEGAR PER RETALLAR)</sys:String>
 	<sys:String x:Key="HeaderDetected">FOTOS DETECTADES</sys:String>
-	<sys:String x:Key="ViewCarousel">Individual</sys:String>
-	<sys:String x:Key="ViewGrid">Graella</sys:String>
-	<sys:String x:Key="TipViewCarousel">Vista individual de fotos (Drecera: 1)</sys:String>
-	<sys:String x:Key="TipViewGrid">Vista en graella de totes les fotos (Drecera: 2)</sys:String>
 	<sys:String x:Key="BtnDelete">Eliminar</sys:String>
 	<sys:String x:Key="BtnRotate">Girar 90°</sys:String>
 	<sys:String x:Key="BtnRefine">Ajustar Vores</sys:String>
@@ -295,7 +291,7 @@
 	<sys:String x:Key="TitleResumeSession">Reprendre Sessió d'Escaneig</sys:String>
 	<sys:String x:Key="LblWorkDirStatus">Carpeta: {0}</sys:String>
 	<sys:String x:Key="LblNoWorkDir">Sense Carpeta de Treball</sys:String>
-	<sys:String x:Key="BtnDeleteScan">Eliminar Escaneig</sys:String>
+	<sys:String x:Key="BtnDeleteScan">Elimina l'escaneig</sys:String>
 	<sys:String x:Key="TipDeleteScan">Elimina aquest escaneig sencer del projecte i del disc</sys:String>
 	<sys:String x:Key="MsgScanDeleted">Escaneig '{0}' eliminat.</sys:String>
 	<sys:String x:Key="BtnCancel">Cancel·lar</sys:String>
@@ -335,7 +331,9 @@
 	<sys:String x:Key="BtnClearSelection">Deseleccionar</sys:String>
 	<sys:String x:Key="TipClearSelection">Deseleccionar fotos</sys:String>
 	<sys:String x:Key="TxtSelectedCount">({0} de {1} seleccionades)</sys:String>
-	<sys:String x:Key="BtnDeleteCount">Eliminar ({0})</sys:String>
+	<sys:String x:Key="BtnDeleteCount">Elimina {0} fotos</sys:String>
+	<sys:String x:Key="BtnDeletePhoto">Elimina la foto</sys:String>
+	<sys:String x:Key="LblDetectionSettings">Configuració de detecció</sys:String>
 	<sys:String x:Key="BtnRotateCount">Girar ({0})</sys:String>
 	<sys:String x:Key="MsgBatchRotating">Girant {0} fotos...</sys:String>
 	<sys:String x:Key="MsgBatchRotated">{0} fotos girades.</sys:String>

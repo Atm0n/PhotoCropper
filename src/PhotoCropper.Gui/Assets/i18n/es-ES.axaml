@@ -27,10 +27,6 @@
 	<sys:String x:Key="TxtNoFiles">Sin archivos</sys:String>
 	<sys:String x:Key="HeaderOriginal">ESCANEO ORIGINAL (CLIC Y ARRASTRAR PARA RECORTAR)</sys:String>
 	<sys:String x:Key="HeaderDetected">FOTOS DETECTADAS</sys:String>
-	<sys:String x:Key="ViewCarousel">Individual</sys:String>
-	<sys:String x:Key="ViewGrid">Cuadrícula</sys:String>
-	<sys:String x:Key="TipViewCarousel">Vista individual de fotos (Atajo: 1)</sys:String>
-	<sys:String x:Key="TipViewGrid">Vista en cuadrícula de todas las fotos (Atajo: 2)</sys:String>
 	<sys:String x:Key="BtnDelete">Eliminar</sys:String>
 	<sys:String x:Key="BtnRotate">Rotar 90°</sys:String>
 	<sys:String x:Key="BtnRefine">Ajustar Bordes</sys:String>
@@ -295,7 +291,7 @@
 	<sys:String x:Key="TitleResumeSession">Reanudar Sesión de Escaneo</sys:String>
 	<sys:String x:Key="LblWorkDirStatus">Carpeta: {0}</sys:String>
 	<sys:String x:Key="LblNoWorkDir">Sin Carpeta de Trabajo</sys:String>
-	<sys:String x:Key="BtnDeleteScan">Eliminar Escaneo</sys:String>
+	<sys:String x:Key="BtnDeleteScan">Eliminar escaneo</sys:String>
 	<sys:String x:Key="TipDeleteScan">Elimina este escaneo completo del proyecto y del disco</sys:String>
 	<sys:String x:Key="MsgScanDeleted">Escaneo '{0}' eliminado.</sys:String>
 	<sys:String x:Key="BtnCancel">Cancelar</sys:String>
@@ -335,7 +331,9 @@
 	<sys:String x:Key="BtnClearSelection">Deseleccionar</sys:String>
 	<sys:String x:Key="TipClearSelection">Deseleccionar fotos</sys:String>
 	<sys:String x:Key="TxtSelectedCount">({0} de {1} seleccionadas)</sys:String>
-	<sys:String x:Key="BtnDeleteCount">Eliminar ({0})</sys:String>
+	<sys:String x:Key="BtnDeleteCount">Eliminar {0} fotos</sys:String>
+	<sys:String x:Key="BtnDeletePhoto">Eliminar foto</sys:String>
+	<sys:String x:Key="LblDetectionSettings">Configuración de detección</sys:String>
 	<sys:String x:Key="BtnRotateCount">Rotar ({0})</sys:String>
 	<sys:String x:Key="MsgBatchRotating">Rotando {0} fotos...</sys:String>
 	<sys:String x:Key="MsgBatchRotated">{0} fotos rotadas.</sys:String>

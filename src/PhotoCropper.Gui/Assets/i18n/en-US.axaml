@@ -27,10 +27,6 @@
 	<sys:String x:Key="TxtNoFiles">No files loaded</sys:String>
 	<sys:String x:Key="HeaderOriginal">ORIGINAL SCAN (CLICK &amp; DRAG TO MANUALLY CROP)</sys:String>
 	<sys:String x:Key="HeaderDetected">DETECTED PHOTOS</sys:String>
-	<sys:String x:Key="ViewCarousel">Single</sys:String>
-	<sys:String x:Key="ViewGrid">Grid</sys:String>
-	<sys:String x:Key="TipViewCarousel">Single photo inspection view (Shortcut: 1)</sys:String>
-	<sys:String x:Key="TipViewGrid">Grid gallery overview of all detected photos (Shortcut: 2)</sys:String>
 	<sys:String x:Key="BtnDelete">Delete</sys:String>
 	<sys:String x:Key="BtnRotate">Rotate 90°</sys:String>
 	<sys:String x:Key="BtnRefine">Refine Edges</sys:String>
@@ -295,7 +291,7 @@
 	<sys:String x:Key="TitleResumeSession">Resume Scanning Session</sys:String>
 	<sys:String x:Key="LblWorkDirStatus">Work Folder: {0}</sys:String>
 	<sys:String x:Key="LblNoWorkDir">No Work Folder</sys:String>
-	<sys:String x:Key="BtnDeleteScan">Delete Scan</sys:String>
+	<sys:String x:Key="BtnDeleteScan">Delete scan</sys:String>
 	<sys:String x:Key="TipDeleteScan">Delete this entire scan from the project and disk</sys:String>
 	<sys:String x:Key="MsgScanDeleted">Scan '{0}' deleted.</sys:String>
 	<sys:String x:Key="BtnCancel">Cancel</sys:String>
@@ -335,7 +331,9 @@
 	<sys:String x:Key="BtnClearSelection">Clear</sys:String>
 	<sys:String x:Key="TipClearSelection">Clear photo selection</sys:String>
 	<sys:String x:Key="TxtSelectedCount">({0} of {1} selected)</sys:String>
-	<sys:String x:Key="BtnDeleteCount">Delete ({0})</sys:String>
+	<sys:String x:Key="BtnDeleteCount">Delete {0} photos</sys:String>
+	<sys:String x:Key="BtnDeletePhoto">Delete photo</sys:String>
+	<sys:String x:Key="LblDetectionSettings">Detection settings</sys:String>
 	<sys:String x:Key="BtnRotateCount">Rotate ({0})</sys:String>
 	<sys:String x:Key="MsgBatchRotating">Rotating {0} photos...</sys:String>
 	<sys:String x:Key="MsgBatchRotated">{0} photos rotated.</sys:String>

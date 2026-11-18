@@ -35,12 +35,10 @@ internal sealed partial class CropsStageViewModel
 
     public ObservableCollection<CropPhotoItem> Photos { get; } = [];
 
-    /// <summary>The photo shown in the carousel; in the grid, the photo selected last.</summary>
+    /// <summary>The photo selected last (the one shown by the counter, refined, or reviewed first).</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviousPhotoCommand), nameof(NextPhotoCommand))]
     private int _selectedPhotoIndex = -1;
-
-    [ObservableProperty] private bool _isGridView;
 
     [ObservableProperty] private string _photoCounterText = string.Empty;
     [ObservableProperty] private string _selectionText = string.Empty;
@@ -51,31 +49,10 @@ internal sealed partial class CropsStageViewModel
     [ObservableProperty] private string _refineTip = string.Empty;
     [ObservableProperty] private bool _hasPhotos;
 
-    /// <summary>The other side of <see cref="IsGridView"/>, for the view's radio buttons.</summary>
-    public bool IsCarouselView
-    {
-        get => !IsGridView;
-        set => IsGridView = !value;
-    }
+    /// <summary>The photo grid is shown (there are photos).</summary>
+    public bool IsGridVisible => HasPhotos;
 
-    public bool IsCarouselVisible => HasPhotos && !IsGridView;
-    public bool IsGridVisible => HasPhotos && IsGridView;
-
-    partial void OnHasPhotosChanged(bool value) => NotifyViewVisibility();
-
-    partial void OnIsGridViewChanged(bool value)
-    {
-        OnPropertyChanged(nameof(IsCarouselView));
-        NotifyViewVisibility();
-        if (value && SelectedPhotoIndex >= 0) SelectOnly(SelectedPhotoIndex);
-        RefreshPhotoTexts();
-    }
-
-    private void NotifyViewVisibility()
-    {
-        OnPropertyChanged(nameof(IsCarouselVisible));
-        OnPropertyChanged(nameof(IsGridVisible));
-    }
+    partial void OnHasPhotosChanged(bool value) => OnPropertyChanged(nameof(IsGridVisible));
 
     partial void OnSelectedPhotoIndexChanged(int value)
     {
@@ -162,14 +139,11 @@ internal sealed partial class CropsStageViewModel
     public void EnsureSelected(CropPhotoItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
-        if (!item.IsSelected || !IsGridView) SelectPhoto(Photos.IndexOf(item));
+        if (!item.IsSelected) SelectPhoto(Photos.IndexOf(item));
     }
 
-    /// <summary>The photos the actions apply to: the grid's selection, or the photo in the carousel.</summary>
-    public IReadOnlyList<int> SelectedPhotoIndices() =>
-        IsGridView
-            ? [.. Photos.Where(p => p.IsSelected).Select(p => p.Index)]
-            : SelectedPhotoIndex >= 0 && SelectedPhotoIndex < Photos.Count ? [Photos[SelectedPhotoIndex].Index] : [];
+    /// <summary>The photos the actions apply to: the grid's selection.</summary>
+    public IReadOnlyList<int> SelectedPhotoIndices() => [.. Photos.Where(p => p.IsSelected).Select(p => p.Index)];
 
     private void SelectOnly(int position)
     {
@@ -318,7 +292,7 @@ internal sealed partial class CropsStageViewModel
             }
 
             ShowPhotos(shown >= 0 ? shown : indices[0]);
-            if (IsGridView && indices.Count > 1) SelectPhotos(indices);
+            if (indices.Count > 1) SelectPhotos(indices);
         });
 
         if (done)
@@ -341,25 +315,25 @@ internal sealed partial class CropsStageViewModel
     public void RefreshPhotoTexts()
     {
         int total = Photos.Count;
-        int selected = IsGridView ? Photos.Count(p => p.IsSelected) : (SelectedPhotoIndex >= 0 ? 1 : 0);
+        int selected = Photos.Count(p => p.IsSelected);
 
         PhotoCounterText = total == 0 || SelectedPhotoIndex < 0
             ? string.Empty
             : LocalizationService.Format(ResourceKeys.PhotoCounter, "PHOTO {0} OF {1}", SelectedPhotoIndex + 1, total);
 
-        bool several = IsGridView && selected > 1;
+        bool several = selected > 1;
         IsSelectionTextVisible = several;
         SelectionText = several ? LocalizationService.Format(ResourceKeys.TxtSelectedCount, "({0} of {1} selected)", selected, total) : string.Empty;
         DeleteButtonText = several
-            ? LocalizationService.Format(ResourceKeys.BtnDeleteCount, "Delete ({0})", selected)
-            : LocalizationService.GetString(ResourceKeys.BtnDelete, "Delete");
+            ? LocalizationService.Format(ResourceKeys.BtnDeleteCount, "Delete {0} photos", selected)
+            : LocalizationService.GetString(ResourceKeys.BtnDeletePhoto, "Delete photo");
         RotateButtonText = several
             ? LocalizationService.Format(ResourceKeys.BtnRotateCount, "Rotate ({0})", selected)
             : LocalizationService.GetString(ResourceKeys.BtnRotate, "Rotate");
         CanRefine = !several && total > 0 && selected > 0;
         RefineTip = several
             ? LocalizationService.GetString(ResourceKeys.TipRefineMultiDisabled, "Select a single photo to refine edges")
-            : LocalizationService.GetString(ResourceKeys.TipRefine, "Shortcut: N");
+            : LocalizationService.GetString(ResourceKeys.TipRefine, "Straighten and tighten the selected photo's edges");
 
         PreviousPhotoCommand.NotifyCanExecuteChanged();
         NextPhotoCommand.NotifyCanExecuteChanged();
