@@ -29,25 +29,9 @@ internal sealed partial class MainWindow
 
     private Task RotateSelectedPhotosCcwAsync() => isLoading ? Task.CompletedTask : _cropsVm.RotateSelectedPhotosCounterClockwiseAsync();
 
-    private void SetViewMode(bool gridView) => _cropsVm.IsGridView = gridView;
-
-    private void BtnSelectAll_Click(object? sender, RoutedEventArgs e) => SelectAllGalleryPhotos();
-
-    private void BtnClearSelection_Click(object? sender, RoutedEventArgs e) => ClearGallerySelection();
-
     private void SelectAllGalleryPhotos() => _cropsVm.SelectAllCommand.Execute(null);
 
     private void ClearGallerySelection() => _cropsVm.ClearSelectionCommand.Execute(null);
-
-    private void BtnPreviousCroppedImage_Click(object? sender, RoutedEventArgs e)
-    {
-        if (!isLoading) _cropsVm.PreviousPhotoCommand.Execute(null);
-    }
-
-    private void BtnNextCroppedImage_Click(object? sender, RoutedEventArgs e)
-    {
-        if (!isLoading) _cropsVm.NextPhotoCommand.Execute(null);
-    }
 
     private void ApplyUndoRedoAction(IUndoableAction? action, string statusMessageKey, string statusDefaultFormat)
     {

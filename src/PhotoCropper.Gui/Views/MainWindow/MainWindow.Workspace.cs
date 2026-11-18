@@ -77,18 +77,12 @@ internal sealed partial class MainWindow
                 }
                 ToolTip.SetTip(btnWorkDir, tooltip);
             }
-            if (lblCurrentProject != null)
-            {
-                lblCurrentProject.Text = projectName;
-                ToolTip.SetTip(lblCurrentProject, tooltip);
-            }
 
             Title = $"PhotoCropper - [{projectName}]";
         }
         else
         {
             string defaultBtn = LocalizationService.GetString(ResourceKeys.BtnWorkDir, "Folder");
-            string noProject = LocalizationService.GetString(ResourceKeys.LblNoProject, "No Project");
             string defaultTip = LocalizationService.GetString(ResourceKeys.TipWorkDir, "Select a work directory for automatic raw scan staging and session recovery");
 
             txtWorkDirBtn?.Text = defaultBtn;
@@ -100,19 +94,9 @@ internal sealed partial class MainWindow
                 }
                 ToolTip.SetTip(btnWorkDir, defaultTip);
             }
-            if (lblCurrentProject != null)
-            {
-                lblCurrentProject.Text = noProject;
-                ToolTip.SetTip(lblCurrentProject, defaultTip);
-            }
 
             Title = LocalizationService.GetString(ResourceKeys.AppTitle, "PhotoCropper - Intelligent Photo Extractor");
         }
-    }
-
-    private void LblCurrentProject_PointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        BtnWorkDir_Click(sender, e);
     }
 
     private void ClearActiveScansFromGui()

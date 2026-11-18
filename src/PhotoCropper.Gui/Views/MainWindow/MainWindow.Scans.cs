@@ -144,13 +144,4 @@ internal sealed partial class MainWindow
             lblStatus.Text = statusMsg;
         }
     }
-
-    // Menu items sit outside the Crops view's DataContext, so they reach its commands through these.
-    private async void BtnPrevScan_Click(object? sender, RoutedEventArgs e) => await NavigateScanAsync(forward: false);
-    private async void BtnNextScan_Click(object? sender, RoutedEventArgs e) => await NavigateScanAsync(forward: true);
-    private async void BtnAutoTune_Click(object? sender, RoutedEventArgs e) => await _cropsVm.AutoTuneCommand.ExecuteAsync(null);
-
-    private void MenuAutoTuneOnPass_Click(object? sender, RoutedEventArgs e) =>
-        _cropsVm.AutoTuneOnScanChange = !_cropsVm.AutoTuneOnScanChange;
-
 }

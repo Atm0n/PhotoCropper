@@ -146,7 +146,6 @@ internal sealed partial class MainWindow
         var stagedPaths = new List<string>();
         try
         {
-            btnScan.IsEnabled = false;
             var scannerService = _scannerService;
             await ExecuteWithLoadingAsync(scanningMsg, async (token) =>
             {
@@ -217,10 +216,6 @@ internal sealed partial class MainWindow
             lblStatus.Text = failedTemplate;
             ShowScannerError(errorTitle, errorDetails);
             return [];
-        }
-        finally
-        {
-            btnScan.IsEnabled = true;
         }
 
         if (stagedPaths.Count > 0)

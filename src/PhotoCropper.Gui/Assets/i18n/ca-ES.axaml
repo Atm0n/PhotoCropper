@@ -2,7 +2,6 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 	<sys:String x:Key="BtnOpenScans">Obrir</sys:String>
-	<sys:String x:Key="BtnSaveResults">Desar</sys:String>
 	<sys:String x:Key="LblDetectionSensitivity">Sensibilitat</sys:String>
 	<sys:String x:Key="LblZoom">Zoom</sys:String>
 	<sys:String x:Key="BtnAdvanced">Avançat</sys:String>
@@ -49,7 +48,6 @@
 	<sys:String x:Key="BtnAccept">Acceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rebutjar (Retrocés)</sys:String>
 	<sys:String x:Key="StatusReady">Llest</sys:String>
-	<sys:String x:Key="StatusShortcuts">Dreceres: [↑/↓] Canviar Escaneig | [←/→] Navegar Fotos | [V] Revisar Tot | [R] Girar | [T] Auto-Ajustar | [Espai] Comparar Original | [Ctrl+Z/Y] Desfer/Refer</sys:String>
 	<sys:String x:Key="MsgUndo">Desfet: {0}.</sys:String>
 	<sys:String x:Key="MsgRedo">Refet: {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
@@ -203,13 +201,11 @@
 	<sys:String x:Key="HelpShortcutClose">[ESC] Tancar finestra</sys:String>
 	<sys:String x:Key="AppTitle">PhotoCropper - Extractor intel·ligent de fotos</sys:String>
 	<sys:String x:Key="TitleHelpWindow">PhotoCropper - Ajuda i dreceres</sys:String>
-	<sys:String x:Key="MenuFile">_Fitxer</sys:String>
-	<sys:String x:Key="MenuEdit">_Edita</sys:String>
-	<sys:String x:Key="MenuViewTop">_Visualitza</sys:String>
-	<sys:String x:Key="MenuTools">_Eines</sys:String>
-	<sys:String x:Key="MenuSettings">_Configuració</sys:String>
-	<sys:String x:Key="MenuHelp">A_juda</sys:String>
-	<sys:String x:Key="MenuExit">Surt</sys:String>
+	<sys:String x:Key="MenuSettings">Configuració</sys:String>
+	<sys:String x:Key="MenuScannerSettings">Configuració de l'escàner...</sys:String>
+	<sys:String x:Key="MenuExportSettings">Configuració d'exportació...</sys:String>
+	<sys:String x:Key="MenuResetDetection">Restableix la configuració de detecció</sys:String>
+	<sys:String x:Key="TipHelpF1">Ajuda i dreceres de teclat (F1)</sys:String>
 	<sys:String x:Key="BtnUndo">Desfés</sys:String>
 	<sys:String x:Key="BtnRedo">Refés</sys:String>
 	<sys:String x:Key="TipUndo">Desfés (Ctrl+Z)</sys:String>
@@ -285,7 +281,6 @@
 	<sys:String x:Key="HelpPoweredBy">Basat en Emgu.CV (wrapper d'OpenCV)</sys:String>
 	<sys:String x:Key="HelpModelLicense">Detecció facial IA: YuNet per Shiqi Yu / OpenCV Zoo (Apache 2.0). Farciment amb IA (descàrrega opcional): LaMa de Suvorov et al., Samsung AI (Apache 2.0), exportació ONNX de Carve; s'executa amb ONNX Runtime (MIT).</sys:String>
 	<sys:String x:Key="HelpCopyright">© 2026 Nil Riera. Llicència GPLv3.</sys:String>
-	<sys:String x:Key="BtnReset">Restablir valors</sys:String>
 	<sys:String x:Key="LblFormat">Format de sortida</sys:String>
 	<sys:String x:Key="LblQuality">Qualitat JPEG</sys:String>
 	<sys:String x:Key="LblOutputDir">Carpeta de sortida</sys:String>
@@ -301,8 +296,6 @@
 	<sys:String x:Key="MsgAutoTuning">Auto-ajustant paràmetres de detecció...</sys:String>
 	<sys:String x:Key="MsgAutoTuneSuccess">Auto-ajustat: s'han trobat {0} fotos (Tolerància: {1:0}, Vora: {2:0}).</sys:String>
 	<sys:String x:Key="MsgAutoTuneFailed">L'auto-ajust no ha trobat fotos addicionals.</sys:String>
-	<sys:String x:Key="BtnScan">Escanejar</sys:String>
-	<sys:String x:Key="TipScan">Adquirir escaneig des de l'escàner pla (Drecera: F5)</sys:String>
 	<sys:String x:Key="BtnWorkDir">Carpeta</sys:String>
 	<sys:String x:Key="TipWorkDir">Seleccionar una carpeta de treball per a emmagatzematge automàtic i recuperació de sessió</sys:String>
 	<sys:String x:Key="MsgScanning">Escanejant imatge des de {0}...</sys:String>
@@ -331,7 +324,6 @@
 	<sys:String x:Key="MsgScanCancelled">L'escaneig s'ha cancel·lat o s'ha esgotat el temps d'espera.</sys:String>
 	<sys:String x:Key="LblNetworkScanners">Cercar a la xarxa (Wi-Fi / eSCL)</sys:String>
 	<sys:String x:Key="TipNetworkScanners">Cerca escàners sense fil a la xarxa local mitjançant Apple AirScan / eSCL (pot demanar permís del tallafoc).</sys:String>
-	<sys:String x:Key="LblNoProject">Sense Projecte</sys:String>
 	<sys:String x:Key="LblProjectFormat">Projecte: {0}</sys:String>
 	<sys:String x:Key="TipActiveProject">Projecte actiu: {0}&#x0a;Ruta: {1}&#x0a;&#x0a;Feu clic per canviar de projecte o carpeta de treball.</sys:String>
 	<sys:String x:Key="BtnNewProject">Nou Lot</sys:String>
@@ -342,7 +334,6 @@
 	<sys:String x:Key="HeaderAdvScanner">Hardware d'Escàner</sys:String>
 	<sys:String x:Key="LblScanner">Escàner:</sys:String>
 	<sys:String x:Key="LblDpi">PPP:</sys:String>
-	<sys:String x:Key="TipScannerConfig">Configurar escàner, resolució (PPP) i opcions de xarxa</sys:String>
 	<sys:String x:Key="TitleScannerConfig">Configuració de l'Escàner</sys:String>
 	<sys:String x:Key="DescScannerConfig">Seleccioneu el vostre escàner i la resolució de captura. La configuració es desarà automàticament.</sys:String>
 	<sys:String x:Key="BtnSaveAndScan">Desar i Escanejar</sys:String>
@@ -371,7 +362,6 @@
 	<sys:String x:Key="ThemeDark">Fosc</sys:String>
 	<sys:String x:Key="ThemeLight">Clar</sys:String>
 	<sys:String x:Key="ThemeSystem">Per defecte del Sistema</sys:String>
-	<sys:String x:Key="MenuDetectionColor">Color del Marc de Detecció</sys:String>
 	<sys:String x:Key="ColorRed">Vermell Clàssic</sys:String>
 	<sys:String x:Key="ColorAmber">Àmbre / Taronja (Accessible)</sys:String>
 	<sys:String x:Key="ColorCyan">Cian / Turquesa (Accessible)</sys:String>
@@ -406,14 +396,13 @@
 	<sys:String x:Key="HelpMetadataDesc">Dona a les fotos un any aproximat, una data, una descripció i un fotògraf; s'escriuen com a etiquetes EXIF perquè els gestors de fotos les puguin ordenar per quan es van fer.</sys:String>
 	<sys:String x:Key="TitleExportSettings">Opcions de Desat i Exportació</sys:String>
 	<sys:String x:Key="DescExportSettings">Configura el format de sortida, noms de fitxer, carpeta de destinació i metadades.</sys:String>
-	<sys:String x:Key="TipSaveSettings">Configurar carpeta de sortida, format, noms i metadades</sys:String>
 	<sys:String x:Key="TipDetectionSettings">Ajustar límits de mida, vores i restauració</sys:String>
 	<sys:String x:Key="TabExport">Desat i Exportació</sys:String>
 	<sys:String x:Key="TabDetection">Detecció i Restauració</sys:String>
 	<sys:String x:Key="ChkPromptBeforeExport">Mostra sempre aquestes opcions abans de desar</sys:String>
 	<sys:String x:Key="BtnExportNow">Desa les fotos</sys:String>
 	<sys:String x:Key="BtnSavePreferences">Desa la configuració</sys:String>
-	<sys:String x:Key="MenuCheckUpdates">Comprovar actualitzacions...</sys:String>
+	<sys:String x:Key="MenuCheckUpdates">Comprova si hi ha actualitzacions...</sys:String>
 	<sys:String x:Key="BtnCheckUpdates">Comprovar actualitzacions</sys:String>
 	<sys:String x:Key="TxtCheckingUpdates">Comprovant actualitzacions...</sys:String>
 	<sys:String x:Key="TxtUpdateAvailable">PhotoCropper {0} està disponible!</sys:String>

@@ -7,7 +7,6 @@ namespace PhotoCropper.Gui.Services;
 internal static class ResourceKeys
 {
     public const string BtnOpenScans = nameof(BtnOpenScans);
-    public const string BtnSaveResults = nameof(BtnSaveResults);
     public const string BtnAutoTune = nameof(BtnAutoTune);
     public const string BtnWorkDir = nameof(BtnWorkDir);
     public const string BtnNewProject = nameof(BtnNewProject);
@@ -42,7 +41,6 @@ internal static class ResourceKeys
     public const string LblAutoAdjustOnLowCoverage = nameof(LblAutoAdjustOnLowCoverage);
     public const string LblCoveragePercent = nameof(LblCoveragePercent);
     public const string LblLookaheadPreloaded = nameof(LblLookaheadPreloaded);
-    public const string LblNoProject = nameof(LblNoProject);
     public const string TxtNoFiles = nameof(TxtNoFiles);
     public const string TxtSelectedCount = nameof(TxtSelectedCount);
     public const string PhotoCounter = nameof(PhotoCounter);
@@ -106,6 +104,10 @@ internal static class ResourceKeys
     public const string FinishStatusExported = nameof(FinishStatusExported);
     public const string MsgSavingCrops = nameof(MsgSavingCrops);
     public const string MsgCropsSaved = nameof(MsgCropsSaved);
+    public const string MenuScannerSettings = nameof(MenuScannerSettings);
+    public const string MenuExportSettings = nameof(MenuExportSettings);
+    public const string MenuResetDetection = nameof(MenuResetDetection);
+    public const string TipHelpF1 = nameof(TipHelpF1);
     public const string MsgExportingFinal = nameof(MsgExportingFinal);
     public const string MsgFinalExported = nameof(MsgFinalExported);
     public const string MsgImportingPhotos = nameof(MsgImportingPhotos);

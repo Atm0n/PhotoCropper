@@ -213,21 +213,8 @@ internal sealed partial class MainWindow : Window
         _activeOperationCts?.Cancel();
     }
 
-    private void ToggleMenuBar()
-    {
-        if (pnlMenuBar != null)
-        {
-            pnlMenuBar.IsVisible = !pnlMenuBar.IsVisible;
-        }
-    }
-
-    private void MenuExit_Click(object? sender, RoutedEventArgs e) => Close();
     private async void MenuUndo_Click(object? sender, RoutedEventArgs e) => await PerformUndoAsync();
     private async void MenuRedo_Click(object? sender, RoutedEventArgs e) => await PerformRedoAsync();
-    private void MenuViewCarousel_Click(object? sender, RoutedEventArgs e) => SetViewMode(false);
-    private void MenuViewGrid_Click(object? sender, RoutedEventArgs e) => SetViewMode(true);
-
-    private void BtnReset_Click(object? sender, RoutedEventArgs e) => BtnResetDefaults_Click(sender, e);
 
     private Dialogs.HelpWindow? _helpWindow;
 
@@ -407,25 +394,8 @@ internal sealed partial class MainWindow : Window
 
     private async ValueTask<bool> HandleNavigationKey(KeyEventArgs e)
     {
-        if (e.Key == Key.LeftAlt || e.Key == Key.RightAlt || e.Key == Key.F10)
-        {
-            if (!e.KeyModifiers.HasFlag(KeyModifiers.Control) && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
-            {
-                ToggleMenuBar();
-                e.Handled = true;
-                return true;
-            }
-        }
-
         if (e.Key == Key.Escape)
         {
-            if (pnlMenuBar != null && pnlMenuBar.IsVisible)
-            {
-                pnlMenuBar.IsVisible = false;
-                e.Handled = true;
-                return true;
-            }
-
             if (pnlUnsavedOverlay != null && pnlUnsavedOverlay.IsVisible)
             {
                 pnlUnsavedOverlay.IsVisible = false;

@@ -35,221 +35,89 @@
 
 	<Grid>
 		<DockPanel>
-			<!-- Hidden Classic Menu Bar (Toggled with ALT key) -->
-			<Border x:Name="pnlMenuBar" DockPanel.Dock="Top" Background="{DynamicResource AppToolbarBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1" IsVisible="False">
-				<Menu Background="Transparent" FontSize="12">
-					<!-- File Menu -->
-					<MenuItem Header="{DynamicResource MenuFile}">
-						<MenuItem Header="{DynamicResource BtnScan}" InputGesture="F5" Click="BtnScan_Click"/>
-						<MenuItem Header="{DynamicResource TitleScannerConfig}" Click="BtnScannerConfig_Click"/>
-						<Separator/>
-						<MenuItem Header="{DynamicResource BtnWorkDir}" Click="BtnWorkDir_Click"/>
-						<Separator/>
-						<MenuItem Header="{DynamicResource BtnSaveResults}" InputGesture="Ctrl+S" Click="BtnSaveImages_Click"/>
-						<Separator/>
-						<MenuItem Header="{DynamicResource MenuExit}" InputGesture="Alt+F4" Click="MenuExit_Click"/>
-					</MenuItem>
-
-					<!-- Edit Menu -->
-					<MenuItem Header="{DynamicResource MenuEdit}">
-						<MenuItem Header="{DynamicResource BtnUndo}" InputGesture="Ctrl+Z" Click="MenuUndo_Click"/>
-						<MenuItem Header="{DynamicResource BtnRedo}" InputGesture="Ctrl+Y" Click="MenuRedo_Click"/>
-						<Separator/>
-						<MenuItem Header="{DynamicResource BtnSelectAll}" InputGesture="Ctrl+A" Click="BtnSelectAll_Click"/>
-						<MenuItem Header="{DynamicResource BtnClearSelection}" InputGesture="Escape" Click="BtnClearSelection_Click"/>
-						<Separator/>
-						<MenuItem Header="{DynamicResource BtnDeleteScan}" InputGesture="Shift+Delete" Click="BtnDeleteScan_Click"/>
-						<MenuItem Header="{DynamicResource BtnDelete}" InputGesture="Delete" Click="BtnDelete_Click"/>
-						<Separator/>
-						<MenuItem Header="{DynamicResource BtnRotate}" InputGesture="R" Click="BtnRotate_Click"/>
-						<MenuItem Header="{DynamicResource BtnRefine}" Click="BtnRefine_Click"/>
-					</MenuItem>
-
-					<!-- View Menu -->
-					<MenuItem Header="{DynamicResource MenuViewTop}">
-						<MenuItem Header="{DynamicResource ViewCarousel}" Click="MenuViewCarousel_Click"/>
-						<MenuItem Header="{DynamicResource ViewGrid}" Click="MenuViewGrid_Click"/>
-						<Separator/>
-						<MenuItem Header="{DynamicResource BtnPrevScan}" InputGesture="Up" Click="BtnPrevScan_Click"/>
-						<MenuItem Header="{DynamicResource BtnNextScan}" InputGesture="Down" Click="BtnNextScan_Click"/>
-						<MenuItem Header="{DynamicResource BtnPreviousCroppedImage}" InputGesture="Left" Click="BtnPreviousCroppedImage_Click"/>
-						<MenuItem Header="{DynamicResource BtnNextCroppedImage}" InputGesture="Right" Click="BtnNextCroppedImage_Click"/>
-					</MenuItem>
-
-					<!-- Tools Menu -->
-					<MenuItem Header="{DynamicResource MenuTools}">
-						<MenuItem Header="{DynamicResource BtnAutoTune}" Click="BtnAutoTune_Click"/>
-						<MenuItem Header="{DynamicResource LblAutoTuneOnPass}" Click="MenuAutoTuneOnPass_Click"/>
-						<Separator/>
-						<MenuItem Header="{DynamicResource BtnResetBackground}" Click="BtnResetBackground_Click"/>
-						<MenuItem Header="{DynamicResource BtnReset}" Click="BtnReset_Click"/>
-					</MenuItem>
-
-					<!-- Settings Menu -->
-					<MenuItem Header="{DynamicResource MenuSettings}">
-						<MenuItem Header="{DynamicResource TitleExportSettings}" Click="BtnSaveSettings_Click"/>
-						<Separator/>
-						<MenuItem Header="{DynamicResource MenuTheme}" x:Name="menuAltTheme"/>
-						<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuAltLanguage"/>
-						<MenuItem Header="{DynamicResource MenuDetectionColor}" x:Name="menuAltDetectionColor"/>
-					</MenuItem>
-
-					<!-- Help Menu -->
-					<MenuItem Header="{DynamicResource MenuHelp}">
-						<MenuItem Header="{DynamicResource BtnHelp}" InputGesture="F1" Click="BtnHelp_Click"/>
-						<Separator/>
-						<MenuItem Header="{DynamicResource MenuCheckUpdates}" Click="MenuCheckUpdates_Click"/>
-					</MenuItem>
-				</Menu>
-			</Border>
-
-			<!-- Header / Toolbar -->
-		<Border DockPanel.Dock="Top" Background="{DynamicResource AppToolbarBrush}" MinHeight="48" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
-			<StackPanel>
-				<!-- Responsive Main Toolbar with Grouped Cards -->
-				<Grid Margin="8,4" VerticalAlignment="Center" ColumnDefinitions="Auto, *, Auto">
-					<!-- Group 1: File Actions (Scan, Save, Workspace) -->
-					<Border Grid.Column="0" HorizontalAlignment="Left" Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="4,3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="3,2">
-						<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-							<!-- Scan Button with Config Trigger -->
-							<Border Background="#28a745" CornerRadius="4">
-								<StackPanel Orientation="Horizontal" Spacing="0">
-									<Button x:Name="btnScan" Click="BtnScan_Click" Padding="10,5" Background="Transparent" BorderThickness="0" Foreground="White" Focusable="False" ToolTip.Tip="{DynamicResource TipScan}">
-										<StackPanel Orientation="Horizontal" Spacing="6">
-											<TextBlock Text="🖨️" FontSize="12" VerticalAlignment="Center"/>
-											<TextBlock Text="{DynamicResource BtnScan}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-										</StackPanel>
-									</Button>
-									<Rectangle Width="1" Fill="#3db85a" Margin="0,4"/>
-									<Button x:Name="btnScannerConfig" Click="BtnScannerConfig_Click" Padding="6,5" Background="Transparent" BorderThickness="0" Foreground="White" Focusable="False" ToolTip.Tip="{DynamicResource TipScannerConfig}">
-										<TextBlock Text="⚙️" FontSize="11" VerticalAlignment="Center"/>
-									</Button>
-								</StackPanel>
-							</Border>
-							<!-- Save Button with Options Trigger -->
-							<Border Background="{DynamicResource AppButtonDefaultBrush}" CornerRadius="4">
-								<StackPanel Orientation="Horizontal" Spacing="0">
-									<Button x:Name="btnSave" Click="BtnSaveImages_Click" Padding="10,5" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource AppButtonDefaultTextBrush}" Focusable="False" ToolTip.Tip="{DynamicResource BtnSaveResults}">
-										<StackPanel Orientation="Horizontal" Spacing="6">
-											<TextBlock Text="💾" FontSize="12" VerticalAlignment="Center"/>
-											<TextBlock Text="{DynamicResource BtnSaveResults}" VerticalAlignment="Center"/>
-										</StackPanel>
-									</Button>
-									<Rectangle Width="1" Fill="{DynamicResource AppBorderBrush}" Margin="0,4"/>
-									<Button x:Name="btnSaveSettings" Click="BtnSaveSettings_Click" Padding="6,5" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource AppButtonDefaultTextBrush}" Focusable="False" ToolTip.Tip="{DynamicResource TipSaveSettings}">
-										<TextBlock Text="⚙️" FontSize="11" VerticalAlignment="Center"/>
-									</Button>
-								</StackPanel>
-							</Border>
-							<Rectangle Width="1" Height="20" Fill="{DynamicResource AppSeparatorBrush}" Margin="4,0"/>
-							<Button x:Name="btnWorkDir" Click="BtnWorkDir_Click" Padding="10,5" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Focusable="False" ToolTip.Tip="{DynamicResource TipWorkDir}" CornerRadius="4">
-								<StackPanel Orientation="Horizontal" Spacing="6">
-									<TextBlock Text="🗂️" FontSize="12" VerticalAlignment="Center"/>
-									<TextBlock x:Name="txtWorkDirBtn" Text="{DynamicResource BtnWorkDir}" FontWeight="SemiBold" MaxWidth="120" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-								</StackPanel>
-							</Button>
-						</StackPanel>
-					</Border>
-
-
-					<!-- Group 2: Edit Actions (Undo/Redo) -->
-					<Border Grid.Column="1" HorizontalAlignment="Left" Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="4,3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="10,2,3,2">
-						<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-							<Button x:Name="btnUndo" Click="MenuUndo_Click" Padding="10,5" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Focusable="False" ToolTip.Tip="{DynamicResource TipUndo}" CornerRadius="4">
-								<StackPanel Orientation="Horizontal" Spacing="6">
-									<TextBlock Text="↩️" FontSize="12" VerticalAlignment="Center"/>
-									<TextBlock Text="{DynamicResource BtnUndo}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-								</StackPanel>
-							</Button>
-							<Button x:Name="btnRedo" Click="MenuRedo_Click" Padding="10,5" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Focusable="False" ToolTip.Tip="{DynamicResource TipRedo}" CornerRadius="4">
-								<StackPanel Orientation="Horizontal" Spacing="6">
-									<TextBlock Text="↪️" FontSize="12" VerticalAlignment="Center"/>
-									<TextBlock Text="{DynamicResource BtnRedo}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-								</StackPanel>
-							</Button>
-						</StackPanel>
-					</Border>
-
-					<!-- Group 5: Reset Defaults -->
-					<Border Grid.Column="2" HorizontalAlignment="Right" Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="6" Padding="6,3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="3,2">
-						<Button x:Name="btnResetDefaults" Click="BtnResetDefaults_Click" Padding="8,5" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" VerticalAlignment="Center" Focusable="False" CornerRadius="4">
-							<StackPanel Orientation="Horizontal" Spacing="4">
-								<TextBlock Text="↺" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
-								<TextBlock Text="{DynamicResource BtnReset}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+			<!-- Top bar: project, the three stages, then Undo/Redo, Help and Settings. Each action lives in one place. -->
+			<Border DockPanel.Dock="Top" Background="{DynamicResource AppToolbarBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
+				<Grid Margin="10,6" ColumnDefinitions="Auto, *, Auto" VerticalAlignment="Center">
+					<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+						<Button x:Name="btnWorkDir" Click="BtnWorkDir_Click" Padding="12,8" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Focusable="False" ToolTip.Tip="{DynamicResource TipWorkDir}" CornerRadius="6">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="🗂️" FontSize="13" VerticalAlignment="Center"/>
+								<TextBlock x:Name="txtWorkDirBtn" Text="{DynamicResource BtnWorkDir}" FontSize="13" FontWeight="SemiBold" MaxWidth="200" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
 							</StackPanel>
 						</Button>
-					</Border>
+						<Rectangle Width="1" Height="28" Fill="{DynamicResource AppSeparatorBrush}" Margin="6,0"/>
+
+						<!-- Stage bar: 1 Scan → 2 Crops → 3 Finish (RawScans → Cropped → Final) -->
+						<Button x:Name="btnStageScan" Classes="stageStep" Click="BtnStageScan_Click" Padding="14,5" CornerRadius="6" Focusable="False">
+							<StackPanel Spacing="1">
+								<TextBlock Text="{DynamicResource StageScan}" FontWeight="SemiBold"/>
+								<TextBlock x:Name="lblStageScanStatus" FontSize="11" Opacity="0.8"/>
+							</StackPanel>
+						</Button>
+						<TextBlock Text="→" VerticalAlignment="Center" Foreground="{DynamicResource AppTextMutedBrush}"/>
+						<Button x:Name="btnStageCrops" Classes="stageStep" Click="BtnStageCrops_Click" Padding="14,5" CornerRadius="6" Focusable="False">
+							<StackPanel Spacing="1">
+								<TextBlock Text="{DynamicResource StageCrops}" FontWeight="SemiBold"/>
+								<TextBlock x:Name="lblStageCropsStatus" FontSize="11" Opacity="0.8"/>
+							</StackPanel>
+						</Button>
+						<TextBlock Text="→" VerticalAlignment="Center" Foreground="{DynamicResource AppTextMutedBrush}"/>
+						<Button x:Name="btnStageFinish" Classes="stageStep" Click="BtnStageFinish_Click" Padding="14,5" CornerRadius="6" Focusable="False">
+							<StackPanel Spacing="1">
+								<TextBlock Text="{DynamicResource StageFinish}" FontWeight="SemiBold"/>
+								<TextBlock x:Name="lblStageFinishStatus" FontSize="11" Opacity="0.8"/>
+							</StackPanel>
+						</Button>
+					</StackPanel>
+
+					<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+						<Button x:Name="btnUndo" Click="MenuUndo_Click" Padding="10,8" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Focusable="False" ToolTip.Tip="{DynamicResource TipUndo}" CornerRadius="6">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="↩️" FontSize="13" VerticalAlignment="Center"/>
+								<TextBlock Text="{DynamicResource BtnUndo}" FontSize="13" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
+						<Button x:Name="btnRedo" Click="MenuRedo_Click" Padding="10,8" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Focusable="False" ToolTip.Tip="{DynamicResource TipRedo}" CornerRadius="6">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="↪️" FontSize="13" VerticalAlignment="Center"/>
+								<TextBlock Text="{DynamicResource BtnRedo}" FontSize="13" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
+						<Rectangle Width="1" Height="28" Fill="{DynamicResource AppSeparatorBrush}" Margin="4,0"/>
+						<Button x:Name="btnHelp" Click="BtnHelp_Click" Padding="10,8" Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" Focusable="False" ToolTip.Tip="{DynamicResource TipHelpF1}" CornerRadius="6">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="❓" FontSize="13" VerticalAlignment="Center"/>
+								<TextBlock Text="{DynamicResource BtnHelp}" FontSize="13" VerticalAlignment="Center"/>
+							</StackPanel>
+						</Button>
+						<Border Background="{DynamicResource AppSubtleCardBrush}" CornerRadius="6">
+							<Menu Background="Transparent" Focusable="False" IsTabStop="False" KeyboardNavigation.TabNavigation="None">
+								<MenuItem x:Name="menuSettings" Focusable="False" IsTabStop="False" Padding="10,8">
+									<MenuItem.Header>
+										<StackPanel Orientation="Horizontal" Spacing="6">
+											<TextBlock Text="⚙️" FontSize="13" VerticalAlignment="Center"/>
+											<TextBlock Text="{DynamicResource MenuSettings}" FontSize="13" VerticalAlignment="Center"/>
+										</StackPanel>
+									</MenuItem.Header>
+									<MenuItem Header="{DynamicResource MenuScannerSettings}" Click="BtnScannerConfig_Click"/>
+									<MenuItem Header="{DynamicResource MenuExportSettings}" Click="BtnSaveSettings_Click"/>
+									<Separator/>
+									<MenuItem Header="{DynamicResource MenuTheme}" x:Name="menuTheme"/>
+									<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuLanguage"/>
+									<Separator/>
+									<MenuItem Header="{DynamicResource MenuResetDetection}" Click="BtnResetDefaults_Click"/>
+									<MenuItem Header="{DynamicResource MenuCheckUpdates}" Click="MenuCheckUpdates_Click"/>
+								</MenuItem>
+							</Menu>
+						</Border>
+					</StackPanel>
 				</Grid>
-			</StackPanel>
-		</Border>
+			</Border>
 
-		<!-- Footer / Status Bar -->
-		<Border DockPanel.Dock="Bottom" Background="{DynamicResource AppFooterBrush}" Height="30" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0">
-			<Grid ColumnDefinitions="Auto, *, Auto">
-				<!-- Project Indicator Badge -->
-				<Border Grid.Column="0" Margin="8,3" Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="8,2"
-						PointerPressed="LblCurrentProject_PointerPressed" Cursor="Hand" ToolTip.Tip="{DynamicResource TipWorkDir}">
-					<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-						<TextBlock Text="🗂️" FontSize="11" VerticalAlignment="Center"/>
-						<TextBlock x:Name="lblCurrentProject" Text="{DynamicResource LblNoProject}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center" MaxWidth="180" TextTrimming="CharacterEllipsis"/>
-					</StackPanel>
-				</Border>
-
-				<StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0" Spacing="20" VerticalAlignment="Center">
-					<TextBlock x:Name="lblStatus" Text="{DynamicResource StatusReady}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource AppTextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
-					<TextBlock Text="{DynamicResource StatusShortcuts}" 
-							   VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}" TextTrimming="CharacterEllipsis"/>
-				</StackPanel>
-
-				<StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0" Spacing="8" VerticalAlignment="Center">
-
-					<Border Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="4" Padding="2,0" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-						<Menu Background="Transparent" VerticalAlignment="Center" Margin="0" Focusable="False" IsTabStop="False" KeyboardNavigation.TabNavigation="None">
-							<MenuItem Header="{DynamicResource MenuTheme}" x:Name="menuTheme" Focusable="False" IsTabStop="False" FontSize="11" Padding="6,2"/>
-						</Menu>
-					</Border>
-
-					<Border Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="4" Padding="2,0" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-						<Menu Background="Transparent" VerticalAlignment="Center" Margin="0" Focusable="False" IsTabStop="False" KeyboardNavigation.TabNavigation="None">
-							<MenuItem Header="{DynamicResource MenuLanguage}" x:Name="menuLanguage" Focusable="False" IsTabStop="False" FontSize="11" Padding="6,2"/>
-						</Menu>
-					</Border>
-
-					<Button x:Name="btnHelp" Click="BtnHelp_Click" Padding="6,2" Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Focusable="False" ToolTip.Tip="{DynamicResource BtnHelp}">
-						<StackPanel Orientation="Horizontal" Spacing="4">
-							<TextBlock Text="❓" FontSize="11" VerticalAlignment="Center"/>
-							<TextBlock Text="{DynamicResource BtnHelp}" FontSize="11" Foreground="{DynamicResource AppTextPrimaryBrush}" VerticalAlignment="Center"/>
-						</StackPanel>
-					</Button>
-				</StackPanel>
-			</Grid>
-		</Border>
-
-		<!-- Stage bar: 1 Scan → 2 Crops → 3 Finish (RawScans → Cropped → Final) -->
-		<Border DockPanel.Dock="Top" Margin="10,6,10,6">
-			<StackPanel Orientation="Horizontal" Spacing="8">
-				<Button x:Name="btnStageScan" Classes="stageStep" Click="BtnStageScan_Click" Padding="14,6" CornerRadius="6" Focusable="False">
-					<StackPanel Spacing="1">
-						<TextBlock Text="{DynamicResource StageScan}" FontWeight="SemiBold"/>
-						<TextBlock x:Name="lblStageScanStatus" FontSize="10" Opacity="0.8"/>
-					</StackPanel>
-				</Button>
-				<TextBlock Text="→" VerticalAlignment="Center" Foreground="{DynamicResource AppTextMutedBrush}"/>
-				<Button x:Name="btnStageCrops" Classes="stageStep" Click="BtnStageCrops_Click" Padding="14,6" CornerRadius="6" Focusable="False">
-					<StackPanel Spacing="1">
-						<TextBlock Text="{DynamicResource StageCrops}" FontWeight="SemiBold"/>
-						<TextBlock x:Name="lblStageCropsStatus" FontSize="10" Opacity="0.8"/>
-					</StackPanel>
-				</Button>
-				<TextBlock Text="→" VerticalAlignment="Center" Foreground="{DynamicResource AppTextMutedBrush}"/>
-				<Button x:Name="btnStageFinish" Classes="stageStep" Click="BtnStageFinish_Click" Padding="14,6" CornerRadius="6" Focusable="False">
-					<StackPanel Spacing="1">
-						<TextBlock Text="{DynamicResource StageFinish}" FontWeight="SemiBold"/>
-						<TextBlock x:Name="lblStageFinishStatus" FontSize="10" Opacity="0.8"/>
-					</StackPanel>
-				</Button>
-			</StackPanel>
-		</Border>
+			<!-- Status bar: what just happened -->
+			<Border DockPanel.Dock="Bottom" Background="{DynamicResource AppFooterBrush}" Height="30" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0">
+				<TextBlock x:Name="lblStatus" Text="{DynamicResource StatusReady}" Margin="14,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource AppTextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+			</Border>
 
 		<!-- Stage content: only the active stage is visible -->
 		<Panel>

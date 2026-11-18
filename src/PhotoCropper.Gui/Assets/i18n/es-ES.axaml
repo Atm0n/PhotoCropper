@@ -2,7 +2,6 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 	<sys:String x:Key="BtnOpenScans">Abrir</sys:String>
-	<sys:String x:Key="BtnSaveResults">Guardar</sys:String>
 	<sys:String x:Key="LblDetectionSensitivity">Sensibilidad</sys:String>
 	<sys:String x:Key="LblZoom">Zoom</sys:String>
 	<sys:String x:Key="BtnAdvanced">Avanzado</sys:String>
@@ -49,7 +48,6 @@
 	<sys:String x:Key="BtnAccept">Aceptar (Enter)</sys:String>
 	<sys:String x:Key="BtnReject">Rechazar (Retroceso)</sys:String>
 	<sys:String x:Key="StatusReady">Listo</sys:String>
-	<sys:String x:Key="StatusShortcuts">Atajos: [↑/↓] Cambiar Escaneo | [←/→] Navegar Fotos | [V] Revisar Todo | [R] Rotar | [T] Auto-Ajustar | [Espacio] Comparar Original | [Ctrl+Z/Y] Deshacer/Rehacer</sys:String>
 	<sys:String x:Key="MsgUndo">Deshecho: {0}.</sys:String>
 	<sys:String x:Key="MsgRedo">Rehecho: {0}.</sys:String>
 	<sys:String x:Key="PhotoCounter">FOTO {0} DE {1}</sys:String>
@@ -203,13 +201,11 @@
 	<sys:String x:Key="HelpShortcutClose">[ESC] Cerrar ventana</sys:String>
 	<sys:String x:Key="AppTitle">PhotoCropper - Extractor inteligente de fotos</sys:String>
 	<sys:String x:Key="TitleHelpWindow">PhotoCropper - Ayuda y atajos</sys:String>
-	<sys:String x:Key="MenuFile">_Archivo</sys:String>
-	<sys:String x:Key="MenuEdit">_Editar</sys:String>
-	<sys:String x:Key="MenuViewTop">_Ver</sys:String>
-	<sys:String x:Key="MenuTools">_Herramientas</sys:String>
-	<sys:String x:Key="MenuSettings">_Configuración</sys:String>
-	<sys:String x:Key="MenuHelp">Ay_uda</sys:String>
-	<sys:String x:Key="MenuExit">Salir</sys:String>
+	<sys:String x:Key="MenuSettings">Configuración</sys:String>
+	<sys:String x:Key="MenuScannerSettings">Configuración del escáner...</sys:String>
+	<sys:String x:Key="MenuExportSettings">Configuración de exportación...</sys:String>
+	<sys:String x:Key="MenuResetDetection">Restablecer la configuración de detección</sys:String>
+	<sys:String x:Key="TipHelpF1">Ayuda y atajos de teclado (F1)</sys:String>
 	<sys:String x:Key="BtnUndo">Deshacer</sys:String>
 	<sys:String x:Key="BtnRedo">Rehacer</sys:String>
 	<sys:String x:Key="TipUndo">Deshacer (Ctrl+Z)</sys:String>
@@ -285,7 +281,6 @@
 	<sys:String x:Key="HelpPoweredBy">Impulsado por Emgu.CV (wrapper de OpenCV)</sys:String>
 	<sys:String x:Key="HelpModelLicense">Detección facial IA: YuNet por Shiqi Yu / OpenCV Zoo (Apache 2.0). Relleno con IA (descarga opcional): LaMa de Suvorov et al., Samsung AI (Apache 2.0), exportación ONNX de Carve; se ejecuta con ONNX Runtime (MIT).</sys:String>
 	<sys:String x:Key="HelpCopyright">© 2026 Nil Riera. Licencia GPLv3.</sys:String>
-	<sys:String x:Key="BtnReset">Restablecer valores</sys:String>
 	<sys:String x:Key="LblFormat">Formato de salida</sys:String>
 	<sys:String x:Key="LblQuality">Calidad JPEG</sys:String>
 	<sys:String x:Key="LblOutputDir">Carpeta de salida</sys:String>
@@ -301,8 +296,6 @@
 	<sys:String x:Key="MsgAutoTuning">Auto-ajustando parámetros de detección...</sys:String>
 	<sys:String x:Key="MsgAutoTuneSuccess">Auto-ajustado: se encontraron {0} fotos (Tolerancia: {1:0}, Borde: {2:0}).</sys:String>
 	<sys:String x:Key="MsgAutoTuneFailed">El auto-ajuste no encontró fotos adicionales.</sys:String>
-	<sys:String x:Key="BtnScan">Escanear</sys:String>
-	<sys:String x:Key="TipScan">Adquirir escaneo desde el escáner plano (Atajo: F5)</sys:String>
 	<sys:String x:Key="BtnWorkDir">Carpeta</sys:String>
 	<sys:String x:Key="TipWorkDir">Seleccionar una carpeta de trabajo para almacenamiento automático y recuperación de sesión</sys:String>
 	<sys:String x:Key="MsgScanning">Escaneando imagen desde {0}...</sys:String>
@@ -331,7 +324,6 @@
 	<sys:String x:Key="MsgScanCancelled">El escaneo fue cancelado o expiró el tiempo de espera.</sys:String>
 	<sys:String x:Key="LblNetworkScanners">Buscar en red (Wi-Fi / eSCL)</sys:String>
 	<sys:String x:Key="TipNetworkScanners">Busca escáneres inalámbricos en la red local mediante Apple AirScan / eSCL (puede solicitar permiso del cortafuegos).</sys:String>
-	<sys:String x:Key="LblNoProject">Sin Proyecto</sys:String>
 	<sys:String x:Key="LblProjectFormat">Proyecto: {0}</sys:String>
 	<sys:String x:Key="TipActiveProject">Proyecto activo: {0}&#x0a;Ruta: {1}&#x0a;&#x0a;Haga clic para cambiar de proyecto o carpeta de trabajo.</sys:String>
 	<sys:String x:Key="BtnNewProject">Nuevo Lote</sys:String>
@@ -342,7 +334,6 @@
 	<sys:String x:Key="HeaderAdvScanner">Hardware de Escáner</sys:String>
 	<sys:String x:Key="LblScanner">Escáner:</sys:String>
 	<sys:String x:Key="LblDpi">PPP:</sys:String>
-	<sys:String x:Key="TipScannerConfig">Configurar escáner, resolución (PPP) y opciones de red</sys:String>
 	<sys:String x:Key="TitleScannerConfig">Configuración del Escáner</sys:String>
 	<sys:String x:Key="DescScannerConfig">Seleccione su dispositivo de escáner y la resolución de captura. La configuración se guardará automáticamente.</sys:String>
 	<sys:String x:Key="BtnSaveAndScan">Guardar y Escanear</sys:String>
@@ -371,7 +362,6 @@
 	<sys:String x:Key="ThemeDark">Oscuro</sys:String>
 	<sys:String x:Key="ThemeLight">Claro</sys:String>
 	<sys:String x:Key="ThemeSystem">Predeterminado del Sistema</sys:String>
-	<sys:String x:Key="MenuDetectionColor">Color de Cuadro de Detección</sys:String>
 	<sys:String x:Key="ColorRed">Rojo Clásico</sys:String>
 	<sys:String x:Key="ColorAmber">Ámbar / Naranja (Accesible)</sys:String>
 	<sys:String x:Key="ColorCyan">Cian / Turquesa (Accesible)</sys:String>
@@ -406,7 +396,6 @@
 	<sys:String x:Key="HelpMetadataDesc">Da a las fotos un año aproximado, una fecha, una descripción y un fotógrafo; se escriben como etiquetas EXIF para que los gestores de fotos puedan ordenarlas por cuándo se hicieron.</sys:String>
 	<sys:String x:Key="TitleExportSettings">Opciones de Guardado y Exportación</sys:String>
 	<sys:String x:Key="DescExportSettings">Configura el formato de salida, nombres de archivo, carpeta de destino y metadatos.</sys:String>
-	<sys:String x:Key="TipSaveSettings">Configurar carpeta de salida, formato, nombres y metadatos</sys:String>
 	<sys:String x:Key="TipDetectionSettings">Ajustar límites de tamaño, bordes y restauración</sys:String>
 	<sys:String x:Key="TabExport">Guardado y Exportación</sys:String>
 	<sys:String x:Key="TabDetection">Detección y Restauración</sys:String>

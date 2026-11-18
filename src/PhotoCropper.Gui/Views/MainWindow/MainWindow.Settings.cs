@@ -21,7 +21,7 @@ internal sealed partial class MainWindow
 
     private void PopulateLanguageMenu()
     {
-        var menus = new[] { menuLanguage, menuAltLanguage };
+        var menus = new[] { menuLanguage };
         var languages = LocalizationService.GetAvailableLanguages();
 
         foreach (var menu in menus)
@@ -57,7 +57,7 @@ internal sealed partial class MainWindow
 
     private void PopulateThemeMenu()
     {
-        var menus = new[] { menuTheme, menuAltTheme };
+        var menus = new[] { menuTheme };
         var currentTheme = SettingsManager.Instance.Settings.Theme ?? "Dark";
 
         var themeItems = new (string Key, string Value)[]
@@ -110,7 +110,7 @@ internal sealed partial class MainWindow
 
     private void PopulateDetectionColorMenu()
     {
-        var menus = new[] { viewCrops.DetectionColorMenu, menuAltDetectionColor };
+        var menus = new[] { viewCrops.DetectionColorMenu };
         var currentColor = SettingsManager.Instance.Settings.DetectionBoxColor ?? "Red";
 
         var colorItems = new (string Key, string Value, string Hex)[]
