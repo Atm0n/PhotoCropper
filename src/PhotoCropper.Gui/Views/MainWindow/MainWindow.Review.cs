@@ -20,8 +20,6 @@ internal sealed partial class MainWindow : IReviewHost
         return Task.CompletedTask;
     }
 
-    private void CloseReviewMode() => _reviewVm.Close();
-
     internal ValueTask<bool> HandleReviewKey(Avalonia.Input.KeyEventArgs e)
     {
         if (!_reviewVm.HandleKey(e.Key)) return ValueTask.FromResult(false);
@@ -52,6 +50,6 @@ internal sealed partial class MainWindow : IReviewHost
         var engine = ScanSessions[CurrentIndex].Activate();
         ShowScan(engine);
         _cropsVm.ShowPhotos(Math.Max(0, photoIndex));
-        UpdateDetectionCoverageLabel();
+        _cropsVm.UpdateCoverage();
     }
 }

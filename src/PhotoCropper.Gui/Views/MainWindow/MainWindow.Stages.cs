@@ -214,7 +214,7 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
     {
         ShowScan(engine);
         _cropsVm.ShowPhotos(photoIndex);
-        UpdateDetectionCoverageLabel();
+        _cropsVm.UpdateCoverage();
     }
 
     // ---- IStageHost ----
@@ -336,7 +336,7 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
 
         if (workspace != null && workDir != null) ProjectWorkspaceService.SaveSession(workDir, workspace);
 
-        var options = GetDetectionOptionsFromUi();
+        var options = _cropsVm.GetDetectionOptions();
         bool wasEmpty = ScanSessions.Count == 0;
         _sessionManager.AddRange([.. added.Select(p => new ScanSessionItem(p, options, isSaved: false, isModified: true))]);
         if (wasEmpty && ScanSessions.Count > 0) CurrentIndex = 0;

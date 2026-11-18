@@ -11,21 +11,11 @@ namespace PhotoCropper.Gui;
 /// </summary>
 internal sealed partial class MainWindow
 {
-    internal void ClearGalleryBitmaps() => _cropsVm.ClearPhotos();
-
-    private void LoadCroppedPhotosToSlider() => _cropsVm.ShowPhotos();
-
-    private void UpdatePhotoCounterLabel() => _cropsVm.RefreshPhotoTexts();
-
-    private void UpdateSelectionUi() => _cropsVm.RefreshPhotoTexts();
-
     /// <summary>The photo shown in the carousel, as an index into the open scan's photos (-1: none).</summary>
     private int SelectedPhotoNumber => _cropsVm.SelectedPhotoIndices() is [var only] ? only
         : _cropsVm.SelectedPhotoIndex >= 0 && _cropsVm.SelectedPhotoIndex < _cropsVm.Photos.Count ? _cropsVm.Photos[_cropsVm.SelectedPhotoIndex].Index : -1;
 
     private void BtnDelete_Click(object? sender, RoutedEventArgs e) => DeleteSelectedPhotos();
-
-    private void DeleteCurrentPhoto() => DeleteSelectedPhotos();
 
     private void DeleteSelectedPhotos()
     {
@@ -34,8 +24,6 @@ internal sealed partial class MainWindow
     }
 
     private async void BtnRotate_Click(object? sender, RoutedEventArgs e) => await RotateSelectedPhotosAsync();
-
-    private Task RotateCurrentPhotoAsync() => RotateSelectedPhotosAsync();
 
     private Task RotateSelectedPhotosAsync() => isLoading ? Task.CompletedTask : _cropsVm.RotateSelectedPhotosAsync();
 
@@ -85,11 +73,11 @@ internal sealed partial class MainWindow
 
             var targetSession = ScanSessions[action.ScanIndex];
             var targetEngine = targetSession.Activate();
-            SyncUiWithScanOptions(targetEngine.CurrentOptions);
+            _cropsVm.ShowOptions(targetEngine.CurrentOptions);
             ShowScan(targetEngine);
             _cropsVm.UpdateScanCounter();
             _cropsVm.ShowPhotos();
-            UpdateDetectionCoverageLabel();
+            _cropsVm.UpdateCoverage();
         }
         else
         {
@@ -97,14 +85,14 @@ internal sealed partial class MainWindow
             // Refresh the main scan overlay (bounding boxes) as well as the photo list, keeping the shown photo.
             ShowScan(engine);
             _cropsVm.ShowPhotos(Math.Max(0, _cropsVm.SelectedPhotoIndex));
-            UpdateDetectionCoverageLabel();
+            _cropsVm.UpdateCoverage();
         }
 
         lblStatus.Text = LocalizationService.Format(statusMessageKey, statusDefaultFormat, action.Description);
 
         if (IsInReviewMode)
         {
-            CloseReviewMode();
+            _reviewVm.Close();
             _ = OpenReviewModeAsync();
         }
     }

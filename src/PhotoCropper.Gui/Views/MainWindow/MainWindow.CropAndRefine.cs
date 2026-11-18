@@ -200,41 +200,13 @@ internal sealed partial class MainWindow
         _refineVm.Open(session.Activate(), CurrentIndex, SelectedPhotoNumber, () => session.IsModified = true);
     }
 
+    /// <summary>Puts the detection settings back to their defaults and detects the open scan again with them.</summary>
     private async void BtnResetDefaults_Click(object? sender, RoutedEventArgs e)
     {
         if (isLoading) return;
-
         SettingsManager.Instance.ResetDetectionDefaults();
-        var settings = SettingsManager.Instance.Settings;
-        var defaultOptions = new DetectionOptions
-        {
-            BackgroundTolerance = settings.BackgroundTolerance,
-            MinAreaFactor = settings.MinAreaFactor / 100.0,
-            MaxAreaFactor = settings.MaxAreaFactor / 100.0,
-            CannyLowThreshold = settings.CannyLowThreshold,
-            CannyHighThreshold = settings.CannyLowThreshold * AppConstants.DefaultCannyHighRatio,
-            AutoOrientPhotos = settings.AutoOrientPhotos,
-            RestoreVintageColors = settings.RestoreVintageColors,
-            RemoveDustAndScratches = settings.RemoveDustAndScratches
-        };
-
-        SyncUiWithScanOptions(defaultOptions);
-
-        if (ScanSessions.Count > 0)
-        {
-            var photo = ScanSessions[CurrentIndex].Activate();
-            photo.ApplyOptions(defaultOptions);
-
-            string reprocessingMsg = LocalizationService.GetString(ResourceKeys.MsgReprocessing, "Reprocessing...");
-            await ExecuteWithLoadingAsync(reprocessingMsg, async ct =>
-            {
-                await Task.Run(() => photo.DetectPhotos(), ct);
-                ShowScan(photo);
-                LoadCroppedPhotosToSlider();
-                UpdateDetectionCoverageLabel();
-                lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgDetectionComplete, "Detection complete. Found {0} photos.", photo.DetectedPhotos.Count);
-            });
-        }
+        _cropsVm.LoadFromSettings();
+        await _cropsVm.ReprocessAsync();
     }
 
     private void TglColorPicker_Click(object? sender, RoutedEventArgs e)

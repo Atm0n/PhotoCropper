@@ -620,7 +620,7 @@ internal sealed partial class MainWindow : Window
         SetMainImage(null);
         _refineVm.Reject();
         _reviewVm.Close();
-        ClearGalleryBitmaps();
+        _cropsVm.ClearPhotos();
         _scannerService.Dispose();
         undoHistory.Dispose();
         _sessionManager.Dispose();

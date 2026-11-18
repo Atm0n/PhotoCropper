@@ -44,7 +44,7 @@ internal sealed partial class MainWindow
                     {
                         LocalizationService.SetLanguage(code);
                         UpdateWorkspaceUi(SettingsManager.Instance.Settings.WorkDirectory);
-                        UpdateSelectionUi();
+                        _cropsVm.RefreshPhotoTexts();
                         PopulateThemeMenu();
                         PopulateDetectionColorMenu();
                         FocusManager?.Focus(null);

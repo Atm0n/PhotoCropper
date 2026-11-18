@@ -37,7 +37,7 @@ internal sealed partial class MainWindow
     private async Task LoadScansFromPathsAsync(IEnumerable<string> paths)
     {
         undoHistory.Clear();
-        var options = GetDetectionOptionsFromUi();
+        var options = _cropsVm.GetDetectionOptions();
         var settings = SettingsManager.Instance.Settings;
         var newSessions = new List<ScanSessionItem>();
 
@@ -81,8 +81,6 @@ internal sealed partial class MainWindow
         if (ScanSessions.Count == 0 || isLoading) return;
         await _cropsVm.LoadCurrentScanAsync();
     }
-
-    private void UpdateDetectionCoverageLabel() => _cropsVm.UpdateCoverage();
 
     private void UpdateEmptyStateVisibility()
     {
@@ -147,7 +145,7 @@ internal sealed partial class MainWindow
         if (!_sessionManager.HasScans)
         {
             SetMainImage(null);
-            ClearGalleryBitmaps();
+            _cropsVm.ClearPhotos();
             lblStatus.Text = statusMsg;
             UpdateEmptyStateVisibility();
             RefreshStages();
@@ -167,9 +165,4 @@ internal sealed partial class MainWindow
     private void MenuAutoTuneOnPass_Click(object? sender, RoutedEventArgs e) =>
         _cropsVm.AutoTuneOnScanChange = !_cropsVm.AutoTuneOnScanChange;
 
-    private Task ReprocessCurrentScanAsync() => _cropsVm.ReprocessAsync();
-
-    private void SyncUiWithScanOptions(DetectionOptions options) => _cropsVm.ShowOptions(options);
-
-    private DetectionOptions GetDetectionOptionsFromUi() => _cropsVm.GetDetectionOptions();
 }

@@ -246,7 +246,7 @@ internal sealed partial class MainWindow
                 ShowAppError("Operation Failed", ex.Message);
             }
 
-            var options = GetDetectionOptionsFromUi();
+            var options = _cropsVm.GetDetectionOptions();
             var newItems = stagedPaths.Select(path => new ScanSessionItem(path, options, isSaved: false, isModified: true)).ToList();
             _sessionManager.AddRange(newItems);
 
