@@ -102,7 +102,20 @@ public static class PhotoExporter
         SavePhotos(photos, originalFilePath, customOutputFolder, format, jpegQuality, FileNameTemplateHelper.DefaultPattern, null, progressCallback);
     }
 
-    public static void SavePhotos(
+    /// <param name="cleanOldExports">
+    /// Remove this scan's earlier exports from the output folder before writing. When
+    /// <paramref name="previousExports"/> has entries, exactly those files are removed (if unchanged on disk and
+    /// still in the output folder). Otherwise, if <paramref name="matchPreviousExportsByName"/> is set, files
+    /// named exactly as the current pattern produces for this scan are removed instead.
+    /// </param>
+    /// <param name="previousExports">Files recorded by this scan's previous export (see the return value).</param>
+    /// <param name="matchPreviousExportsByName">
+    /// Allow the name-based fallback. Callers should turn it off when another scan exporting to the same folder
+    /// has the same base name, since names can't tell their files apart.
+    /// </param>
+    /// <returns>The files written, to pass as <paramref name="previousExports"/> on the next export.</returns>
+    /// <exception cref="PartialExportException">Writing failed after some files were written; they are listed on the exception.</exception>
+    public static IReadOnlyList<ExportedFile> SavePhotos(
         IReadOnlyList<Mat> photos,
         string originalFilePath,
         string? customOutputFolder = null,
@@ -111,26 +124,21 @@ public static class PhotoExporter
         string fileNamePattern = FileNameTemplateHelper.DefaultPattern,
         PhotoCropper.Core.Models.PhotoExportMetadata? metadata = null,
         Action<int, int>? progressCallback = null,
-        bool cleanOldExports = false)
+        bool cleanOldExports = false,
+        IEnumerable<ExportedFile>? previousExports = null,
+        bool matchPreviousExportsByName = true)
     {
         ArgumentNullException.ThrowIfNull(photos);
         ArgumentNullException.ThrowIfNull(originalFilePath);
         ArgumentNullException.ThrowIfNull(format);
 
+        var written = new List<ExportedFile>();
         string outputFolder = ExportPathResolver.ResolveOutputDirectory(originalFilePath, customOutputFolder);
-        if (string.IsNullOrEmpty(outputFolder)) return;
+        if (string.IsNullOrEmpty(outputFolder)) return written;
 
         Directory.CreateDirectory(outputFolder);
 
         string baseFileName = Path.GetFileNameWithoutExtension(originalFilePath);
-
-        if (cleanOldExports)
-        {
-            CleanOldExports(outputFolder, baseFileName);
-        }
-
-        string extension = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
-        var (xDpi, yDpi) = GetDpiFromSource(originalFilePath);
 
         int totalValidPhotos = 0;
         for (int p = 0; p < photos.Count; p++)
@@ -138,6 +146,12 @@ public static class PhotoExporter
             if (!photos[p].IsEmpty) totalValidPhotos++;
         }
 
+        string extension = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
+        var (xDpi, yDpi) = GetDpiFromSource(originalFilePath);
+
+        // Encode everything before touching the output folder, so an encoding failure can't happen after the
+        // previous export has already been deleted.
+        var encoded = new List<(int SourceIndex, string FileName, byte[] Bytes)>(totalValidPhotos);
         int saveCounter = 1;
         for (int i = 0; i < photos.Count; i++)
         {
@@ -149,66 +163,214 @@ public static class PhotoExporter
                 totalValidPhotos,
                 metadata,
                 extension);
-            string baseTargetFileName = Path.Combine(outputFolder, relativeFileName);
-            string fileName = ResolveUniqueExportPath(baseTargetFileName);
+            encoded.Add((i, relativeFileName, EncodePhoto(photos[i], format, jpegQuality, metadata, xDpi, yDpi)));
+        }
 
-            if (string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase))
+        if (cleanOldExports)
+        {
+            CleanOldExports(outputFolder, originalFilePath, fileNamePattern, metadata, totalValidPhotos, previousExports, matchPreviousExportsByName);
+        }
+
+        foreach (var (sourceIndex, relativeFileName, fileBytes) in encoded)
+        {
+            string fileName = ResolveUniqueExportPath(Path.Combine(outputFolder, relativeFileName));
+            try
             {
-                using Emgu.CV.Util.VectorOfByte buf = new();
-                CvInvoke.Imencode(".png", photos[i], buf);
-                byte[] fileBytes = buf.ToArray();
-                if (metadata?.HasMetadata == true)
-                {
-                    fileBytes = ExifMetadataWriter.InjectPngMetadata(fileBytes, metadata);
-                }
-                fileBytes = ApplyPngDpi(fileBytes, xDpi, yDpi);
                 WriteBytesToFile(fileName, fileBytes);
             }
-            else
+            catch (Exception ex) when (written.Count > 0 && ex is IOException or UnauthorizedAccessException)
             {
-                KeyValuePair<ImwriteFlags, int>[] parameters = [
-                    new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegQuality, jpegQuality),
-                    new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegOptimize, 1)
-                ];
-                using Emgu.CV.Util.VectorOfByte buf = new();
-                CvInvoke.Imencode(".jpg", photos[i], buf, parameters);
-                byte[] fileBytes = buf.ToArray();
-                if (metadata?.HasMetadata == true)
-                {
-                    fileBytes = ExifMetadataWriter.InjectJpegMetadata(fileBytes, metadata);
-                }
-                fileBytes = ApplyJpegDpi(fileBytes, xDpi, yDpi);
-                WriteBytesToFile(fileName, fileBytes);
+                // Report what did get written so the caller can still record (and later replace) it.
+                throw new PartialExportException(written, ex);
+            }
+            finally
+            {
+                // Once the file exists on disk, File.Exists protects the name; the claim only has to cover
+                // the window between choosing the name and writing it.
+                ReleaseExportPath(fileName);
             }
 
-            progressCallback?.Invoke(i + 1, photos.Count);
+            written.Add(ExportedFile.FromDisk(fileName));
+            progressCallback?.Invoke(sourceIndex + 1, photos.Count);
+        }
+
+        return written;
+    }
+
+    /// <summary>
+    /// Encodes a photo exactly as exports write it: PNG or JPEG, with EXIF/text metadata (when present) and
+    /// the source scan's DPI. Shared by batch and single-photo export so both produce identical files.
+    /// </summary>
+    /// <param name="format">"PNG" for PNG; anything else produces JPEG.</param>
+    public static byte[] EncodePhoto(Mat photo, string format, int jpegQuality, PhotoCropper.Core.Models.PhotoExportMetadata? metadata, int xDpi, int yDpi)
+    {
+        ArgumentNullException.ThrowIfNull(photo);
+        ArgumentNullException.ThrowIfNull(format);
+
+        bool isPng = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase);
+        using Emgu.CV.Util.VectorOfByte buf = new();
+        if (isPng)
+        {
+            CvInvoke.Imencode(".png", photo, buf);
+        }
+        else
+        {
+            KeyValuePair<ImwriteFlags, int>[] parameters = [
+                new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegQuality, jpegQuality),
+                new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegOptimize, 1)
+            ];
+            CvInvoke.Imencode(".jpg", photo, buf, parameters);
+        }
+
+        byte[] fileBytes = buf.ToArray();
+        if (metadata?.HasMetadata == true)
+        {
+            fileBytes = isPng
+                ? ExifMetadataWriter.InjectPngMetadata(fileBytes, metadata)
+                : ExifMetadataWriter.InjectJpegMetadata(fileBytes, metadata);
+        }
+
+        return isPng ? ApplyPngDpi(fileBytes, xDpi, yDpi) : ApplyJpegDpi(fileBytes, xDpi, yDpi);
+    }
+
+    /// <summary>
+    /// Paths handed out by <see cref="ResolveUniqueExportPath"/> whose files haven't been written yet, so two
+    /// concurrent exports can't pick the same new name. Entries are released once the file is written,
+    /// so this only ever holds in-flight exports.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, byte> ClaimedExportPaths = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Releases a path claimed by <see cref="ResolveUniqueExportPath"/> once its file is written (or abandoned).</summary>
+    public static void ReleaseExportPath(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        ClaimedExportPaths.TryRemove(path, out _);
+    }
+
+    private static readonly string[] ExportExtensions = [".jpg", ".png"];
+
+    /// <summary>Upper bound on photo indices probed when looking for previous exports.</summary>
+    private const int MaxProbedExportIndex = 10_000;
+
+    private static void CleanOldExports(
+        string outputFolder,
+        string originalFilePath,
+        string fileNamePattern,
+        PhotoCropper.Core.Models.PhotoExportMetadata? metadata,
+        int totalPhotos,
+        IEnumerable<ExportedFile>? previousExports,
+        bool matchByName)
+    {
+        string sourceFullPath = Path.GetFullPath(originalFilePath);
+        string outputFullPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(outputFolder));
+        var previous = previousExports?.ToList() ?? [];
+
+        IEnumerable<string> candidates;
+        if (previous.Count > 0)
+        {
+            // A record of exactly what this scan wrote last time is authoritative: it also covers exports
+            // made with an older pattern or metadata, and never touches another scan's files even when both
+            // scans share a base name. Only files still in this output folder and unchanged on disk are
+            // replaced; exports to a folder the user has since moved away from are kept.
+            candidates = previous
+                .Where(f => f.IsUnchangedOnDisk() &&
+                            string.Equals(Path.GetDirectoryName(Path.GetFullPath(f.Path)), outputFullPath, StringComparison.OrdinalIgnoreCase))
+                .Select(f => f.Path);
+        }
+        else if (matchByName)
+        {
+            // No record (first export, or an export made before records were kept): fall back to names.
+            candidates = FindPreviousExports(outputFolder, Path.GetFileNameWithoutExtension(originalFilePath), fileNamePattern, metadata, totalPhotos);
+        }
+        else
+        {
+            return;
+        }
+
+        candidates = candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        foreach (string file in candidates)
+        {
+            // A pattern like "{original}" exporting next to the scan generates the scan's own name.
+            if (string.Equals(Path.GetFullPath(file), sourceFullPath, StringComparison.OrdinalIgnoreCase)) continue;
+
+            try
+            {
+                File.Delete(file);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Failed to remove previous export '{file}': {ex.Message}");
+            }
         }
     }
 
-    private static readonly ConcurrentDictionary<string, byte> ClaimedExportPaths = new(StringComparer.OrdinalIgnoreCase);
-
-    public static void ClearClaimedExportPaths() => ClaimedExportPaths.Clear();
-
-    private static void CleanOldExports(string outputFolder, string baseFileName)
+    /// <summary>
+    /// Finds files from an earlier export of this scan that a re-export should replace.
+    /// </summary>
+    /// <remarks>
+    /// Only files whose names are exactly what <paramref name="fileNamePattern"/> produces for this scan
+    /// (index 1, 2, … in .jpg or .png, plus the " (n)" variants <see cref="ResolveUniqueExportPath"/> adds on
+    /// collisions) are returned, so unrelated files that merely share a prefix are never touched. Indices
+    /// beyond <paramref name="totalPhotos"/> are included while they keep existing, to remove photos the user
+    /// has since deleted. Patterns without {original}/{filename} return nothing: their names don't identify the
+    /// scan, so they could belong to another scan exported into the same folder.
+    /// Exports made with a different pattern or metadata aren't found; those are left in place.
+    /// </remarks>
+    internal static IReadOnlyList<string> FindPreviousExports(
+        string outputFolder,
+        string baseFileName,
+        string fileNamePattern,
+        PhotoCropper.Core.Models.PhotoExportMetadata? metadata,
+        int totalPhotos)
     {
-        try
-        {
-            var files = Directory.GetFiles(outputFolder, $"{baseFileName}_*.*")
-                .Concat(Directory.GetFiles(outputFolder, $"*_{baseFileName}_*.*"))
-                .Distinct();
+        ArgumentNullException.ThrowIfNull(outputFolder);
+        ArgumentNullException.ThrowIfNull(baseFileName);
 
-            foreach (var f in files)
+        var found = new List<string>();
+        if (!PatternIdentifiesScan(fileNamePattern) || !Directory.Exists(outputFolder)) return found;
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int index = 1; index <= MaxProbedExportIndex; index++)
+        {
+            bool foundForIndex = false;
+            foreach (string ext in ExportExtensions)
             {
-                string ext = Path.GetExtension(f).ToUpperInvariant();
-                if (ext == ".JPG" || ext == ".JPEG" || ext == ".PNG")
+                string name = FileNameTemplateHelper.FormatFileName(fileNamePattern, baseFileName, index, totalPhotos, metadata, ext);
+                string path = Path.Combine(outputFolder, name);
+                if (!seen.Add(path)) continue;
+
+                foreach (string existing in ExistingWithDuplicateSuffixes(path))
                 {
-                    File.Delete(f);
+                    found.Add(existing);
+                    foundForIndex = true;
                 }
             }
+
+            if (index >= totalPhotos && !foundForIndex) break;
         }
-        catch (Exception ex)
+
+        return found;
+    }
+
+    private static bool PatternIdentifiesScan(string? fileNamePattern) =>
+        string.IsNullOrWhiteSpace(fileNamePattern) ||
+        fileNamePattern.Contains("{original}", StringComparison.OrdinalIgnoreCase) ||
+        fileNamePattern.Contains("{filename}", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Yields <paramref name="path"/> and its "name (1).ext", "name (2).ext", … siblings while they exist.</summary>
+    private static IEnumerable<string> ExistingWithDuplicateSuffixes(string path)
+    {
+        if (File.Exists(path)) yield return path;
+
+        string dir = Path.GetDirectoryName(path) ?? string.Empty;
+        string nameWithoutExt = Path.GetFileNameWithoutExtension(path);
+        string ext = Path.GetExtension(path);
+        for (int n = 1; n <= AppConstants.MaxExportPathRetries; n++)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to clean old exports for {baseFileName}: {ex.Message}");
+            string candidate = Path.Combine(dir, $"{nameWithoutExt} ({n}){ext}");
+            if (!File.Exists(candidate)) yield break;
+            yield return candidate;
         }
     }
 

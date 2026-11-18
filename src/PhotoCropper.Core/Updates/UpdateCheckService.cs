@@ -5,7 +5,8 @@ namespace PhotoCropper.Core.Updates;
 
 public static class UpdateCheckService
 {
-    private static readonly Uri DefaultReleaseUri = new("https://github.com/Atm0n/PhotoCropper/releases/latest");
+    private static readonly Uri DefaultReleaseUri = new("https://api.github.com/repos/Atm0n/PhotoCropper/releases/latest");
+    private static readonly Uri DefaultFallbackDownloadUri = new("https://github.com/Atm0n/PhotoCropper/releases/latest");
 
     public static Uri DefaultLatestReleaseUri => DefaultReleaseUri;
 
@@ -25,7 +26,7 @@ public static class UpdateCheckService
         }
 
         string trimmed = tag.Trim();
-        if (trimmed.StartsWith('v') || trimmed.StartsWith('V'))
+        if (trimmed is ['v' or 'V', ..])
         {
             trimmed = trimmed[1..];
         }
@@ -61,38 +62,61 @@ public static class UpdateCheckService
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Head, requestUri);
+            using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
             request.Headers.Add("User-Agent", "PhotoCropper");
+            request.Headers.Add("Accept", "application/vnd.github.v3+json");
 
-            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using var response = await client.SendAsync(request, cancellationToken);
 
-            Uri? location = response.Headers.Location;
-            if (location == null && response.RequestMessage?.RequestUri != null)
+            string? tag = null;
+            Uri? downloadUri = null;
+
+            if (response.IsSuccessStatusCode)
             {
-                location = response.RequestMessage.RequestUri;
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var doc = await System.Text.Json.JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("tag_name", out var tagElem))
+                {
+                    tag = tagElem.GetString();
+                }
+
+                if (root.TryGetProperty("html_url", out var urlElem) && Uri.TryCreate(urlElem.GetString(), UriKind.Absolute, out var parsedUrl))
+                {
+                    downloadUri = parsedUrl;
+                }
+            }
+            else if (response.Headers.Location != null)
+            {
+                // A redirect the client didn't follow (e.g. a caller-supplied client hitting the
+                // github.com/.../releases/latest page): the target URL ends in the release tag.
+                Uri loc = response.Headers.Location;
+                downloadUri = loc.IsAbsoluteUri ? loc : new Uri(requestUri, loc);
+                tag = Path.GetFileName(downloadUri.AbsolutePath.TrimEnd('/'));
+            }
+            else
+            {
+                // Any other error (e.g. 403/429 when the unauthenticated GitHub API rate limit is hit) means
+                // the latest version is unknown. Reporting "up to date" here would hide available updates.
+                return UpdateCheckResult.Failed(activeVersion, DescribeHttpFailure(response));
             }
 
-            if (location == null)
-            {
-                return UpdateCheckResult.UpToDate(activeVersion);
-            }
-
-            Uri absoluteUri = location.IsAbsoluteUri ? location : new Uri(requestUri, location);
-            string tag = Path.GetFileName(absoluteUri.AbsolutePath.TrimEnd('/'));
+            downloadUri ??= DefaultFallbackDownloadUri;
 
             if (TryParseTagVersion(tag, out Version? latestVersion) && latestVersion != null)
             {
                 if (latestVersion > activeVersion)
                 {
-                    return UpdateCheckResult.Available(activeVersion, latestVersion, tag, absoluteUri);
+                    return UpdateCheckResult.Available(activeVersion, latestVersion, tag!, downloadUri);
                 }
 
-                return UpdateCheckResult.UpToDate(activeVersion, latestVersion, tag, absoluteUri);
+                return UpdateCheckResult.UpToDate(activeVersion, latestVersion, tag, downloadUri);
             }
 
-            return UpdateCheckResult.UpToDate(activeVersion);
+            return UpdateCheckResult.Failed(activeVersion, $"Could not read the latest release version (tag: '{tag ?? "none"}').");
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException or System.Text.Json.JsonException)
         {
             return UpdateCheckResult.Failed(activeVersion, ex.Message);
         }
@@ -102,12 +126,24 @@ public static class UpdateCheckService
         }
     }
 
+    private static string DescribeHttpFailure(HttpResponseMessage response)
+    {
+        int status = (int)response.StatusCode;
+        string message = $"GitHub returned HTTP {status} {response.ReasonPhrase}".TrimEnd();
+
+        bool rateLimited = status == 429 ||
+            (status == 403 && response.Headers.TryGetValues("X-RateLimit-Remaining", out var remaining) && remaining.Contains("0"));
+        return rateLimited
+            ? $"{message}: the GitHub API rate limit was reached. Try again later."
+            : message;
+    }
+
     [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "HttpClient owns and disposes the handler")]
     private static HttpClient CreateDefaultHttpClient()
     {
         var handler = new HttpClientHandler
         {
-            AllowAutoRedirect = false,
+            AllowAutoRedirect = true,
             CheckCertificateRevocationList = true
         };
 

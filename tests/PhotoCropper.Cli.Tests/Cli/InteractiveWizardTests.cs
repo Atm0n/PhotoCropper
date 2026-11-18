@@ -170,6 +170,8 @@ public sealed class InteractiveWizardTests : IDisposable
         console.Input.PushTextWithEnter("1978-08-20");
         // Description
         console.Input.PushTextWithEnter("Summer Vacation");
+        // Photographer (skip)
+        console.Input.PushKey(ConsoleKey.Enter);
 
         // 6b. Pattern: Since Year is set to 1978, top choice is {year}_{original}_{index:02}
         console.Input.PushKey(ConsoleKey.Enter);
@@ -224,6 +226,7 @@ public sealed class InteractiveWizardTests : IDisposable
         console.Input.PushTextWithEnter("not-a-valid-date"); // Invalid date input
         console.Input.PushTextWithEnter("1995-12-25");        // Valid date input
         console.Input.PushKey(ConsoleKey.Enter); // Skip Description
+        console.Input.PushKey(ConsoleKey.Enter); // Skip Photographer
         console.Input.PushKey(ConsoleKey.Enter); // Pattern
         console.Input.PushKey(ConsoleKey.Enter); // Threads
         console.Input.PushKey(ConsoleKey.Enter); // Confirm

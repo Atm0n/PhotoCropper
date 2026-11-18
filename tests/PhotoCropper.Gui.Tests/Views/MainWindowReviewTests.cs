@@ -1,5 +1,6 @@
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
+using PhotoCropper.Gui.ViewModels;
 using PhotoCropper.TestHelpers;
 using System.Diagnostics.CodeAnalysis;
 
@@ -44,7 +45,7 @@ public sealed class MainWindowReviewTests : IDisposable
         s2.PhotoCount.ShouldBe(2);
 
         var sessions = new List<ScanSessionItem> { s1, s2 };
-        var flattened = MainWindow.FlattenReviewItems(sessions, currentIndex: 1, out int initialIndex, selectedPhotoIndex: 1);
+        var flattened = ReviewViewModel.Flatten(sessions, currentIndex: 1, out int initialIndex, selectedPhotoIndex: 1);
 
         flattened.Count.ShouldBe(4);
         flattened[0].ShouldBe(new ReviewPhotoItem(0, 0));

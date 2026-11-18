@@ -1,6 +1,6 @@
 # PhotoCropper Architecture
 
-PhotoCropper is built using a modular `.NET 10` architecture that cleanly separates the image processing logic from the user interfaces. The system uses `Emgu.CV` (an OpenCV wrapper) for high-performance computer vision tasks.
+PhotoCropper is built using a modular `.NET 11` architecture that cleanly separates the image processing logic from the user interfaces. The system uses `Emgu.CV` (an OpenCV wrapper) for high-performance computer vision tasks.
 
 ## High-Level System Overview
 
@@ -42,6 +42,22 @@ flowchart TD
     Extract --> OpenCV
     Orient --> ONNX
 ```
+
+## GUI Structure
+
+The GUI is a three-stage workflow over the project folders: **1 Scan** (`RawScans/`) → **2 Crops** (`Cropped/`) → **3 Finish** (`Final/`). `MainWindow` hosts the stage bar, the menus, the loading and error overlays and the keyboard routing; each stage's state and logic live in a view-model (CommunityToolkit.Mvvm) that reaches the window only through a small host interface, so view-models are tested without UI.
+
+| Piece | View | View-model | Host interface |
+|---|---|---|---|
+| Scan stage | `Views/Stages/ScanStageView` | `ScanStageViewModel` | `IStageHost` |
+| Crops stage | `Views/Stages/CropsStageView` (scan view, photo panel) | `CropsStageViewModel` (`.Editing`, `.Photos`) | `ICropsStageHost`; the view asks the window through `ICropsViewActions` |
+| Finish stage | `Views/Stages/FinishStageView` | `FinishStageViewModel` | `IStageHost` |
+| Review mode | `Views/Overlays/ReviewView` | `ReviewViewModel` | `IReviewHost` |
+| Refine mode | `Views/Overlays/RefineView` | `RefineViewModel` | `IRefineHost` |
+
+`CropsStageViewModel` owns the open scan and navigation, the detection settings, the background look-ahead (`LookaheadPlan`), box editing in scan pixels (`PressAt`/`DragTo`/`Release`/`ClickAt`, geometry in `BoxEditMath`) and the photo list (`CropPhotoItem`, carousel and grid selection, delete/rotate with undo). `CropsStageView`'s code-behind only maps the pointer to scan pixels, zooms, draws the selection rectangle and collapses the photo panel.
+
+Box outlines, handles and badges are drawn by `Controls/CropBoxOverlay` over the untouched scan, from the same `CropBoxGeometry` that hit-testing uses; the engine no longer paints them into a copy of the scan, so dragging a box only repaints the overlay.
 
 ## Auto-Tuning Detection Pipeline
 

@@ -27,6 +27,22 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
+    public void Move_ShouldReorderAndKeepTheSameScanSelected()
+    {
+        using var manager = new ScanSessionManager();
+        manager.AddRange([
+            new ScanSessionItem(_scan1, new DetectionOptions()),
+            new ScanSessionItem(_scan2, new DetectionOptions()),
+            new ScanSessionItem(_scan3, new DetectionOptions())]);
+        manager.MoveTo(2);
+
+        manager.Move(2, 0);
+
+        manager.Sessions.Select(s => Path.GetFileName(s.FilePath)).ShouldBe(["scan3.png", "scan1.png", "scan2.png"]);
+        manager.CurrentSession!.FilePath.ShouldBe(_scan3);
+    }
+
+    [Fact]
     public void ScanSessionManager_InitialState_ShouldBeEmpty()
     {
         using var manager = new ScanSessionManager();
@@ -36,8 +52,6 @@ public sealed class ScanSessionManagerTests : IDisposable
         manager.CurrentIndex.ShouldBe(0);
         manager.CurrentSession.ShouldBeNull();
         manager.Sessions.ShouldBeEmpty();
-        manager.HasUnsavedChanges().ShouldBeFalse();
-        manager.GetPendingExportSessions().ShouldBeEmpty();
     }
 
     [Fact]
@@ -238,27 +252,39 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_DirtyTracking_ShouldDetectUnsavedAndPending()
+    public void ScanSessionManager_SessionModified_ShouldReportEveryEditOfATrackedScan()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
-
         var item1 = new ScanSessionItem(_scan1, options, isSaved: true, isModified: false);
         var item2 = new ScanSessionItem(_scan2, options, isSaved: false, isModified: true);
+        var reported = new List<ScanSessionItem>();
+        manager.SessionModified += reported.Add;
 
         manager.AddRange([item1, item2]);
+        reported.ShouldBeEmpty(); // constructing a session is not an edit
 
-        manager.HasUnsavedChanges().ShouldBeTrue();
-        var pending = manager.GetPendingExportSessions();
-        pending.Count.ShouldBe(1);
-        pending[0].ShouldBe(item2);
-
-        // Mark item2 as saved and unmodified
-        item2.IsSaved = true;
+        item1.IsModified = true;
+        item1.IsModified = true; // each edit counts, even when already modified
         item2.IsModified = false;
 
-        manager.HasUnsavedChanges().ShouldBeFalse();
-        manager.GetPendingExportSessions().ShouldBeEmpty();
+        reported.ShouldBe([item1, item1]);
+    }
+
+    [Fact]
+    public void ScanSessionManager_SessionModified_ShouldStopForRemovedScans()
+    {
+        using var manager = new ScanSessionManager();
+        var options = new DetectionOptions();
+        var item = new ScanSessionItem(_scan1, options);
+        var reported = new List<ScanSessionItem>();
+        manager.SessionModified += reported.Add;
+        manager.Add(item);
+
+        manager.RemoveAt(0);
+        item.IsModified = true;
+
+        reported.ShouldBeEmpty();
     }
 
     [Fact]

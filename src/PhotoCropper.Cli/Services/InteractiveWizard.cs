@@ -349,6 +349,13 @@ internal static class InteractiveWizard
                     .AllowEmpty());
 
             options.Description = string.IsNullOrWhiteSpace(descInput) ? null : descInput.Trim();
+
+            string photographerInput = console.Prompt(
+                new TextPrompt<string>("    Photographer / Artist name (press Enter to skip):")
+                    .DefaultValue(options.Photographer ?? string.Empty)
+                    .AllowEmpty());
+
+            options.Photographer = string.IsNullOrWhiteSpace(photographerInput) ? null : photographerInput.Trim();
         }
 
         console.WriteLine();
@@ -453,12 +460,13 @@ internal static class InteractiveWizard
         table.AddRow("Dust/Scratch Removal", options.RemoveDust ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
         table.AddRow("Naming Pattern", $"[bold yellow]{Markup.Escape(options.FileNamePattern)}[/]");
 
-        if (options.Year.HasValue || !string.IsNullOrWhiteSpace(options.Date) || !string.IsNullOrWhiteSpace(options.Description))
+        if (options.Year.HasValue || !string.IsNullOrWhiteSpace(options.Date) || !string.IsNullOrWhiteSpace(options.Description) || !string.IsNullOrWhiteSpace(options.Photographer))
         {
             string meta = "";
             if (options.Year.HasValue) meta += $"Year: {options.Year} ";
             if (!string.IsNullOrWhiteSpace(options.Date)) meta += $"Date: {options.Date} ";
-            if (!string.IsNullOrWhiteSpace(options.Description)) meta += $"Desc: '{options.Description}'";
+            if (!string.IsNullOrWhiteSpace(options.Description)) meta += $"Desc: '{options.Description}' ";
+            if (!string.IsNullOrWhiteSpace(options.Photographer)) meta += $"Photographer: '{options.Photographer}'";
             table.AddRow("Vintage EXIF", $"[bold green]{Markup.Escape(meta.Trim())}[/]");
         }
 
@@ -494,7 +502,8 @@ internal static class InteractiveWizard
             FileNamePattern = source.FileNamePattern,
             Year = source.Year,
             Date = source.Date,
-            Description = source.Description
+            Description = source.Description,
+            Photographer = source.Photographer
         };
 
         foreach (var input in source.Inputs)

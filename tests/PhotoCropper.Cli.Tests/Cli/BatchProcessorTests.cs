@@ -4,6 +4,7 @@ using PhotoCropper.TestHelpers;
 
 namespace PhotoCropper.Cli.Tests.Cli;
 
+[Collection(nameof(ConsoleProgressGroup))]
 public sealed class BatchProcessorTests : IDisposable
 {
     private readonly string _tempDir;

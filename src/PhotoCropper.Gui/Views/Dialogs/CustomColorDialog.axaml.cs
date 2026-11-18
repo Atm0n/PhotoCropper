@@ -38,7 +38,7 @@ internal sealed partial class CustomColorDialog : Window
     {
         if (!string.IsNullOrWhiteSpace(initialColor))
         {
-            if (initialColor.StartsWith('#') && Color.TryParse(initialColor, out var parsed))
+            if (initialColor is ['#', ..] && Color.TryParse(initialColor, out var parsed))
             {
                 return parsed;
             }
@@ -152,7 +152,7 @@ internal sealed partial class CustomColorDialog : Window
         if (_isUpdating) return;
 
         string text = txtHex.Text?.Trim() ?? "";
-        if (!text.StartsWith('#')) text = "#" + text;
+        if (text is not ['#', ..]) text = "#" + text;
 
         if (Color.TryParse(text, out var color))
         {

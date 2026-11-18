@@ -13,12 +13,34 @@ public sealed class ScanSessionItem : IDisposable
     public int PhotoCount => Engine?.DetectedPhotos.Count ?? CachedPhotoCount;
     public int CachedPhotoCount { get; private set; }
     public bool IsSaved { get; set; }
-    public bool IsModified { get; set; }
+
+    /// <summary>
+    /// The scan's boxes differ from a fresh detection, so its engine is kept loaded. Setting it to true (on every
+    /// edit, even when already true) raises <see cref="Modified"/>, which the GUI uses to save the boxes.
+    /// </summary>
+    public bool IsModified
+    {
+        get => _isModified;
+        set
+        {
+            _isModified = value;
+            if (value) Modified?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private bool _isModified;
+
+    /// <summary>Raised on each edit (see <see cref="IsModified"/>), possibly from a background thread.</summary>
+    public event EventHandler? Modified;
     public bool IsAutoTuned { get; set; }
     public bool IsProcessing { get; set; }
     public PhotoExportMetadata Metadata { get; set; } = new();
 
-    public IReadOnlyList<PhotoCropper.Core.Workspace.WorkspaceCropData>? SavedCrops { get; }
+    /// <summary>Files written by this scan's last export; replaced by the next export.</summary>
+    public IReadOnlyList<PhotoCropper.Core.Export.ExportedFile> ExportedFiles { get; set; } = [];
+
+    /// <summary>The boxes saved in session.json; a scan that has them is restored from them instead of re-detected.</summary>
+    public IReadOnlyList<PhotoCropper.Core.Workspace.WorkspaceCropData>? SavedCrops { get; set; }
 
     private readonly Lock _lock = new();
 
@@ -30,7 +52,7 @@ public sealed class ScanSessionItem : IDisposable
         FilePath = filePath;
         Options = defaultOptions with { };
         IsSaved = isSaved;
-        IsModified = isModified;
+        _isModified = isModified;
         SavedCrops = savedCrops?.ToList();
     }
 
@@ -43,7 +65,8 @@ public sealed class ScanSessionItem : IDisposable
                 var engine = new PhotoCropperEngine(FilePath);
                 engine.ApplyOptions(Options);
 
-                if (SavedCrops != null && SavedCrops.Count > 0 && IsSaved && !IsModified)
+                // An empty saved list is kept as empty: every photo on the scan was deleted.
+                if (SavedCrops != null && IsSaved && !IsModified)
                 {
                     engine.RestoreFromSavedCrops(SavedCrops);
                 }

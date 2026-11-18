@@ -1,0 +1,154 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PhotoCropper.Gui.ViewModels"
+             x:Class="PhotoCropper.Gui.Views.Overlays.StartView"
+             x:DataType="vm:StartViewModel"
+             Background="{DynamicResource AppBackgroundBrush}">
+	<UserControl.Styles>
+		<Style Selector="Button.startAction">
+			<Setter Property="Background" Value="{DynamicResource AppCardBackgroundBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Padding" Value="18,16"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalContentAlignment" Value="Left"/>
+			<Setter Property="VerticalAlignment" Value="Stretch"/>
+			<Setter Property="VerticalContentAlignment" Value="Top"/>
+		</Style>
+		<!-- A recent project whose folder is gone: dimmed rather than the default (brighter) disabled look -->
+		<Style Selector="Button.missing:disabled /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource AppCardBackgroundBrush}"/>
+		</Style>
+		<Style Selector="Button.missing">
+			<Setter Property="Opacity" Value="0.55"/>
+		</Style>
+		<Style Selector="Button.startAction.primary">
+			<Setter Property="Background" Value="{DynamicResource AppButtonAccentBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AppButtonAccentTextBrush}"/>
+		</Style>
+	</UserControl.Styles>
+
+	<Grid RowDefinitions="Auto, *">
+		<!-- Back to the open project (only when one is open) -->
+		<Button Grid.Row="0" HorizontalAlignment="Right" Margin="16" Padding="12,8" CornerRadius="6"
+				IsVisible="{Binding CanGoBack}" Command="{Binding BackCommand}"
+				Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}">
+			<TextBlock Text="{Binding BackText}" FontSize="13"/>
+		</Button>
+
+		<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+			<StackPanel MaxWidth="760" Margin="24,0,24,32" Spacing="22">
+				<StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center" Margin="0,12,0,0">
+					<Image Source="avares://PhotoCropper.Gui/Assets/app_icon.png" Width="56" Height="56"/>
+					<StackPanel VerticalAlignment="Center" Spacing="2">
+						<TextBlock Text="PhotoCropper" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+						<TextBlock Text="{DynamicResource StartSubtitle}" FontSize="14" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+					</StackPanel>
+				</StackPanel>
+
+				<!-- The three ways in -->
+				<UniformGrid Columns="3" IsVisible="{Binding !IsCreating}">
+					<Button Classes="startAction primary" Margin="0,0,8,0" Command="{Binding NewProjectCommand}">
+						<StackPanel Spacing="4">
+							<TextBlock Text="＋" FontSize="22" FontWeight="Bold"/>
+							<TextBlock Text="{DynamicResource BtnNewProject}" FontSize="16" FontWeight="SemiBold"/>
+							<TextBlock Text="{DynamicResource TipNewProject}" FontSize="12" TextWrapping="Wrap" Opacity="0.85"/>
+						</StackPanel>
+					</Button>
+					<Button Classes="startAction" Margin="4,0" Command="{Binding OpenProjectCommand}">
+						<StackPanel Spacing="4">
+							<TextBlock Text="📂" FontSize="20"/>
+							<TextBlock Text="{DynamicResource BtnOpenProject}" FontSize="16" FontWeight="SemiBold"/>
+							<TextBlock Text="{DynamicResource TipOpenProject}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+						</StackPanel>
+					</Button>
+					<Button Classes="startAction" Margin="8,0,0,0" Command="{Binding RestoreOnlyCommand}">
+						<StackPanel Spacing="4">
+							<TextBlock Text="✨" FontSize="20"/>
+							<TextBlock Text="{DynamicResource BtnRestoreOnly}" FontSize="16" FontWeight="SemiBold"/>
+							<TextBlock Text="{DynamicResource TipRestoreOnly}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+						</StackPanel>
+					</Button>
+				</UniformGrid>
+
+				<!-- New project: a name and where to put it -->
+				<Border IsVisible="{Binding IsCreating}" Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="10" Padding="20"
+						BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+					<StackPanel Spacing="12">
+						<TextBlock Text="{DynamicResource BtnNewProject}" FontSize="18" FontWeight="Bold" IsVisible="{Binding !IsRestoreOnly}"/>
+						<TextBlock Text="{DynamicResource BtnRestoreOnly}" FontSize="18" FontWeight="Bold" IsVisible="{Binding IsRestoreOnly}"/>
+						<TextBlock Text="{DynamicResource TipRestoreOnly}" FontSize="13" TextWrapping="Wrap" IsVisible="{Binding IsRestoreOnly}"
+								   Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+						<StackPanel Spacing="4">
+							<TextBlock Text="{DynamicResource LblProjectName}" FontSize="13" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+							<TextBox x:Name="txtProjectName" Text="{Binding NewName}" FontSize="14" KeyDown="ProjectName_KeyDown"/>
+						</StackPanel>
+						<StackPanel Spacing="4">
+							<TextBlock Text="{DynamicResource LblProjectLocation}" FontSize="13" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+							<Grid ColumnDefinitions="*, Auto">
+								<TextBlock Grid.Column="0" Text="{Binding NewLocation}" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+								<Button Grid.Column="1" Command="{Binding ChangeLocationCommand}" Padding="12,6" CornerRadius="6" Margin="10,0,0,0"
+										Background="{DynamicResource AppSubtleCardBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}">
+									<TextBlock Text="{DynamicResource BtnChangeLocation}" FontSize="13"/>
+								</Button>
+							</Grid>
+						</StackPanel>
+						<TextBlock Text="{Binding CreateError}" IsVisible="{Binding CreateError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+								   TextWrapping="Wrap" FontSize="13" Foreground="{DynamicResource AppDangerTextBrush}"/>
+						<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+							<Button Command="{Binding CancelCreateCommand}" Padding="16,8" CornerRadius="6"
+									Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}">
+								<TextBlock Text="{DynamicResource BtnCancel}" FontSize="13"/>
+							</Button>
+							<Button Command="{Binding CreateCommand}" Padding="18,8" CornerRadius="6"
+									Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}">
+								<TextBlock Text="{DynamicResource BtnCreateProject}" FontSize="13" FontWeight="SemiBold"/>
+							</Button>
+						</StackPanel>
+					</StackPanel>
+				</Border>
+
+				<!-- Recent projects -->
+				<StackPanel Spacing="8" IsVisible="{Binding !IsCreating}">
+					<TextBlock Text="{DynamicResource LblRecentProjects}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+					<TextBlock Text="{DynamicResource LblNoRecentProjects}" IsVisible="{Binding !HasRecent}" FontSize="13"
+							   Foreground="{DynamicResource AppTextMutedBrush}"/>
+					<ItemsControl ItemsSource="{Binding Recent}">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate x:DataType="vm:RecentProjectItem">
+								<Grid ColumnDefinitions="*, Auto" Margin="0,0,0,8">
+									<Button Grid.Column="0" Command="{Binding $parent[ItemsControl].((vm:StartViewModel)DataContext).OpenRecentCommand}"
+											CommandParameter="{Binding}" IsEnabled="{Binding Exists}" Padding="10" CornerRadius="8" Classes.missing="{Binding !Exists}"
+											HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+											Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+										<Grid ColumnDefinitions="64, *">
+											<Border Grid.Column="0" Width="64" Height="64" CornerRadius="4" Background="{DynamicResource AppWorkspaceBrush}" ClipToBounds="True">
+												<Panel>
+													<TextBlock Text="🗂️" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+													<Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+												</Panel>
+											</Border>
+											<StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center" Spacing="3">
+												<TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
+												<TextBlock Text="{Binding Folder}" FontSize="12" Foreground="{DynamicResource AppTextMutedBrush}" TextTrimming="CharacterEllipsis"/>
+												<TextBlock Text="{Binding Details}" FontSize="12" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+											</StackPanel>
+										</Grid>
+									</Button>
+									<Button Grid.Column="1" Command="{Binding $parent[ItemsControl].((vm:StartViewModel)DataContext).RemoveRecentCommand}"
+											CommandParameter="{Binding}" Margin="8,0,0,0" Padding="10,6" CornerRadius="6" VerticalAlignment="Center"
+											ToolTip.Tip="{DynamicResource TipRemoveRecent}"
+											Background="Transparent" Foreground="{DynamicResource AppTextMutedBrush}">
+										<TextBlock Text="✕" FontSize="13"/>
+									</Button>
+								</Grid>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</StackPanel>
+			</StackPanel>
+		</ScrollViewer>
+	</Grid>
+</UserControl>

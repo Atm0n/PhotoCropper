@@ -10,19 +10,10 @@ internal sealed partial class MainWindow
     private void ApplySettingsToUi()
     {
         var settings = SettingsManager.Instance.Settings;
-        sldSensitivity.Value = PhotoCropper.Core.Models.DetectionOptions.ToleranceToSensitivity(settings.BackgroundTolerance);
-        sldZoom.Value = settings.ZoomLevel;
-        sldMinArea.Value = settings.MinAreaFactor;
-        sldMaxArea.Value = settings.MaxAreaFactor;
-        sldEdge.Value = settings.CannyLowThreshold;
+        viewCrops.ZoomLevel = settings.ZoomLevel;
+        _cropsVm.LoadFromSettings();
 
-        chkAutoOrient?.IsChecked = settings.AutoOrientPhotos;
-        chkRestoreColors?.IsChecked = settings.RestoreVintageColors;
-        chkRemoveDust?.IsChecked = settings.RemoveDustAndScratches;
-        chkAutoTuneOnPass?.IsChecked = settings.AutoTuneOnScanChange;
-        chkAutoAdjustOnLowCoverage?.IsChecked = settings.AutoAdjustOnLowCoverage;
-
-        UpdateWorkspaceUi(settings.WorkDirectory);
+        UpdateWorkspaceUi(_openProject);
         UpdateCropStrokeColor(settings.DetectionBoxColor);
         PopulateThemeMenu();
         PopulateDetectionColorMenu();
@@ -30,7 +21,7 @@ internal sealed partial class MainWindow
 
     private void PopulateLanguageMenu()
     {
-        var menus = new[] { menuLanguage, menuAltLanguage };
+        var menus = new[] { menuLanguage };
         var languages = LocalizationService.GetAvailableLanguages();
 
         foreach (var menu in menus)
@@ -52,8 +43,8 @@ internal sealed partial class MainWindow
                     if (s is MenuItem mi && mi.Tag is string code)
                     {
                         LocalizationService.SetLanguage(code);
-                        UpdateWorkspaceUi(SettingsManager.Instance.Settings.WorkDirectory);
-                        UpdateSelectionUi();
+                        UpdateWorkspaceUi(_openProject);
+                        _cropsVm.RefreshPhotoTexts();
                         PopulateThemeMenu();
                         PopulateDetectionColorMenu();
                         FocusManager?.Focus(null);
@@ -66,7 +57,7 @@ internal sealed partial class MainWindow
 
     private void PopulateThemeMenu()
     {
-        var menus = new[] { menuTheme, menuAltTheme };
+        var menus = new[] { menuTheme };
         var currentTheme = SettingsManager.Instance.Settings.Theme ?? "Dark";
 
         var themeItems = new (string Key, string Value)[]
@@ -119,7 +110,7 @@ internal sealed partial class MainWindow
 
     private void PopulateDetectionColorMenu()
     {
-        var menus = new[] { menuDetectionColor, menuAltDetectionColor };
+        var menus = new[] { viewCrops.DetectionColorMenu };
         var currentColor = SettingsManager.Instance.Settings.DetectionBoxColor ?? "Red";
 
         var colorItems = new (string Key, string Value, string Hex)[]
@@ -159,7 +150,7 @@ internal sealed partial class MainWindow
 
             menu.Items.Add(new Separator());
 
-            bool isCustomSelected = !string.IsNullOrWhiteSpace(currentColor) && currentColor.StartsWith('#');
+            bool isCustomSelected = !string.IsNullOrWhiteSpace(currentColor) && currentColor is ['#', ..];
             Color customColor = isCustomSelected && Color.TryParse(currentColor, out var parsedCustom)
                 ? parsedCustom
                 : Color.Parse("#00D4FF");
@@ -229,7 +220,7 @@ internal sealed partial class MainWindow
         return panel;
     }
 
-    private async Task SetDetectionBoxColorAsync(string colorName)
+    private Task SetDetectionBoxColorAsync(string colorName)
     {
         SettingsManager.Instance.Settings.DetectionBoxColor = colorName;
         SettingsManager.Instance.Save();
@@ -244,17 +235,17 @@ internal sealed partial class MainWindow
             if (session.IsActive && session.Engine != null)
             {
                 session.Engine.BoundingBoxColor = colorName;
+                // The colour only affects the overlay, so there is nothing to re-detect.
+                ShowScan(session.Engine);
             }
-            await ReprocessCurrentScanAsync();
         }
+        return Task.CompletedTask;
     }
 
     private void UpdateCropStrokeColor(string? colorName)
     {
-        if (rectCrop == null) return;
-
         Color stroke;
-        if (!string.IsNullOrWhiteSpace(colorName) && colorName.StartsWith('#') && Color.TryParse(colorName, out var parsed))
+        if (!string.IsNullOrWhiteSpace(colorName) && colorName is ['#', ..] && Color.TryParse(colorName, out var parsed))
         {
             stroke = parsed;
         }
@@ -271,18 +262,8 @@ internal sealed partial class MainWindow
         }
 
         var fill = Color.FromArgb(0x33, stroke.R, stroke.G, stroke.B);
-        rectCrop.Stroke = new SolidColorBrush(stroke);
-        rectCrop.Fill = new SolidColorBrush(fill);
-
-        if (rectRefineCrop != null)
-        {
-            rectRefineCrop.Stroke = new SolidColorBrush(stroke);
-            rectRefineCrop.Fill = new SolidColorBrush(fill);
-        }
-
-        if (rectCurrentDetectionColor != null)
-        {
-            rectCurrentDetectionColor.Fill = new SolidColorBrush(stroke);
-        }
+        viewCrops.SetSelectionColor(stroke, fill);
+        viewRefine?.SetSelectionColor(stroke, fill);
+        viewScanStage?.SetBoxColor(stroke);
     }
 }

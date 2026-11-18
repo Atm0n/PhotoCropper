@@ -73,13 +73,108 @@ public static class FaceOrientationService
             string modelPath = Path.Combine(modelsDir, "face_detection_yunet_2023mar.onnx");
             if (!File.Exists(modelPath) || new FileInfo(modelPath).Length != stream.Length)
             {
-                using FileStream fileStream = File.Create(modelPath);
-                stream.CopyTo(fileStream);
+                WriteModelAtomically(stream, modelPath);
             }
             return modelPath;
         }
         catch
         {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Writes the model to a unique temporary file and then renames it into place. The GUI and CLI can start
+    /// at the same time; writing <paramref name="modelPath"/> directly would let one process load a model the
+    /// other is still writing. A rename on the same volume is atomic, so readers see the old file or the
+    /// complete new one.
+    /// </summary>
+    internal static void WriteModelAtomically(Stream source, string modelPath)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(modelPath);
+
+        string tempPath = $"{modelPath}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            using (FileStream fileStream = new(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                source.CopyTo(fileStream);
+            }
+
+            try
+            {
+                File.Move(tempPath, modelPath, overwrite: true);
+            }
+            catch (Exception ex) when ((ex is IOException or UnauthorizedAccessException) && File.Exists(modelPath) && new FileInfo(modelPath).Length == new FileInfo(tempPath).Length)
+            {
+                // Another process put an identical model in place first and has it open; use theirs.
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(tempPath)) File.Delete(tempPath);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Leftover temp file is harmless.
+            }
+        }
+    }
+
+    /// <summary>
+    /// Idle detectors, reused across photos. Creating a FaceDetectorYN parses the ONNX model, which previously
+    /// happened four times per photo. A detector isn't thread-safe, so each one is rented by a single call at a
+    /// time; parallel extraction rents several.
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentBag<FaceDetectorYN> IdleDetectors = [];
+
+    /// <summary>At most this many idle detectors are kept; extras are disposed when returned.</summary>
+    internal static int MaxIdleDetectors { get; } = Math.Max(1, Environment.ProcessorCount);
+
+    internal static int IdleDetectorCount => IdleDetectors.Count;
+
+    private static FaceDetectorYN? RentDetector() =>
+        IdleDetectors.TryTake(out var detector) ? detector : CreateDetector();
+
+    private static void ReturnDetector(FaceDetectorYN detector)
+    {
+        // The count check and Add aren't atomic, so the pool may briefly exceed the cap by a few under
+        // contention; it stays bounded by the number of concurrent callers.
+        if (IdleDetectors.Count < MaxIdleDetectors)
+        {
+            IdleDetectors.Add(detector);
+        }
+        else
+        {
+            detector.Dispose();
+        }
+    }
+
+    /// <summary>Frees all idle detectors (their native model memory). Detectors in use are freed when returned.</summary>
+    public static void ReleaseCachedDetectors()
+    {
+        while (IdleDetectors.TryTake(out var detector))
+        {
+            detector.Dispose();
+        }
+    }
+
+    private static FaceDetectorYN? CreateDetector()
+    {
+        string? modelPath = LazyModelPath.Value;
+        if (modelPath == null || !File.Exists(modelPath)) return null;
+
+        try
+        {
+            // Input size and score threshold are set per call before detecting.
+            return new FaceDetectorYN(modelPath, string.Empty, new Size(320, 320), 0.45f, 0.3f, 5000);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not load face detection model: {ex.Message}");
             return null;
         }
     }
@@ -118,24 +213,34 @@ public static class FaceOrientationService
         }
 
         // Test the 4 cardinal rotations to find the orientation where faces are upright
-        int[] rotations = [0, 90, 180, 270];
-        int bestRot = -1;
-        float bestScore = scoreThreshold;
+        var detector = RentDetector();
+        if (detector == null) return -1;
 
-        foreach (int rot in rotations)
+        try
         {
-            float score = ScoreRotation(bgrSmall, rot, scoreThreshold);
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestRot = rot;
-            }
-        }
+            int[] rotations = [0, 90, 180, 270];
+            int bestRot = -1;
+            float bestScore = scoreThreshold;
 
-        return bestRot;
+            foreach (int rot in rotations)
+            {
+                float score = ScoreRotation(detector, bgrSmall, rot, scoreThreshold);
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestRot = rot;
+                }
+            }
+
+            return bestRot;
+        }
+        finally
+        {
+            ReturnDetector(detector);
+        }
     }
 
-    private static float ScoreRotation(Mat bgrSmall, int rot, float scoreThreshold)
+    private static float ScoreRotation(FaceDetectorYN detector, Mat bgrSmall, int rot, float scoreThreshold)
     {
         using Mat candidate = new();
         if (rot == 0)
@@ -156,13 +261,8 @@ public static class FaceOrientationService
 
         try
         {
-            using var detector = new FaceDetectorYN(
-                LazyModelPath.Value,
-                string.Empty,
-                candidate.Size,
-                scoreThreshold,
-                0.3f,
-                5000);
+            detector.InputSize = candidate.Size;
+            detector.SetScoreThreshold(scoreThreshold);
 
             using Mat faces = new();
             detector.Detect(candidate, faces);

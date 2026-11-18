@@ -13,6 +13,18 @@ internal sealed partial class MainWindow
     private IScannerService _scannerService;
     private readonly List<ScannerDeviceInfo> _availableScanners = [];
 
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Trace.TraceWarning($"[PhotoCropper] Could not remove cancelled scan '{path}': {ex.Message}");
+        }
+    }
+
     private void ResetScannerService()
     {
         try
@@ -26,53 +38,18 @@ internal sealed partial class MainWindow
         _scannerService = new Naps2ScannerService();
     }
 
-    private async void BtnScan_Click(object? sender, RoutedEventArgs e)
+    private async void BtnScan_Click(object? sender, RoutedEventArgs e) => await ScanNewAsync();
+
+    /// <summary>Scans from the configured scanner into the project.</summary>
+    /// <returns>The staged scan files (empty if nothing was scanned).</returns>
+    private async Task<IReadOnlyList<string>> ScanNewAsync()
     {
-        if (isLoading) return;
+        if (isLoading) return [];
 
-        // 1. Ensure Work Directory
+        // 1. Scans always go into a project.
+        string workDir = await EnsureProjectAsync() ?? string.Empty;
+        if (workDir.Length == 0) return [];
         var settings = SettingsManager.Instance.Settings;
-        string? workDir = settings.WorkDirectory;
-        if (string.IsNullOrEmpty(workDir) || !Directory.Exists(workDir))
-        {
-            var topLevel = TopLevel.GetTopLevel(this);
-            if (topLevel?.StorageProvider != null)
-            {
-                var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-                {
-                    Title = LocalizationService.GetString(ResourceKeys.BtnWorkDir, "Select Work Directory for Raw Scans"),
-                    AllowMultiple = false
-                });
-
-                if (folders.Count > 0)
-                {
-                    workDir = folders[0].Path.LocalPath;
-                    settings.WorkDirectory = workDir;
-                    SettingsManager.Instance.Save();
-                    UpdateWorkspaceUi(workDir);
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(workDir))
-            {
-                string picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-                if (string.IsNullOrWhiteSpace(picturesDir))
-                {
-                    picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                }
-                if (string.IsNullOrWhiteSpace(picturesDir))
-                {
-                    picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                }
-
-                workDir = Path.Combine(picturesDir, "PhotoCropper_Workspace");
-                settings.WorkDirectory = workDir;
-                SettingsManager.Instance.Save();
-                UpdateWorkspaceUi(workDir);
-            }
-        }
-
-        ProjectWorkspaceService.InitializeWorkspace(workDir);
 
         // 2. Discover scanner if needed
         if (_availableScanners.Count == 0)
@@ -85,11 +62,30 @@ internal sealed partial class MainWindow
         if (selectedDevice == null || string.IsNullOrEmpty(settings.SelectedScannerId) || _availableScanners.Count == 0)
         {
             await ShowScannerConfigAsync();
-            return;
+            return [];
         }
 
         int dpi = settings.ScannerDpi > 0 ? settings.ScannerDpi : 300;
-        await ExecuteScanAsync(workDir, selectedDevice, dpi);
+        return await ExecuteScanAsync(workDir, selectedDevice, dpi);
+    }
+
+    /// <summary>
+    /// The open project's folder. Everything added (scans, imports) goes into a project, since the Crops and Finish
+    /// stages write there; the start screen makes sure one is open, so this only shows it again if not.
+    /// </summary>
+    /// <returns>The project folder, or null when none is open.</returns>
+    private Task<string?> EnsureProjectAsync()
+    {
+        string? workDir = _openProject;
+        if (workDir == null || !Directory.Exists(workDir))
+        {
+            ShowStartScreen();
+            return Task.FromResult<string?>(null);
+        }
+
+        ProjectWorkspaceService.InitializeWorkspace(workDir);
+        _workspaceSession ??= new WorkspaceSessionState();
+        return Task.FromResult<string?>(workDir);
     }
 
     private async void BtnScannerConfig_Click(object? sender, RoutedEventArgs e)
@@ -108,12 +104,12 @@ internal sealed partial class MainWindow
         }
     }
 
-    private async Task ExecuteScanAsync(string workDir, ScannerDeviceInfo? selectedDevice, int dpi)
+    private async Task<IReadOnlyList<string>> ExecuteScanAsync(string workDir, ScannerDeviceInfo? selectedDevice, int dpi)
     {
         if (selectedDevice == null)
         {
             await ShowScannerConfigAsync();
-            return;
+            return [];
         }
 
         var settings = SettingsManager.Instance.Settings;
@@ -130,42 +126,48 @@ internal sealed partial class MainWindow
         var stagedPaths = new List<string>();
         try
         {
-            btnScan.IsEnabled = false;
+            var scannerService = _scannerService;
             await ExecuteWithLoadingAsync(scanningMsg, async (token) =>
             {
-                var scannedMats = await _scannerService.ScanAsync(scannerOptions, token).ConfigureAwait(false);
-                if (scannedMats.Count == 0) return;
-
-                foreach (var mat in scannedMats)
+                var scannedMats = await scannerService.ScanAsync(scannerOptions, token).ConfigureAwait(false);
+                try
                 {
-                    using (mat)
+                    // A driver can return after the user cancelled or the scan timed out. The UI has
+                    // already moved on by then, so discard the late result instead of staging it.
+                    token.ThrowIfCancellationRequested();
+
+                    // Staging (PNG encode + disk write) stays on the thread pool; the shared session is
+                    // only updated on the UI thread once the operation has completed.
+                    var paths = new List<string>(scannedMats.Count);
+                    try
                     {
-                        string stagedPath = ProjectWorkspaceService.StageRawScanFromMat(workDir, mat);
-                        stagedPaths.Add(stagedPath);
-
-                        string relativePath = Path.GetRelativePath(workDir, stagedPath);
-                        _workspaceSession ??= new WorkspaceSessionState();
-                        _workspaceSession.Scans.Add(new WorkspaceScanEntry
+                        foreach (var mat in scannedMats)
                         {
-                            RelativePath = relativePath,
-                            OriginalFileName = Path.GetFileName(stagedPath),
-                            StagedAtUtc = DateTime.UtcNow
-                        });
+                            token.ThrowIfCancellationRequested();
+                            paths.Add(ProjectWorkspaceService.StageRawScanFromMat(workDir, mat));
+                        }
                     }
+                    catch
+                    {
+                        // Cancelled or failed (e.g. disk full on page 2): pages already staged would never be
+                        // added to the session, so don't leave half a multi-page scan orphaned in RawScans.
+                        foreach (string path in paths) TryDeleteFile(path);
+                        throw;
+                    }
+                    stagedPaths.AddRange(paths);
                 }
-
-                if (_workspaceSession != null)
+                finally
                 {
-                    ProjectWorkspaceService.SaveSession(workDir, _workspaceSession);
+                    foreach (var mat in scannedMats) mat.Dispose();
                 }
-            }, null, canCancel: true, timeout: TimeSpan.FromSeconds(dpi >= 600 ? 180 : 90));
+            }, null, canCancel: true, timeout: TimeSpan.FromSeconds(dpi >= 600 ? 180 : 90), propagateExceptions: true);
         }
         catch (OperationCanceledException)
         {
             ResetScannerService();
             string cancelledMsg = LocalizationService.GetString(ResourceKeys.MsgScanCancelled, "Scanning was cancelled or timed out.");
             lblStatus.Text = cancelledMsg;
-            return;
+            return [];
         }
         catch (ScannerNotFoundException ex)
         {
@@ -178,7 +180,7 @@ internal sealed partial class MainWindow
 
             lblStatus.Text = ex.Message;
             ShowScannerError(notFoundTitle, notFoundDetails);
-            return;
+            return [];
         }
         catch (Exception ex)
         {
@@ -193,16 +195,33 @@ internal sealed partial class MainWindow
 
             lblStatus.Text = failedTemplate;
             ShowScannerError(errorTitle, errorDetails);
-            return;
-        }
-        finally
-        {
-            btnScan.IsEnabled = true;
+            return [];
         }
 
         if (stagedPaths.Count > 0)
         {
-            var options = GetDetectionOptionsFromUi();
+            _workspaceSession ??= new WorkspaceSessionState();
+            foreach (string stagedPath in stagedPaths)
+            {
+                _workspaceSession.Scans.Add(new WorkspaceScanEntry
+                {
+                    RelativePath = Path.GetRelativePath(workDir, stagedPath),
+                    OriginalFileName = Path.GetFileName(stagedPath),
+                    StagedAtUtc = DateTime.UtcNow
+                });
+            }
+            try
+            {
+                ProjectWorkspaceService.SaveSession(workDir, _workspaceSession);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // The scans are already on disk in RawScans; only crash-recovery bookkeeping failed.
+                Trace.TraceError($"[PhotoCropper] Failed to save session after scanning: {ex.Message}");
+                ShowAppError("Operation Failed", ex.Message);
+            }
+
+            var options = _cropsVm.GetDetectionOptions();
             var newItems = stagedPaths.Select(path => new ScanSessionItem(path, options, isSaved: false, isModified: true)).ToList();
             _sessionManager.AddRange(newItems);
 
@@ -213,6 +232,8 @@ internal sealed partial class MainWindow
         {
             lblStatus.Text = LocalizationService.GetString(ResourceKeys.MsgNoScanData, "No image was returned by the scanner.");
         }
+
+        return stagedPaths;
     }
 
     private async Task RefreshScannersAsync(CancellationToken cancellationToken = default)

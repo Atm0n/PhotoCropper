@@ -10,6 +10,7 @@ public static class ExifMetadataWriter
     private const ushort TagImageDescription = 0x010E;
     private const ushort TagSoftware = 0x0131;
     private const ushort TagDateTime = 0x0132;
+    private const ushort TagArtist = 0x013B;
     private const ushort TagExifIfdPointer = 0x8769;
     private const ushort TagDateTimeOriginal = 0x9003;
     private const ushort TagDateTimeDigitized = 0x9004;
@@ -70,8 +71,14 @@ public static class ExifMetadataWriter
 
         if (!string.IsNullOrWhiteSpace(description))
         {
-            string descNullTerm = description + "\0";
-            ifd0Entries.Add((TagImageDescription, TypeAscii, (uint)descNullTerm.Length, Encoding.ASCII.GetBytes(descNullTerm)));
+            byte[] descBytes = TextFieldBytes(description);
+            ifd0Entries.Add((TagImageDescription, TypeAscii, (uint)descBytes.Length, descBytes));
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.Photographer))
+        {
+            byte[] artistBytes = TextFieldBytes(metadata.Photographer);
+            ifd0Entries.Add((TagArtist, TypeAscii, (uint)artistBytes.Length, artistBytes));
         }
 
         // Exif IFD Pointer entry (we will calculate offset after IFD0)
@@ -85,10 +92,7 @@ public static class ExifMetadataWriter
 
         if (!string.IsNullOrWhiteSpace(description))
         {
-            // UserComment format: 8-byte charset prefix ("ASCII\0\0\0") + comment
-            byte[] userCommentData = new byte[8 + Encoding.UTF8.GetByteCount(description)];
-            Encoding.ASCII.GetBytes("ASCII\0\0\0", 0, 8, userCommentData, 0);
-            Encoding.UTF8.GetBytes(description, 0, description.Length, userCommentData, 8);
+            byte[] userCommentData = UserCommentBytes(description);
             subIfdEntries.Add((TagUserComment, TypeUndefined, (uint)userCommentData.Length, userCommentData));
         }
 
@@ -173,6 +177,27 @@ public static class ExifMetadataWriter
         {
             writer.Write((uint)0);
         }
+    }
+
+    /// <summary>
+    /// Bytes for an EXIF text tag (Artist, ImageDescription), NUL-terminated. The tag type is ASCII, but
+    /// encoding with Encoding.ASCII turned every non-ASCII character into '?' (e.g. "Josep Martí" →
+    /// "Josep Mart?"). UTF-8 is identical to ASCII for ASCII text, and it is what ExifTool, Windows and the
+    /// major photo managers read in these fields in practice.
+    /// </summary>
+    internal static byte[] TextFieldBytes(string text) => Encoding.UTF8.GetBytes(text + "\0");
+
+    /// <summary>
+    /// UserComment value: an 8-byte character-code prefix followed by the text. Plain ASCII text uses the
+    /// "ASCII" code; anything else uses "UNICODE" (UCS-2 in the TIFF byte order, little-endian here) rather than
+    /// labelling UTF-8 bytes as ASCII.
+    /// </summary>
+    internal static byte[] UserCommentBytes(string text)
+    {
+        bool isAscii = Ascii.IsValid(text);
+        byte[] prefix = Encoding.ASCII.GetBytes(isAscii ? "ASCII\0\0\0" : "UNICODE\0");
+        byte[] body = isAscii ? Encoding.ASCII.GetBytes(text) : Encoding.Unicode.GetBytes(text);
+        return [.. prefix, .. body];
     }
 
     public static byte[] InjectJpegMetadata(ReadOnlySpan<byte> jpegBytes, PhotoExportMetadata metadata)
@@ -266,6 +291,11 @@ public static class ExifMetadataWriter
         {
             chunksToInject.Add(BuildPngTextChunk("Description", metadata.Description));
             chunksToInject.Add(BuildPngTextChunk("Comment", metadata.Description));
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.Photographer))
+        {
+            chunksToInject.Add(BuildPngTextChunk("Author", metadata.Photographer));
         }
 
         if (chunksToInject.Count == 0)

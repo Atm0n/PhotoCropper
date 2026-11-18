@@ -17,12 +17,19 @@ internal static class BatchProcessor
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(scanFiles);
 
+        if (options.Stage == PipelineStage.Crop)
+        {
+            // The crop stage produces what a project keeps in Cropped/: geometry fixes only, saved losslessly so
+            // the restore stage doesn't recompress a JPEG.
+            options.RestoreColors = false;
+            options.RemoveDust = false;
+            options.Format = AppConstants.FormatPng;
+        }
+
         PrintHeader(options, scanFiles.Count);
 
         var detectionOptions = CreateDetectionOptions(options);
         var metadata = CreateExportMetadata(options);
-
-        PhotoExporter.ClearClaimedExportPaths();
 
         int totalExtracted = 0;
         int errorCount = 0;
@@ -381,6 +388,10 @@ internal static class BatchProcessor
         grid.AddColumn(new GridColumn());
 
         grid.AddRow("[bold cyan]Scans Found:[/]", $"[bold white]{scanCount}[/]");
+        if (options.Stage == PipelineStage.Crop)
+        {
+            grid.AddRow("[bold cyan]Stage:[/]", "[bold yellow]Crop only[/] (lossless PNG, no restoration)");
+        }
         grid.AddRow("[bold cyan]Output Format:[/]", $"[bold white]{options.Format}[/] (Quality: {options.JpegQuality})");
         grid.AddRow("[bold cyan]Detection:[/]", $"Tolerance: [bold white]{options.Tolerance}[/], MinSize: [bold white]{options.MinAreaFactor * 100:0}%[/], MaxSize: [bold white]{options.MaxAreaFactor * 100:0}%[/]");
         grid.AddRow("[bold cyan]Auto-Tune:[/]", options.AlwaysAutoTune ? "[bold green]Always[/]" : options.AutoTune ? "[bold yellow]On Mismatch[/]" : options.AutoAdjustLowCoverage ? $"[bold yellow]Low-Coverage Trigger (< {options.MinCoverageThresholdPercent:0}%)[/]" : "[grey]Disabled[/]");
@@ -398,12 +409,13 @@ internal static class BatchProcessor
         {
             grid.AddRow("[bold cyan]Naming Pattern:[/]", $"[bold yellow]{options.FileNamePattern}[/]");
         }
-        if (options.Year.HasValue || !string.IsNullOrWhiteSpace(options.Date) || !string.IsNullOrWhiteSpace(options.Description))
+        if (options.Year.HasValue || !string.IsNullOrWhiteSpace(options.Date) || !string.IsNullOrWhiteSpace(options.Description) || !string.IsNullOrWhiteSpace(options.Photographer))
         {
             string metaSummary = "";
             if (options.Year.HasValue) metaSummary += $"Year: {options.Year.Value} ";
             if (!string.IsNullOrWhiteSpace(options.Date)) metaSummary += $"Date: {options.Date} ";
-            if (!string.IsNullOrWhiteSpace(options.Description)) metaSummary += $"Desc: '{options.Description}'";
+            if (!string.IsNullOrWhiteSpace(options.Description)) metaSummary += $"Desc: '{options.Description}' ";
+            if (!string.IsNullOrWhiteSpace(options.Photographer)) metaSummary += $"Photographer: '{options.Photographer}'";
             grid.AddRow("[bold cyan]EXIF Metadata:[/]", $"[bold green]{metaSummary.Trim()}[/]");
         }
         if (options.CopyUndetectedDirectory != null)
@@ -418,7 +430,7 @@ internal static class BatchProcessor
                 .BorderColor(Color.Cyan1));
     }
 
-    private static DetectionOptions CreateDetectionOptions(CliOptions options)
+    internal static DetectionOptions CreateDetectionOptions(CliOptions options)
     {
         return new DetectionOptions
         {
@@ -433,7 +445,7 @@ internal static class BatchProcessor
         };
     }
 
-    private static PhotoExportMetadata? CreateExportMetadata(CliOptions options)
+    internal static PhotoExportMetadata? CreateExportMetadata(CliOptions options)
     {
         DateTime? parsedDate = null;
         if (!string.IsNullOrWhiteSpace(options.Date) && DateTime.TryParse(options.Date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
@@ -441,13 +453,14 @@ internal static class BatchProcessor
             parsedDate = d;
         }
 
-        if (options.Year.HasValue || parsedDate.HasValue || !string.IsNullOrWhiteSpace(options.Description))
+        if (options.Year.HasValue || parsedDate.HasValue || !string.IsNullOrWhiteSpace(options.Description) || !string.IsNullOrWhiteSpace(options.Photographer))
         {
             return new PhotoExportMetadata
             {
                 Year = options.Year,
                 DateTaken = parsedDate,
-                Description = options.Description
+                Description = options.Description,
+                Photographer = options.Photographer
             };
         }
         return null;

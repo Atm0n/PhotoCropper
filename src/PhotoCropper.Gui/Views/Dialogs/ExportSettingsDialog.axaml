@@ -59,7 +59,7 @@
 								<Slider x:Name="sldJpegQuality" Minimum="50" Maximum="100" Value="100" Width="100" 
 										TickFrequency="5" IsSnapToTickEnabled="True"
 										ValueChanged="SldJpegQuality_ValueChanged" VerticalAlignment="Center" Focusable="False"/>
-								<TextBlock x:Name="txtQualityValue" Text="100% (Max)" FontSize="11" VerticalAlignment="Center" Width="75"/>
+								<TextBlock x:Name="txtQualityValue" Text="{DynamicResource LblQualityMax}" FontSize="11" VerticalAlignment="Center" Width="75"/>
 							</StackPanel>
 						</WrapPanel>
 					</StackPanel>
@@ -140,9 +140,6 @@
 							<CheckBox x:Name="chkFlashTaskbar" Content="{DynamicResource LblFlashTaskbar}" ToolTip.Tip="{DynamicResource TipFlashTaskbar}" 
 									  IsChecked="True" FontSize="11" VerticalAlignment="Center" Focusable="False" Margin="0,2,14,2"/>
 						</WrapPanel>
-						<Rectangle Height="1" Fill="{DynamicResource AppSeparatorBrush}" Margin="0,4"/>
-						<CheckBox x:Name="chkPromptBeforeExport" Content="{DynamicResource ChkPromptBeforeExport}" 
-								  FontSize="11" VerticalAlignment="Center" Focusable="False"/>
 					</StackPanel>
 				</Border>
 			</StackPanel>
@@ -156,14 +153,8 @@
 				<Button x:Name="btnCancel" Click="BtnCancel_Click" Padding="14,7" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" CornerRadius="6" Focusable="False">
 					<TextBlock Text="{DynamicResource BtnCancel}"/>
 				</Button>
-				<Button x:Name="btnSavePreferences" Click="BtnSavePreferences_Click" Padding="14,7" Background="{DynamicResource AppButtonDefaultBrush}" Foreground="{DynamicResource AppButtonDefaultTextBrush}" CornerRadius="6" Focusable="False">
+				<Button x:Name="btnSavePreferences" Click="BtnSavePreferences_Click" Padding="16,7" Background="{DynamicResource AppButtonActionBrush}" Foreground="{DynamicResource AppButtonActionTextBrush}" FontWeight="SemiBold" CornerRadius="6" Focusable="False">
 					<TextBlock Text="{DynamicResource BtnSavePreferences}"/>
-				</Button>
-				<Button x:Name="btnExportNow" Click="BtnExportNow_Click" Padding="16,7" Background="{DynamicResource AppButtonActionBrush}" Foreground="{DynamicResource AppButtonActionTextBrush}" FontWeight="SemiBold" CornerRadius="6" Focusable="False">
-					<StackPanel Orientation="Horizontal" Spacing="6">
-						<TextBlock Text="💾" FontSize="12" VerticalAlignment="Center"/>
-						<TextBlock Text="{DynamicResource BtnExportNow}" VerticalAlignment="Center"/>
-					</StackPanel>
 				</Button>
 			</StackPanel>
 		</Grid>

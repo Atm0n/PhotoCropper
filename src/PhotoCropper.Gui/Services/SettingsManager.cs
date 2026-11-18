@@ -24,6 +24,9 @@ internal sealed class UserSettings
     public bool AutoTuneOnScanChange { get; set; }
     public bool AutoAdjustOnLowCoverage { get; set; } = true;
     public string? WorkDirectory { get; set; }
+
+    /// <summary>Projects opened recently, newest first (see <see cref="RecentProjects"/>).</summary>
+    public IReadOnlyList<string> RecentProjectFolders { get; set; } = [];
     public string? SelectedScannerId { get; set; }
     public int ScannerDpi { get; set; } = AppConstants.DefaultScannerDpi;
     public string ScannerPageSize { get; set; } = AppConstants.DefaultScannerPageSize;
@@ -37,7 +40,6 @@ internal sealed class UserSettings
     public bool ShowNotifications { get; set; } = true;
     public bool FlashTaskbarOnCompletion { get; set; } = true;
     public bool PlaySoundOnCompletion { get; set; }
-    public bool PromptBeforeExport { get; set; }
     public DateTime? LastUpdateCheckUtc { get; set; }
     public bool CheckForUpdatesAutomatically { get; set; } = true;
 }
@@ -51,6 +53,9 @@ internal sealed class SettingsManager
     private readonly string _settingsFilePath;
     private readonly JsonSerializerOptions _jsonOptions;
 
+    /// <summary>Environment variable that points the settings file somewhere else (the test suites set it).</summary>
+    public const string SettingsPathVariable = "PHOTOCROPPER_SETTINGS_PATH";
+
     public UserSettings Settings { get; private set; } = new();
 
     // Public constructor for testing/mocking
@@ -60,6 +65,12 @@ internal sealed class SettingsManager
         {
             _settingsFilePath = customPath;
             _settingsDirectory = Path.GetDirectoryName(customPath) ?? "";
+        }
+        else if (Environment.GetEnvironmentVariable(SettingsPathVariable) is { Length: > 0 } overridePath)
+        {
+            // Used by the test suites so they never touch the real settings file.
+            _settingsFilePath = overridePath;
+            _settingsDirectory = Path.GetDirectoryName(overridePath) ?? "";
         }
         else
         {

@@ -41,9 +41,9 @@
 			<StackPanel Spacing="6">
 				<TextBlock Text="{DynamicResource LblScannerResolution}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 				<ComboBox x:Name="cbScannerDpi" SelectedIndex="1" HorizontalAlignment="Stretch" SelectionChanged="CbScannerDpi_SelectionChanged" Focusable="False" FontSize="12">
-					<ComboBoxItem Content="150 (Draft / Fast)"/>
-					<ComboBoxItem Content="300 (Standard Photos - Recommended)"/>
-					<ComboBoxItem Content="600 (High Detail / Archival)"/>
+					<ComboBoxItem Content="{DynamicResource OptDpi150}"/>
+					<ComboBoxItem Content="{DynamicResource OptDpi300}"/>
+					<ComboBoxItem Content="{DynamicResource OptDpi600}"/>
 				</ComboBox>
 			</StackPanel>
 
@@ -51,7 +51,7 @@
 			<StackPanel Spacing="6">
 				<TextBlock Text="{DynamicResource LblScannerPageSize}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimaryBrush}"/>
 				<ComboBox x:Name="cbScannerPageSize" SelectedIndex="0" HorizontalAlignment="Stretch" SelectionChanged="CbScannerPageSize_SelectionChanged" Focusable="False" FontSize="12" ToolTip.Tip="{DynamicResource TipScannerPageSize}">
-					<ComboBoxItem x:Name="cbiPageSizeAuto" Content="Auto / Full Bed (Auto-Detect Maximum)"/>
+					<ComboBoxItem x:Name="cbiPageSizeAuto" Content="{DynamicResource OptPageAuto}"/>
 					<ComboBoxItem Content="A4 (210 × 297 mm)"/>
 					<ComboBoxItem Content="Letter / LTR (8.5 × 11 in / 216 × 279 mm)"/>
 					<ComboBoxItem Content="Legal (8.5 × 14 in / 216 × 356 mm)"/>

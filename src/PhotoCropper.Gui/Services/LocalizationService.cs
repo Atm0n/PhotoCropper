@@ -7,10 +7,8 @@ namespace PhotoCropper.Gui.Services;
 internal static class ResourceKeys
 {
     public const string BtnOpenScans = nameof(BtnOpenScans);
-    public const string BtnSaveResults = nameof(BtnSaveResults);
     public const string BtnAutoTune = nameof(BtnAutoTune);
     public const string BtnWorkDir = nameof(BtnWorkDir);
-    public const string BtnNewProject = nameof(BtnNewProject);
     public const string BtnCheckUpdates = nameof(BtnCheckUpdates);
     public const string BtnResetBackground = nameof(BtnResetBackground);
     public const string BtnSampleBackground = nameof(BtnSampleBackground);
@@ -18,11 +16,11 @@ internal static class ResourceKeys
     public const string BtnDelete = nameof(BtnDelete);
     public const string BtnRotate = nameof(BtnRotate);
     public const string BtnDeleteCount = nameof(BtnDeleteCount);
+    public const string BtnDeletePhoto = nameof(BtnDeletePhoto);
+    public const string LblDetectionSettings = nameof(LblDetectionSettings);
     public const string BtnRotateCount = nameof(BtnRotateCount);
     public const string BtnSelectAll = nameof(BtnSelectAll);
     public const string BtnClearSelection = nameof(BtnClearSelection);
-    public const string BtnSaveAndExit = nameof(BtnSaveAndExit);
-    public const string BtnDiscardAndExit = nameof(BtnDiscardAndExit);
     public const string BtnCancel = nameof(BtnCancel);
     public const string BtnOk = nameof(BtnOk);
     public const string BtnReviewPhotos = nameof(BtnReviewPhotos);
@@ -33,8 +31,6 @@ internal static class ResourceKeys
     public const string ReviewSentinelSubtitle = nameof(ReviewSentinelSubtitle);
     public const string ReviewSentinelStats = nameof(ReviewSentinelStats);
     public const string BtnReviewGoToStart = nameof(BtnReviewGoToStart);
-    public const string BtnReviewEdit = nameof(BtnReviewEdit);
-    public const string TipReviewEdit = nameof(TipReviewEdit);
     public const string TipToggleRightPanel = nameof(TipToggleRightPanel);
 
     public const string LblDetectionSensitivity = nameof(LblDetectionSensitivity);
@@ -42,7 +38,6 @@ internal static class ResourceKeys
     public const string LblAutoAdjustOnLowCoverage = nameof(LblAutoAdjustOnLowCoverage);
     public const string LblCoveragePercent = nameof(LblCoveragePercent);
     public const string LblLookaheadPreloaded = nameof(LblLookaheadPreloaded);
-    public const string LblNoProject = nameof(LblNoProject);
     public const string TxtNoFiles = nameof(TxtNoFiles);
     public const string TxtSelectedCount = nameof(TxtSelectedCount);
     public const string PhotoCounter = nameof(PhotoCounter);
@@ -73,7 +68,7 @@ internal static class ResourceKeys
     public const string MsgScanning = nameof(MsgScanning);
     public const string MsgScanCancelled = nameof(MsgScanCancelled);
     public const string MsgScanFailed = nameof(MsgScanFailed);
-    public const string MsgScanSuccess = nameof(MsgScanSuccess);
+    public const string MsgProjectLoaded = nameof(MsgProjectLoaded);
     public const string MsgScanDeleted = nameof(MsgScanDeleted);
     public const string MsgNoScanData = nameof(MsgNoScanData);
     public const string MsgNoScannerFound = nameof(MsgNoScannerFound);
@@ -84,9 +79,58 @@ internal static class ResourceKeys
     public const string MsgDetectionComplete = nameof(MsgDetectionComplete);
     public const string MsgNewProjectReady = nameof(MsgNewProjectReady);
     public const string MsgReprocessing = nameof(MsgReprocessing);
-    public const string MsgSavingProgress = nameof(MsgSavingProgress);
-    public const string MsgSaved = nameof(MsgSaved);
-    public const string MsgAllScansAlreadySaved = nameof(MsgAllScansAlreadySaved);
+    public const string TitleExportFailed = nameof(TitleExportFailed);
+    public const string MsgExportFailedStatus = nameof(MsgExportFailedStatus);
+    public const string TitleUnexpectedError = nameof(TitleUnexpectedError);
+    public const string MsgUnexpectedError = nameof(MsgUnexpectedError);
+    public const string StageScanStatus = nameof(StageScanStatus);
+    public const string StageCropsStatus = nameof(StageCropsStatus);
+    public const string StageFinishStatus = nameof(StageFinishStatus);
+    public const string StageNeedsProject = nameof(StageNeedsProject);
+    public const string StartSubtitle = nameof(StartSubtitle);
+    public const string BtnNewProject = nameof(BtnNewProject);
+    public const string TipNewProject = nameof(TipNewProject);
+    public const string BtnOpenProject = nameof(BtnOpenProject);
+    public const string TipOpenProject = nameof(TipOpenProject);
+    public const string BtnRestoreOnly = nameof(BtnRestoreOnly);
+    public const string TipRestoreOnly = nameof(TipRestoreOnly);
+    public const string LblProjectName = nameof(LblProjectName);
+    public const string LblProjectLocation = nameof(LblProjectLocation);
+    public const string BtnChangeLocation = nameof(BtnChangeLocation);
+    public const string BtnCreateProject = nameof(BtnCreateProject);
+    public const string LblRecentProjects = nameof(LblRecentProjects);
+    public const string LblNoRecentProjects = nameof(LblNoRecentProjects);
+    public const string TipRemoveRecent = nameof(TipRemoveRecent);
+    public const string BtnBackToProject = nameof(BtnBackToProject);
+    public const string LblProjectMissing = nameof(LblProjectMissing);
+    public const string LblRecentProjectDetails = nameof(LblRecentProjectDetails);
+    public const string DefaultProjectName = nameof(DefaultProjectName);
+    public const string MsgProjectNameInvalid = nameof(MsgProjectNameInvalid);
+    public const string MsgProjectExists = nameof(MsgProjectExists);
+    public const string MsgProjectCreateFailed = nameof(MsgProjectCreateFailed);
+    public const string BtnImportScans = nameof(BtnImportScans);
+    public const string BtnImportPhotos = nameof(BtnImportPhotos);
+    public const string ScanStatusNotChecked = nameof(ScanStatusNotChecked);
+    public const string ScanPreviewDetecting = nameof(ScanPreviewDetecting);
+    public const string TipScanPreview = nameof(TipScanPreview);
+    public const string ScanStatusNoPhotos = nameof(ScanStatusNoPhotos);
+    public const string ScanStatusPhotos = nameof(ScanStatusPhotos);
+    public const string FinishSourceImported = nameof(FinishSourceImported);
+    public const string FinishStatusNew = nameof(FinishStatusNew);
+    public const string FinishStatusStale = nameof(FinishStatusStale);
+    public const string FinishStatusExported = nameof(FinishStatusExported);
+    public const string MsgSavingCrops = nameof(MsgSavingCrops);
+    public const string MsgCropsSaved = nameof(MsgCropsSaved);
+    public const string MsgAutosaveFailed = nameof(MsgAutosaveFailed);
+    public const string MenuScannerSettings = nameof(MenuScannerSettings);
+    public const string TipScanF5 = nameof(TipScanF5);
+    public const string MenuExportSettings = nameof(MenuExportSettings);
+    public const string MenuResetDetection = nameof(MenuResetDetection);
+    public const string TipHelpF1 = nameof(TipHelpF1);
+    public const string MsgExportingFinal = nameof(MsgExportingFinal);
+    public const string MsgFinalExported = nameof(MsgFinalExported);
+    public const string MsgImportingPhotos = nameof(MsgImportingPhotos);
+    public const string MsgScanReplaced = nameof(MsgScanReplaced);
     public const string MsgScannerNotFoundDetails = nameof(MsgScannerNotFoundDetails);
     public const string MsgScannerErrorDetails = nameof(MsgScannerErrorDetails);
     public const string MsgExtractingCrop = nameof(MsgExtractingCrop);
@@ -96,13 +140,11 @@ internal static class ResourceKeys
     public const string MsgRefineSuccess = nameof(MsgRefineSuccess);
     public const string MsgRefineCancelled = nameof(MsgRefineCancelled);
     public const string MsgResumeSession = nameof(MsgResumeSession);
-    public const string MsgUnsavedChanges = nameof(MsgUnsavedChanges);
 
     public const string TitleScannerNotFound = nameof(TitleScannerNotFound);
     public const string TitleScannerError = nameof(TitleScannerError);
     public const string TitleNoScanner = nameof(TitleNoScanner);
     public const string TitleResumeSession = nameof(TitleResumeSession);
-    public const string TitleUnsavedChanges = nameof(TitleUnsavedChanges);
 
     public const string MenuExportSingle = nameof(MenuExportSingle);
     public const string LblOutputDir = nameof(LblOutputDir);
@@ -112,6 +154,11 @@ internal static class ResourceKeys
     public const string TxtScanningSearching = nameof(TxtScanningSearching);
     public const string MsgClickToSample = nameof(MsgClickToSample);
     public const string MsgBackgroundSampled = nameof(MsgBackgroundSampled);
+    public const string MsgBackgroundAutoTuned = nameof(MsgBackgroundAutoTuned);
+    public const string MsgPhotoExported = nameof(MsgPhotoExported);
+    public const string MsgPhotoExportFailed = nameof(MsgPhotoExportFailed);
+    public const string AppTitle = nameof(AppTitle);
+    public const string LblQualityMax = nameof(LblQualityMax);
 
     public const string ColorCustom = nameof(ColorCustom);
     public const string AppButtonActionBrush = nameof(AppButtonActionBrush);

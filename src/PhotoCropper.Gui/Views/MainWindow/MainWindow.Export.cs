@@ -3,6 +3,7 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Util;
+using PhotoCropper.Core;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
@@ -14,182 +15,28 @@ namespace PhotoCropper.Gui;
 
 internal sealed partial class MainWindow
 {
-    private bool HasUnsavedChanges()
+    /// <summary>The engine's boxes, with each photo's manual and auto rotation, as saved in session.json.</summary>
+    private static List<WorkspaceCropData> BuildCropData(PhotoCropperEngine engine) => [.. WorkspaceCropData.FromEngine(engine)];
+
+    /// <summary>
+    /// Builds a bullet list of failed scans for the error dialog, capped so a large batch of
+    /// failures (e.g. an unwritable output folder) doesn't overflow the dialog.
+    /// </summary>
+    internal static string FormatFailedScanList(IReadOnlyList<(string FilePath, string Error)> failures, int maxShown = 10)
     {
-        return _sessionManager.HasUnsavedChanges();
-    }
+        ArgumentNullException.ThrowIfNull(failures);
 
-    private async void BtnSaveImages_Click(object? sender, RoutedEventArgs e)
-    {
-        if (isLoading || _isNavigating || !_sessionManager.HasScans) return;
+        var lines = failures
+            .Take(maxShown)
+            .Select(f => $"• {Path.GetFileName(f.FilePath)}: {f.Error}")
+            .ToList();
 
-        var settings = SettingsManager.Instance.Settings;
-        if (settings.PromptBeforeExport)
+        if (failures.Count > maxShown)
         {
-            await ShowExportSettingsAsync(triggerExportOnConfirm: true);
-        }
-        else
-        {
-            await SavePendingScansAsync(closeAfterSave: false);
-        }
-    }
-
-    private async Task<bool> SavePendingScansAsync(bool closeAfterSave)
-    {
-        if (isLoading || _isNavigating || !_sessionManager.HasScans) return false;
-
-        var pendingSessions = _sessionManager.GetPendingExportSessions();
-        if (pendingSessions.Count == 0)
-        {
-            lblStatus.Text = LocalizationService.Format(
-                ResourceKeys.MsgAllScansAlreadySaved,
-                "All {0} scans are already saved to 'Cropped'. No changes to export.",
-                ScanSessions.Count);
-
-            if (closeAfterSave)
-            {
-                _isExitingConfirmed = true;
-                Close();
-            }
-            return true;
+            lines.Add($"… (+{failures.Count - maxShown})");
         }
 
-        var settings = SettingsManager.Instance.Settings;
-        int totalScans = pendingSessions.Count;
-        int completedScans = 0;
-        int totalSavedPhotos = 0;
-
-        string targetOutputFolder = ExportPathResolver.ResolveOutputDirectory(
-            pendingSessions[0].FilePath,
-            settings.CustomOutputDirectory,
-            settings.WorkDirectory);
-
-        int maxConcurrency = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
-
-        await ExecuteWithLoadingAsync(LocalizationService.Format(ResourceKeys.MsgSavingProgress, "Exporting scan {0} of {1} ({2} photos saved)...", 1, totalScans, 0), async ct =>
-        {
-            await Task.Run(() =>
-            {
-                PhotoExporter.ClearClaimedExportPaths();
-
-                // Build a filename-keyed lookup before entering the parallel loop so that
-                // each thread can resolve its own WorkspaceScanEntry without traversing
-                // _workspaceSession.Scans concurrently (which would be a data race).
-                Dictionary<string, WorkspaceScanEntry>? workspaceLookup = null;
-                if (_workspaceSession != null)
-                {
-                    workspaceLookup = _workspaceSession.Scans
-                        .Where(s => s != null)
-                        .GroupBy(s => Path.GetFileName(s.RelativePath), StringComparer.OrdinalIgnoreCase)
-                        .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
-                }
-
-                Parallel.ForEach(pendingSessions, new ParallelOptions { MaxDegreeOfParallelism = maxConcurrency, CancellationToken = ct }, (session) =>
-                {
-                    try
-                    {
-                        var engine = session.Activate();
-                        bool wasActive = session.IsActive;
-                        try
-                        {
-                            string scanTargetFolder = ExportPathResolver.ResolveOutputDirectory(
-                                session.FilePath,
-                                settings.CustomOutputDirectory,
-                                settings.WorkDirectory);
-
-                            var scanMetadata = settings.ApplyYearToAllScans
-                                ? new PhotoExportMetadata { Year = settings.DefaultYear, Description = settings.DefaultDescription }
-                                : session.Metadata;
-
-                            engine.SaveDetectedPhotos(
-                                scanTargetFolder,
-                                settings.PreferredFormat,
-                                settings.JpegQuality,
-                                settings.FileNamePattern,
-                                scanMetadata,
-                                progressCallback: null,
-                                cleanOldExports: true);
-
-                            int savedCount = engine.DetectedPhotos.Count;
-                            Interlocked.Add(ref totalSavedPhotos, savedCount);
-
-                            session.IsSaved = true;
-                            session.IsModified = false;
-
-                            // Each session maps to exactly one WorkspaceScanEntry — resolved via the
-                            // pre-built dict so no concurrent list traversal occurs inside the parallel body.
-                            if (workspaceLookup != null)
-                            {
-                                string sessionFileName = Path.GetFileName(session.FilePath);
-                                if (workspaceLookup.TryGetValue(sessionFileName, out var entry))
-                                {
-                                    entry.IsProcessed = true;
-                                    entry.ExtractedPhotoCount = savedCount;
-                                    entry.Metadata = scanMetadata;
-
-                                    entry.FinalCrops.Clear();
-                                    for (int cIdx = 0; cIdx < engine.AcceptedCandidates.Count; cIdx++)
-                                    {
-                                        var cand = engine.AcceptedCandidates[cIdx];
-                                        int rot = engine.PhotoRotations.TryGetValue(cIdx, out int r) ? r : 0;
-                                        entry.FinalCrops.Add(new WorkspaceCropData
-                                        {
-                                            CenterX = cand.Rotated.Center.X,
-                                            CenterY = cand.Rotated.Center.Y,
-                                            Width = cand.Rotated.Size.Width,
-                                            Height = cand.Rotated.Size.Height,
-                                            Angle = cand.Rotated.Angle,
-                                            RotationDegrees = rot
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                        finally
-                        {
-                            if (!wasActive)
-                            {
-                                session.Deactivate();
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Trace.TraceError($"[PhotoCropper] Failed to export scan '{session.FilePath}': {ex.GetType().Name}: {ex.Message}");
-                    }
-
-                    int done = Interlocked.Increment(ref completedScans);
-                    if (done % 15 == 0)
-                    {
-                        GC.Collect(1, GCCollectionMode.Optimized, false);
-                    }
-
-                    Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                    {
-                        lblStatus.Text = LocalizationService.Format(ResourceKeys.MsgSavingProgress, "Exporting scan {0} of {1} ({2} photos saved)...", done, totalScans, totalSavedPhotos);
-                    });
-                });
-
-                if (_workspaceSession != null && !string.IsNullOrEmpty(settings.WorkDirectory) && Directory.Exists(settings.WorkDirectory))
-                {
-                    ProjectWorkspaceService.SaveSession(settings.WorkDirectory, _workspaceSession);
-                }
-
-            }, ct);
-
-            if (totalSavedPhotos > 0)
-            {
-                _notificationService.NotifyExportCompleted(totalSavedPhotos, targetOutputFolder);
-            }
-        }, LocalizationService.Format(ResourceKeys.MsgSaved, "Successfully saved {0} photos to 'cropped' folders.", totalSavedPhotos));
-
-        if (closeAfterSave)
-        {
-            _isExitingConfirmed = true;
-            Close();
-        }
-
-        return true;
+        return string.Join('\n', lines);
     }
 
     private async Task ExportSinglePhotoAsync(int photoIndex, CancellationToken cancellationToken = default)
@@ -206,9 +53,11 @@ internal sealed partial class MainWindow
         string defaultExt = string.Equals(settings.PreferredFormat, AppConstants.FormatPng, StringComparison.OrdinalIgnoreCase) ? AppConstants.ExtensionPng : AppConstants.ExtensionJpg;
         string baseName = Path.GetFileNameWithoutExtension(ScanSessions[CurrentIndex].FilePath);
 
-        var scanMetadata = settings.ApplyYearToAllScans
-            ? new PhotoExportMetadata { Year = settings.DefaultYear, Description = settings.DefaultDescription }
-            : ScanSessions[CurrentIndex].Metadata;
+        var scanMetadata = ExportMetadataResolver.Resolve(
+            ScanSessions[CurrentIndex].Metadata,
+            settings.ApplyYearToAllScans,
+            settings.DefaultYear,
+            settings.DefaultDescription);
 
         string suggestedName = FileNameTemplateHelper.FormatFileName(
             settings.FileNamePattern,
@@ -228,48 +77,31 @@ internal sealed partial class MainWindow
         if (fileResult != null)
         {
             string targetPath = fileResult.Path.LocalPath;
-            var photoMat = engine.DetectedPhotos[photoIndex];
-            var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(ScanSessions[CurrentIndex].FilePath);
-
-            if (targetPath.EndsWith(AppConstants.ExtensionPng, StringComparison.OrdinalIgnoreCase))
+            try
             {
-                using var buf = new Emgu.CV.Util.VectorOfByte();
-                Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionPng, photoMat, buf);
-                await File.WriteAllBytesAsync(targetPath, buf.ToArray(), cancellationToken);
-                PhotoExporter.EmbedPngDpi(targetPath, xDpi, yDpi);
-                if (scanMetadata.HasMetadata)
-                {
-                    PhotoExporter.EmbedPngMetadata(targetPath, scanMetadata);
-                }
-            }
-            else
-            {
-                var parameters = new[] {
-                    new KeyValuePair<ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegQuality, settings.JpegQuality),
-                    new KeyValuePair<Emgu.CV.CvEnum.ImwriteFlags, int>(Emgu.CV.CvEnum.ImwriteFlags.JpegOptimize, 1)
-                };
-                using var buf = new VectorOfByte();
-                Emgu.CV.CvInvoke.Imencode(AppConstants.ExtensionJpg, photoMat, buf, parameters);
-                await File.WriteAllBytesAsync(targetPath, buf.ToArray(), cancellationToken);
-                PhotoExporter.EmbedJpegDpi(targetPath, xDpi, yDpi);
-                if (scanMetadata.HasMetadata)
-                {
-                    PhotoExporter.EmbedJpegMetadata(targetPath, scanMetadata);
-                }
-            }
+                var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(ScanSessions[CurrentIndex].FilePath);
 
-            string exportMsg = $"Exported photo to {Path.GetFileName(targetPath)}";
-            lblStatus.Text = exportMsg;
-            _notificationService.ShowSuccess("PhotoCropper", exportMsg);
+                // The format follows the extension chosen in the save dialog; encoding is shared with batch export.
+                string format = targetPath.EndsWith(AppConstants.ExtensionPng, StringComparison.OrdinalIgnoreCase)
+                    ? AppConstants.FormatPng
+                    : AppConstants.FormatJpeg;
+                byte[] fileBytes = PhotoExporter.EncodePhoto(engine.DetectedPhotos[photoIndex], format, settings.JpegQuality, scanMetadata, xDpi, yDpi);
+                await File.WriteAllBytesAsync(targetPath, fileBytes, cancellationToken);
+
+                string exportMsg = LocalizationService.Format(ResourceKeys.MsgPhotoExported, "Exported photo to {0}", Path.GetFileName(targetPath));
+                lblStatus.Text = exportMsg;
+                _notificationService.ShowSuccess("PhotoCropper", exportMsg);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                string errorMsg = LocalizationService.Format(ResourceKeys.MsgPhotoExportFailed, "Failed to export photo: {0}", ex.Message);
+                lblStatus.Text = errorMsg;
+                _notificationService.ShowError("PhotoCropper", errorMsg);
+            }
         }
     }
 
     private async void BtnSaveSettings_Click(object? sender, RoutedEventArgs e)
-    {
-        await ShowExportSettingsAsync(triggerExportOnConfirm: false);
-    }
-
-    private async Task ShowExportSettingsAsync(bool triggerExportOnConfirm)
     {
         if (isLoading) return;
 
@@ -277,12 +109,7 @@ internal sealed partial class MainWindow
             ? Path.GetFileNameWithoutExtension(ScanSessions[CurrentIndex].FilePath)
             : "Scan001";
 
-        var dialog = new Dialogs.ExportSettingsDialog(hasScans: _sessionManager.HasScans, sampleOriginal: sampleName);
-        var result = await dialog.ShowDialog<Dialogs.ExportSettingsResult>(this);
-
-        if (result == Dialogs.ExportSettingsResult.SaveAndExport || (triggerExportOnConfirm && result == Dialogs.ExportSettingsResult.SaveSettings))
-        {
-            await SavePendingScansAsync(closeAfterSave: false);
-        }
+        var dialog = new Dialogs.ExportSettingsDialog(sampleOriginal: sampleName);
+        await dialog.ShowDialog<Dialogs.ExportSettingsResult>(this);
     }
 }

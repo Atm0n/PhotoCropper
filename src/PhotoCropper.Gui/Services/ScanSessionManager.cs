@@ -27,6 +27,26 @@ internal sealed class ScanSessionManager : IDisposable
     /// </summary>
     public event Action<int>? SessionDeactivated;
 
+    /// <summary>A session's boxes were edited (see <see cref="ScanSessionItem.Modified"/>); may be raised off the UI thread.</summary>
+    public event Action<ScanSessionItem>? SessionModified;
+
+    private void OnSessionModified(object? sender, EventArgs e)
+    {
+        if (sender is ScanSessionItem item) SessionModified?.Invoke(item);
+    }
+
+    private void Track(ScanSessionItem item)
+    {
+        item.Modified += OnSessionModified;
+        _sessions.Add(item);
+    }
+
+    private void Untrack(ScanSessionItem item)
+    {
+        item.Modified -= OnSessionModified;
+        item.Dispose();
+    }
+
     public bool MoveTo(int index)
     {
         if (!HasScans)
@@ -83,7 +103,7 @@ internal sealed class ScanSessionManager : IDisposable
     public void Add(ScanSessionItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
-        _sessions.Add(item);
+        Track(item);
         if (_sessions.Count == 1)
         {
             CurrentIndex = 0;
@@ -95,7 +115,7 @@ internal sealed class ScanSessionManager : IDisposable
         ArgumentNullException.ThrowIfNull(items);
         foreach (var item in items)
         {
-            _sessions.Add(item);
+            Track(item);
         }
 
         if (_sessions.Count > 0 && CurrentIndex >= _sessions.Count)
@@ -110,9 +130,23 @@ internal sealed class ScanSessionManager : IDisposable
         Clear();
         foreach (var item in items)
         {
-            _sessions.Add(item);
+            Track(item);
         }
         CurrentIndex = 0;
+    }
+
+    /// <summary>Moves a scan to another position (e.g. a rescan taking the place of the scan it replaces).</summary>
+    public void Move(int fromIndex, int toIndex)
+    {
+        if (fromIndex < 0 || fromIndex >= _sessions.Count || toIndex < 0 || toIndex >= _sessions.Count || fromIndex == toIndex) return;
+
+        var current = CurrentSession;
+        var item = _sessions[fromIndex];
+        _sessions.RemoveAt(fromIndex);
+        _sessions.Insert(toIndex, item);
+
+        // Keep the same scan selected.
+        if (current != null) CurrentIndex = _sessions.IndexOf(current);
     }
 
     public ScanSessionItem? RemoveCurrent()
@@ -126,7 +160,7 @@ internal sealed class ScanSessionManager : IDisposable
         if (index < 0 || index >= _sessions.Count) return null;
 
         var item = _sessions[index];
-        item.Dispose();
+        Untrack(item);
         _sessions.RemoveAt(index);
 
         if (_sessions.Count == 0)
@@ -141,16 +175,6 @@ internal sealed class ScanSessionManager : IDisposable
         return item;
     }
 
-    public bool HasUnsavedChanges()
-    {
-        return _sessions.Any(s => !s.IsSaved || s.IsModified);
-    }
-
-    public IReadOnlyList<ScanSessionItem> GetPendingExportSessions()
-    {
-        return _sessions.Where(s => !s.IsSaved || s.IsModified).ToList();
-    }
-
     public ScanSessionItem? FindByPath(string filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath)) return null;
@@ -161,7 +185,7 @@ internal sealed class ScanSessionManager : IDisposable
     {
         foreach (var session in _sessions)
         {
-            session.Dispose();
+            Untrack(session);
         }
         _sessions.Clear();
         CurrentIndex = 0;
