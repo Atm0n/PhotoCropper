@@ -114,43 +114,4 @@ internal sealed partial class MainWindow
         ApplyUndoRedoAction(action, ResourceKeys.MsgRedo, "Redid {0}.");
         return Task.CompletedTask;
     }
-
-    private async void ContextMenu_RotateCw_Click(object? sender, RoutedEventArgs e)
-    {
-        EnsureContextSelection(sender);
-        await RotateSelectedPhotosAsync();
-    }
-
-    private async void ContextMenu_RotateCcw_Click(object? sender, RoutedEventArgs e)
-    {
-        EnsureContextSelection(sender);
-        await RotateSelectedPhotosCcwAsync();
-    }
-
-    private void ContextMenu_Refine_Click(object? sender, RoutedEventArgs e)
-    {
-        EnsureContextSelection(sender);
-        StartRefineMode();
-    }
-
-    private void ContextMenu_Delete_Click(object? sender, RoutedEventArgs e)
-    {
-        EnsureContextSelection(sender);
-        DeleteSelectedPhotos();
-    }
-
-    private async void ContextMenu_ExportSingle_Click(object? sender, RoutedEventArgs e)
-    {
-        EnsureContextSelection(sender);
-        int selectedIndex = SelectedPhotoNumber;
-        if (selectedIndex >= 0)
-        {
-            await ExportSinglePhotoAsync(selectedIndex, CancellationToken.None);
-        }
-    }
-
-    private void EnsureContextSelection(object? sender)
-    {
-        if (sender is MenuItem { DataContext: CropPhotoItem item }) _cropsVm.EnsureSelected(item);
-    }
 }

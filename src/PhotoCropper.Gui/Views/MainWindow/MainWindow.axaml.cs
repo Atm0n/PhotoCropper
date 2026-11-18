@@ -49,7 +49,8 @@ internal sealed partial class MainWindow : Window
         _notificationService.Initialize(this);
 
         _cropsVm = new CropsStageViewModel(this, _sessionManager, undoHistory, () => SettingsManager.Instance.Settings, SettingsManager.Instance.Save);
-        grdMainWorkspace.DataContext = _cropsVm;
+        viewCrops.DataContext = _cropsVm;
+        viewCrops.Actions = this;
         _reviewVm = new ReviewViewModel(this, undoHistory);
         _refineVm = new RefineViewModel(this, undoHistory);
         viewReview.DataContext = _reviewVm;
@@ -529,82 +530,18 @@ internal sealed partial class MainWindow : Window
         }
     }
 
-    /// <summary>The scan currently shown, so editing boxes only repaints the overlay instead of re-uploading the scan.</summary>
-    private Emgu.CV.Mat? _shownScan;
+    /// <summary>Shows a scan with its boxes in the Crops view (null clears it).</summary>
+    internal void ShowScan(PhotoCropperEngine? engine) => viewCrops.ShowScan(engine);
 
-    internal void SetMainImage(Emgu.CV.Mat? mat)
-    {
-        if (img == null) return;
+    internal static void DeferDispose(IDisposable? obj, int delayMs = 300) => DeferredDisposal.Later(obj, delayMs);
 
-        var oldSource = img.Source as IDisposable;
-        img.Source = mat != null ? MatBitmapConverter.ToAvaloniaBitmap(mat) : null;
-        _shownScan = mat;
-        DeferDispose(oldSource);
-        UpdateCropCanvasSize();
-        if (mat == null) ShowCropBoxes(null);
-    }
-
-    /// <summary>Shows a scan with its boxes drawn over it. The bitmap is only rebuilt when the scan itself changed.</summary>
-    internal void ShowScan(PhotoCropperEngine? engine)
-    {
-        var scan = engine?.Original;
-        if (scan == null || scan.IsEmpty)
-        {
-            SetMainImage(null);
-            return;
-        }
-
-        if (!ReferenceEquals(scan, _shownScan)) SetMainImage(scan);
-        ShowCropBoxes(engine);
-    }
-
-    private void ShowCropBoxes(PhotoCropperEngine? engine)
-    {
-        if (cropOverlay == null) return;
-        if (engine?.Original == null || engine.Original.IsEmpty)
-        {
-            cropOverlay.Candidates = null;
-            return;
-        }
-
-        cropOverlay.ScanSize = new Size(engine.Original.Width, engine.Original.Height);
-        cropOverlay.OverlayScale = engine.OverlayScale;
-        var bgr = engine.CurrentOptions.GetBoundingBoxColorBgr();
-        cropOverlay.BoxColor = Color.FromRgb((byte)bgr.V2, (byte)bgr.V1, (byte)bgr.V0);
-        cropOverlay.Candidates = engine.AcceptedCandidates;
-        // The engine may have edited the same list instance in place; repaint either way.
-        cropOverlay.InvalidateVisual();
-    }
-
-    internal static void DeferDispose(IDisposable? obj, int delayMs = 300)
-    {
-        if (obj == null) return;
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(delayMs);
-            Dispatcher.UIThread.Post(obj.Dispose);
-        });
-    }
-
-    internal static void DeferDispose(IEnumerable<IDisposable> objects, int delayMs = 300)
-    {
-        var list = objects.ToList();
-        if (list.Count == 0) return;
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(delayMs);
-            Dispatcher.UIThread.Post(() =>
-            {
-                foreach (var obj in list) obj.Dispose();
-            });
-        });
-    }
+    internal static void DeferDispose(IEnumerable<IDisposable> objects, int delayMs = 300) => DeferredDisposal.Later(objects, delayMs);
 
     protected override void OnClosed(EventArgs e)
     {
         var settings = SettingsManager.Instance.Settings;
         settings.BackgroundTolerance = PhotoCropper.Core.Models.DetectionOptions.SensitivityToTolerance(_cropsVm.Sensitivity);
-        settings.ZoomLevel = sldZoom.Value;
+        settings.ZoomLevel = viewCrops.ZoomLevel;
         settings.MinAreaFactor = _cropsVm.MinAreaPercent;
         settings.MaxAreaFactor = _cropsVm.MaxAreaPercent;
         settings.CannyLowThreshold = _cropsVm.EdgeThreshold;
@@ -617,7 +554,7 @@ internal sealed partial class MainWindow : Window
         SettingsManager.Instance.Save();
 
         base.OnClosed(e);
-        SetMainImage(null);
+        ShowScan(null);
         _refineVm.Reject();
         _reviewVm.Close();
         _cropsVm.ClearPhotos();

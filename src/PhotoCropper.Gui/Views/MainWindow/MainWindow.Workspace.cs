@@ -119,7 +119,7 @@ internal sealed partial class MainWindow
     {
         undoHistory.Clear();
         _sessionManager.Clear();
-        SetMainImage(null);
+        ShowScan(null);
         _cropsVm.ClearPhotos();
         _cropsVm.UpdateScanCounter();
     }
