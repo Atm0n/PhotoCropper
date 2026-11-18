@@ -269,32 +269,13 @@ internal sealed partial class MainWindow : Window
 
         if (ScanSessions.Count > 0)
         {
-            if (e.Key == Key.Delete && e.KeyModifiers.HasFlag(KeyModifiers.Shift))
-            {
-                await DeleteCurrentScanAsync();
-                e.Handled = true;
-                return true;
-            }
-
             switch (e.Key)
             {
-                case Key.N:
-                case Key.Oem3:
-                    FocusManager?.Focus(null);
-                    StartRefineMode();
-                    e.Handled = true;
-                    return true;
                 case Key.R:
                     FocusManager?.Focus(null);
                     await RotateSelectedPhotosAsync();
                     e.Handled = true;
                     return true;
-                case Key.V:
-                    FocusManager?.Focus(null);
-                    await OpenReviewModeAsync();
-                    e.Handled = true;
-                    return true;
-                case Key.X:
                 case Key.Delete:
                     FocusManager?.Focus(null);
                     DeleteSelectedPhotos();
@@ -329,7 +310,7 @@ internal sealed partial class MainWindow : Window
             return true;
         }
 
-        if (!isLoading && !_isNavigating && ScanSessions.Count > 0 && (e.Key == Key.Space || e.Key == Key.B))
+        if (!isLoading && !_isNavigating && ScanSessions.Count > 0 && e.Key == Key.Space)
         {
             if (!isComparingRaw && _cropsVm.SelectedPhotoIndex >= 0)
             {
@@ -377,14 +358,12 @@ internal sealed partial class MainWindow : Window
             switch (e.Key)
             {
                 case Key.Up:
-                case Key.PageUp:
                     if (isLoading || _isNavigating) { e.Handled = true; return true; }
                     e.Handled = true;
                     await NavigateScanAsync(forward: false);
                     return true;
 
                 case Key.Down:
-                case Key.PageDown:
                     if (isLoading || _isNavigating) { e.Handled = true; return true; }
                     e.Handled = true;
                     await NavigateScanAsync(forward: true);
@@ -433,7 +412,7 @@ internal sealed partial class MainWindow : Window
             return;
         }
 
-        if (isComparingRaw && (e.Key == Key.Space || e.Key == Key.B))
+        if (isComparingRaw && e.Key == Key.Space)
         {
             isComparingRaw = false;
             if (!isLoading && !_isNavigating && ScanSessions.Count > 0)

@@ -30,8 +30,6 @@ internal static class ResourceKeys
     public const string ReviewSentinelSubtitle = nameof(ReviewSentinelSubtitle);
     public const string ReviewSentinelStats = nameof(ReviewSentinelStats);
     public const string BtnReviewGoToStart = nameof(BtnReviewGoToStart);
-    public const string BtnReviewEdit = nameof(BtnReviewEdit);
-    public const string TipReviewEdit = nameof(TipReviewEdit);
     public const string TipToggleRightPanel = nameof(TipToggleRightPanel);
 
     public const string LblDetectionSensitivity = nameof(LblDetectionSensitivity);
