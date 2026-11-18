@@ -15,7 +15,7 @@ A project goes through three stages, shown in the stage bar at the top of the wi
 2. **Crops → `Cropped/`**: photos are detected on each scan automatically. Fix the boxes (drag corners, rotate, delete), draw missed photos by hand, rotate, refine edges, or go through every photo full-size in **Review mode**. Each photo is saved as a lossless PNG with geometry fixes only.
 3. **Finish → `Final/`**: restore each photo (colour, dust, repair brush, optional AI fill) in a full-window editor with a before/after split, add metadata, and export as JPEG or PNG with EXIF. Only photos that changed are exported again, and photos cropped elsewhere can be imported straight into this stage.
 
-The CLI can run the same stages unattended (`--stage crop|restore`). Press `F1` in the app for the full help and shortcuts.
+The CLI can run the same stages unattended (`--stage crop|restore`), on loose files or on a project with `--project`, so the app and the CLI can share work. Press `F1` in the app for the full help and shortcuts.
 
 ## Project Structure
 
@@ -236,6 +236,9 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans -o
 dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Scans --stage crop -o D:\Cropped
 dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\Cropped --stage restore -o D:\Final
 
+# Work on an app project: add new scans, keep boxes edited in the app, write Cropped/ and Final/
+dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --project D:\Albums\Grandma D:\NewScans
+
 # Restore photos that were already cropped elsewhere (no detection)
 dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- D:\OldPhotos --stage restore --year 1975
 
@@ -249,6 +252,7 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 |---|---|---|
 | `-i, --input <path>` | Input image file or directory of scans (positional arguments accepted) | *Required* |
 | `-o, --output <dir>` | Output destination directory for extracted photos | `<scan_dir>/cropped` (`<input_dir>/restored` with `--stage restore`) |
+| `--project <folder>` | Work on a PhotoCropper project: inputs are added to `RawScans/`, boxes saved in the app are kept, other scans are detected (low-coverage scans auto-tuned, as in the app), and `Cropped/`, `Final/` and `session.json` are updated. Scans where nothing was found stay flagged and are tried again next run. With `--stage crop` it stops after `Cropped/`; `--stage restore` only renders missing or out-of-date final photos. Don't run it on a project that is open in the app | — |
 | `--stage <all\|crop\|restore>` | Pipeline stage to run: `all` detects, crops, restores and exports; `crop` writes lossless PNGs with geometry fixes only (no restoration); `restore` restores existing photo files without detection, keeping their names unless `-p` is given | `all` |
 | `-f, --format <fmt>` | Output file format: `JPEG` or `PNG` | `JPEG` |
 | `-q, --quality <1-100>` | JPEG compression quality | `100` |

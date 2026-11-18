@@ -155,6 +155,10 @@ internal static class CommandLineParser
                 options.FileNamePattern = args[++i];
                 options.FileNamePatternSpecified = true;
             }
+            else if (arg == "--project" && i + 1 < args.Length)
+            {
+                options.ProjectDirectory = args[++i];
+            }
             else if (arg == "--stage" && i + 1 < args.Length)
             {
                 string stage = args[++i];
@@ -207,9 +211,16 @@ internal static class CommandLineParser
         
             Usage:
               PhotoCropperCli [options] <input-file-or-directory> [more-inputs...]
+              PhotoCropperCli --project <folder> [scans-to-add...] [options]
         
             Options:
               -i, --input <path>      Input image file or folder of scans (positional arguments also accepted)
+              --project <folder>      Work on a PhotoCropper project (the app's project folder): inputs are
+                                      added to RawScans/, boxes saved in the app are kept, the rest are
+                                      detected, and Cropped/ and Final/ are written. Created if missing.
+                                      --stage crop stops after Cropped/; --stage restore only renders
+                                      Final/. -o writes the final photos elsewhere. Like the app,
+                                      scans with low coverage are auto-tuned.
               -o, --output <dir>      Output directory for extracted photos (default: <scan_dir>/cropped,
                                       or <input_dir>/restored with --stage restore)
               --stage <stage>         Pipeline stage to run (default: all):
@@ -258,6 +269,7 @@ internal static class CommandLineParser
               PhotoCropperCli -i scan1.jpg -i scan2.jpg -t 30 -q 95
               PhotoCropperCli D:\Scans --stage crop -o D:\Cropped
               PhotoCropperCli D:\Cropped --stage restore -o D:\Final
+              PhotoCropperCli --project D:\Albums\Grandma D:\NewScans
         
             Acknowledgements & Licenses:
               PhotoCropper is licensed under GNU General Public License v3.0.

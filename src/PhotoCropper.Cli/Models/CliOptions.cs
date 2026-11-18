@@ -21,6 +21,9 @@ internal sealed class CliOptions
     public bool FileNamePatternSpecified { get; set; }
 
     public List<string> Inputs { get; } = [];
+
+    /// <summary>--project: a project folder to run the app's RawScans → Cropped → Final pipeline on.</summary>
+    public string? ProjectDirectory { get; set; }
     public string? OutputDirectory { get; set; }
     public string Format { get; set; } = "JPEG";
     public int JpegQuality { get; set; } = 100;
