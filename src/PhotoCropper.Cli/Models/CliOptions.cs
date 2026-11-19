@@ -28,7 +28,8 @@ internal sealed class CliOptions
     public string Format { get; set; } = "JPEG";
     public int JpegQuality { get; set; } = 100;
     public double Tolerance { get; set; } = 25.0;
-    public double MinAreaFactor { get; set; } = 0.25;
+    /// <summary>Smallest photo as a fraction of the scan: the app's own default, so a page holding several prints is found too.</summary>
+    public double MinAreaFactor { get; set; } = PhotoCropper.Core.Common.AppConstants.DefaultMinAreaFactor;
     public double MaxAreaFactor { get; set; } = 0.90;
     public double CannyLow { get; set; } = 20.0;
     public bool AutoOrient { get; set; } = true;

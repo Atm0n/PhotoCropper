@@ -216,29 +216,29 @@ internal static class InteractiveWizard
             new SelectionPrompt<string>()
                 .Title("  [bold]Choose detection sensitivity profile:[/]")
                 .AddChoices(
-                    "Standard    - Tolerance: 25, Min Size: 25% (Recommended for most flatbed scans)",
-                    "Sensitive   - Tolerance: 35, Min Size: 15% (For light borders or faint separation)",
-                    "Aggressive  - Tolerance: 45, Min Size: 10% (For dark scanner lids or irregular photos)",
+                    "Standard    - Tolerance: 25, Min Size: 1% (Recommended for most flatbed scans)",
+                    "Sensitive   - Tolerance: 35, Min Size: 1% (For light borders or faint separation)",
+                    "Aggressive  - Tolerance: 45, Min Size: 1% (For dark scanner lids or irregular photos)",
                     "Custom      - Manually configure detection parameters"));
 
         if (profile.StartsWith("Standard", StringComparison.OrdinalIgnoreCase))
         {
             options.Tolerance = 25.0;
-            options.MinAreaFactor = 0.25;
+            options.MinAreaFactor = Core.Common.AppConstants.DefaultMinAreaFactor;
             options.MaxAreaFactor = 0.90;
             options.CannyLow = 20.0;
         }
         else if (profile.StartsWith("Sensitive", StringComparison.OrdinalIgnoreCase))
         {
             options.Tolerance = 35.0;
-            options.MinAreaFactor = 0.15;
+            options.MinAreaFactor = Core.Common.AppConstants.DefaultMinAreaFactor;
             options.MaxAreaFactor = 0.95;
             options.CannyLow = 15.0;
         }
         else if (profile.StartsWith("Aggressive", StringComparison.OrdinalIgnoreCase))
         {
             options.Tolerance = 45.0;
-            options.MinAreaFactor = 0.10;
+            options.MinAreaFactor = Core.Common.AppConstants.DefaultMinAreaFactor;
             options.MaxAreaFactor = 0.95;
             options.CannyLow = 15.0;
         }
