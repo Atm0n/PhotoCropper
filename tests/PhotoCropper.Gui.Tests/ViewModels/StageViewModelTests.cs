@@ -32,8 +32,12 @@ public sealed class StageViewModelTests : IDisposable
         using var photo = new Mat(40, 60, DepthType.Cv8U, 3);
         photo.SetTo(new MCvScalar(90, 120, 150));
         var crop = new WorkspaceCropData { CenterX = 50, CenterY = 50, Width = 60, Height = 40 };
-        return PhotoPipelineService.SaveCroppedPhotos(_workDir, _host.Workspace, entry, [new CroppedPhotoInput(photo, crop)],
+        var saved = PhotoPipelineService.SaveCroppedPhotos(_workDir, _host.Workspace, entry, [new CroppedPhotoInput(photo, crop)],
             new RestorationSettings { RestoreColors = restoreColors })[0];
+        // As the app and the CLI do: the scan's boxes are recorded with its photos. Without them the Scan stage's
+        // preview asks the host to detect, the fake host finds nothing and flags the scan empty in the background.
+        entry.SetFinalCrops([crop]);
+        return saved;
     }
 
     [Fact]
