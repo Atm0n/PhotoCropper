@@ -24,20 +24,18 @@ public static class PhotoAtPointLocator
     private const double MinAreaFraction = 0.002;
     private const double MaxAreaFraction = 0.92;
 
-    // Experiment knobs (read by the benchmark through environment variables; fixed once tuned).
-    internal static double PhotoLikeFill = Env("PC_FILL", 0.90);
-    internal static double FillSlack = Env("PC_SLACK", 0.04);
-    internal static double SwallowFraction = Env("PC_SWALLOW", 0.5);
-    internal static bool PaintOthers = Env("PC_PAINT", 1) > 0;
-    internal static bool UseDetector = Env("PC_DETECTOR", 1) > 0;
-    internal static bool UseOutlines = Env("PC_OUTLINES", 1) > 0;
-    internal static int GrabCutMode = (int)Env("PC_GRABCUT", 0);      // 0 off, 1 refine the chosen shape
-    internal static double GrabCutGrow = Env("PC_GC_GROW", 0.2);     // "probably photo" = chosen box grown by this
-    internal static double GrabCutRing = Env("PC_GC_RING", 0.5);     // background beyond the box grown by this
-    internal static double GrabCutSide = Env("PC_GC_SIDE", 700);     // GrabCut runs at this size (longer side)
-
-    private static double Env(string name, double fallback) =>
-        double.TryParse(Environment.GetEnvironmentVariable(name), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v) ? v : fallback;
+    /// <summary>Among shapes about as rectangular as the best (within this much fill), the largest wins.</summary>
+    private const double FillSlack = 0.04;
+    /// <summary>A shape counts as photo-like when it fills at least this much of its box.</summary>
+    private const double PhotoLikeFill = 0.90;
+    /// <summary>A shape may cover at most this fraction of another photo's box (or its own area).</summary>
+    private const double SwallowFraction = 0.5;
+    /// <summary>A strip counts as background when at most this fraction of it is edges...</summary>
+    private const double BackgroundEdgeDensity = 0.02;
+    /// <summary>...and its brightness varies by at most this much (standard deviation, 0-255).</summary>
+    private const double BackgroundStdDev = 10;
+    /// <summary>A side moves out at most this much of the box's longer side.</summary>
+    private const double GrowMax = 0.8;
 
     /// <param name="scan">The scan, as loaded.</param>
     /// <param name="point">The clicked point, in scan pixels.</param>
@@ -80,66 +78,99 @@ public static class PhotoAtPointLocator
         }
 
         var chosen = search.Choose();
-        if (chosen is { } shape && GrabCutMode == 1)
+        if (chosen is { } shape)
         {
-            chosen = GrabCutAround(image, search.Click, shape, search.Others) ?? shape;
+            chosen = GrowToBackground(image, shape, search.Others);
         }
         return chosen is { } best ? Scale(best, 1.0 / image.Scale) : null;
     }
 
     /// <summary>
-    /// Redraws the photo's outline with GrabCut, which learns the photo's and the surroundings' colours from the
-    /// scan itself: the chosen box grown a little is "probably photo", the scan's other boxes and the area well
-    /// outside are background, and the click is photo. Working-size scan coordinates in and out.
+    /// Moves each side of the box outwards while the strip just outside it isn't background. A part of the photo
+    /// close to the background's colour (a pink roof on a pink album page) is left out of every colour mask, but
+    /// it has texture, which paper and the scanner bed don't: a strip counts as background when it is smooth.
+    /// A side stops at another photo's box. Working-size scan coordinates in and out.
     /// </summary>
-    private static RotatedRect? GrabCutAround(WorkingImage image, Point2f click, RotatedRect hint, Point2f[][] others)
+    private static RotatedRect GrowToBackground(WorkingImage image, RotatedRect box, Point2f[][] others)
     {
-        double g = Math.Min(1.0, GrabCutSide / Math.Max(image.Bgr.Width, image.Bgr.Height));
-        using Mat small = new();
-        Cv2.Resize(image.Bgr, small, new Size(Math.Max(1, (int)Math.Round(image.Bgr.Width * g)), Math.Max(1, (int)Math.Round(image.Bgr.Height * g))), 0, 0, InterpolationFlags.Area);
-        // Scan (working-size) coordinates to the small padded image and back.
-        Point2f ToSmall(Point2f p) => new((float)((p.X + image.Pad) * g), (float)((p.Y + image.Pad) * g));
-        Point[] Poly(RotatedRect r, double grow) =>
-            [.. Grow(r, grow).Points().Select(p => ToSmall(p)).Select(p => new Point((int)Math.Round(p.X), (int)Math.Round(p.Y)))];
+        float w = box.Size.Width, h = box.Size.Height;
+        if (w < 8 || h < 8) return box;
+        int margin = (int)Math.Ceiling(Math.Max(w, h) * GrowMax) + 4;
+        int pw = (int)Math.Round(w) + 2 * margin, ph = (int)Math.Round(h) + 2 * margin;
 
-        using Mat mask = new(small.Size(), MatType.CV_8UC1, Scalar.All((int)GrabCutClasses.BGD));
-        Cv2.FillConvexPoly(mask, Poly(hint, GrabCutGrow + GrabCutRing), Scalar.All(2)); // probably background
-        Cv2.FillConvexPoly(mask, Poly(hint, GrabCutGrow), Scalar.All(3));               // probably photo
+        // Straighten the box and its surroundings: the box is axis-aligned at [margin, margin + w] x [margin, margin + h].
+        var centre = new Point2f(box.Center.X + image.Pad, box.Center.Y + image.Pad);
+        using Mat rotation = Cv2.GetRotationMatrix2D(centre, box.Angle, 1.0);
+        rotation.Set<double>(0, 2, rotation.Get<double>(0, 2) - centre.X + pw / 2.0);
+        rotation.Set<double>(1, 2, rotation.Get<double>(1, 2) - centre.Y + ph / 2.0);
+
+        using Mat gray = new();
+        Cv2.CvtColor(image.Bgr, gray, ColorConversionCodes.BGR2GRAY);
+        using Mat edges = new();
+        using (Mat blurred = new())
+        {
+            Cv2.GaussianBlur(gray, blurred, new Size(3, 3), 0);
+            Cv2.Canny(blurred, edges, 30, 90);
+        }
+        using Mat othersMask = new(gray.Size(), MatType.CV_8UC1, Scalar.All(0));
         foreach (var other in others)
         {
-            Cv2.FillConvexPoly(mask, [.. other.Select(p => ToSmall(p)).Select(p => new Point((int)Math.Round(p.X), (int)Math.Round(p.Y)))], Scalar.All((int)GrabCutClasses.BGD));
+            Cv2.FillConvexPoly(othersMask, [.. other.Select(p => new Point((int)Math.Round(p.X + image.Pad), (int)Math.Round(p.Y + image.Pad)))], Scalar.All(255));
         }
-        var c = ToSmall(click);
-        int seed = Math.Max(2, (int)(Math.Min(small.Width, small.Height) * 0.01));
-        Cv2.Circle(mask, new Point((int)c.X, (int)c.Y), seed, Scalar.All((int)GrabCutClasses.FGD), -1);
 
-        using Mat bgdModel = new();
-        using Mat fgdModel = new();
-        Cv2.GrabCut(small, mask, default, bgdModel, fgdModel, 4, GrabCutModes.InitWithMask);
+        using Mat grayPatch = new();
+        using Mat edgePatch = new();
+        using Mat otherPatch = new();
+        var size = new Size(pw, ph);
+        Cv2.WarpAffine(gray, grayPatch, rotation, size, InterpolationFlags.Linear, BorderTypes.Constant, Scalar.All(0));
+        Cv2.WarpAffine(edges, edgePatch, rotation, size, InterpolationFlags.Nearest, BorderTypes.Constant, Scalar.All(0));
+        // Outside the scan (and its padding) is treated as another photo: nothing to grow into.
+        Cv2.WarpAffine(othersMask, otherPatch, rotation, size, InterpolationFlags.Nearest, BorderTypes.Constant, Scalar.All(255));
 
-        // Photo = definitely or probably foreground; keep the part containing the click.
-        using Mat foreground = new();
-        Cv2.InRange(mask, Scalar.All(1), Scalar.All(1), foreground);
-        using Mat probable = new();
-        Cv2.InRange(mask, Scalar.All(3), Scalar.All(3), probable);
-        Cv2.BitwiseOr(foreground, probable, foreground);
-        Cv2.FindContours(foreground, out Point[][] contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
-        foreach (var contour in contours)
-        {
-            Point[] hull = Cv2.ConvexHull(contour);
-            if (Cv2.PointPolygonTest(hull, c, false) < 0) continue;
-            RotatedRect r = Cv2.MinAreaRect(hull);
-            // Back to working-size scan coordinates.
-            return new RotatedRect(new Point2f((float)(r.Center.X / g - image.Pad), (float)(r.Center.Y / g - image.Pad)),
-                new Size2f((float)(r.Size.Width / g), (float)(r.Size.Height / g)), r.Angle);
-        }
-        return null;
+        int step = Math.Max(2, (int)Math.Round(Math.Min(w, h) * 0.015));
+        double left = margin, right = margin + w, top = margin, bottom = margin + h;
+        left -= Extend(grayPatch, edgePatch, otherPatch, step, margin, (int)top, (int)bottom, horizontal: true, from: (int)left, outward: -1);
+        right += Extend(grayPatch, edgePatch, otherPatch, step, margin, (int)top, (int)bottom, horizontal: true, from: (int)right, outward: 1);
+        top -= Extend(grayPatch, edgePatch, otherPatch, step, margin, (int)left, (int)right, horizontal: false, from: (int)top, outward: -1);
+        bottom += Extend(grayPatch, edgePatch, otherPatch, step, margin, (int)left, (int)right, horizontal: false, from: (int)bottom, outward: 1);
+
+        // Back to scan coordinates: undo the straightening.
+        double rad = box.Angle * Math.PI / 180, cos = Math.Cos(rad), sin = Math.Sin(rad);
+        double dx = (left + right) / 2 - pw / 2.0, dy = (top + bottom) / 2 - ph / 2.0;
+        var c = new Point2f((float)(box.Center.X + dx * cos - dy * sin), (float)(box.Center.Y + dx * sin + dy * cos));
+        return new RotatedRect(c, new Size2f((float)(right - left), (float)(bottom - top)), box.Angle);
     }
 
-    private static RotatedRect Grow(RotatedRect r, double fraction)
+    /// <summary>
+    /// How far one side moves out: strips of width <paramref name="step"/> beyond it are tried until one is
+    /// background. If none is within the limit, or another photo comes first, the side stays (or stops there).
+    /// </summary>
+    private static int Extend(Mat gray, Mat edges, Mat others, int step, int limit, int spanFrom, int spanTo, bool horizontal, int from, int outward)
     {
-        float d = (float)(Math.Min(r.Size.Width, r.Size.Height) * fraction);
-        return new RotatedRect(r.Center, new Size2f(r.Size.Width + 2 * d, r.Size.Height + 2 * d), r.Angle);
+        // Leave out the ends of the side, where the neighbouring sides' surroundings are.
+        int inset = (spanTo - spanFrom) / 20;
+        int a = spanFrom + inset, b = spanTo - inset;
+        if (b - a < 4) return 0;
+        // The strip right next to the side holds the side's own edge; start just past it.
+        for (int moved = 0; moved + step <= limit; moved += step)
+        {
+            int near = from + outward * (moved + 2);
+            int far = near + outward * step;
+            int lo = Math.Min(near, far), hi = Math.Max(near, far);
+            Rect strip = horizontal ? new Rect(lo, a, hi - lo, b - a) : new Rect(a, lo, b - a, hi - lo);
+            strip = strip.Intersect(new Rect(0, 0, gray.Width, gray.Height));
+            if (strip.Width <= 0 || strip.Height <= 0) return moved;
+
+            using Mat otherStrip = new(others, strip);
+            if (Cv2.CountNonZero(otherStrip) > 0.1 * strip.Width * strip.Height) return moved;
+
+            using Mat edgeStrip = new(edges, strip);
+            using Mat grayStrip = new(gray, strip);
+            double density = Cv2.CountNonZero(edgeStrip) / (double)(strip.Width * strip.Height);
+            Cv2.MeanStdDev(grayStrip, out _, out Scalar spread);
+            if (density <= BackgroundEdgeDensity && spread.Val0 <= BackgroundStdDev) return moved;
+        }
+        return 0; // never reached background: the side was probably right after all
     }
 
     private static RotatedRect Scale(RotatedRect r, double s) =>
@@ -169,7 +200,10 @@ public static class PhotoAtPointLocator
             using (Mat fullHsv = new())
             {
                 Cv2.CvtColor(original, fullHsv, ColorConversionCodes.BGR2HSV);
-                backgroundHsv = options.CustomBackgroundColorHsv is { } picked ? CvInterop.ToCv(picked) : BackgroundAnalyzer.SampleBackgroundColor(fullHsv);
+                // The scan's other photos are known: keep them out of the background sample.
+                backgroundHsv = options.CustomBackgroundColorHsv is { } picked
+                    ? CvInterop.ToCv(picked)
+                    : BackgroundAnalyzer.SampleBackgroundColor(fullHsv, [.. otherBoxes.Select(b => CvInterop.ToCv(b).Points())]);
             }
             Scalar backgroundBgr = BackgroundAnalyzer.HsvToBgr(backgroundHsv);
 
@@ -186,13 +220,11 @@ public static class PhotoAtPointLocator
                 if (right > 0) Cv2.Rectangle(padded, new Rect(padded.Width - pad - right, 0, pad + right, padded.Height), backgroundBgr, -1);
             }
 
-            if (PaintOthers)
+            // The other photos are painted over, so the clicked one can't merge with them.
+            foreach (var other in otherBoxes)
             {
-                foreach (var other in otherBoxes)
-                {
-                    Point[] corners = [.. other.GetVertices().Select(p => new Point((int)Math.Round(p.X) + pad, (int)Math.Round(p.Y) + pad))];
-                    Cv2.FillConvexPoly(padded, corners, backgroundBgr);
-                }
+                Point[] corners = [.. other.GetVertices().Select(p => new Point((int)Math.Round(p.X) + pad, (int)Math.Round(p.Y) + pad))];
+                Cv2.FillConvexPoly(padded, corners, backgroundBgr);
             }
 
             double scale = Math.Min(1.0, WorkingSide / Math.Max(padded.Width, padded.Height));
@@ -233,9 +265,6 @@ public static class PhotoAtPointLocator
         private readonly WorkingImage _image;
         private readonly Point2f _click;
         private readonly Point2f[][] _others;
-
-        public Point2f Click => _click;
-        public Point2f[][] Others => _others;
         private readonly double _imageArea;
         private readonly List<(RotatedRect Box, double Fill, double Area)> _candidates = [];
 
@@ -247,37 +276,35 @@ public static class PhotoAtPointLocator
             _others = [.. otherBoxes.Select(b => Scale(CvInterop.ToCv(b), image.Scale).Points())];
         }
 
+        /// <summary>The other photos' outlines, in working-size scan coordinates.</summary>
+        public Point2f[][] Others => _others;
+
         public void Consider(Mat foreground)
         {
-            if (UseDetector)
+            // Detection's own candidates for this mask, with composites (several photos as one) resolved.
+            var candidates = CandidateExtractor.ExtractCandidates(
+                foreground, _image.Pad, _image.ScanSize.Width, _image.ScanSize.Height, MinAreaFraction, MaxAreaFraction, _image.Bgr, _image.BackgroundBgr);
+            foreach (var candidate in CandidateResolutionFilter.FilterCandidates(candidates))
             {
-                // Detection's own candidates for this mask, with composites (several photos as one) resolved.
-                var candidates = CandidateExtractor.ExtractCandidates(
-                    foreground, _image.Pad, _image.ScanSize.Width, _image.ScanSize.Height, MinAreaFraction, MaxAreaFraction, _image.Bgr, _image.BackgroundBgr);
-                foreach (var candidate in CandidateResolutionFilter.FilterCandidates(candidates))
-                {
-                    var box = CvInterop.ToCv(candidate.Rotated);
-                    if (Cv2.PointPolygonTest(box.Points(), _click, false) < 0) continue;
-                    Add(box, candidate.Rectangularity);
-                }
+                var box = CvInterop.ToCv(candidate.Rotated);
+                if (Cv2.PointPolygonTest(box.Points(), _click, false) < 0) continue;
+                Add(box, candidate.Rectangularity);
             }
 
-            if (UseOutlines)
+            // And the mask's raw outlines around the click (the mask is padded: shift by the padding).
+            Cv2.FindContours(foreground, out Point[][] contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+            var padded = new Point2f(_click.X + _image.Pad, _click.Y + _image.Pad);
+            foreach (var contour in contours)
             {
-                Cv2.FindContours(foreground, out Point[][] contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
-                var padded = new Point2f(_click.X + _image.Pad, _click.Y + _image.Pad);
-                foreach (var contour in contours)
-                {
-                    if (!Cv2.BoundingRect(contour).Contains(new Point((int)padded.X, (int)padded.Y))) continue;
-                    Point[] hull = Cv2.ConvexHull(contour);
-                    if (Cv2.PointPolygonTest(hull, padded, false) < 0) continue;
+                if (!Cv2.BoundingRect(contour).Contains(new Point((int)padded.X, (int)padded.Y))) continue;
+                Point[] hull = Cv2.ConvexHull(contour);
+                if (Cv2.PointPolygonTest(hull, padded, false) < 0) continue;
 
-                    RotatedRect boxInPadded = Cv2.MinAreaRect(hull);
-                    var box = new RotatedRect(new Point2f(boxInPadded.Center.X - _image.Pad, boxInPadded.Center.Y - _image.Pad), boxInPadded.Size, boxInPadded.Angle);
-                    double boxArea = (double)box.Size.Width * box.Size.Height;
-                    // How much of its box the shape fills: a photo fills it, merged neighbours or a ragged blob don't.
-                    Add(box, boxArea > 0 ? Cv2.ContourArea(contour) / boxArea : 0);
-                }
+                RotatedRect boxInPadded = Cv2.MinAreaRect(hull);
+                var box = new RotatedRect(new Point2f(boxInPadded.Center.X - _image.Pad, boxInPadded.Center.Y - _image.Pad), boxInPadded.Size, boxInPadded.Angle);
+                double boxArea = (double)box.Size.Width * box.Size.Height;
+                // How much of its box the shape fills: a photo fills it, merged neighbours or a ragged blob don't.
+                Add(box, boxArea > 0 ? Cv2.ContourArea(contour) / boxArea : 0);
             }
         }
 

@@ -57,6 +57,62 @@ public static class BackgroundAnalyzer
         return new Scalar(medianH, medianS, medianV);
     }
 
+    /// <summary>
+    /// Like <see cref="SampleBackgroundColor(Mat)"/>, for a scan whose photos are partly known: samples around the
+    /// border but skips spots inside <paramref name="photos"/> (outlines in <paramref name="hsv"/> pixels) and spots
+    /// with texture, so photos covering most of the border don't decide the colour. Falls back to the plain sample
+    /// when fewer than two spots are left.
+    /// </summary>
+    public static Scalar SampleBackgroundColor(Mat hsv, IReadOnlyList<Point2f[]> photos)
+    {
+        ArgumentNullException.ThrowIfNull(hsv);
+        ArgumentNullException.ThrowIfNull(photos);
+        const int s = 15;
+        if (hsv.Width < s * 3 + 20 || hsv.Height < s * 3 + 20) return SampleBackgroundColor(hsv);
+
+        int insetX = Math.Max(Math.Clamp((int)(hsv.Width * 0.035), 5, hsv.Width / 2 - s - 10), hsv.Width >= 400 ? 25 : 5);
+        int insetY = Math.Max(Math.Clamp((int)(hsv.Height * 0.035), 5, hsv.Height / 2 - s - 10), hsv.Height >= 400 ? 25 : 5);
+        int x0 = insetX, x1 = hsv.Width - s - insetX, y0 = insetY, y1 = hsv.Height - s - insetY;
+
+        // Five spots along each side (corners shared).
+        var spots = new List<Rect>();
+        for (int i = 0; i <= 5; i++)
+        {
+            int x = x0 + (x1 - x0) * i / 5, y = y0 + (y1 - y0) * i / 5;
+            spots.Add(new Rect(x, y0, s, s));
+            spots.Add(new Rect(x, y1, s, s));
+            if (i is > 0 and < 5)
+            {
+                spots.Add(new Rect(x0, y, s, s));
+                spots.Add(new Rect(x1, y, s, s));
+            }
+        }
+
+        var hVals = new List<double>();
+        var sVals = new List<double>();
+        var vVals = new List<double>();
+        foreach (var r in spots)
+        {
+            var centre = new Point2f(r.X + s / 2f, r.Y + s / 2f);
+            if (photos.Any(p => Cv2.PointPolygonTest(p, centre, true) > -s)) continue; // on (or right next to) a photo
+            using Mat m = new(hsv, r);
+            Cv2.MeanStdDev(m, out Scalar mean, out Scalar spread);
+            if (spread.Val2 > 12) continue; // textured: not plain background
+            hVals.Add(mean.Val0);
+            sVals.Add(mean.Val1);
+            vVals.Add(mean.Val2);
+        }
+        if (hVals.Count < 2) return SampleBackgroundColor(hsv);
+        return new Scalar(Median(hVals), Median(sVals), Median(vVals));
+    }
+
+    private static double Median(List<double> values)
+    {
+        values.Sort();
+        int n = values.Count;
+        return n % 2 == 1 ? values[n / 2] : (values[n / 2 - 1] + values[n / 2]) / 2;
+    }
+
     public static Scalar SamplePixelBackgroundColor(Mat bgr, int x, int y, int sampleSize = 5)
     {
         ArgumentNullException.ThrowIfNull(bgr);
