@@ -67,8 +67,8 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-; Files the app downloads or writes outside {app}: the AI models (the dust-removal model is downloaded on
-; demand; the face model is unpacked there) and crash reports. Settings are asked about in CurUninstallStepChanged;
+; Files the app downloads or writes outside {app}: the AI models (the LaMa repair-brush model is downloaded
+; on demand; the face model is unpacked there from the app and comes back on next use) and crash reports. Settings are asked about in CurUninstallStepChanged;
 ; projects and photos are never touched.
 Type: filesandordirs; Name: "{localappdata}\{#MyAppName}\models"
 Type: filesandordirs; Name: "{localappdata}\{#MyAppName}\logs"
