@@ -67,16 +67,17 @@ else
 fi
 
 if [[ -n "${APPIMAGE}" ]]; then
-  # Extracted rather than mounted: containers have no FUSE, and the contents are the same.
+  # Extracted rather than mounted: containers have no FUSE, and the contents are the same. Both checks start the
+  # app through AppRun, as the AppImage does (the CLI through a photocropper-cli link, as users set it up).
   EXTRACT="cd /tmp && cp /pkgs/$(basename "${APPIMAGE}") app && chmod +x app && ./app --appimage-extract > /dev/null"
 
   echo "::group::AppImage: CLI on the sample scans"
-  in_container "${EXTRACT} && CLI=/tmp/squashfs-root/usr/bin/PhotoCropper.Cli; ${CLI_CHECK}"
+  in_container "${EXTRACT} && ln -s squashfs-root/AppRun /tmp/photocropper-cli && CLI=/tmp/photocropper-cli; ${CLI_CHECK}"
   record "AppImage: CLI finds ${EXPECTED} photos on the samples" $?
   echo "::endgroup::"
 
   echo "::group::AppImage: GUI starts"
-  in_container "${APT_QUIET}; ${EXTRACT} && GUI=/tmp/squashfs-root/usr/bin/PhotoCropper.Gui; ${GUI_CHECK}"
+  in_container "${APT_QUIET}; ${EXTRACT} && GUI=/tmp/squashfs-root/AppRun; ${GUI_CHECK}"
   record "AppImage: GUI starts" $?
   echo "::endgroup::"
 else
