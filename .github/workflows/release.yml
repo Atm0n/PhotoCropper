@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v*'
+  # Dry runs: build, package and smoke-test without publishing a release. A release PR into main runs them
+  # automatically, so packaging problems show up before a tag is pushed.
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -68,6 +73,17 @@ jobs:
       - name: Build Solution
         run: dotnet build PhotoCropper.slnx -c Release --no-restore
 
+      - name: Generate Sample Scans
+        if: runner.os == 'Linux'
+        run: dotnet run --project tools/PhotoCropper.SampleScans -c Release --no-build -- ./publish/samples --count 6
+
+      - name: Upload Sample Scans
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: PhotoCropper-SampleScans
+          path: ./publish/samples
+
       - name: Publish GUI & CLI Binaries
         shell: pwsh
         env:
@@ -99,9 +115,13 @@ jobs:
           Get-ChildItem -Path ./publish -Include *.pdb,*.dbg,*.xml -Recurse -File | Remove-Item -Force
 
           # Extract version from tag (e.g. v2.5.2 -> 2.5.2)
+          # Dry runs (no tag) use the version in Directory.Build.props.
           $rawTag = $env:REF_NAME
-          $appVersion = if ($rawTag -and $rawTag.StartsWith('v')) { $rawTag.Substring(1) } else { $rawTag }
+          $appVersion = if ($rawTag -and $rawTag.StartsWith('v')) { $rawTag.Substring(1) } else {
+            ([regex]::Match((Get-Content Directory.Build.props -Raw), '<Version>([^<]+)</Version>')).Groups[1].Value
+          }
           if (-not $appVersion) { exit 1 }
+          Write-Host "Packaging version $appVersion"
 
           # Package separate zip archives (preserving Unix execution permissions on Linux)
           if ($env:TARGET_PLATFORM -eq 'Linux') {
@@ -171,9 +191,62 @@ jobs:
           name: PhotoCropper-CLI-${{ matrix.platform }}
           path: ./*-CLI-${{ matrix.platform }}.zip
 
+  # The packages as users get them, each on a clean system: catches what unit tests can't, such as a native
+  # library left out of the published app (3.0.0's Linux packages had no OpenCV library) or a missing dependency.
+  smoke_linux:
+    name: Smoke Test (Linux packages)
+    needs: build_package_publish
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Download Packages
+        uses: actions/download-artifact@v8
+        with:
+          name: PhotoCropper-Linux-Packages
+          path: ./smoke/packages
+
+      - name: Download Sample Scans
+        uses: actions/download-artifact@v8
+        with:
+          name: PhotoCropper-SampleScans
+          path: ./smoke/samples
+
+      - name: Run Smoke Tests
+        run: bash packaging/smoke/linux-smoke.sh ./smoke/packages ./smoke/samples
+
+  smoke_windows:
+    name: Smoke Test (Windows installer)
+    needs: build_package_publish
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Download Installer
+        uses: actions/download-artifact@v8
+        with:
+          name: PhotoCropper-Windows-Installer
+          path: ./smoke/installer
+
+      - name: Download Sample Scans
+        uses: actions/download-artifact@v8
+        with:
+          name: PhotoCropper-SampleScans
+          path: ./smoke/samples
+
+      - name: Run Smoke Tests
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem ./smoke/installer -Filter *.exe | Select-Object -First 1
+          ./packaging/smoke/windows-smoke.ps1 -Installer $installer.FullName -Samples (Resolve-Path ./smoke/samples).Path
+
   release:
     name: Create GitHub Release
-    needs: build_package_publish
+    # Only for a pushed tag, and only once the packages passed their smoke tests.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build_package_publish, smoke_linux, smoke_windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
