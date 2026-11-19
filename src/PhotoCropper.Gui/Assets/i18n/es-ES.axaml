@@ -170,6 +170,12 @@
 	<sys:String x:Key="MsgPhotoRotated">Foto rotada.</sys:String>
 	<sys:String x:Key="MsgExtractingCrop">Extrayendo recorte manual...</sys:String>
 	<sys:String x:Key="MsgManualCropAdded">Recorte manual añadido.</sys:String>
+	<sys:String x:Key="MsgFindingPhoto">Buscando la foto...</sys:String>
+	<sys:String x:Key="MsgNoPhotoFound">No se ha encontrado ninguna foto aquí. Haz clic más cerca de su centro, o dibuja un recuadro.</sys:String>
+	<sys:String x:Key="MsgPhotoFound">Foto encontrada y añadida.</sys:String>
+	<sys:String x:Key="MsgPhotoRefitted">Recuadro ajustado a la foto.</sys:String>
+	<sys:String x:Key="BtnFindPhoto">Buscar foto</sys:String>
+	<sys:String x:Key="TipFindPhoto">Haz clic en una foto para encontrarla y añadir su recuadro; haz clic dentro de un recuadro para ajustarlo a la foto. Vuelve a pulsar el botón o Esc para terminar.</sys:String>
 	<sys:String x:Key="MsgRefineModeHelp">Modo de ajuste: dibuja para recortar a mano, Enter para aceptar, Esc para cancelar.</sys:String>
 	<sys:String x:Key="MsgApplyingRefine">Aplicando ajuste...</sys:String>
 	<sys:String x:Key="MsgRefineSuccess">Recorte ajustado con éxito.</sys:String>

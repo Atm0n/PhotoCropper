@@ -170,6 +170,12 @@
 	<sys:String x:Key="MsgPhotoRotated">Photo rotated.</sys:String>
 	<sys:String x:Key="MsgExtractingCrop">Extracting manual crop...</sys:String>
 	<sys:String x:Key="MsgManualCropAdded">Manual crop added.</sys:String>
+	<sys:String x:Key="MsgFindingPhoto">Finding the photo...</sys:String>
+	<sys:String x:Key="MsgNoPhotoFound">No photo found there. Click nearer its middle, or draw a box around it.</sys:String>
+	<sys:String x:Key="MsgPhotoFound">Photo found and added.</sys:String>
+	<sys:String x:Key="MsgPhotoRefitted">Box fitted to the photo.</sys:String>
+	<sys:String x:Key="BtnFindPhoto">Find Photo</sys:String>
+	<sys:String x:Key="TipFindPhoto">Click a photo to find it and add its box; click inside a box to fit it to the photo. Click the button again or press Esc to stop.</sys:String>
 	<sys:String x:Key="MsgRefineModeHelp">Refinement mode: draw to crop by hand, Enter to accept, Esc to cancel.</sys:String>
 	<sys:String x:Key="MsgApplyingRefine">Applying refinement...</sys:String>
 	<sys:String x:Key="MsgRefineSuccess">Crop refined successfully.</sys:String>

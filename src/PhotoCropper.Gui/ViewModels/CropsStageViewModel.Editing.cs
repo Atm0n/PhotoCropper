@@ -194,6 +194,67 @@ internal sealed partial class CropsStageViewModel
         });
     }
 
+    /// <summary>
+    /// "Find photo" tool: finds the photo at <paramref name="point"/> (scan pixels). Inside an existing box it re-fits
+    /// that box to the photo; elsewhere it adds the photo found. Undoable like a resize or an added crop.
+    /// </summary>
+    public async Task FindPhotoAtAsync(PointF point)
+    {
+        _gesture = BoxGesture.None;
+        var session = Current;
+        if (session == null || !CanStartWork) return;
+
+        var engine = session.Activate();
+        int scanIndex = _sessions.CurrentIndex;
+
+        // What the box under the click looked like, for undo if it gets re-fitted.
+        int inside = -1;
+        for (int i = engine.AcceptedCandidates.Count - 1; i >= 0; i--)
+        {
+            if (Cv2.PointPolygonTest(CvInterop.ToCv(engine.AcceptedCandidates[i].Rotated.GetVertices()), CvInterop.ToCv(point), false) >= 0)
+            {
+                inside = i;
+                break;
+            }
+        }
+        using Mat? beforePhoto = inside >= 0 && inside < engine.DetectedPhotos.Count ? engine.DetectedPhotos[inside].Clone() : null;
+        using Mat? beforeRaw = inside >= 0 && inside < engine.RawDetectedPhotos.Count ? engine.RawDetectedPhotos[inside].Clone() : null;
+        var beforeBoxes = engine.AcceptedCandidates.ToList();
+
+        await _host.RunBusyAsync(LocalizationService.GetString(ResourceKeys.MsgFindingPhoto, "Finding the photo..."), async ct =>
+        {
+            var (index, added) = await Task.Run(() => engine.FindPhotoAt(point), ct);
+            if (index < 0)
+            {
+                _host.ShowStatus(LocalizationService.GetString(ResourceKeys.MsgNoPhotoFound,
+                    "No photo found there. Click nearer its middle, or draw a box around it."));
+                return;
+            }
+
+            session.IsModified = true;
+            if (added)
+            {
+                _undo.PushAdd(scanIndex, index, engine.DetectedPhotos[index], engine.AcceptedCandidates[index]);
+                _host.ShowStatus(LocalizationService.GetString(ResourceKeys.MsgPhotoFound, "Photo found and added."));
+            }
+            else
+            {
+                if (beforePhoto != null)
+                {
+                    _undo.PushResizeCandidate(
+                        scanIndex, index,
+                        beforePhoto, engine.DetectedPhotos[index],
+                        beforeBoxes, engine.AcceptedCandidates,
+                        "Fit Crop Box",
+                        beforeRaw,
+                        index < engine.RawDetectedPhotos.Count ? engine.RawDetectedPhotos[index] : null);
+                }
+                _host.ShowStatus(LocalizationService.GetString(ResourceKeys.MsgPhotoRefitted, "Box fitted to the photo."));
+            }
+            Present(engine, select: index);
+        });
+    }
+
     /// <summary>Drops a gesture that won't be finished (e.g. the scan changed under it).</summary>
     public void CancelGesture()
     {
