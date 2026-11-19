@@ -57,11 +57,15 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update --fix-missing
-          sudo apt-get install -y \
-            libgomp1 libgl1 libtbb12 libglib2.0-0 libicu-dev libatlas-base-dev libjpeg-dev libx11-6 \
-            libgeotiff-dev libhdf5-dev libvtk9-dev \
-            libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+          # Runtime libraries only (no -dev packages, no recommends): Emgu CV's libcvextern.so links against
+          # VTK 9.1, HDF5, GeoTIFF, GStreamer, FFmpeg, GTK 3 and LAPACK; Avalonia and Skia need X11, ICE/SM and
+          # fontconfig; NAPS2 needs SANE.
+          sudo apt-get install -y --no-install-recommends \
+            libgomp1 libgl1 libtbb12 libglib2.0-0t64 libx11-6 libice6 libsm6 libfontconfig1 \
+            libtiff6 libgeotiff5 libfreetype6 libopenjp2-7 liblapack3 libblas3 \
+            libhdf5-103-1t64 libvtk9.1t64 \
+            libavcodec60 libavformat60 libavutil58 libswscale7 \
+            libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 libgtk-3-0t64 \
             libsane1 sane-utils
 
       - name: Restore Dependencies
@@ -69,6 +73,14 @@ jobs:
 
       - name: Build Solution
         run: dotnet build PhotoCropper.slnx -c Release --no-restore
+
+      - name: Check Native Libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          # Names any library OpenCV needs that the install step missed, instead of a test failing to load it.
+          lib=$(find . -path '*/bin/Release/*' -name libcvextern.so -print -quit)
+          missing=$(ldd "$lib" | grep "not found" || true)
+          if [ -n "$missing" ]; then echo "Missing for $lib:"; echo "$missing"; exit 1; fi
 
       - name: Run Core Tests
         run: dotnet run --project tests/PhotoCropper.Core.Tests/PhotoCropper.Core.Tests.csproj -c Release --no-build -- -parallelMode none
