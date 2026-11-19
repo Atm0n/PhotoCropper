@@ -1,6 +1,6 @@
-using Emgu.CV;
-using Emgu.CV.Structure;
-using Emgu.CV.Util;
+using PhotoCropper.Core.Common;
+using Cv2 = OpenCvSharp.Cv2;
+using Mat = OpenCvSharp.Mat;
 using PhotoCropper.Core;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Gui.Controls;
@@ -161,8 +161,7 @@ internal sealed partial class CropsStageViewModel
                 return;
             }
 
-            using var outline = new VectorOfPointF(box.Rotated.GetVertices());
-            if (CvInvoke.PointPolygonTest(outline, point, false) >= 0)
+            if (Cv2.PointPolygonTest(CvInterop.ToCv(box.Rotated.GetVertices()), CvInterop.ToCv(point), false) >= 0)
             {
                 SelectPhoto(i);
                 return;
@@ -276,7 +275,7 @@ internal static class BoxEditMath
 {
     /// <summary>Turns the box by how far the pointer has turned around its centre since the drag started.</summary>
     public static CropCandidate Rotate(CropCandidate box, double startMouseAngle, double startBoxAngle, double mouseAngle) =>
-        box with { Rotated = new RotatedRect(box.Rotated.Center, box.Rotated.Size, (float)(startBoxAngle + mouseAngle - startMouseAngle)) };
+        box with { Rotated = new RotatedBox(box.Rotated.Center, box.Rotated.Size, (float)(startBoxAngle + mouseAngle - startMouseAngle)) };
 
     /// <summary>Moves one corner to <paramref name="point"/>, keeping the opposite corner and the box's angle.</summary>
     public static CropCandidate ResizeFromCorner(CropCandidate box, int corner, PointF point)
@@ -291,6 +290,6 @@ internal static class BoxEditMath
         float width = (float)Math.Abs(dx * Math.Cos(theta) + dy * Math.Sin(theta));
         float height = (float)Math.Abs(-dx * Math.Sin(theta) + dy * Math.Cos(theta));
 
-        return box with { Rotated = new RotatedRect(center, new SizeF(width, height), box.Rotated.Angle) };
+        return box with { Rotated = new RotatedBox(center, new SizeF(width, height), box.Rotated.Angle) };
     }
 }

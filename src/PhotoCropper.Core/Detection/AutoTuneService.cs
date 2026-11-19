@@ -1,9 +1,6 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Models;
-using System.Drawing;
 
 namespace PhotoCropper.Core.Detection;
 
@@ -27,8 +24,8 @@ public sealed class AutoTuneService : IDisposable
 
     private Mat? _detMat;
     private Mat? _detHsv;
-    private MCvScalar _avgBgColorHsv;
-    private MCvScalar _bgBgr;
+    private Scalar _avgBgColorHsv;
+    private Scalar _bgBgr;
 
     private double _bestScore;
     private int _bestCount;
@@ -56,7 +53,7 @@ public sealed class AutoTuneService : IDisposable
         using Mat rawDetMat = new();
         if (_scale < 0.999)
         {
-            CvInvoke.Resize(_source, rawDetMat, new Size(_scaledW, _scaledH), 0, 0, Inter.Area);
+            Cv2.Resize(_source, rawDetMat, new Size(_scaledW, _scaledH), 0, 0, InterpolationFlags.Area);
         }
         else
         {
@@ -65,7 +62,7 @@ public sealed class AutoTuneService : IDisposable
 
         _detMat = PhotoCropperEngine.NormalizeToBgr(rawDetMat);
         _detHsv = new Mat();
-        CvInvoke.CvtColor(_detMat, _detHsv, ColorConversion.Bgr2Hsv);
+        Cv2.CvtColor(_detMat, _detHsv, ColorConversionCodes.BGR2HSV);
 
         PrepareBackground();
         NeutralizeBezels();
@@ -99,7 +96,7 @@ public sealed class AutoTuneService : IDisposable
 
     private void PrepareBackground()
     {
-        _avgBgColorHsv = _currentOptions.CustomBackgroundColorHsv ?? BackgroundAnalyzer.SampleBackgroundColor(_detHsv!);
+        _avgBgColorHsv = _currentOptions.CustomBackgroundColorHsv is { } picked ? CvInterop.ToCv(picked) : BackgroundAnalyzer.SampleBackgroundColor(_detHsv!);
         _bgBgr = BackgroundAnalyzer.HsvToBgr(_avgBgColorHsv);
     }
 
@@ -108,11 +105,11 @@ public sealed class AutoTuneService : IDisposable
         var (Top, Bottom, Left, Right) = BackgroundAnalyzer.DetectBezelMargins(_detMat!, _avgBgColorHsv, _currentOptions.BackgroundTolerance);
         if (Top > 0 || Bottom > 0 || Left > 0 || Right > 0)
         {
-            if (Top > 0) CvInvoke.Rectangle(_detMat, new Rectangle(0, 0, _detMat!.Width, Top), _bgBgr, -1);
-            if (Bottom > 0) CvInvoke.Rectangle(_detMat, new Rectangle(0, _detMat!.Height - Bottom, _detMat!.Width, Bottom), _bgBgr, -1);
-            if (Left > 0) CvInvoke.Rectangle(_detMat, new Rectangle(0, 0, Left, _detMat!.Height), _bgBgr, -1);
-            if (Right > 0) CvInvoke.Rectangle(_detMat, new Rectangle(_detMat!.Width - Right, 0, Right, _detMat!.Height), _bgBgr, -1);
-            CvInvoke.CvtColor(_detMat, _detHsv, ColorConversion.Bgr2Hsv);
+            if (Top > 0) Cv2.Rectangle(_detMat!, new Rect(0, 0, _detMat!.Width, Top), _bgBgr, -1);
+            if (Bottom > 0) Cv2.Rectangle(_detMat!, new Rect(0, _detMat!.Height - Bottom, _detMat!.Width, Bottom), _bgBgr, -1);
+            if (Left > 0) Cv2.Rectangle(_detMat!, new Rect(0, 0, Left, _detMat!.Height), _bgBgr, -1);
+            if (Right > 0) Cv2.Rectangle(_detMat!, new Rect(_detMat!.Width - Right, 0, Right, _detMat!.Height), _bgBgr, -1);
+            Cv2.CvtColor(_detMat!, _detHsv!, ColorConversionCodes.BGR2HSV);
         }
     }
 
@@ -152,7 +149,7 @@ public sealed class AutoTuneService : IDisposable
             // 2. Otsu Fallback Sweep
             if (_bestCount < _minExpected)
             {
-                bool isLightBg = _avgBgColorHsv.V2 > 120;
+                bool isLightBg = _avgBgColorHsv.Val2 > 120;
                 foreach (double cannyLow in SweepCannyLows)
                 {
                     Mat edgeMap = edgeMapDict[cannyLow];
@@ -226,16 +223,16 @@ public sealed class AutoTuneService : IDisposable
 
         foreach (var cand in candidates)
         {
-            var center = new PointF((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
-            var size = new SizeF((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
+            var center = new Point2f((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
+            var size = new Size2f((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
             var fullRect = new RotatedRect(center, size, cand.Rotated.Angle);
 
-            var bRect = fullRect.MinAreaRect();
+            var bRect = fullRect.BoundingRect();
             int x = Math.Max(0, bRect.X);
             int y = Math.Max(0, bRect.Y);
             int w = Math.Min(originalW - x, bRect.Width);
             int h = Math.Min(originalH - y, bRect.Height);
-            var rect = new Rectangle(x, y, w, h);
+            var rect = new Rect(x, y, w, h);
 
             Point[]? fullShape = null;
             if (cand.ShapePoints != null && cand.ShapePoints.Length > 0)
@@ -251,10 +248,10 @@ public sealed class AutoTuneService : IDisposable
 
             fullCandidates.Add(new CropCandidate
             {
-                Rotated = fullRect,
-                Rect = rect,
+                Rotated = CvInterop.ToBox(fullRect),
+                Rect = CvInterop.ToRectangle(rect),
                 Area = fullRect.Size.Width * fullRect.Size.Height,
-                ShapePoints = fullShape ?? []
+                ShapePoints = fullShape is null ? [] : CvInterop.ToPoints(fullShape)
             });
         }
         return fullCandidates;

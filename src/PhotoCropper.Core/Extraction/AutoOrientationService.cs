@@ -1,7 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
-using System.Drawing;
+using OpenCvSharp;
 
 namespace PhotoCropper.Core.Extraction;
 
@@ -10,7 +7,7 @@ public static class AutoOrientationService
     public static Mat OrientPhoto(Mat photo)
     {
         ArgumentNullException.ThrowIfNull(photo);
-        if (photo.IsEmpty || photo.Width < 50 || photo.Height < 50) return photo;
+        if (photo.Empty() || photo.Width < 50 || photo.Height < 50) return photo;
 
         int rotationDegrees = DetectRequiredRotation(photo);
         if (rotationDegrees == 0) return photo;
@@ -19,21 +16,21 @@ public static class AutoOrientationService
         {
             90 => RotateFlags.Rotate90Clockwise,
             180 => RotateFlags.Rotate180,
-            270 => RotateFlags.Rotate90CounterClockwise,
+            270 => RotateFlags.Rotate90Counterclockwise,
             _ => (RotateFlags)(-1)
         };
 
         if ((int)flags == -1) return photo;
 
         Mat rotated = new();
-        CvInvoke.Rotate(photo, rotated, flags);
+        Cv2.Rotate(photo, rotated, flags);
         return rotated;
     }
 
     public static int DetectRequiredRotation(Mat photo)
     {
         ArgumentNullException.ThrowIfNull(photo);
-        if (photo.IsEmpty || photo.Width < 50 || photo.Height < 50) return 0;
+        if (photo.Empty() || photo.Width < 50 || photo.Height < 50) return 0;
 
         // 1. Primary: AI Face Detection (YuNet ONNX)
         int faceRotation = FaceOrientationService.DetectFaceRotation(photo);
@@ -49,7 +46,7 @@ public static class AutoOrientationService
     public static int DetectLandscapeRotation(Mat photo)
     {
         ArgumentNullException.ThrowIfNull(photo);
-        if (photo.IsEmpty || photo.Width < 50 || photo.Height < 50) return 0;
+        if (photo.Empty() || photo.Width < 50 || photo.Height < 50) return 0;
 
         // Downscale small proxy for fast analysis (<1ms per rotation)
         int maxDim = Math.Max(photo.Width, photo.Height);
@@ -58,16 +55,16 @@ public static class AutoOrientationService
         int h = (int)Math.Round(photo.Height * scale);
 
         using Mat small = new();
-        CvInvoke.Resize(photo, small, new Size(w, h), 0, 0, Inter.Area);
+        Cv2.Resize(photo, small, new Size(w, h), 0, 0, InterpolationFlags.Area);
 
         using Mat bgrSmall = new();
-        if (small.NumberOfChannels == 4)
+        if (small.Channels() == 4)
         {
-            CvInvoke.CvtColor(small, bgrSmall, ColorConversion.Bgra2Bgr);
+            Cv2.CvtColor(small, bgrSmall, ColorConversionCodes.BGRA2BGR);
         }
-        else if (small.NumberOfChannels == 1)
+        else if (small.Channels() == 1)
         {
-            CvInvoke.CvtColor(small, bgrSmall, ColorConversion.Gray2Bgr);
+            Cv2.CvtColor(small, bgrSmall, ColorConversionCodes.GRAY2BGR);
         }
         else
         {
@@ -116,10 +113,10 @@ public static class AutoOrientationService
             {
                 90 => RotateFlags.Rotate90Clockwise,
                 180 => RotateFlags.Rotate180,
-                270 => RotateFlags.Rotate90CounterClockwise,
+                270 => RotateFlags.Rotate90Counterclockwise,
                 _ => RotateFlags.Rotate180
             };
-            CvInvoke.Rotate(bgrSmall, candidate, flag);
+            Cv2.Rotate(bgrSmall, candidate, flag);
         }
 
         int cw = candidate.Width;
@@ -127,14 +124,14 @@ public static class AutoOrientationService
         int bandH = Math.Max(2, (int)Math.Round(ch * 0.38));
 
         using Mat hsv = new();
-        CvInvoke.CvtColor(candidate, hsv, ColorConversion.Bgr2Hsv);
+        Cv2.CvtColor(candidate, hsv, ColorConversionCodes.BGR2HSV);
 
         using Mat gray = new();
-        CvInvoke.CvtColor(candidate, gray, ColorConversion.Bgr2Gray);
+        Cv2.CvtColor(candidate, gray, ColorConversionCodes.BGR2GRAY);
 
         // Top and bottom region bounding boxes
-        Rectangle topRect = new(0, 0, cw, bandH);
-        Rectangle botRect = new(0, ch - bandH, cw, bandH);
+        Rect topRect = new(0, 0, cw, bandH);
+        Rect botRect = new(0, ch - bandH, cw, bandH);
 
         using Mat topHsv = new(hsv, topRect);
         using Mat botHsv = new(hsv, botRect);
@@ -154,8 +151,8 @@ public static class AutoOrientationService
         double botWater = ComputeWaterRatio(botHsv);
 
         // 4. Luminance (brightness)
-        double topV = CvInvoke.Mean(topHsv).V2;
-        double botV = CvInvoke.Mean(botHsv).V2;
+        double topV = Cv2.Mean(topHsv).Val2;
+        double botV = Cv2.Mean(botHsv).Val2;
 
         // 5. Texture complexity (Laplacian variance: sky is smooth, terrain/objects are textured)
         double topTex = ComputeTextureVariance(topGray);
@@ -184,20 +181,20 @@ public static class AutoOrientationService
     {
         // Blue Sky: H in [75, 140], S >= 15, V >= 80
         using Mat blueMask = new();
-        using ScalarArray blueLow = new(new MCvScalar(75, 15, 80));
-        using ScalarArray blueHigh = new(new MCvScalar(140, 255, 255));
-        CvInvoke.InRange(hsvRegion, blueLow, blueHigh, blueMask);
+        Scalar blueLow = new Scalar(75, 15, 80);
+        Scalar blueHigh = new Scalar(140, 255, 255);
+        Cv2.InRange(hsvRegion, blueLow, blueHigh, blueMask);
 
         // Overcast / Cloudy White Sky: S <= 45, V >= 165
         using Mat cloudMask = new();
-        using ScalarArray cloudLow = new(new MCvScalar(0, 0, 165));
-        using ScalarArray cloudHigh = new(new MCvScalar(180, 45, 255));
-        CvInvoke.InRange(hsvRegion, cloudLow, cloudHigh, cloudMask);
+        Scalar cloudLow = new Scalar(0, 0, 165);
+        Scalar cloudHigh = new Scalar(180, 45, 255);
+        Cv2.InRange(hsvRegion, cloudLow, cloudHigh, cloudMask);
 
         using Mat combinedSky = new();
-        CvInvoke.BitwiseOr(blueMask, cloudMask, combinedSky);
+        Cv2.BitwiseOr(blueMask, cloudMask, combinedSky);
 
-        int count = CvInvoke.CountNonZero(combinedSky);
+        int count = Cv2.CountNonZero(combinedSky);
         int total = Math.Max(1, hsvRegion.Width * hsvRegion.Height);
         return (double)count / total * 100.0;
     }
@@ -207,11 +204,11 @@ public static class AutoOrientationService
         // Ocean / Sea / Lake / Pool: Cyan/Deep-Blue/Teal (Hue in [65, 135], Sat >= 30, Val in [25, 175])
         // Distinguishes rich/darker body of water from bright/high-luminance sky
         using Mat waterMask = new();
-        using ScalarArray waterLow = new(new MCvScalar(65, 30, 25));
-        using ScalarArray waterHigh = new(new MCvScalar(135, 255, 175));
-        CvInvoke.InRange(hsvRegion, waterLow, waterHigh, waterMask);
+        Scalar waterLow = new Scalar(65, 30, 25);
+        Scalar waterHigh = new Scalar(135, 255, 175);
+        Cv2.InRange(hsvRegion, waterLow, waterHigh, waterMask);
 
-        int count = CvInvoke.CountNonZero(waterMask);
+        int count = Cv2.CountNonZero(waterMask);
         int total = Math.Max(1, hsvRegion.Width * hsvRegion.Height);
         return (double)count / total * 100.0;
     }
@@ -220,11 +217,11 @@ public static class AutoOrientationService
     {
         // Green foliage / grass: H in [30, 88], S >= 25, V >= 25
         using Mat vegMask = new();
-        using ScalarArray vegLow = new(new MCvScalar(30, 25, 25));
-        using ScalarArray vegHigh = new(new MCvScalar(88, 255, 255));
-        CvInvoke.InRange(hsvRegion, vegLow, vegHigh, vegMask);
+        Scalar vegLow = new Scalar(30, 25, 25);
+        Scalar vegHigh = new Scalar(88, 255, 255);
+        Cv2.InRange(hsvRegion, vegLow, vegHigh, vegMask);
 
-        int count = CvInvoke.CountNonZero(vegMask);
+        int count = Cv2.CountNonZero(vegMask);
         int total = Math.Max(1, hsvRegion.Width * hsvRegion.Height);
         return (double)count / total * 100.0;
     }
@@ -232,12 +229,10 @@ public static class AutoOrientationService
     private static double ComputeTextureVariance(Mat grayRegion)
     {
         using Mat laplacian = new();
-        CvInvoke.Laplacian(grayRegion, laplacian, DepthType.Cv64F);
+        Cv2.Laplacian(grayRegion, laplacian, MatType.CV_64F);
 
-        MCvScalar mean = new();
-        MCvScalar stdDev = new();
-        CvInvoke.MeanStdDev(laplacian, ref mean, ref stdDev);
+        Cv2.MeanStdDev(laplacian, out _, out Scalar stdDev);
 
-        return Math.Min(100.0, stdDev.V0);
+        return Math.Min(100.0, stdDev.Val0);
     }
 }

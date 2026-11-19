@@ -1,10 +1,8 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Extraction;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.TestHelpers;
-using System.Drawing;
 using System.Text.Json;
 
 namespace PhotoCropper.Core.Tests.Extraction;
@@ -28,17 +26,17 @@ public sealed class RestorationOptionsTests
             }
         }
 
-        var mat = new Mat(height, width, DepthType.Cv8U, 3);
-        mat.SetTo(data);
+        var mat = new Mat(height, width, MatType.CV_8UC3);
+        mat.SetData(data);
         return mat;
     }
 
     /// <summary>Two clearly different colours side by side.</summary>
-    private static Mat TwoColours(MCvScalar left, MCvScalar right)
+    private static Mat TwoColours(Scalar left, Scalar right)
     {
-        var mat = new Mat(120, 160, DepthType.Cv8U, 3);
-        using (var l = new Mat(mat, new Rectangle(0, 0, 80, 120))) l.SetTo(left);
-        using (var r = new Mat(mat, new Rectangle(80, 0, 80, 120))) r.SetTo(right);
+        var mat = new Mat(120, 160, MatType.CV_8UC3);
+        using (var l = new Mat(mat, new Rect(0, 0, 80, 120))) l.SetTo(left);
+        using (var r = new Mat(mat, new Rect(80, 0, 80, 120))) r.SetTo(right);
         return mat;
     }
 
@@ -60,34 +58,34 @@ public sealed class RestorationOptionsTests
             }
         }
 
-        var mat = new Mat(height, width, DepthType.Cv8U, 3);
-        mat.SetTo(data);
+        var mat = new Mat(height, width, MatType.CV_8UC3);
+        mat.SetData(data);
         return mat;
     }
 
     /// <summary>How far the pixels at a spot are from the background value after restoration.</summary>
-    private static double Remaining(Mat image, Rectangle spot, double background)
+    private static double Remaining(Mat image, Rect spot, double background)
     {
         using var region = new Mat(image, spot);
-        return Math.Abs(CvInvoke.Mean(region).V0 - background);
+        return Math.Abs(Cv2.Mean(region).Val0 - background);
     }
 
-    private static MCvScalar MeanLab(Mat bgr)
+    private static Scalar MeanLab(Mat bgr)
     {
         using Mat lab = new();
-        CvInvoke.CvtColor(bgr, lab, ColorConversion.Bgr2Lab);
-        return CvInvoke.Mean(lab);
+        Cv2.CvtColor(bgr, lab, ColorConversionCodes.BGR2Lab);
+        return Cv2.Mean(lab);
     }
 
-    private static double Difference(Mat a, Mat b) => CvInvoke.Norm(a, b, NormType.L1);
+    private static double Difference(Mat a, Mat b) => Cv2.Norm(a, b, NormTypes.L1);
 
     [Fact]
     public void IsMonochrome_ShouldRecogniseGreyAndSepiaButNotColour()
     {
         using var grey = TonedGradient(1, 1, 1);
         using var sepia = TonedGradient(0.75, 0.9, 1.0);
-        using var colour = TwoColours(new MCvScalar(200, 60, 40), new MCvScalar(40, 160, 200));
-        using var fadedColour = TwoColours(new MCvScalar(150, 130, 120), new MCvScalar(110, 130, 150));
+        using var colour = TwoColours(new Scalar(200, 60, 40), new Scalar(40, 160, 200));
+        using var fadedColour = TwoColours(new Scalar(150, 130, 120), new Scalar(110, 130, 150));
 
         PhotoRestorationService.IsMonochrome(grey).ShouldBeTrue();
         PhotoRestorationService.IsMonochrome(sepia).ShouldBeTrue();
@@ -121,8 +119,7 @@ public sealed class RestorationOptionsTests
 
         using var result = PhotoRestorationService.Restore(sepia, RestorationSettings.BlackAndWhite);
 
-        using var channels = new Emgu.CV.Util.VectorOfMat();
-        CvInvoke.Split(result, channels);
+        using var channels = MatChannels.Split(result);
         Difference(channels[0], channels[1]).ShouldBe(0);
         Difference(channels[1], channels[2]).ShouldBe(0);
     }
@@ -131,25 +128,25 @@ public sealed class RestorationOptionsTests
     public void Restore_SepiaPreset_ShouldKeepTheWarmTone()
     {
         using var sepia = TonedGradient(0.75, 0.9, 1.0);
-        double warmthBefore = MeanLab(sepia).V2;
+        double warmthBefore = MeanLab(sepia).Val2;
 
         using var result = PhotoRestorationService.Restore(sepia, RestorationSettings.Sepia);
 
         // LAB b > 128 is yellow/warm; white balance would have pulled it to neutral (128).
-        MeanLab(result).V2.ShouldBeGreaterThan(128 + (warmthBefore - 128) * 0.8);
+        MeanLab(result).Val2.ShouldBeGreaterThan(128 + (warmthBefore - 128) * 0.8);
     }
 
     [Fact]
     public void Restore_AutoColorMode_ShouldNotNeutraliseADetectedSepiaPrint()
     {
         using var sepia = TonedGradient(0.75, 0.9, 1.0);
-        double warmthBefore = MeanLab(sepia).V2;
+        double warmthBefore = MeanLab(sepia).Val2;
 
         using var auto = PhotoRestorationService.Restore(sepia, new RestorationSettings { RestoreColors = true });
         using var forcedColour = PhotoRestorationService.Restore(sepia, new RestorationSettings { RestoreColors = true, ColorMode = PhotoColorMode.Color });
 
-        MeanLab(auto).V2.ShouldBeGreaterThan(MeanLab(forcedColour).V2, "treated as colour, white balance removes the tone");
-        MeanLab(auto).V2.ShouldBeGreaterThan(128 + (warmthBefore - 128) * 0.8);
+        MeanLab(auto).Val2.ShouldBeGreaterThan(MeanLab(forcedColour).Val2, "treated as colour, white balance removes the tone");
+        MeanLab(auto).Val2.ShouldBeGreaterThan(128 + (warmthBefore - 128) * 0.8);
     }
 
     [Fact]
@@ -167,7 +164,7 @@ public sealed class RestorationOptionsTests
     public void Restore_WithoutColourCastRemoval_ShouldKeepTheYellowCast()
     {
         using var photo = FadedColourPrint();
-        double castBefore = MeanLab(photo).V2 - 128; // > 0: yellow
+        double castBefore = MeanLab(photo).Val2 - 128; // > 0: yellow
 
         using var all = PhotoRestorationService.Restore(photo, new RestorationSettings { RestoreColors = true, ColorMode = PhotoColorMode.Color });
         using var noCastRemoval = PhotoRestorationService.Restore(photo, new RestorationSettings
@@ -176,8 +173,8 @@ public sealed class RestorationOptionsTests
         });
 
         castBefore.ShouldBeGreaterThan(5);
-        (MeanLab(all).V2 - 128).ShouldBeLessThan(castBefore, "colour cast removal reduces the yellow");
-        (MeanLab(noCastRemoval).V2 - 128).ShouldBeGreaterThan(MeanLab(all).V2 - 128);
+        (MeanLab(all).Val2 - 128).ShouldBeLessThan(castBefore, "colour cast removal reduces the yellow");
+        (MeanLab(noCastRemoval).Val2 - 128).ShouldBeGreaterThan(MeanLab(all).Val2 - 128);
     }
 
     [Theory]
@@ -186,7 +183,7 @@ public sealed class RestorationOptionsTests
     [InlineData(0, 0, 0, 60, 0)]
     public void Restore_ManualAdjustments_ShouldMoveTheMatchingChannel(int brightness, int contrast, int warmth, int tint, int saturation)
     {
-        using var photo = TwoColours(new MCvScalar(120, 120, 120), new MCvScalar(90, 110, 130));
+        using var photo = TwoColours(new Scalar(120, 120, 120), new Scalar(90, 110, 130));
         var before = MeanLab(photo);
 
         using var result = PhotoRestorationService.Restore(photo, new RestorationSettings
@@ -195,21 +192,21 @@ public sealed class RestorationOptionsTests
         });
         var after = MeanLab(result);
 
-        if (brightness > 0) after.V0.ShouldBeGreaterThan(before.V0);
-        if (warmth > 0) after.V2.ShouldBeGreaterThan(before.V2);
-        if (tint > 0) after.V1.ShouldBeGreaterThan(before.V1);
+        if (brightness > 0) after.Val0.ShouldBeGreaterThan(before.Val0);
+        if (warmth > 0) after.Val2.ShouldBeGreaterThan(before.Val2);
+        if (tint > 0) after.Val1.ShouldBeGreaterThan(before.Val1);
     }
 
     [Fact]
     public void Restore_SaturationMinus100_ShouldRemoveColour()
     {
-        using var photo = TwoColours(new MCvScalar(200, 60, 40), new MCvScalar(40, 160, 200));
+        using var photo = TwoColours(new Scalar(200, 60, 40), new Scalar(40, 160, 200));
 
         using var result = PhotoRestorationService.Restore(photo, new RestorationSettings { Saturation = -100 });
 
         using Mat hsv = new();
-        CvInvoke.CvtColor(result, hsv, ColorConversion.Bgr2Hsv);
-        CvInvoke.Mean(hsv).V1.ShouldBeLessThan(2);
+        Cv2.CvtColor(result, hsv, ColorConversionCodes.BGR2HSV);
+        Cv2.Mean(hsv).Val1.ShouldBeLessThan(2);
     }
 
     [Theory]
@@ -220,34 +217,34 @@ public sealed class RestorationOptionsTests
     public void RemoveDust_ShouldRemoveSpecksOnCleanBackground(int speck, int radius)
     {
         // Regression: the edge guard used to cancel every speck, because a speck's own outline is an edge.
-        using var photo = new Mat(200, 200, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(128, 128, 128));
-        CvInvoke.Circle(photo, new Point(100, 100), radius, new MCvScalar(speck, speck, speck), -1);
+        using var photo = new Mat(200, 200, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(128, 128, 128));
+        Cv2.Circle(photo, new Point(100, 100), radius, new Scalar(speck, speck, speck), -1);
 
         using var result = PhotoRestorationService.InpaintDustAndScratches(photo);
 
-        Remaining(result, new Rectangle(100 - radius, 100 - radius, 2 * radius + 1, 2 * radius + 1), 128).ShouldBeLessThan(3);
+        Remaining(result, new Rect(100 - radius, 100 - radius, 2 * radius + 1, 2 * radius + 1), 128).ShouldBeLessThan(3);
     }
 
     [Fact]
     public void RemoveDust_OnAHighResolutionScan_ShouldRemoveLargerSpecks()
     {
-        using var photo = new Mat(1600, 1600, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(128, 128, 128));
-        CvInvoke.Circle(photo, new Point(800, 800), 3, new MCvScalar(0, 0, 0), -1); // 7 px speck
+        using var photo = new Mat(1600, 1600, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(128, 128, 128));
+        Cv2.Circle(photo, new Point(800, 800), 3, new Scalar(0, 0, 0), -1); // 7 px speck
 
         using var result = PhotoRestorationService.InpaintDustAndScratches(photo);
 
-        Remaining(result, new Rectangle(797, 797, 7, 7), 128).ShouldBeLessThan(3);
+        Remaining(result, new Rect(797, 797, 7, 7), 128).ShouldBeLessThan(3);
     }
 
     [Fact]
     public void RemoveDust_ShouldLeaveNaturalEdgesAndLinesUntouched()
     {
-        using var photo = new Mat(200, 200, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(200, 200, 200));
-        CvInvoke.Rectangle(photo, new Rectangle(60, 60, 80, 80), new MCvScalar(30, 30, 30), -1);
-        CvInvoke.Line(photo, new Point(10, 20), new Point(190, 20), new MCvScalar(40, 40, 40), 1);
+        using var photo = new Mat(200, 200, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(200, 200, 200));
+        Cv2.Rectangle(photo, new Rect(60, 60, 80, 80), new Scalar(30, 30, 30), -1);
+        Cv2.Line(photo, new Point(10, 20), new Point(190, 20), new Scalar(40, 40, 40), 1);
 
         using var result = PhotoRestorationService.InpaintDustAndScratches(photo);
 
@@ -261,8 +258,8 @@ public sealed class RestorationOptionsTests
 
         using var result = PhotoRestorationService.Restore(photo, RestorationSettings.OnlyCleanDust);
 
-        Remaining(result, new Rectangle(48, 48, 5, 5), 128).ShouldBeLessThan(3, "the bright speck is removed");
-        Remaining(result, new Rectangle(10, 150, 30, 30), 128).ShouldBe(0, "the rest of the photo keeps its colours");
+        Remaining(result, new Rect(48, 48, 5, 5), 128).ShouldBeLessThan(3, "the bright speck is removed");
+        Remaining(result, new Rect(10, 150, 30, 30), 128).ShouldBe(0, "the rest of the photo keeps its colours");
     }
 
     [Theory]

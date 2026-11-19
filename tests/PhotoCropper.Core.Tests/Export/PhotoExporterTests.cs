@@ -1,6 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Export;
 using PhotoCropper.TestHelpers;
 
@@ -21,10 +19,10 @@ public sealed class PhotoExporterTests : IDisposable
         string outputDir = Path.Combine(_tempDir, "CleanTest");
         Directory.CreateDirectory(outputDir);
         string scanPath = Path.Combine(_tempDir, "batch_scan.jpg");
-        using (Mat scan = new(300, 300, DepthType.Cv8U, 3))
+        using (Mat scan = new(300, 300, MatType.CV_8UC3))
         {
-            scan.SetTo(new MCvScalar(200, 200, 200));
-            scan.Save(scanPath);
+            scan.SetTo(new Scalar(200, 200, 200));
+            Cv2.ImWrite(scanPath, scan);
         }
 
         string oldFile1 = Path.Combine(outputDir, "batch_scan_1.jpg");
@@ -32,8 +30,8 @@ public sealed class PhotoExporterTests : IDisposable
         File.WriteAllText(oldFile1, "old");
         File.WriteAllText(oldFile2, "old");
 
-        using Mat photo = new(10, 10, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(0, 0, 0));
+        using Mat photo = new(10, 10, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(0, 0, 0));
 
         PhotoExporter.SavePhotos([photo], scanPath, customOutputFolder: outputDir, cleanOldExports: true);
 
@@ -48,10 +46,10 @@ public sealed class PhotoExporterTests : IDisposable
     public void PhotoExporter_ShouldPreserveDpiAndReportProgress()
     {
         string scanPath = Path.Combine(_tempDir, "dpi_test_scan.jpg");
-        using (Mat scan = new(300, 300, DepthType.Cv8U, 3))
+        using (Mat scan = new(300, 300, MatType.CV_8UC3))
         {
-            scan.SetTo(new MCvScalar(200, 200, 200));
-            scan.Save(scanPath);
+            scan.SetTo(new Scalar(200, 200, 200));
+            Cv2.ImWrite(scanPath, scan);
         }
 
         // Set source JPEG DPI to 600x600
@@ -60,8 +58,8 @@ public sealed class PhotoExporterTests : IDisposable
         XDpi.ShouldBe(600);
         YDpi.ShouldBe(600);
 
-        using Mat photo1 = new(100, 100, DepthType.Cv8U, 3);
-        photo1.SetTo(new MCvScalar(50, 50, 50));
+        using Mat photo1 = new(100, 100, MatType.CV_8UC3);
+        photo1.SetTo(new Scalar(50, 50, 50));
 
         int progressUpdates = 0;
         string exportDir = Path.Combine(_tempDir, "dpi_export");
@@ -87,14 +85,14 @@ public sealed class PhotoExporterTests : IDisposable
     public void SavePhotos_PNG_ShouldCreateLosslessFiles()
     {
         string scanPath = Path.Combine(_tempDir, "png_test_scan.jpg");
-        using (Mat scan = new(300, 300, DepthType.Cv8U, 3))
+        using (Mat scan = new(300, 300, MatType.CV_8UC3))
         {
-            scan.SetTo(new MCvScalar(200, 200, 200));
-            scan.Save(scanPath);
+            scan.SetTo(new Scalar(200, 200, 200));
+            Cv2.ImWrite(scanPath, scan);
         }
 
-        using Mat photo1 = new(100, 100, DepthType.Cv8U, 3);
-        photo1.SetTo(new MCvScalar(50, 50, 50));
+        using Mat photo1 = new(100, 100, MatType.CV_8UC3);
+        photo1.SetTo(new Scalar(50, 50, 50));
 
         string exportDir = Path.Combine(_tempDir, "png_export");
         PhotoExporter.SavePhotos([photo1], scanPath, exportDir, "PNG", 90);
@@ -107,23 +105,22 @@ public sealed class PhotoExporterTests : IDisposable
     public void SavePhotos_AndEngine_ShouldSupportUnicodeAndAccentedPaths()
     {
         string unicodeScanPath = Path.Combine(_tempDir, "IMG_2026_còpia (24) - 日本語_тест.jpg");
-        using (Mat scan = new(200, 200, DepthType.Cv8U, 3))
+        using (Mat scan = new(200, 200, MatType.CV_8UC3))
         {
-            scan.SetTo(new MCvScalar(128, 128, 128));
-            using Emgu.CV.Util.VectorOfByte buf = new();
-            CvInvoke.Imencode(".jpg", scan, buf);
-            File.WriteAllBytes(unicodeScanPath, buf.ToArray());
+            scan.SetTo(new Scalar(128, 128, 128));
+            Cv2.ImEncode(".jpg", scan, out byte[] buf);
+            File.WriteAllBytes(unicodeScanPath, buf);
         }
 
         using (PhotoCropperEngine engine = new(unicodeScanPath))
         {
-            engine.Original.IsEmpty.ShouldBeFalse();
+            engine.Original.Empty().ShouldBeFalse();
             engine.Original.Width.ShouldBe(200);
             engine.Original.Height.ShouldBe(200);
         }
 
-        using Mat photo = new(50, 50, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(255, 0, 0));
+        using Mat photo = new(50, 50, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(255, 0, 0));
 
         string exportDir = Path.Combine(_tempDir, "export_còpia_folder");
         PhotoExporter.SavePhotos([photo], unicodeScanPath, exportDir, "JPEG", 90);
@@ -141,14 +138,14 @@ public sealed class PhotoExporterTests : IDisposable
         Directory.CreateDirectory(rawScansDir);
 
         string scanFile = Path.Combine(rawScansDir, "scan_0001.jpg");
-        using (Mat scan = new(100, 100, DepthType.Cv8U, 3))
+        using (Mat scan = new(100, 100, MatType.CV_8UC3))
         {
-            scan.SetTo(new MCvScalar(200, 200, 200));
-            scan.Save(scanFile);
+            scan.SetTo(new Scalar(200, 200, 200));
+            Cv2.ImWrite(scanFile, scan);
         }
 
-        using Mat photo = new(50, 50, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(100, 100, 100));
+        using Mat photo = new(50, 50, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(100, 100, 100));
 
         // When customOutputFolder is null, it should detect RawScans and export to workspace/Final
         PhotoExporter.SavePhotos([photo], scanFile, customOutputFolder: null, "JPEG", 90);
@@ -167,16 +164,16 @@ public sealed class PhotoExporterTests : IDisposable
     public void SavePhotos_WithCustomPatternAndMetadata_ShouldProduceFormattedNameAndEmbedExif()
     {
         string scanFile = Path.Combine(_tempDir, "vintage_scan.jpg");
-        using (Mat scan = new(100, 100, DepthType.Cv8U, 3))
+        using (Mat scan = new(100, 100, MatType.CV_8UC3))
         {
-            scan.SetTo(new MCvScalar(150, 150, 150));
-            scan.Save(scanFile);
+            scan.SetTo(new Scalar(150, 150, 150));
+            Cv2.ImWrite(scanFile, scan);
         }
 
-        using Mat photo1 = new(40, 40, DepthType.Cv8U, 3);
-        using Mat photo2 = new(40, 40, DepthType.Cv8U, 3);
-        photo1.SetTo(new MCvScalar(20, 20, 20));
-        photo2.SetTo(new MCvScalar(40, 40, 40));
+        using Mat photo1 = new(40, 40, MatType.CV_8UC3);
+        using Mat photo2 = new(40, 40, MatType.CV_8UC3);
+        photo1.SetTo(new Scalar(20, 20, 20));
+        photo2.SetTo(new Scalar(40, 40, 40));
 
         string exportDir = Path.Combine(_tempDir, "pattern_meta_export");
         var metadata = new PhotoCropper.Core.Models.PhotoExportMetadata
@@ -244,10 +241,10 @@ public sealed class PhotoExporterTests : IDisposable
         File.WriteAllBytes(scan1, [0xFF, 0xD8, 0xFF, 0xD9]);
         File.WriteAllBytes(scan2, [0xFF, 0xD8, 0xFF, 0xD9]);
 
-        using Mat photo1 = new(40, 40, DepthType.Cv8U, 3);
-        using Mat photo2 = new(40, 40, DepthType.Cv8U, 3);
-        photo1.SetTo(new MCvScalar(10, 10, 10));
-        photo2.SetTo(new MCvScalar(20, 20, 20));
+        using Mat photo1 = new(40, 40, MatType.CV_8UC3);
+        using Mat photo2 = new(40, 40, MatType.CV_8UC3);
+        photo1.SetTo(new Scalar(10, 10, 10));
+        photo2.SetTo(new Scalar(20, 20, 20));
 
         var meta = new PhotoCropper.Core.Models.PhotoExportMetadata { Year = 2002 };
 

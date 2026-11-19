@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Every download (installer, AppImage, .deb, zips) now includes `LICENSE.txt` and `THIRD-PARTY-NOTICES.txt` with the copyright and license text of every bundled component (Avalonia, OpenCvSharp/OpenCV, FFmpeg, ONNX Runtime, NAPS2, ImageSharp, the Inter font and the YuNet face model), plus ONNX Runtime's own notices.
+
+### Changed
+- **OpenCV is now provided by OpenCvSharp5 (OpenCV 5.1) instead of Emgu CV (OpenCV 5.0).** Detection results are the same: on 58 real scans every photo is found with the same orientation, and boxes match to within a few pixels. Existing projects open unchanged. On Linux, OpenCV now needs only the system C and C++ libraries (no GTK, FFmpeg, TBB or VTK packages).
+
+### Fixed
+- **Linux packages (CLI and GUI zips, `.deb`, AppImage) didn't include OpenCV in 3.0.0**, so they couldn't open a scan. The OpenCvSharp library is now part of every Linux package.
+- The Windows uninstaller now removes the downloaded AI models and crash reports from `%LocalAppData%\PhotoCropper`, and asks whether to remove your settings too (default: keep them). Projects and photos are never touched.
+- The README listed the YuNet face model as Apache 2.0; it is MIT licensed.
+
 ## [3.0.0] - 2026-11-18
 
 > **Upgrading from 2.x:** a project is converted the first time 3.0 opens it (exports move from `Cropped/` to `Final/`, and `session.json` gains each photo's history and Finish settings). Back up a project before opening it if you may need 2.x again: version 2.9 still opens a converted project, but saving it there drops the photo list, Finish settings and export records; 3.0 then crops the photos again from the scans, with default Finish settings.

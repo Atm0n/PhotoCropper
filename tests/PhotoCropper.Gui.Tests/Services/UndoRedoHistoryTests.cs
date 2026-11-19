@@ -1,6 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Gui.Services;
@@ -107,8 +105,8 @@ public sealed class UndoRedoHistoryTests : IDisposable
         engine.DetectPhotos();
         int initialCount = engine.DetectedPhotos.Count;
 
-        using Mat manualCrop = new(150, 150, DepthType.Cv8U, 3);
-        manualCrop.SetTo(new MCvScalar(100, 100, 100));
+        using Mat manualCrop = new(150, 150, MatType.CV_8UC3);
+        manualCrop.SetTo(new Scalar(100, 100, 100));
 
         engine.DetectedPhotos.Add(manualCrop.Clone());
         history.PushAdd(0, engine.DetectedPhotos.Count - 1, manualCrop);
@@ -136,8 +134,8 @@ public sealed class UndoRedoHistoryTests : IDisposable
         engine.DetectedPhotos.ShouldNotBeEmpty();
 
         using var prevMat = engine.DetectedPhotos[0].Clone();
-        using var newMat = new Mat(50, 50, DepthType.Cv8U, 3);
-        newMat.SetTo(new MCvScalar(200, 200, 200));
+        using var newMat = new Mat(50, 50, MatType.CV_8UC3);
+        newMat.SetTo(new Scalar(200, 200, 200));
 
         engine.DetectedPhotos[0].Dispose();
         engine.DetectedPhotos[0] = newMat.Clone();
@@ -161,7 +159,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     public void UndoRedoHistory_Clear_ShouldResetAllStacks()
     {
         using var history = new UndoRedoHistory();
-        using Mat dummy = new(10, 10, DepthType.Cv8U, 3);
+        using Mat dummy = new(10, 10, MatType.CV_8UC3);
         history.PushAdd(0, 0, dummy);
         history.CanUndo.ShouldBeTrue();
 

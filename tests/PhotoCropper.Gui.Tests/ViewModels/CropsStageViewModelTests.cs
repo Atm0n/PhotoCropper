@@ -369,7 +369,7 @@ public sealed class CropsStageViewModelTests : IDisposable
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
         vm.SelectPhoto(1);
-        var before = engine.DetectedPhotos[1].Size;
+        var before = engine.DetectedPhotos[1].Size();
 
         await vm.RotateSelectedPhotosCommand.ExecuteAsync(null);
 
@@ -399,7 +399,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     {
         var box = new CropCandidate
         {
-            Rotated = new Emgu.CV.Structure.RotatedRect(new System.Drawing.PointF(100, 100), new System.Drawing.SizeF(100, 50), 0),
+            Rotated = new RotatedBox(new System.Drawing.PointF(100, 100), new System.Drawing.SizeF(100, 50), 0),
             ShapePoints = [],
         };
         var vertices = box.Rotated.GetVertices();

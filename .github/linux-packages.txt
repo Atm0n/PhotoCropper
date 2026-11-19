@@ -1,0 +1,13 @@
+# Ubuntu 24.04 runtime libraries the Linux CI and release jobs install (no -dev packages, no recommends).
+# Changing this file also refreshes the cached .deb downloads (the Ubuntu mirror is slow).
+#
+# OpenCV (OpenCvSharp's libOpenCvSharpExtern.so) needs only glibc and libstdc++; CI checks with ldd after the build.
+# Avalonia and Skia:
+libgl1
+libx11-6
+libice6
+libsm6
+libfontconfig1
+# NAPS2 scanning:
+libsane1
+sane-utils

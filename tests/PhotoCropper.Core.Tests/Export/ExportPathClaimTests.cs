@@ -1,6 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Export;
 using PhotoCropper.TestHelpers;
 
@@ -16,8 +14,8 @@ public sealed class ExportPathClaimTests : IDisposable
         string scan = Path.Combine(_tempDir, "claim_scan.jpg");
         File.WriteAllBytes(scan, [0xFF, 0xD8, 0xFF, 0xD9]);
         string outputDir = Path.Combine(_tempDir, "out");
-        using Mat photo = new(20, 20, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(10, 20, 30));
+        using Mat photo = new(20, 20, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(10, 20, 30));
 
         var written = PhotoExporter.SavePhotos([photo], scan, customOutputFolder: outputDir);
         File.Delete(written[0].Path);

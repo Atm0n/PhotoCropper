@@ -1,9 +1,8 @@
-using Emgu.CV;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
-using System.Drawing;
+using RectangleF = System.Drawing.RectangleF;
 
 namespace PhotoCropper.Core.Workspace;
 
@@ -301,7 +300,7 @@ public static class PhotoPipelineService
 
     private static RectangleF Bounds(WorkspaceCropData crop)
     {
-        var vertices = new RotatedRect(new PointF(crop.CenterX, crop.CenterY), new SizeF(crop.Width, crop.Height), crop.Angle).GetVertices();
+        var vertices = new RotatedBox(new System.Drawing.PointF(crop.CenterX, crop.CenterY), new System.Drawing.SizeF(crop.Width, crop.Height), crop.Angle).GetVertices();
         float minX = vertices.Min(v => v.X), minY = vertices.Min(v => v.Y);
         return new RectangleF(minX, minY, vertices.Max(v => v.X) - minX, vertices.Max(v => v.Y) - minY);
     }

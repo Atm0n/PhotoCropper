@@ -1,6 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Extraction;
 using PhotoCropper.TestHelpers;
 
@@ -37,8 +35,8 @@ public sealed class OrientationTests
     [Fact]
     public void FaceOrientationService_NonFaceImage_ShouldReturnNegativeOne()
     {
-        using Mat landscape = new(200, 200, DepthType.Cv8U, 3);
-        landscape.SetTo(new MCvScalar(200, 100, 50));
+        using Mat landscape = new(200, 200, MatType.CV_8UC3);
+        landscape.SetTo(new Scalar(200, 100, 50));
         FaceOrientationService.DetectFaceRotation(landscape).ShouldBe(-1);
     }
 
@@ -46,13 +44,13 @@ public sealed class OrientationTests
     public void AutoOrientationService_ShouldHandleBgra4ChannelAndGrayscale()
     {
         // 4-channel BGRA (transparent margins from extracted photos)
-        using Mat bgra = new(200, 200, DepthType.Cv8U, 4);
-        bgra.SetTo(new MCvScalar(200, 100, 50, 255));
+        using Mat bgra = new(200, 200, MatType.CV_8UC4);
+        bgra.SetTo(new Scalar(200, 100, 50, 255));
         AutoOrientationService.DetectRequiredRotation(bgra).ShouldBe(0);
 
         // 1-channel Grayscale
-        using Mat gray = new(200, 200, DepthType.Cv8U, 1);
-        gray.SetTo(new MCvScalar(128));
+        using Mat gray = new(200, 200, MatType.CV_8UC1);
+        gray.SetTo(new Scalar(128));
         AutoOrientationService.DetectRequiredRotation(gray).ShouldBe(0);
     }
 }

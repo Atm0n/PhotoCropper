@@ -1,8 +1,6 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
+using OpenCvSharp;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.TestHelpers;
-using System.Drawing;
 
 namespace PhotoCropper.Core.Tests.Engine;
 
@@ -32,7 +30,7 @@ public sealed class EngineConsistencyTests : IDisposable
         new() { CenterX = cx, CenterY = cy, Width = w, Height = h, Angle = 0, RotationDegrees = rotation };
 
     private static bool AreIdentical(Mat a, Mat b) =>
-        a.Size == b.Size && a.NumberOfChannels == b.NumberOfChannels && CvInvoke.Norm(a, b, NormType.L1) == 0;
+        a.Size() == b.Size() && a.Channels() == b.Channels() && Cv2.Norm(a, b, NormTypes.L1) == 0;
 
     [Fact]
     public void DetectPhotos_AfterRotation_ShouldClearStaleRotations()
@@ -113,13 +111,13 @@ public sealed class EngineConsistencyTests : IDisposable
     {
         using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80));
         engine.RotatePhoto(0);
-        var rotatedSize = engine.DetectedPhotos[0].Size;
+        var rotatedSize = engine.DetectedPhotos[0].Size();
 
         engine.ApplyGrabHandleResize(0);
 
         engine.PhotoRotations[0].ShouldBe(90);
-        engine.DetectedPhotos[0].Size.ShouldBe(rotatedSize);
-        engine.RawDetectedPhotos[0].Size.ShouldBe(rotatedSize);
+        engine.DetectedPhotos[0].Size().ShouldBe(rotatedSize);
+        engine.RawDetectedPhotos[0].Size().ShouldBe(rotatedSize);
     }
 
     [Fact]
@@ -150,15 +148,15 @@ public sealed class EngineConsistencyTests : IDisposable
     public void ApplyGrabHandleResize_WhenBoxIsTooSmall_ShouldReportFailureAndKeepThePhoto()
     {
         using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80));
-        var sizeBefore = engine.DetectedPhotos[0].Size;
+        var sizeBefore = engine.DetectedPhotos[0].Size();
         var tiny = engine.AcceptedCandidates[0] with
         {
-            Rotated = new Emgu.CV.Structure.RotatedRect(new PointF(500, 500), new SizeF(6, 6), 0)
+            Rotated = new PhotoCropper.Core.Models.RotatedBox(new System.Drawing.PointF(500, 500), new System.Drawing.SizeF(6, 6), 0)
         };
         engine.UpdateCandidates([tiny]);
 
         engine.ApplyGrabHandleResize(0).ShouldBeFalse();
-        engine.DetectedPhotos[0].Size.ShouldBe(sizeBefore);
+        engine.DetectedPhotos[0].Size().ShouldBe(sizeBefore);
     }
 
     [Fact]
@@ -174,8 +172,8 @@ public sealed class EngineConsistencyTests : IDisposable
     {
         using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80), Crop(900, 900, 120, 60));
         using var photo = engine.DetectedPhotos[1].Clone();
-        using var raw = new Mat(photo.Size, photo.Depth, photo.NumberOfChannels);
-        raw.SetTo(new Emgu.CV.Structure.MCvScalar(1, 2, 3, 255));
+        using var raw = new Mat(photo.Size(), photo.Type());
+        raw.SetTo(new Scalar(1, 2, 3, 255));
 
         engine.InsertPhoto(0, photo.Clone(), engine.AcceptedCandidates[1], raw, rotation: 90);
 
@@ -188,10 +186,10 @@ public sealed class EngineConsistencyTests : IDisposable
     {
         using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80));
 
-        engine.ApplyCropToPhoto(0, new Rectangle(10, 10, 100, 50));
+        engine.ApplyCropToPhoto(0, new System.Drawing.Rectangle(10, 10, 100, 50));
 
-        engine.DetectedPhotos[0].Size.ShouldBe(new Size(100, 50));
-        engine.RawDetectedPhotos[0].Size.ShouldBe(new Size(100, 50));
+        engine.DetectedPhotos[0].Size().ShouldBe(new Size(100, 50));
+        engine.RawDetectedPhotos[0].Size().ShouldBe(new Size(100, 50));
     }
 
     [Fact]

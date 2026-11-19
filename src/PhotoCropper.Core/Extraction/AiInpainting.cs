@@ -1,9 +1,7 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
+using PhotoCropper.Core.Common;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
-using System.Drawing;
 using System.Security.Cryptography;
 
 namespace PhotoCropper.Core.Extraction;
@@ -34,9 +32,9 @@ internal sealed class LamaModel : IInpaintingModel, IDisposable
         int size = InputSize;
         int plane = size * size;
         byte[] pixels = new byte[plane * 3];
-        bgr.CopyTo(pixels);
+        bgr.CopyDataTo(pixels);
         byte[] maskBytes = new byte[plane];
-        mask.CopyTo(maskBytes);
+        mask.CopyDataTo(maskBytes);
 
         // Model input: RGB in 0..1, planar (1x3xHxW); mask 0/1 (1x1xHxW).
         float[] image = new float[plane * 3];
@@ -70,9 +68,19 @@ internal sealed class LamaModel : IInpaintingModel, IDisposable
             }
         }
 
-        var mat = new Mat(size, size, DepthType.Cv8U, 3);
-        mat.SetTo(result);
-        return mat;
+        Mat? mat = null;
+        try
+        {
+            mat = new Mat(size, size, MatType.CV_8UC3);
+            mat.SetData(result);
+            Mat filled = mat;
+            mat = null; // the caller owns it now
+            return filled;
+        }
+        finally
+        {
+            mat?.Dispose();
+        }
     }
 
     private static byte ToByte(float value) => (byte)Math.Clamp(MathF.Round(value), 0, 255);
@@ -162,24 +170,21 @@ public static class AiInpainting
 
     private static Mat FillWithModel(IInpaintingModel model, Mat image, Mat mask)
     {
-        if (image.NumberOfChannels == 3) return FillBgr(model, image, mask);
+        if (image.Channels() == 3) return FillBgr(model, image, mask);
 
         using Mat bgr = new();
-        CvInvoke.CvtColor(image, bgr, image.NumberOfChannels == 4 ? ColorConversion.Bgra2Bgr : ColorConversion.Gray2Bgr);
+        Cv2.CvtColor(image, bgr, image.Channels() == 4 ? ColorConversionCodes.BGRA2BGR : ColorConversionCodes.GRAY2BGR);
         using Mat filled = FillBgr(model, bgr, mask);
         Mat result = new();
-        if (image.NumberOfChannels == 1)
+        if (image.Channels() == 1)
         {
-            CvInvoke.CvtColor(filled, result, ColorConversion.Bgr2Gray);
+            Cv2.CvtColor(filled, result, ColorConversionCodes.BGR2GRAY);
             return result;
         }
 
-        using var channels = new Emgu.CV.Util.VectorOfMat();
-        CvInvoke.Split(image, channels);
-        using var colour = new Emgu.CV.Util.VectorOfMat();
-        CvInvoke.Split(filled, colour);
-        using var merged = new Emgu.CV.Util.VectorOfMat(colour[0], colour[1], colour[2], channels[3]);
-        CvInvoke.Merge(merged, result);
+        using var channels = MatChannels.Split(image);
+        using var colour = MatChannels.Split(filled);
+        Cv2.Merge([colour[0], colour[1], colour[2], channels[3]], result);
         return result;
     }
 
@@ -188,7 +193,7 @@ public static class AiInpainting
         Mat result = bgr.Clone();
         try
         {
-            foreach (Rectangle area in FindAreas(mask, bgr.Size))
+            foreach (Rect area in FindAreas(mask, bgr.Size()))
             {
                 FillArea(model, result, mask, area);
             }
@@ -205,19 +210,19 @@ public static class AiInpainting
     /// The squares to fill: one per group of nearby damaged areas, each about 2.5× the damage it contains (at least a
     /// quarter of the photo's shorter side) so the network sees enough surroundings. Squares that overlap are merged.
     /// </summary>
-    internal static List<Rectangle> FindAreas(Mat mask, Size imageSize)
+    internal static List<Rect> FindAreas(Mat mask, Size imageSize)
     {
-        var holes = new List<Rectangle>();
+        var holes = new List<Rect>();
         using (Mat labels = new())
         using (Mat stats = new())
         using (Mat centroids = new())
         {
-            int count = CvInvoke.ConnectedComponentsWithStats(mask, labels, stats, centroids, LineType.EightConnected, DepthType.Cv32S);
+            int count = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids, PixelConnectivity.Connectivity8, MatType.CV_32S);
             int[] values = new int[count * 5];
-            if (count > 0) stats.CopyTo(values);
+            if (count > 0) stats.CopyDataTo(values);
             for (int i = 1; i < count; i++)
             {
-                holes.Add(new Rectangle(values[i * 5], values[i * 5 + 1], values[i * 5 + 2], values[i * 5 + 3]));
+                holes.Add(new Rect(values[i * 5], values[i * 5 + 1], values[i * 5 + 2], values[i * 5 + 3]));
             }
         }
 
@@ -231,7 +236,7 @@ public static class AiInpainting
                 for (int j = i + 1; j < squares.Count; j++)
                 {
                     if (!squares[i].Square.IntersectsWith(squares[j].Square)) continue;
-                    Rectangle hole = Rectangle.Union(squares[i].Hole, squares[j].Hole);
+                    Rect hole = Rect.Union(squares[i].Hole, squares[j].Hole);
                     squares[i] = (hole, ContextSquare(hole, imageSize));
                     squares.RemoveAt(j);
                     merged = true;
@@ -243,7 +248,7 @@ public static class AiInpainting
         return squares.Select(s => s.Square).ToList();
     }
 
-    private static Rectangle ContextSquare(Rectangle hole, Size imageSize)
+    private static Rect ContextSquare(Rect hole, Size imageSize)
     {
         int side = (int)Math.Ceiling(Math.Max(Math.Max(hole.Width, hole.Height) * 2.5, Math.Min(imageSize.Width, imageSize.Height) / 4.0));
         side = Math.Max(side, 32);
@@ -252,10 +257,10 @@ public static class AiInpainting
         int x = Math.Clamp(centerX - side / 2, 0, Math.Max(0, imageSize.Width - side));
         int y = Math.Clamp(centerY - side / 2, 0, Math.Max(0, imageSize.Height - side));
         // Near a small photo's edge the square can't fit; it is cut to the photo here and padded later.
-        return Rectangle.Intersect(new Rectangle(x, y, side, side), new Rectangle(Point.Empty, imageSize));
+        return Rect.Intersect(new Rect(x, y, side, side), new Rect(0, 0, imageSize.Width, imageSize.Height));
     }
 
-    private static void FillArea(IInpaintingModel model, Mat image, Mat mask, Rectangle area)
+    private static void FillArea(IInpaintingModel model, Mat image, Mat mask, Rect area)
     {
         int side = Math.Max(area.Width, area.Height);
         int size = model.InputSize;
@@ -265,51 +270,51 @@ public static class AiInpainting
 
         // Pad to a square (mirrored image, no damage in the padding), then scale to the network's size.
         using Mat square = new();
-        CvInvoke.CopyMakeBorder(crop, square, 0, side - area.Height, 0, side - area.Width, BorderType.Reflect101, new MCvScalar());
+        Cv2.CopyMakeBorder(crop, square, 0, side - area.Height, 0, side - area.Width, BorderTypes.Reflect101, new Scalar());
         using Mat squareMask = new();
-        CvInvoke.CopyMakeBorder(cropMask, squareMask, 0, side - area.Height, 0, side - area.Width, BorderType.Constant, new MCvScalar(0));
+        Cv2.CopyMakeBorder(cropMask, squareMask, 0, side - area.Height, 0, side - area.Width, BorderTypes.Constant, new Scalar(0));
 
         using Mat input = new();
-        CvInvoke.Resize(square, input, new Size(size, size), 0, 0, side > size ? Inter.Area : Inter.Cubic);
+        Cv2.Resize(square, input, new Size(size, size), 0, 0, side > size ? InterpolationFlags.Area : InterpolationFlags.Cubic);
         using Mat inputMask = new();
-        CvInvoke.Resize(squareMask, inputMask, new Size(size, size), 0, 0, Inter.Linear);
-        CvInvoke.Threshold(inputMask, inputMask, 0, 255, ThresholdType.Binary);
+        Cv2.Resize(squareMask, inputMask, new Size(size, size), 0, 0, InterpolationFlags.Linear);
+        Cv2.Threshold(inputMask, inputMask, 0, 255, ThresholdTypes.Binary);
         // Slightly larger hole, so the damage's soft edge is regenerated too.
-        using (Mat grow = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5), new Point(-1, -1)))
+        using (Mat grow = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5), new Point(-1, -1)))
         {
-            CvInvoke.Dilate(inputMask, inputMask, grow, new Point(-1, -1), 1, BorderType.Constant, new MCvScalar());
+            Cv2.Dilate(inputMask, inputMask, grow, new Point(-1, -1), 1, BorderTypes.Constant, new Scalar());
         }
 
         using Mat output = RunCached(model, input, inputMask);
 
         using Mat upscaled = new();
-        CvInvoke.Resize(output, upscaled, new Size(side, side), 0, 0, side > size ? Inter.Cubic : Inter.Area);
-        using Mat filled = new(upscaled, new Rectangle(0, 0, area.Width, area.Height));
+        Cv2.Resize(output, upscaled, new Size(side, side), 0, 0, side > size ? InterpolationFlags.Cubic : InterpolationFlags.Area);
+        using Mat filled = new(upscaled, new Rect(0, 0, area.Width, area.Height));
 
         // Blend: fully replaced inside the painted area, fading out over a couple of pixels around it.
         using Mat weight = new();
-        cropMask.ConvertTo(weight, DepthType.Cv32F, 1.0 / 255.0);
+        cropMask.ConvertTo(weight, MatType.CV_32F, 1.0 / 255.0);
         using Mat soft = new();
-        using (Mat grow = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3), new Point(-1, -1)))
+        using (Mat grow = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3), new Point(-1, -1)))
         {
-            CvInvoke.Dilate(weight, soft, grow, new Point(-1, -1), 1, BorderType.Constant, new MCvScalar());
+            Cv2.Dilate(weight, soft, grow, new Point(-1, -1), 1, BorderTypes.Constant, new Scalar());
         }
-        CvInvoke.GaussianBlur(soft, soft, new Size(0, 0), 1.0);
-        CvInvoke.Max(soft, weight, weight);
+        Cv2.GaussianBlur(soft, soft, new Size(0, 0), 1.0);
+        Cv2.Max(soft, weight, weight);
 
         using Mat weight3 = new();
-        CvInvoke.CvtColor(weight, weight3, ColorConversion.Gray2Bgr);
+        Cv2.CvtColor(weight, weight3, ColorConversionCodes.GRAY2BGR);
         using Mat original = new();
-        crop.ConvertTo(original, DepthType.Cv32F);
+        crop.ConvertTo(original, MatType.CV_32F);
         using Mat generated = new();
-        filled.ConvertTo(generated, DepthType.Cv32F);
+        filled.ConvertTo(generated, MatType.CV_32F);
 
         // result = original + (generated - original) * weight
         using Mat difference = new();
-        CvInvoke.Subtract(generated, original, difference);
-        CvInvoke.Multiply(difference, weight3, difference);
-        CvInvoke.Add(original, difference, original);
-        original.ConvertTo(crop, DepthType.Cv8U);
+        Cv2.Subtract(generated, original, difference);
+        Cv2.Multiply(difference, weight3, difference);
+        Cv2.Add(original, difference, original);
+        original.ConvertTo(crop, MatType.CV_8U);
     }
 
     /// <summary>Runs the network, reusing the result when the same input was filled recently.</summary>
@@ -343,11 +348,11 @@ public static class AiInpainting
     private static string Fingerprint(IInpaintingModel model, Mat input, Mat inputMask)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        byte[] pixels = new byte[input.Rows * input.Cols * input.NumberOfChannels];
-        input.CopyTo(pixels);
+        byte[] pixels = new byte[input.Rows * input.Cols * input.Channels()];
+        input.CopyDataTo(pixels);
         hash.AppendData(pixels);
         byte[] maskBytes = new byte[inputMask.Rows * inputMask.Cols];
-        inputMask.CopyTo(maskBytes);
+        inputMask.CopyDataTo(maskBytes);
         hash.AppendData(maskBytes);
         hash.AppendData(BitConverter.GetBytes(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(model)));
         return Convert.ToHexString(hash.GetHashAndReset());

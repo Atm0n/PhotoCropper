@@ -1,5 +1,5 @@
 using Avalonia.Media.Imaging;
-using Emgu.CV;
+using Mat = OpenCvSharp.Mat;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PhotoCropper.Core.Workspace;
@@ -879,9 +879,9 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         double scale = Math.Min(1.0, (double)PreviewMaxSize / Math.Max(image.Width, image.Height));
         if (scale < 1.0)
         {
-            Emgu.CV.CvInvoke.Resize(image, result, new System.Drawing.Size(
+            OpenCvSharp.Cv2.Resize(image, result, new OpenCvSharp.Size(
                 Math.Max(1, (int)Math.Round(image.Width * scale)),
-                Math.Max(1, (int)Math.Round(image.Height * scale))), 0, 0, Emgu.CV.CvEnum.Inter.Area);
+                Math.Max(1, (int)Math.Round(image.Height * scale))), 0, 0, OpenCvSharp.InterpolationFlags.Area);
         }
         else
         {

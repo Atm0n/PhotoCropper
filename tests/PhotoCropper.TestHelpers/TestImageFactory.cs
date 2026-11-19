@@ -1,8 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
-using Emgu.CV.Util;
-using System.Drawing;
+using OpenCvSharp;
 
 namespace PhotoCropper.TestHelpers;
 
@@ -17,11 +13,11 @@ public static class TestImageFactory
 
     public static void CreateStandardTwoPhotoScan(string path, int width = 2000, int height = 2000)
     {
-        using Mat scan = new(height, width, DepthType.Cv8U, 3);
-        scan.SetTo(new MCvScalar(255, 255, 255)); // White scanner background
+        using Mat scan = new(height, width, MatType.CV_8UC3);
+        scan.SetTo(new Scalar(255, 255, 255)); // White scanner background
 
         // Photo 1: Straight Black Square (400x400 at 100, 100)
-        CvInvoke.Rectangle(scan, new Rectangle(100, 100, 400, 400), new MCvScalar(0, 0, 0), -1);
+        Cv2.Rectangle(scan, new Rect(100, 100, 400, 400), new Scalar(0, 0, 0), -1);
 
         // Photo 2: Tilted Dark Grey Polygon
         Point[] points = [
@@ -30,41 +26,41 @@ public static class TestImageFactory
             new Point(1300, 1500),
             new Point(900, 1400)
         ];
-        using var vp = new VectorOfPoint(points);
-        CvInvoke.FillConvexPoly(scan, vp, new MCvScalar(50, 50, 50));
+        Point[] vp = points;
+        Cv2.FillConvexPoly(scan, vp, new Scalar(50, 50, 50));
 
-        scan.Save(path);
+        Cv2.ImWrite(path, scan);
     }
 
     public static void CreateCornerPhotoScan(string path)
     {
-        using Mat scan = new(2000, 2000, DepthType.Cv8U, 3);
-        scan.SetTo(new MCvScalar(255, 255, 255));
+        using Mat scan = new(2000, 2000, MatType.CV_8UC3);
+        scan.SetTo(new Scalar(255, 255, 255));
 
         // Photo 1 in center
-        CvInvoke.Rectangle(scan, new Rectangle(800, 800, 400, 400), new MCvScalar(0, 0, 0), -1);
+        Cv2.Rectangle(scan, new Rect(800, 800, 400, 400), new Scalar(0, 0, 0), -1);
 
         // Photo 2 in corner touching bottom-right
-        CvInvoke.Rectangle(scan, new Rectangle(1700, 1700, 300, 300), new MCvScalar(20, 20, 20), -1);
+        Cv2.Rectangle(scan, new Rect(1700, 1700, 300, 300), new Scalar(20, 20, 20), -1);
 
-        scan.Save(path);
+        Cv2.ImWrite(path, scan);
     }
 
     public static void CreateFlushEdgeScan(string path)
     {
-        using Mat scan = new(2000, 2000, DepthType.Cv8U, 3);
-        scan.SetTo(new MCvScalar(255, 255, 255));
+        using Mat scan = new(2000, 2000, MatType.CV_8UC3);
+        scan.SetTo(new Scalar(255, 255, 255));
 
         // Photo touching top-left edge
-        CvInvoke.Rectangle(scan, new Rectangle(0, 0, 500, 400), new MCvScalar(0, 0, 0), -1);
+        Cv2.Rectangle(scan, new Rect(0, 0, 500, 400), new Scalar(0, 0, 0), -1);
 
-        scan.Save(path);
+        Cv2.ImWrite(path, scan);
     }
 
     public static void CreateTiltedAdjacentScan(string path)
     {
-        using Mat scan = new(2000, 2000, DepthType.Cv8U, 3);
-        scan.SetTo(new MCvScalar(255, 255, 255));
+        using Mat scan = new(2000, 2000, MatType.CV_8UC3);
+        scan.SetTo(new Scalar(255, 255, 255));
 
         // Photo 1: Large diamond shape centered at (1000, 1000)
         Point[] points1 = [
@@ -73,86 +69,86 @@ public static class TestImageFactory
             new Point(1000, 1354),
             new Point(646, 1000)
         ];
-        using (var vp1 = new VectorOfPoint(points1))
         {
-            CvInvoke.FillConvexPoly(scan, vp1, new MCvScalar(50, 50, 50), LineType.AntiAlias);
+            Point[] vp1 = points1;
+            Cv2.FillConvexPoly(scan, vp1, new Scalar(50, 50, 50), LineTypes.AntiAlias);
         }
 
         // Photo 2: Square 220x220 at (550, 550)
-        CvInvoke.Rectangle(scan, new Rectangle(550, 550, 220, 220), new MCvScalar(20, 20, 20), -1);
+        Cv2.Rectangle(scan, new Rect(550, 550, 220, 220), new Scalar(20, 20, 20), -1);
 
-        scan.Save(path);
+        Cv2.ImWrite(path, scan);
     }
 
     public static void CreateCloselySpacedScan(string path, int gap = 20)
     {
-        using Mat scan = new(2000, 2000, DepthType.Cv8U, 3);
-        scan.SetTo(new MCvScalar(255, 255, 255));
+        using Mat scan = new(2000, 2000, MatType.CV_8UC3);
+        scan.SetTo(new Scalar(255, 255, 255));
 
         // Photo 1: 500x500 at (200, 200)
-        CvInvoke.Rectangle(scan, new Rectangle(200, 200, 500, 500), new MCvScalar(20, 20, 20), -1);
+        Cv2.Rectangle(scan, new Rect(200, 200, 500, 500), new Scalar(20, 20, 20), -1);
 
         // Photo 2: 500x500 at (200 + 500 + gap, 200)
-        CvInvoke.Rectangle(scan, new Rectangle(700 + gap, 200, 500, 500), new MCvScalar(30, 30, 30), -1);
+        Cv2.Rectangle(scan, new Rect(700 + gap, 200, 500, 500), new Scalar(30, 30, 30), -1);
 
-        scan.Save(path);
+        Cv2.ImWrite(path, scan);
     }
 
     public static void CreateLowContrastScan(string path)
     {
-        using Mat scan = new(2000, 2000, DepthType.Cv8U, 3);
-        scan.SetTo(new MCvScalar(240, 240, 240));
+        using Mat scan = new(2000, 2000, MatType.CV_8UC3);
+        scan.SetTo(new Scalar(240, 240, 240));
 
         // Subtle low-contrast photo
-        CvInvoke.Rectangle(scan, new Rectangle(300, 300, 600, 600), new MCvScalar(232, 230, 228), -1);
+        Cv2.Rectangle(scan, new Rect(300, 300, 600, 600), new Scalar(232, 230, 228), -1);
 
-        scan.Save(path);
+        Cv2.ImWrite(path, scan);
     }
 
     public static void CreateDarkBackgroundScan(string path)
     {
-        using Mat scan = new(2000, 2000, DepthType.Cv8U, 3);
-        scan.SetTo(new MCvScalar(30, 30, 30));
+        using Mat scan = new(2000, 2000, MatType.CV_8UC3);
+        scan.SetTo(new Scalar(30, 30, 30));
 
         // Bright photo
-        CvInvoke.Rectangle(scan, new Rectangle(200, 200, 600, 400), new MCvScalar(220, 200, 180), -1);
+        Cv2.Rectangle(scan, new Rect(200, 200, 600, 400), new Scalar(220, 200, 180), -1);
 
-        scan.Save(path);
+        Cv2.ImWrite(path, scan);
     }
 
     public static void CreateHighResScan(string path)
     {
-        using Mat scan = new(5000, 5000, DepthType.Cv8U, 3);
-        scan.SetTo(new MCvScalar(255, 255, 255));
+        using Mat scan = new(5000, 5000, MatType.CV_8UC3);
+        scan.SetTo(new Scalar(255, 255, 255));
 
-        CvInvoke.Rectangle(scan, new Rectangle(1000, 1000, 3000, 3000), new MCvScalar(0, 0, 0), -1);
+        Cv2.Rectangle(scan, new Rect(1000, 1000, 3000, 3000), new Scalar(0, 0, 0), -1);
 
-        scan.Save(path);
+        Cv2.ImWrite(path, scan);
     }
 
     public static Mat CreateSkyLandscapePhoto(int width = 200, int height = 200, int orientation = 0)
     {
-        Mat mat = new(height, width, DepthType.Cv8U, 3);
-        MCvScalar skyColor = new(235, 180, 70); // BGR Blue Sky
-        MCvScalar groundColor = new(20, 40, 20); // Dark Green Ground
+        Mat mat = new(height, width, MatType.CV_8UC3);
+        Scalar skyColor = new(235, 180, 70); // BGR Blue Sky
+        Scalar groundColor = new(20, 40, 20); // Dark Green Ground
 
         switch (orientation)
         {
             case 180: // Upside down: sky at bottom, ground at top
-                CvInvoke.Rectangle(mat, new Rectangle(0, 0, width, height / 2), groundColor, -1);
-                CvInvoke.Rectangle(mat, new Rectangle(0, height / 2, width, height / 2), skyColor, -1);
+                Cv2.Rectangle(mat, new Rect(0, 0, width, height / 2), groundColor, -1);
+                Cv2.Rectangle(mat, new Rect(0, height / 2, width, height / 2), skyColor, -1);
                 break;
             case 90: // Sideways: sky on left, ground on right
-                CvInvoke.Rectangle(mat, new Rectangle(0, 0, width / 2, height), skyColor, -1);
-                CvInvoke.Rectangle(mat, new Rectangle(width / 2, 0, width / 2, height), groundColor, -1);
+                Cv2.Rectangle(mat, new Rect(0, 0, width / 2, height), skyColor, -1);
+                Cv2.Rectangle(mat, new Rect(width / 2, 0, width / 2, height), groundColor, -1);
                 break;
             case 270: // Sideways: sky on right, ground on left
-                CvInvoke.Rectangle(mat, new Rectangle(0, 0, width / 2, height), groundColor, -1);
-                CvInvoke.Rectangle(mat, new Rectangle(width / 2, 0, width / 2, height), skyColor, -1);
+                Cv2.Rectangle(mat, new Rect(0, 0, width / 2, height), groundColor, -1);
+                Cv2.Rectangle(mat, new Rect(width / 2, 0, width / 2, height), skyColor, -1);
                 break;
             default: // Upright: sky at top, ground at bottom
-                CvInvoke.Rectangle(mat, new Rectangle(0, 0, width, height / 2), skyColor, -1);
-                CvInvoke.Rectangle(mat, new Rectangle(0, height / 2, width, height / 2), groundColor, -1);
+                Cv2.Rectangle(mat, new Rect(0, 0, width, height / 2), skyColor, -1);
+                Cv2.Rectangle(mat, new Rect(0, height / 2, width, height / 2), groundColor, -1);
                 break;
         }
 
@@ -161,44 +157,44 @@ public static class TestImageFactory
 
     public static Mat CreateFadedPhoto(int width = 200, int height = 200, bool includeAlpha = false)
     {
-        Mat mat = new(height, width, DepthType.Cv8U, includeAlpha ? 4 : 3);
-        mat.SetTo(includeAlpha ? new MCvScalar(50, 150, 200, 255) : new MCvScalar(50, 150, 200));
+        Mat mat = new(height, width, includeAlpha ? MatType.CV_8UC4 : MatType.CV_8UC3);
+        mat.SetTo(includeAlpha ? new Scalar(50, 150, 200, 255) : new Scalar(50, 150, 200));
         return mat;
     }
 
     public static Mat CreateBlemishedPhoto(int width = 200, int height = 200)
     {
-        Mat mat = new(height, width, DepthType.Cv8U, 3);
-        mat.SetTo(new MCvScalar(128, 128, 128));
+        Mat mat = new(height, width, MatType.CV_8UC3);
+        mat.SetTo(new Scalar(128, 128, 128));
 
         // Inject simulated dust speck (bright white dot) and dark hairline scratch
-        CvInvoke.Circle(mat, new Point(50, 50), 2, new MCvScalar(255, 255, 255), -1);
-        CvInvoke.Line(mat, new Point(100, 100), new Point(108, 108), new MCvScalar(0, 0, 0), 1);
+        Cv2.Circle(mat, new Point(50, 50), 2, new Scalar(255, 255, 255), -1);
+        Cv2.Line(mat, new Point(100, 100), new Point(108, 108), new Scalar(0, 0, 0), 1);
 
         return mat;
     }
 
     public static void CreateScannerBezelScan(string path, int bezelThickness = 15, int width = 2000, int height = 2000)
     {
-        using Mat scan = new(height, width, DepthType.Cv8U, 3);
-        scan.SetTo(new MCvScalar(255, 255, 255)); // White scanner background
+        using Mat scan = new(height, width, MatType.CV_8UC3);
+        scan.SetTo(new Scalar(255, 255, 255)); // White scanner background
 
         // Photo 1: Straight Dark Square (400x400 at 200, 200)
-        CvInvoke.Rectangle(scan, new Rectangle(200, 200, 400, 400), new MCvScalar(20, 20, 20), -1);
+        Cv2.Rectangle(scan, new Rect(200, 200, 400, 400), new Scalar(20, 20, 20), -1);
 
-        // Photo 2: Dark Rectangle (400x300 at 1000, 1000)
-        CvInvoke.Rectangle(scan, new Rectangle(1000, 1000, 400, 300), new MCvScalar(40, 40, 40), -1);
+        // Photo 2: Dark Rect (400x300 at 1000, 1000)
+        Cv2.Rectangle(scan, new Rect(1000, 1000, 400, 300), new Scalar(40, 40, 40), -1);
 
         // Simulated scanner dark bezel around the perimeter (typical of flatbed scanners like Canon LiDE 400)
         if (bezelThickness > 0)
         {
-            MCvScalar bezelColor = new(10, 10, 10);
-            CvInvoke.Rectangle(scan, new Rectangle(0, 0, width, bezelThickness), bezelColor, -1); // Top
-            CvInvoke.Rectangle(scan, new Rectangle(0, height - bezelThickness, width, bezelThickness), bezelColor, -1); // Bottom
-            CvInvoke.Rectangle(scan, new Rectangle(0, 0, bezelThickness, height), bezelColor, -1); // Left
-            CvInvoke.Rectangle(scan, new Rectangle(width - bezelThickness, 0, bezelThickness, height), bezelColor, -1); // Right
+            Scalar bezelColor = new(10, 10, 10);
+            Cv2.Rectangle(scan, new Rect(0, 0, width, bezelThickness), bezelColor, -1); // Top
+            Cv2.Rectangle(scan, new Rect(0, height - bezelThickness, width, bezelThickness), bezelColor, -1); // Bottom
+            Cv2.Rectangle(scan, new Rect(0, 0, bezelThickness, height), bezelColor, -1); // Left
+            Cv2.Rectangle(scan, new Rect(width - bezelThickness, 0, bezelThickness, height), bezelColor, -1); // Right
         }
 
-        scan.Save(path);
+        Cv2.ImWrite(path, scan);
     }
 }

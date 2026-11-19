@@ -1,10 +1,8 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Extraction;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.TestHelpers;
-using System.Drawing;
 
 namespace PhotoCropper.Core.Tests.Extraction;
 
@@ -15,9 +13,9 @@ public sealed class RepairBrushTests : IDisposable
     /// <summary>A grey photo with a long dark scratch across it (too long for automatic dust removal).</summary>
     private static Mat ScratchedPhoto(int width = 200, int height = 100, int channels = 3)
     {
-        var mat = new Mat(height, width, DepthType.Cv8U, channels);
-        mat.SetTo(channels == 4 ? new MCvScalar(128, 128, 128, 200) : new MCvScalar(128, 128, 128));
-        CvInvoke.Line(mat, new Point(20, 50), new Point(180, 50), channels == 4 ? new MCvScalar(20, 20, 20, 200) : new MCvScalar(20, 20, 20), 2);
+        var mat = new Mat(height, width, MatType.CV_8UC(channels));
+        mat.SetTo(channels == 4 ? new Scalar(128, 128, 128, 200) : new Scalar(128, 128, 128));
+        Cv2.Line(mat, new Point(20, 50), new Point(180, 50), channels == 4 ? new Scalar(20, 20, 20, 200) : new Scalar(20, 20, 20), 2);
         return mat;
     }
 
@@ -29,10 +27,10 @@ public sealed class RepairBrushTests : IDisposable
         return stroke;
     }
 
-    private static double MeanAt(Mat image, Rectangle area)
+    private static double MeanAt(Mat image, Rect area)
     {
         using var region = new Mat(image, area);
-        return CvInvoke.Mean(region).V0;
+        return Cv2.Mean(region).Val0;
     }
 
     [Fact]
@@ -40,8 +38,8 @@ public sealed class RepairBrushTests : IDisposable
     {
         using var mask = PhotoRepairService.CreateMask(new Size(200, 100), [StrokeAlongScratch()]);
 
-        MeanAt(mask, new Rectangle(40, 49, 120, 3)).ShouldBe(255, "under the stroke");
-        MeanAt(mask, new Rectangle(40, 10, 120, 20)).ShouldBe(0, "away from the stroke");
+        MeanAt(mask, new Rect(40, 49, 120, 3)).ShouldBe(255, "under the stroke");
+        MeanAt(mask, new Rect(40, 10, 120, 20)).ShouldBe(0, "away from the stroke");
     }
 
     [Fact]
@@ -51,18 +49,18 @@ public sealed class RepairBrushTests : IDisposable
 
         using var repaired = PhotoRepairService.ApplyRepairs(photo, [StrokeAlongScratch()]);
 
-        Math.Abs(MeanAt(repaired, new Rectangle(40, 49, 120, 3)) - 128).ShouldBeLessThan(6);
-        Math.Abs(MeanAt(photo, new Rectangle(40, 49, 120, 3)) - 128).ShouldBeGreaterThan(40, "the original is untouched");
+        Math.Abs(MeanAt(repaired, new Rect(40, 49, 120, 3)) - 128).ShouldBeLessThan(6);
+        Math.Abs(MeanAt(photo, new Rect(40, 49, 120, 3)) - 128).ShouldBeGreaterThan(40, "the original is untouched");
     }
 
     /// <summary>A photo with film-like (Gaussian) grain and a long scratch.</summary>
     private static Mat GrainyScratchedPhoto(out Mat clean)
     {
         // Gaussian noise centred on the photo's colours, std 14, well inside 0..255 so nothing is clipped.
-        clean = new Mat(300, 400, DepthType.Cv8U, 3);
-        CvInvoke.Randn(clean, new MCvScalar(120, 130, 140), new MCvScalar(14, 14, 14));
+        clean = new Mat(300, 400, MatType.CV_8UC3);
+        Cv2.Randn(clean, new Scalar(120, 130, 140), new Scalar(14, 14, 14));
         var damaged = clean.Clone();
-        CvInvoke.Line(damaged, new Point(40, 150), new Point(360, 150), new MCvScalar(20, 20, 20), 6);
+        Cv2.Line(damaged, new Point(40, 150), new Point(360, 150), new Scalar(20, 20, 20), 6);
         return damaged;
     }
 
@@ -81,14 +79,14 @@ public sealed class RepairBrushTests : IDisposable
         {
             using var repaired = PhotoRepairService.ApplyRepairs(damaged, [HorizontalStroke(0.5f, 0.0125f)]);
 
-            var fillMean = new MCvScalar(); var fillStd = new MCvScalar();
-            var refMean = new MCvScalar(); var refStd = new MCvScalar();
-            using (var fill = new Mat(repaired, new Rectangle(60, 147, 280, 6))) CvInvoke.MeanStdDev(fill, ref fillMean, ref fillStd);
-            using (var reference = new Mat(clean, new Rectangle(60, 100, 280, 6))) CvInvoke.MeanStdDev(reference, ref refMean, ref refStd);
+            var fillMean = new Scalar(); var fillStd = new Scalar();
+            var refMean = new Scalar(); var refStd = new Scalar();
+            using (var fill = new Mat(repaired, new Rect(60, 147, 280, 6))) Cv2.MeanStdDev(fill, out fillMean, out fillStd);
+            using (var reference = new Mat(clean, new Rect(60, 100, 280, 6))) Cv2.MeanStdDev(reference, out refMean, out refStd);
 
             // A plain blend keeps only ~15% of the texture; the grain should be close to the surroundings.
-            (fillStd.V0 / refStd.V0).ShouldBeInRange(0.7, 1.3);
-            Math.Abs(fillMean.V0 - refMean.V0).ShouldBeLessThan(5);
+            (fillStd.Val0 / refStd.Val0).ShouldBeInRange(0.7, 1.3);
+            Math.Abs(fillMean.Val0 - refMean.Val0).ShouldBeLessThan(5);
         }
     }
 
@@ -99,10 +97,10 @@ public sealed class RepairBrushTests : IDisposable
 
         using var repaired = PhotoRepairService.ApplyRepairs(photo, [StrokeAlongScratch()]);
 
-        var mean = new MCvScalar(); var std = new MCvScalar();
-        using var fill = new Mat(repaired, new Rectangle(40, 47, 120, 6));
-        CvInvoke.MeanStdDev(fill, ref mean, ref std);
-        std.V0.ShouldBeLessThan(2);
+        var mean = new Scalar(); var std = new Scalar();
+        using var fill = new Mat(repaired, new Rect(40, 47, 120, 6));
+        Cv2.MeanStdDev(fill, out mean, out std);
+        std.Val0.ShouldBeLessThan(2);
     }
 
     [Fact]
@@ -114,7 +112,7 @@ public sealed class RepairBrushTests : IDisposable
             using var first = PhotoRepairService.ApplyRepairs(damaged, [HorizontalStroke(0.5f, 0.0125f)]);
             using var second = PhotoRepairService.ApplyRepairs(damaged, [HorizontalStroke(0.5f, 0.0125f)]);
 
-            CvInvoke.Norm(first, second, NormType.L1).ShouldBe(0);
+            Cv2.Norm(first, second, NormTypes.L1).ShouldBe(0);
         }
     }
 
@@ -125,10 +123,9 @@ public sealed class RepairBrushTests : IDisposable
 
         using var repaired = PhotoRepairService.ApplyRepairs(photo, [StrokeAlongScratch()]);
 
-        repaired.NumberOfChannels.ShouldBe(4);
-        using var channels = new Emgu.CV.Util.VectorOfMat();
-        CvInvoke.Split(repaired, channels);
-        CvInvoke.Mean(channels[3]).V0.ShouldBe(200);
+        repaired.Channels().ShouldBe(4);
+        using var channels = MatChannels.Split(repaired);
+        Cv2.Mean(channels[3]).Val0.ShouldBe(200);
     }
 
     [Fact]
@@ -143,7 +140,7 @@ public sealed class RepairBrushTests : IDisposable
     {
         ProjectWorkspaceService.InitializeWorkspace(_workDir);
         string scanPath = Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), "scan_0001.png");
-        using (var scan = new Mat(400, 400, DepthType.Cv8U, 3)) { scan.SetTo(new MCvScalar(230, 230, 230)); scan.Save(scanPath); }
+        using (var scan = new Mat(400, 400, MatType.CV_8UC3)) { scan.SetTo(new Scalar(230, 230, 230)); Cv2.ImWrite(scanPath, scan); }
         var session = WorkspaceSessionState.CreateNew();
         var entry = new WorkspaceScanEntry { RelativePath = Path.GetRelativePath(_workDir, scanPath) };
         session.Scans.Add(entry);
@@ -170,7 +167,7 @@ public sealed class RepairBrushTests : IDisposable
 
         photo.IsFinalStale.ShouldBeFalse();
         using var final = PhotoCropper.Core.Export.RestoreStage.ReadImage(photo.Final!.GetFullPath(_workDir));
-        Math.Abs(MeanAt(final, new Rectangle(40, 49, 120, 3)) - 128).ShouldBeLessThan(6);
+        Math.Abs(MeanAt(final, new Rect(40, 49, 120, 3)) - 128).ShouldBeLessThan(6);
     }
 
     [Fact]
@@ -186,7 +183,7 @@ public sealed class RepairBrushTests : IDisposable
 
         photo.AreRepairsOutdated(200, 100).ShouldBeTrue();
         using var final = PhotoCropper.Core.Export.RestoreStage.ReadImage(photo.Final!.GetFullPath(_workDir));
-        Math.Abs(MeanAt(final, new Rectangle(40, 49, 120, 3)) - 128).ShouldBeGreaterThan(40, "misaligned strokes are not applied");
+        Math.Abs(MeanAt(final, new Rect(40, 49, 120, 3)) - 128).ShouldBeGreaterThan(40, "misaligned strokes are not applied");
         photo.IsFinalStale.ShouldBeFalse("it was rendered with these (unapplied) strokes");
     }
 

@@ -77,7 +77,7 @@ public sealed class ReviewAndRefineViewModelTests : IDisposable
         var vm = new ReviewViewModel(_host, _undo);
         vm.Open(selectedPhotoIndex: 0);
         var photo = _scans[0].Engine!.DetectedPhotos[0];
-        var before = photo.Size;
+        var before = photo.Size();
 
         vm.HandleKey(Key.R).ShouldBeTrue();
 
@@ -175,7 +175,7 @@ public sealed class ReviewAndRefineViewModelTests : IDisposable
     public async Task CancellingARefinement_LeavesThePhotoAlone()
     {
         var engine = _scans[0].Engine!;
-        var before = engine.DetectedPhotos[0].Size;
+        var before = engine.DetectedPhotos[0].Size();
         var vm = new RefineViewModel(_host, _undo);
         vm.Open(engine, 0, 0, () => { });
         vm.SetCrop(new System.Drawing.Rectangle(10, 10, 50, 50));
@@ -183,7 +183,7 @@ public sealed class ReviewAndRefineViewModelTests : IDisposable
         (await vm.HandleKeyAsync(Key.Escape)).ShouldBeTrue();
 
         vm.IsOpen.ShouldBeFalse();
-        engine.DetectedPhotos[0].Size.ShouldBe(before);
+        engine.DetectedPhotos[0].Size().ShouldBe(before);
         _undo.UndoCount.ShouldBe(0);
     }
 

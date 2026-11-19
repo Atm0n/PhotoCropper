@@ -1,5 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
+using OpenCvSharp;
 using PhotoCropper.Core;
 using PhotoCropper.Core.Models;
 

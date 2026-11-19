@@ -53,6 +53,17 @@ HERE="$(dirname "$(readlink -f "${0}")")"
 export PATH="${HERE}/usr/bin:${PATH}"
 export LD_LIBRARY_PATH="${HERE}/usr/bin:${LD_LIBRARY_PATH:-}"
 
+# .NET aborts at startup without ICU (libicu), which an AppImage can't declare as a dependency. Most desktops
+# have it; where it's missing, run without culture data (numbers and dates are formatted invariantly) instead.
+has_icu() {
+  ldconfig -p 2> /dev/null | grep -q 'libicuuc\.so' && return 0
+  compgen -G '/usr/lib*/libicuuc.so.*' > /dev/null || compgen -G '/usr/lib*/*/libicuuc.so.*' > /dev/null \
+    || compgen -G '/lib*/*/libicuuc.so.*' > /dev/null
+}
+if ! has_icu; then
+  export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+fi
+
 INVOKED_NAME="$(basename "${0}")"
 if [[ "$INVOKED_NAME" == "photocropper-cli" || "$INVOKED_NAME" == "PhotoCropper.Cli" ]]; then
   exec "${HERE}/usr/bin/PhotoCropper.Cli" "$@"

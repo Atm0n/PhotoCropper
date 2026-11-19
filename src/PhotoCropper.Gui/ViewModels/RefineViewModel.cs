@@ -1,8 +1,8 @@
 using Avalonia.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Emgu.CV;
-using Emgu.CV.Structure;
+using PhotoCropper.Core.Common;
+using Cv2 = OpenCvSharp.Cv2;
 using PhotoCropper.Core;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Gui.Services;
@@ -148,7 +148,7 @@ internal sealed partial class RefineViewModel(IRefineHost host, UndoRedoHistory 
         const int thickness = 8;
         var outline = CropRect;
         outline.Inflate(-thickness / 2, -thickness / 2);
-        CvInvoke.Rectangle(preview, outline, new MCvScalar(0, 0, 255), thickness);
+        Cv2.Rectangle(preview, CvInterop.ToCv(outline), new OpenCvSharp.Scalar(0, 0, 255), thickness);
         ReplacePreview(MatBitmapConverter.ToAvaloniaBitmap(preview));
     }
 

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- Writes synthetic scans for manual testing and the release smoke tests. Not shipped. -->
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net11.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+		<!-- A developer tool: its few console messages are not translated. -->
+		<NoWarn>$(NoWarn);CA1303</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\tests\PhotoCropper.TestHelpers\PhotoCropper.TestHelpers.csproj" />
+	</ItemGroup>
+
+</Project>

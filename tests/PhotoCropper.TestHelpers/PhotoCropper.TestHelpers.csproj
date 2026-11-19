@@ -7,10 +7,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Emgu.CV" />
-		<PackageReference Include="Emgu.CV.Bitmap" />
-		<PackageReference Include="Emgu.CV.runtime.windows" />
-		<PackageReference Include="Emgu.CV.runtime.ubuntu-24.04-x64" />
+		<ProjectReference Include="..\..\src\PhotoCropper.Core\PhotoCropper.Core.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -1,6 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Models;
 using PhotoCropper.TestHelpers;
 
@@ -15,9 +13,9 @@ public sealed class ScanIsolationTests : IDisposable
     {
         _tempDir = TestImageFactory.CreateTempDirectory("IsolationTests");
         _scanPath = Path.Combine(_tempDir, "scan.jpg");
-        using Mat scan = new(500, 500, DepthType.Cv8U, 3);
-        scan.SetTo(new MCvScalar(255, 255, 255));
-        scan.Save(_scanPath);
+        using Mat scan = new(500, 500, MatType.CV_8UC3);
+        scan.SetTo(new Scalar(255, 255, 255));
+        Cv2.ImWrite(_scanPath, scan);
     }
 
     [Fact]

@@ -1,46 +1,41 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
-using Emgu.CV.Util;
+using OpenCvSharp;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Models;
-using System.Drawing;
 
 namespace PhotoCropper.Core.Detection;
 
 public static class CandidateResolutionFilter
 {
-    public static double CalculatePolygonIntersectionArea(Point[] poly1, Rectangle bounds1, Point[] poly2, Rectangle bounds2)
+    public static double CalculatePolygonIntersectionArea(Point[] poly1, Rect bounds1, Point[] poly2, Rect bounds2)
     {
         ArgumentNullException.ThrowIfNull(poly1);
         ArgumentNullException.ThrowIfNull(poly2);
 
-        Rectangle intersectBox = Rectangle.Intersect(bounds1, bounds2);
-        if (intersectBox.IsEmpty || intersectBox.Width <= 0 || intersectBox.Height <= 0)
+        Rect intersectBox = Rect.Intersect(bounds1, bounds2);
+        if (intersectBox.Width <= 0 || intersectBox.Height <= 0)
         {
             return 0;
         }
 
-        using Mat mask1 = new(intersectBox.Size, DepthType.Cv8U, 1);
-        using Mat mask2 = new(intersectBox.Size, DepthType.Cv8U, 1);
+        using Mat mask1 = new(intersectBox.Size, MatType.CV_8UC1);
+        using Mat mask2 = new(intersectBox.Size, MatType.CV_8UC1);
         using Mat maskOverlap = new();
-        mask1.SetTo(new MCvScalar(0));
-        mask2.SetTo(new MCvScalar(0));
+        mask1.SetTo(new Scalar(0));
+        mask2.SetTo(new Scalar(0));
 
         Point[] shifted1 = [.. poly1.Select(p => new Point(p.X - intersectBox.X, p.Y - intersectBox.Y))];
         Point[] shifted2 = [.. poly2.Select(p => new Point(p.X - intersectBox.X, p.Y - intersectBox.Y))];
 
-        using (VectorOfPoint vp1 = new(shifted1))
-        using (VectorOfPoint vp2 = new(shifted2))
-        using (VectorOfVectorOfPoint vvp1 = new(vp1))
-        using (VectorOfVectorOfPoint vvp2 = new(vp2))
-        {
-            CvInvoke.FillPoly(mask1, vvp1, new MCvScalar(255));
-            CvInvoke.FillPoly(mask2, vvp2, new MCvScalar(255));
-        }
+        Cv2.FillPoly(mask1, [shifted1], new Scalar(255));
+        Cv2.FillPoly(mask2, [shifted2], new Scalar(255));
 
-        CvInvoke.BitwiseAnd(mask1, mask2, maskOverlap);
-        return CvInvoke.CountNonZero(maskOverlap);
+        Cv2.BitwiseAnd(mask1, mask2, maskOverlap);
+        return Cv2.CountNonZero(maskOverlap);
     }
+
+    /// <summary>The overlap of two candidates' shapes, in pixels.</summary>
+    private static double Overlap(CropCandidate a, CropCandidate b) =>
+        CalculatePolygonIntersectionArea(CvInterop.ToCv(a.ShapePoints), CvInterop.ToCv(a.Rect), CvInterop.ToCv(b.ShapePoints), CvInterop.ToCv(b.Rect));
 
     public static IReadOnlyList<CropCandidate> FilterCandidates(IReadOnlyList<CropCandidate> candidates)
     {
@@ -73,7 +68,7 @@ public static class CandidateResolutionFilter
                 if (child.Area >= parent.Area * 0.85 || child.Area < parent.Area * 0.02) continue;
                 if (child.Rectangularity < 0.60) continue;
 
-                double overlap = CalculatePolygonIntersectionArea(child.ShapePoints, child.Rect, parent.ShapePoints, parent.Rect);
+                double overlap = Overlap(child, parent);
                 if (overlap / child.Area >= 0.70)
                 {
                     subCandidates.Add(j);
@@ -103,7 +98,7 @@ public static class CandidateResolutionFilter
             for (int b = a + 1; b < subCandidates.Count; b++)
             {
                 var candB = candidates[subCandidates[b]];
-                double subOverlap = CalculatePolygonIntersectionArea(candA.ShapePoints, candA.Rect, candB.ShapePoints, candB.Rect);
+                double subOverlap = Overlap(candA, candB);
                 double minSubArea = Math.Min(candA.Area, candB.Area);
 
                 if (minSubArea > 0 && subOverlap / minSubArea < 0.30)
@@ -116,44 +111,31 @@ public static class CandidateResolutionFilter
     }
 
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope")]
     private static List<CropCandidate> FilterOverlappingDuplicates(List<CropCandidate> validCandidates)
     {
         var acceptedCandidates = new List<CropCandidate>();
-        var acceptedPolys = new List<VectorOfPoint>();
+        var acceptedPolys = new List<Point[]>();
 
-        try
+        foreach (var cand in validCandidates)
         {
-            foreach (var cand in validCandidates)
-            {
-                if (IsCenterInsideAccepted(cand, acceptedPolys)) continue;
+            if (IsCenterInsideAccepted(cand, acceptedPolys)) continue;
 
-                using VectorOfPoint shape = new(cand.ShapePoints);
+            Point[] shape = CvInterop.ToCv(cand.ShapePoints);
+            if (HasSignificantOverlapWithAccepted(cand, shape, acceptedPolys)) continue;
 
-                if (HasSignificantOverlapWithAccepted(cand, shape, acceptedPolys)) continue;
-
-                acceptedCandidates.Add(cand);
-
-                acceptedPolys.Add(new VectorOfPoint(cand.ShapePoints));
-            }
-        }
-        finally
-        {
-            foreach (var poly in acceptedPolys)
-            {
-                poly.Dispose();
-            }
+            acceptedCandidates.Add(cand);
+            acceptedPolys.Add(shape);
         }
 
         return acceptedCandidates;
     }
 
-    private static bool IsCenterInsideAccepted(CropCandidate cand, List<VectorOfPoint> acceptedPolys)
+    private static bool IsCenterInsideAccepted(CropCandidate cand, List<Point[]> acceptedPolys)
     {
-        Point center = new(cand.Rect.X + cand.Rect.Width / 2, cand.Rect.Y + cand.Rect.Height / 2);
+        Point2f center = new(cand.Rect.X + cand.Rect.Width / 2, cand.Rect.Y + cand.Rect.Height / 2);
         foreach (var accepted in acceptedPolys)
         {
-            if (CvInvoke.PointPolygonTest(accepted, center, false) >= 0)
+            if (Cv2.PointPolygonTest(accepted, center, false) >= 0)
             {
                 return true;
             }
@@ -161,12 +143,12 @@ public static class CandidateResolutionFilter
         return false;
     }
 
-    private static bool HasSignificantOverlapWithAccepted(CropCandidate cand, VectorOfPoint shape, List<VectorOfPoint> acceptedPolys)
+    private static bool HasSignificantOverlapWithAccepted(CropCandidate cand, Point[] shape, List<Point[]> acceptedPolys)
     {
         foreach (var accepted in acceptedPolys)
         {
-            double overlap = CalculatePolygonIntersectionArea(cand.ShapePoints, cand.Rect, accepted.ToArray(), CvInvoke.BoundingRectangle(accepted));
-            double minPolyArea = Math.Min(CvInvoke.ContourArea(shape), CvInvoke.ContourArea(accepted));
+            double overlap = CalculatePolygonIntersectionArea(shape, CvInterop.ToCv(cand.Rect), accepted, Cv2.BoundingRect(accepted));
+            double minPolyArea = Math.Min(Cv2.ContourArea(shape), Cv2.ContourArea(accepted));
             if (minPolyArea > 0 && overlap / minPolyArea > 0.35)
             {
                 return true;

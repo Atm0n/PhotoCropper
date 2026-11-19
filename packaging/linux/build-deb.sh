@@ -63,7 +63,7 @@ Priority: optional
 Architecture: amd64
 Installed-Size: ${INSTALLED_SIZE}
 Maintainer: Atm0n <https://github.com/Atm0n/PhotoCropper>
-Depends: libgomp1, libgl1, libglib2.0-0 | libglib2.0-0t64, libx11-6
+Depends: libgl1, libglib2.0-0 | libglib2.0-0t64, libx11-6, libfontconfig1, libicu76 | libicu74 | libicu72 | libicu71 | libicu70 | libicu67 | libicu66
 Recommends: libsane1, sane-utils
 Homepage: https://github.com/Atm0n/PhotoCropper
 Description: Batch photo cropper and scanner image extractor

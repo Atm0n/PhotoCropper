@@ -1,44 +1,41 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
-using System.Drawing;
+using OpenCvSharp;
 
 namespace PhotoCropper.Core.Extraction;
 
 public static class EdgeRefinementService
 {
-    public static Rectangle GetRefinedCropRect(Mat photo)
+    public static Rect GetRefinedCropRect(Mat photo)
     {
         ArgumentNullException.ThrowIfNull(photo);
 
-        if (photo.IsEmpty) return Rectangle.Empty;
+        if (photo.Empty()) return default;
 
         using Mat gray = new();
-        if (photo.NumberOfChannels == 1)
+        if (photo.Channels() == 1)
         {
             photo.CopyTo(gray);
         }
-        else if (photo.NumberOfChannels == 4)
+        else if (photo.Channels() == 4)
         {
-            CvInvoke.CvtColor(photo, gray, ColorConversion.Bgra2Gray);
+            Cv2.CvtColor(photo, gray, ColorConversionCodes.BGRA2GRAY);
         }
         else
         {
-            CvInvoke.CvtColor(photo, gray, ColorConversion.Bgr2Gray);
+            Cv2.CvtColor(photo, gray, ColorConversionCodes.BGR2GRAY);
         }
 
         int s = 5;
-        if (gray.Width <= s * 2 || gray.Height <= s * 2) return new Rectangle(0, 0, photo.Width, photo.Height);
+        if (gray.Width <= s * 2 || gray.Height <= s * 2) return new Rect(0, 0, photo.Width, photo.Height);
 
         double bgGray = EstimateAverageBackgroundShade(gray);
         using Mat mask = BuildRefinementMask(gray, bgGray);
 
-        Rectangle contentBox = CvInvoke.BoundingRectangle(mask);
+        Rect contentBox = Cv2.BoundingRect(mask);
 
         // Safety: Abort if content box is too small (<20% of photo area)
         if (contentBox.Width < photo.Width * 0.2 || contentBox.Height < photo.Height * 0.2)
         {
-            return new Rectangle(0, 0, photo.Width, photo.Height);
+            return new Rect(0, 0, photo.Width, photo.Height);
         }
 
         // Shave 2 pixels to guarantee cutting inside the gradient edge of the margin
@@ -49,17 +46,17 @@ public static class EdgeRefinementService
         int w = Math.Max(10, contentBox.Width);
         int h = Math.Max(10, contentBox.Height);
 
-        Rectangle finalRect = new(x, y, w, h);
-        finalRect.Intersect(new Rectangle(Point.Empty, photo.Size));
+        Rect finalRect = new(x, y, w, h);
+        finalRect = finalRect.Intersect(new Rect(0, 0, photo.Width, photo.Height));
 
         return finalRect;
     }
 
-    public static Mat ApplyCrop(Mat photo, Rectangle rect)
+    public static Mat ApplyCrop(Mat photo, Rect rect)
     {
         ArgumentNullException.ThrowIfNull(photo);
 
-        rect.Intersect(new Rectangle(Point.Empty, photo.Size));
+        rect = rect.Intersect(new Rect(0, 0, photo.Width, photo.Height));
         if (rect.Width <= 10 || rect.Height <= 10) return photo.Clone();
 
         using Mat subMat = new(photo, rect);
@@ -71,15 +68,15 @@ public static class EdgeRefinementService
         int s = 5;
         if (grayImage.Width <= s * 2 || grayImage.Height <= s * 2) return 255.0;
 
-        using Mat mTl = new(grayImage, new Rectangle(0, 0, s, s));
-        using Mat mTr = new(grayImage, new Rectangle(grayImage.Width - s, 0, s, s));
-        using Mat mBl = new(grayImage, new Rectangle(0, grayImage.Height - s, s, s));
-        using Mat mBr = new(grayImage, new Rectangle(grayImage.Width - s, grayImage.Height - s, s, s));
+        using Mat mTl = new(grayImage, new Rect(0, 0, s, s));
+        using Mat mTr = new(grayImage, new Rect(grayImage.Width - s, 0, s, s));
+        using Mat mBl = new(grayImage, new Rect(0, grayImage.Height - s, s, s));
+        using Mat mBr = new(grayImage, new Rect(grayImage.Width - s, grayImage.Height - s, s, s));
 
-        var tl = CvInvoke.Mean(mTl).V0;
-        var tr = CvInvoke.Mean(mTr).V0;
-        var bl = CvInvoke.Mean(mBl).V0;
-        var br = CvInvoke.Mean(mBr).V0;
+        var tl = Cv2.Mean(mTl).Val0;
+        var tr = Cv2.Mean(mTr).Val0;
+        var bl = Cv2.Mean(mBl).Val0;
+        var br = Cv2.Mean(mBr).Val0;
 
         return (tl + tr + bl + br) / 4.0;
     }
@@ -91,20 +88,18 @@ public static class EdgeRefinementService
         double lower = Math.Max(0, bgGray - 20);
         double upper = Math.Min(255, bgGray + 20);
 
-        using ScalarArray lowerArray = new(lower);
-        using ScalarArray upperArray = new(upper);
-        CvInvoke.InRange(grayImage, lowerArray, upperArray, mask);
+        Cv2.InRange(grayImage, new Scalar(lower), new Scalar(upper), mask);
 
         // Invert: Photo is white (255), background margin is black (0)
-        CvInvoke.BitwiseNot(mask, mask);
+        Cv2.BitwiseNot(mask, mask);
 
         // Remove scanner noise/dust from the black margin
-        using Mat openKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(7, 7), new Point(-1, -1));
-        CvInvoke.MorphologyEx(mask, mask, MorphOp.Open, openKernel, new Point(-1, -1), 1, BorderType.Default, new MCvScalar());
+        using Mat openKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(7, 7), new Point(-1, -1));
+        Cv2.MorphologyEx(mask, mask, MorphTypes.Open, openKernel, new Point(-1, -1), 1, BorderTypes.Default, new Scalar());
 
         // Solidify the photo area
-        using Mat closeKernel = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(21, 21), new Point(-1, -1));
-        CvInvoke.MorphologyEx(mask, mask, MorphOp.Close, closeKernel, new Point(-1, -1), 3, BorderType.Default, new MCvScalar());
+        using Mat closeKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(21, 21), new Point(-1, -1));
+        Cv2.MorphologyEx(mask, mask, MorphTypes.Close, closeKernel, new Point(-1, -1), 3, BorderTypes.Default, new Scalar());
 
         return mask;
     }

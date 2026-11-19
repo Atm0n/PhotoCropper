@@ -1,8 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Util;
 using PhotoCropper.Core;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;

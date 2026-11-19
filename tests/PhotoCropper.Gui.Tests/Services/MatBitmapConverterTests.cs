@@ -1,6 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui.Tests.Services;
@@ -21,8 +19,8 @@ public sealed class MatBitmapConverterTests
     [Fact]
     public void ToAvaloniaBitmap_3ChannelBgrMat_ShouldConvertToBitmap()
     {
-        using var mat = new Mat(100, 200, DepthType.Cv8U, 3);
-        mat.SetTo(new MCvScalar(128, 64, 32));
+        using var mat = new Mat(100, 200, MatType.CV_8UC3);
+        mat.SetTo(new Scalar(128, 64, 32));
 
         var bitmap = MatBitmapConverter.ToAvaloniaBitmap(mat);
 
@@ -34,8 +32,8 @@ public sealed class MatBitmapConverterTests
     [Fact]
     public void ToAvaloniaBitmap_4ChannelBgraMat_ShouldConvertToBitmap()
     {
-        using var mat = new Mat(50, 80, DepthType.Cv8U, 4);
-        mat.SetTo(new MCvScalar(128, 64, 32, 255));
+        using var mat = new Mat(50, 80, MatType.CV_8UC4);
+        mat.SetTo(new Scalar(128, 64, 32, 255));
 
         var bitmap = MatBitmapConverter.ToAvaloniaBitmap(mat);
 
@@ -47,8 +45,8 @@ public sealed class MatBitmapConverterTests
     [Fact]
     public void ToAvaloniaBitmap_1ChannelGrayMat_ShouldConvertToBitmap()
     {
-        using var mat = new Mat(50, 80, DepthType.Cv8U, 1);
-        mat.SetTo(new MCvScalar(128));
+        using var mat = new Mat(50, 80, MatType.CV_8UC1);
+        mat.SetTo(new Scalar(128));
 
         var bitmap = MatBitmapConverter.ToAvaloniaBitmap(mat);
 

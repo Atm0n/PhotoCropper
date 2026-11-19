@@ -1,5 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
+using OpenCvSharp;
 using NAPS2.Images;
 using NAPS2.Images.ImageSharp;
 using NAPS2.Scan;
@@ -15,6 +14,18 @@ public sealed class Naps2ScannerService : IScannerService
     private readonly ScanController _controller;
     private readonly SemaphoreSlim _deviceScanLock = new(1, 1);
     private bool _disposed;
+
+    /// <summary>
+    /// Whether SANE (libsane.so.1, the library NAPS2 loads on Linux) is installed. Without it NAPS2's SANE
+    /// object fails half-constructed, and its finalizer then throws on the finalizer thread, which ends the
+    /// process however the call is guarded; so SANE is only asked for devices when the library loads.
+    /// </summary>
+    private static readonly Lazy<bool> IsSaneInstalled = new(() =>
+    {
+        if (!System.Runtime.InteropServices.NativeLibrary.TryLoad("libsane.so.1", out nint handle)) return false;
+        System.Runtime.InteropServices.NativeLibrary.Free(handle);
+        return true;
+    });
 
     public Naps2ScannerService()
     {
@@ -98,8 +109,7 @@ public sealed class Naps2ScannerService : IScannerService
                     {
                         image.Save(ms, ImageFileFormat.Png);
                         var bytes = ms.ToArray();
-                        using var raw = new Mat();
-                        CvInvoke.Imdecode(bytes, ImreadModes.AnyColor, raw);
+                        using var raw = Cv2.ImDecode(bytes, ImreadModes.AnyColor);
                         var bgrMat = PhotoCropperEngine.NormalizeToBgr(raw);
                         mats.Add(bgrMat);
                     }
@@ -205,9 +215,9 @@ public sealed class Naps2ScannerService : IScannerService
                 // WIA service not available, timed out, or threw error
             }
         }
-        else if (OperatingSystem.IsLinux())
+        else if (OperatingSystem.IsLinux() && IsSaneInstalled.Value)
         {
-            // SANE on Linux
+            // SANE on Linux (only when installed: see IsSaneInstalled)
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -222,7 +232,7 @@ public sealed class Naps2ScannerService : IScannerService
             {
             }
         }
-        else
+        else if (!OperatingSystem.IsLinux())
         {
             try
             {

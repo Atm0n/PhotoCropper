@@ -1,4 +1,4 @@
-using Emgu.CV;
+using OpenCvSharp;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -166,7 +166,7 @@ public static partial class ProjectWorkspaceService
         string fileName = explicitFileName ?? GetNextScanFileName(workDirectory, ".png");
         string destinationPath = Path.Combine(GetRawScansDirectory(workDirectory), fileName);
 
-        CvInvoke.Imwrite(destinationPath, scanMat);
+        Cv2.ImWrite(destinationPath, scanMat);
         return destinationPath;
     }
 

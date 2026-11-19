@@ -1,8 +1,5 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Extraction;
-using System.Drawing;
 
 namespace PhotoCropper.Core.Tests.Extraction;
 
@@ -12,11 +9,11 @@ public sealed class EdgeRefinementServiceTests
     public void GetRefinedCropRect_ShouldTrimOuterWhiteMargins()
     {
         // 1000x1000 photo with 80px white margin around a dark center
-        using Mat photo = new(1000, 1000, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(255, 255, 255)); // White border
-        CvInvoke.Rectangle(photo, new Rectangle(80, 80, 840, 840), new MCvScalar(30, 30, 30), -1);
+        using Mat photo = new(1000, 1000, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(255, 255, 255)); // White border
+        Cv2.Rectangle(photo, new Rect(80, 80, 840, 840), new Scalar(30, 30, 30), -1);
 
-        Rectangle refined = EdgeRefinementService.GetRefinedCropRect(photo);
+        Rect refined = EdgeRefinementService.GetRefinedCropRect(photo);
 
         refined.X.ShouldBeGreaterThanOrEqualTo(70);
         refined.Y.ShouldBeGreaterThanOrEqualTo(70);

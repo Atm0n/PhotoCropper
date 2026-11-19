@@ -64,7 +64,7 @@ public sealed class PipelineStageTests : IDisposable
         foreach (string name in new[] { "a.png", "b.png" })
         {
             using var photo = TestImageFactory.CreateFadedPhoto(100, 80);
-            photo.Save(Path.Combine(input, name));
+            OpenCvSharp.Cv2.ImWrite(Path.Combine(input, name), photo);
         }
         var options = new CliOptions { Stage = PipelineStage.Restore, NonInteractive = true, Threads = 1 };
         string[] files = [.. Directory.GetFiles(input)];

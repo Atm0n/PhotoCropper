@@ -1,9 +1,5 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
-using Emgu.CV.Util;
+using OpenCvSharp;
 using PhotoCropper.TestHelpers;
-using System.Drawing;
 
 namespace PhotoCropper.Core.Tests.Engine;
 
@@ -42,7 +38,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     public void Constructor_ShouldLoadImage()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
-        cropper.Original.IsEmpty.ShouldBeFalse();
+        cropper.Original.Empty().ShouldBeFalse();
         cropper.Original.Width.ShouldBe(2000);
     }
 
@@ -120,7 +116,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     public void AddManualCrop_VariousCases(int x, int y, int w, int h, bool expectedAdded)
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
-        cropper.AddManualCrop(new Rectangle(x, y, w, h));
+        cropper.AddManualCrop(new System.Drawing.Rectangle(x, y, w, h));
 
         if (expectedAdded)
         {
@@ -137,12 +133,12 @@ public sealed class PhotoCropperEngineTests : IDisposable
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
 
-        using Mat messy = new(400, 400, DepthType.Cv8U, 3);
-        messy.SetTo(new MCvScalar(255, 255, 255));
-        CvInvoke.Rectangle(messy, new Rectangle(100, 100, 200, 200), new MCvScalar(0, 0, 0), -1);
+        using Mat messy = new(400, 400, MatType.CV_8UC3);
+        messy.SetTo(new Scalar(255, 255, 255));
+        Cv2.Rectangle(messy, new Rect(100, 100, 200, 200), new Scalar(0, 0, 0), -1);
 
         cropper.DetectedPhotos.Add(messy.Clone());
-        Rectangle refined = cropper.GetRefinedCropRect(0);
+        System.Drawing.Rectangle refined = cropper.GetRefinedCropRect(0);
 
         refined.Width.ShouldBeInRange(190, 205);
         refined.Height.ShouldBeInRange(190, 205);
@@ -279,7 +275,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
             MaxAreaFactor = 0.80,
             CannyLowThreshold = 30,
             CannyHighThreshold = 70,
-            CustomBackgroundColorHsv = new MCvScalar(10, 20, 30),
+            CustomBackgroundColorHsv = new Models.ColorScalar(10, 20, 30),
             AutoOrientPhotos = false,
             RestoreVintageColors = false,
             RemoveDustAndScratches = false
@@ -292,7 +288,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
         cropper.MaxAreaFactor.ShouldBe(0.80);
         cropper.CannyLowThreshold.ShouldBe(30);
         cropper.CannyHighThreshold.ShouldBe(70);
-        cropper.CustomBackgroundColorHsv.ShouldBe(new MCvScalar(10, 20, 30));
+        cropper.CustomBackgroundColorHsv.ShouldBe(new Models.ColorScalar(10, 20, 30));
         cropper.AutoOrientPhotos.ShouldBeFalse();
         cropper.RestoreVintageColors.ShouldBeFalse();
         cropper.RemoveDustAndScratches.ShouldBeFalse();
@@ -322,16 +318,16 @@ public sealed class PhotoCropperEngineTests : IDisposable
     public void GetRefinedCropRect_OutOfBounds_ShouldReturnEmpty()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
-        cropper.GetRefinedCropRect(-1).ShouldBe(Rectangle.Empty);
-        cropper.GetRefinedCropRect(100).ShouldBe(Rectangle.Empty);
+        cropper.GetRefinedCropRect(-1).ShouldBe(System.Drawing.Rectangle.Empty);
+        cropper.GetRefinedCropRect(100).ShouldBe(System.Drawing.Rectangle.Empty);
     }
 
     [Fact]
     public void ApplyCropToPhoto_OutOfBounds_ShouldNotThrow()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
-        Should.NotThrow(() => cropper.ApplyCropToPhoto(-1, new Rectangle(0, 0, 10, 10)));
-        Should.NotThrow(() => cropper.ApplyCropToPhoto(100, new Rectangle(0, 0, 10, 10)));
+        Should.NotThrow(() => cropper.ApplyCropToPhoto(-1, new System.Drawing.Rectangle(0, 0, 10, 10)));
+        Should.NotThrow(() => cropper.ApplyCropToPhoto(100, new System.Drawing.Rectangle(0, 0, 10, 10)));
 
     }
 
@@ -365,16 +361,16 @@ public sealed class PhotoCropperEngineTests : IDisposable
     public void DetectPhotos_SlightlyTiltedPhoto_ShouldDetectInclinationAndStraighten()
     {
         string tiltedScanPath = Path.Combine(_tempDir, "tilted_scan.jpg");
-        using (Mat scan = new(2000, 2000, DepthType.Cv8U, 3))
+        using (Mat scan = new(2000, 2000, MatType.CV_8UC3))
         {
-            scan.SetTo(new MCvScalar(255, 255, 255));
+            scan.SetTo(new Scalar(255, 255, 255));
             // Photo tilted by ~3 degrees: center at (600, 600), size (400, 500), angle = 3.0
-            RotatedRect targetRect = new(new PointF(600, 600), new SizeF(400, 500), 3.0f);
-            PointF[] vertices = targetRect.GetVertices();
-            Point[] polyPoints = [.. vertices.Select(v => Point.Round(v))];
-            using var vp = new VectorOfPoint(polyPoints);
-            CvInvoke.FillConvexPoly(scan, vp, new MCvScalar(20, 20, 20));
-            scan.Save(tiltedScanPath);
+            RotatedRect targetRect = new(new Point2f(600, 600), new Size2f(400, 500), 3.0f);
+            Point2f[] vertices = targetRect.Points();
+            Point[] polyPoints = [.. vertices.Select(v => new Point((int)Math.Round(v.X), (int)Math.Round(v.Y)))];
+            Point[] vp = polyPoints;
+            Cv2.FillConvexPoly(scan, vp, new Scalar(20, 20, 20));
+            Cv2.ImWrite(tiltedScanPath, scan);
         }
 
         using var cropper = new PhotoCropperEngine(tiltedScanPath);
@@ -391,37 +387,37 @@ public sealed class PhotoCropperEngineTests : IDisposable
     [Fact]
     public void NormalizeToBgr_DifferentChannels_ShouldAlwaysReturn3Channels()
     {
-        using var grayMat = new Mat(50, 50, DepthType.Cv8U, 1);
-        grayMat.SetTo(new MCvScalar(100));
+        using var grayMat = new Mat(50, 50, MatType.CV_8UC1);
+        grayMat.SetTo(new Scalar(100));
         using var bgrFromGray = PhotoCropperEngine.NormalizeToBgr(grayMat);
-        bgrFromGray.NumberOfChannels.ShouldBe(3);
+        bgrFromGray.Channels().ShouldBe(3);
         bgrFromGray.Width.ShouldBe(50);
         bgrFromGray.Height.ShouldBe(50);
 
-        using var bgrMat = new Mat(50, 50, DepthType.Cv8U, 3);
-        bgrMat.SetTo(new MCvScalar(10, 20, 30));
+        using var bgrMat = new Mat(50, 50, MatType.CV_8UC3);
+        bgrMat.SetTo(new Scalar(10, 20, 30));
         using var bgrFromBgr = PhotoCropperEngine.NormalizeToBgr(bgrMat);
-        bgrFromBgr.NumberOfChannels.ShouldBe(3);
+        bgrFromBgr.Channels().ShouldBe(3);
 
-        using var bgraMat = new Mat(50, 50, DepthType.Cv8U, 4);
-        bgraMat.SetTo(new MCvScalar(10, 20, 30, 255));
+        using var bgraMat = new Mat(50, 50, MatType.CV_8UC4);
+        bgraMat.SetTo(new Scalar(10, 20, 30, 255));
         using var bgrFromBgra = PhotoCropperEngine.NormalizeToBgr(bgraMat);
-        bgrFromBgra.NumberOfChannels.ShouldBe(3);
+        bgrFromBgra.Channels().ShouldBe(3);
     }
 
     [Fact]
     public void DetectPhotos_GrayscaleScan_ShouldDetectPhotosWithoutThrowing()
     {
         string grayScanPath = Path.Combine(_tempDir, "gray_scan.png");
-        using (Mat scan = new(1000, 1000, DepthType.Cv8U, 1))
+        using (Mat scan = new(1000, 1000, MatType.CV_8UC1))
         {
-            scan.SetTo(new MCvScalar(255));
-            CvInvoke.Rectangle(scan, new Rectangle(100, 100, 300, 300), new MCvScalar(0), -1);
-            scan.Save(grayScanPath);
+            scan.SetTo(new Scalar(255));
+            Cv2.Rectangle(scan, new Rect(100, 100, 300, 300), new Scalar(0), -1);
+            Cv2.ImWrite(grayScanPath, scan);
         }
 
         using var cropper = new PhotoCropperEngine(grayScanPath);
-        cropper.Original.NumberOfChannels.ShouldBe(3);
+        cropper.Original.Channels().ShouldBe(3);
         cropper.DetectPhotos();
         cropper.DetectedPhotos.Count.ShouldBe(1);
     }
@@ -437,7 +433,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
 
         // Modify the candidate's RotatedRect directly to simulate a user resize
         var cand = cropper.AcceptedCandidates[candIndex];
-        var newRect = new RotatedRect(cand.Rotated.Center, new SizeF(50, 50), cand.Rotated.Angle);
+        var newRect = new Models.RotatedBox(cand.Rotated.Center, new System.Drawing.SizeF(50, 50), cand.Rotated.Angle);
         var list = cropper.AcceptedCandidates.ToList();
         list[candIndex] = cand with { Rotated = newRect };
         cropper.UpdateCandidates(list);
