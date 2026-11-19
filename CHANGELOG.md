@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Linux packages (CLI and GUI zips, `.deb`, AppImage) didn't include OpenCV in 3.0.0**, so they couldn't open a scan. The OpenCvSharp library is now part of every Linux package.
 - The Windows uninstaller now removes the downloaded AI models and crash reports from `%LocalAppData%\PhotoCropper`, and asks whether to remove your settings too (default: keep them). Projects and photos are never touched.
 - The README listed the YuNet face model as Apache 2.0; it is MIT licensed.
+- **CLI found no photos on pages holding several prints**: its smallest-photo size defaulted to 25% of the scan (and 10–25% in the wizard's presets), so any photo smaller than a quarter of the page was ignored. It now defaults to 1%, as in the app.
 
 ## [3.0.0] - 2026-11-18
 

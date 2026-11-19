@@ -286,7 +286,7 @@ internal static class CommandLineParser
 
             Finding photos:
               -s, --sensitivity <0-100>  Detection sensitivity (default: 50)
-              --min-size <percent>    Smallest photo, as % of the scan (default: 25)
+              --min-size <percent>    Smallest photo, as % of the scan (default: 1, as in the app)
               --max-size <percent>    Largest photo, as % of the scan (default: 90)
               --min-photos <n>        Flag scans with fewer photos (default: 1)
               --max-photos <n>        Flag scans with more photos (default: no limit)

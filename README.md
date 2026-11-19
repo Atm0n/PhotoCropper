@@ -262,7 +262,7 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `--photographer <name>` | Photographer written to EXIF Artist and PNG Author | — |
 | `-s, --sensitivity <0-100>` | Detection sensitivity percentage (maps inversely to tolerance) | `50%` |
 | `-j, --threads <num>` | Number of concurrent CPU worker threads for batch processing | *CPU Cores / 2* (1-4) |
-| `--min-size <percent>` | Minimum photo size as % of total scan area | `25%` (CLI) / `1%` (Core) |
+| `--min-size <percent>` | Minimum photo size as % of total scan area | `1%` (as in the app) |
 | `--max-size <percent>` | Maximum photo size as % of total scan area | `90%` |
 | `--min-photos <num>` | Flag scans with fewer photos | `1` |
 | `--max-photos <num>` | Flag scans with more photos | *Unlimited* |
