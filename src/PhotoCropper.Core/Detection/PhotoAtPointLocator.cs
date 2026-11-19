@@ -31,6 +31,10 @@ public static class PhotoAtPointLocator
     internal static bool PaintOthers = Env("PC_PAINT", 1) > 0;
     internal static bool UseDetector = Env("PC_DETECTOR", 1) > 0;
     internal static bool UseOutlines = Env("PC_OUTLINES", 1) > 0;
+    internal static int GrabCutMode = (int)Env("PC_GRABCUT", 0);      // 0 off, 1 refine the chosen shape
+    internal static double GrabCutGrow = Env("PC_GC_GROW", 0.2);     // "probably photo" = chosen box grown by this
+    internal static double GrabCutRing = Env("PC_GC_RING", 0.5);     // background beyond the box grown by this
+    internal static double GrabCutSide = Env("PC_GC_SIDE", 700);     // GrabCut runs at this size (longer side)
 
     private static double Env(string name, double fallback) =>
         double.TryParse(Environment.GetEnvironmentVariable(name), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v) ? v : fallback;
@@ -75,7 +79,67 @@ public static class PhotoAtPointLocator
             search.Consider(foreground);
         }
 
-        return search.Choose() is { } best ? Scale(best, 1.0 / image.Scale) : null;
+        var chosen = search.Choose();
+        if (chosen is { } shape && GrabCutMode == 1)
+        {
+            chosen = GrabCutAround(image, search.Click, shape, search.Others) ?? shape;
+        }
+        return chosen is { } best ? Scale(best, 1.0 / image.Scale) : null;
+    }
+
+    /// <summary>
+    /// Redraws the photo's outline with GrabCut, which learns the photo's and the surroundings' colours from the
+    /// scan itself: the chosen box grown a little is "probably photo", the scan's other boxes and the area well
+    /// outside are background, and the click is photo. Working-size scan coordinates in and out.
+    /// </summary>
+    private static RotatedRect? GrabCutAround(WorkingImage image, Point2f click, RotatedRect hint, Point2f[][] others)
+    {
+        double g = Math.Min(1.0, GrabCutSide / Math.Max(image.Bgr.Width, image.Bgr.Height));
+        using Mat small = new();
+        Cv2.Resize(image.Bgr, small, new Size(Math.Max(1, (int)Math.Round(image.Bgr.Width * g)), Math.Max(1, (int)Math.Round(image.Bgr.Height * g))), 0, 0, InterpolationFlags.Area);
+        // Scan (working-size) coordinates to the small padded image and back.
+        Point2f ToSmall(Point2f p) => new((float)((p.X + image.Pad) * g), (float)((p.Y + image.Pad) * g));
+        Point[] Poly(RotatedRect r, double grow) =>
+            [.. Grow(r, grow).Points().Select(p => ToSmall(p)).Select(p => new Point((int)Math.Round(p.X), (int)Math.Round(p.Y)))];
+
+        using Mat mask = new(small.Size(), MatType.CV_8UC1, Scalar.All((int)GrabCutClasses.BGD));
+        Cv2.FillConvexPoly(mask, Poly(hint, GrabCutGrow + GrabCutRing), Scalar.All(2)); // probably background
+        Cv2.FillConvexPoly(mask, Poly(hint, GrabCutGrow), Scalar.All(3));               // probably photo
+        foreach (var other in others)
+        {
+            Cv2.FillConvexPoly(mask, [.. other.Select(p => ToSmall(p)).Select(p => new Point((int)Math.Round(p.X), (int)Math.Round(p.Y)))], Scalar.All((int)GrabCutClasses.BGD));
+        }
+        var c = ToSmall(click);
+        int seed = Math.Max(2, (int)(Math.Min(small.Width, small.Height) * 0.01));
+        Cv2.Circle(mask, new Point((int)c.X, (int)c.Y), seed, Scalar.All((int)GrabCutClasses.FGD), -1);
+
+        using Mat bgdModel = new();
+        using Mat fgdModel = new();
+        Cv2.GrabCut(small, mask, default, bgdModel, fgdModel, 4, GrabCutModes.InitWithMask);
+
+        // Photo = definitely or probably foreground; keep the part containing the click.
+        using Mat foreground = new();
+        Cv2.InRange(mask, Scalar.All(1), Scalar.All(1), foreground);
+        using Mat probable = new();
+        Cv2.InRange(mask, Scalar.All(3), Scalar.All(3), probable);
+        Cv2.BitwiseOr(foreground, probable, foreground);
+        Cv2.FindContours(foreground, out Point[][] contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        foreach (var contour in contours)
+        {
+            Point[] hull = Cv2.ConvexHull(contour);
+            if (Cv2.PointPolygonTest(hull, c, false) < 0) continue;
+            RotatedRect r = Cv2.MinAreaRect(hull);
+            // Back to working-size scan coordinates.
+            return new RotatedRect(new Point2f((float)(r.Center.X / g - image.Pad), (float)(r.Center.Y / g - image.Pad)),
+                new Size2f((float)(r.Size.Width / g), (float)(r.Size.Height / g)), r.Angle);
+        }
+        return null;
+    }
+
+    private static RotatedRect Grow(RotatedRect r, double fraction)
+    {
+        float d = (float)(Math.Min(r.Size.Width, r.Size.Height) * fraction);
+        return new RotatedRect(r.Center, new Size2f(r.Size.Width + 2 * d, r.Size.Height + 2 * d), r.Angle);
     }
 
     private static RotatedRect Scale(RotatedRect r, double s) =>
@@ -169,6 +233,9 @@ public static class PhotoAtPointLocator
         private readonly WorkingImage _image;
         private readonly Point2f _click;
         private readonly Point2f[][] _others;
+
+        public Point2f Click => _click;
+        public Point2f[][] Others => _others;
         private readonly double _imageArea;
         private readonly List<(RotatedRect Box, double Fill, double Area)> _candidates = [];
 

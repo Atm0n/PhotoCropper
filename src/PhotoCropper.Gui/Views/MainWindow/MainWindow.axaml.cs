@@ -356,6 +356,12 @@ internal sealed partial class MainWindow : Window
                 return true;
             }
 
+            if (viewCrops.CancelClickTool())
+            {
+                e.Handled = true;
+                return true;
+            }
+
             if (_cropsVm.SelectedPhotoIndices().Count > 1)
             {
                 ClearGallerySelection();

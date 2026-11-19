@@ -833,6 +833,59 @@ public class PhotoCropperEngine : IDisposable
         AcceptedCandidates = [.. AcceptedCandidates ?? [], candidate.Value with { OrientationDegrees = orientation }];
     }
 
+    /// <summary>
+    /// Finds the photo at <paramref name="point"/> (scan pixels). Inside an existing box it re-fits that box;
+    /// elsewhere it adds the photo found, processed like a detected one.
+    /// </summary>
+    /// <returns>The photo's index and whether it was added; index -1 when no photo was found there.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "ProcessExtractedPhoto takes ownership of the extracted Mat")]
+    public (int Index, bool Added) FindPhotoAt(System.Drawing.PointF point)
+    {
+        var boxes = AcceptedCandidates ?? [];
+        int inside = -1;
+        for (int i = boxes.Count - 1; i >= 0; i--)
+        {
+            if (Cv2.PointPolygonTest(CvInterop.ToCv(boxes[i].Rotated).Points(), new Point2f(point.X, point.Y), false) >= 0)
+            {
+                inside = i;
+                break;
+            }
+        }
+
+        var others = boxes.Where((_, i) => i != inside).Select(b => b.Rotated).ToList();
+        if (PhotoAtPointLocator.Locate(Original, point, CurrentOptions, others) is not { } found) return (-1, false);
+
+        var vertices = found.GetVertices();
+        var shape = vertices.Select(v => new DrawingPoint((int)Math.Round(v.X), (int)Math.Round(v.Y))).ToArray();
+        var candidate = new CropCandidate(
+            shape,
+            CvInterop.ToRectangle(Cv2.BoundingRect(CvInterop.ToCv(shape))),
+            9999.0, found, (double)found.Size.Width * found.Size.Height, 1.0, 1.0);
+
+        if (inside >= 0)
+        {
+            var before = boxes.ToList();
+            var refitted = boxes.ToList();
+            refitted[inside] = candidate with { OrientationDegrees = boxes[inside].OrientationDegrees };
+            UpdateCandidates(refitted);
+            if (ApplyGrabHandleResize(inside)) return (inside, false);
+            UpdateCandidates(before);
+            return (-1, false);
+        }
+
+        Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(found), Original);
+        if (extracted.Empty())
+        {
+            extracted.Dispose();
+            return (-1, false);
+        }
+        var (photo, raw, orientation) = ProcessExtractedPhoto(extracted);
+        DetectedPhotos.Add(photo);
+        RawDetectedPhotos.Add(raw);
+        AcceptedCandidates = [.. boxes, candidate with { OrientationDegrees = orientation }];
+        return (DetectedPhotos.Count - 1, true);
+    }
+
     /// <returns>The files written; pass them back as <paramref name="previousExports"/> on the next export.</returns>
     public IReadOnlyList<ExportedFile> SaveDetectedPhotos(
         string? customOutputFolder = null,

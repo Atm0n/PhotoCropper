@@ -190,6 +190,15 @@ internal sealed partial class CropsStageView : UserControl
             return;
         }
 
+        if (tglFindPhoto.IsChecked == true)
+        {
+            // Stays on, so several photos can be found in a row; the button or Esc turns it off.
+            e.Handled = true;
+            var pixel = ToScanPixel(e.GetPosition(pnlOriginal), engine);
+            _ = vm.FindPhotoAtAsync(new System.Drawing.PointF(pixel.X, pixel.Y)).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+            return;
+        }
+
         UpdateCanvasSize();
         _pressPoint = e.GetPosition(pnlOriginal);
         _gesture = vm.PressAt(ToScanPixel(_pressPoint, engine));
@@ -256,8 +265,29 @@ internal sealed partial class CropsStageView : UserControl
 
     // ---- background colour ----
 
-    private void TglColorPicker_Click(object? sender, RoutedEventArgs e) =>
+    private void TglColorPicker_Click(object? sender, RoutedEventArgs e)
+    {
+        if (tglColorPicker.IsChecked == true) tglFindPhoto.IsChecked = false;
         pnlOriginal.Cursor = tglColorPicker.IsChecked == true ? new Cursor(StandardCursorType.Cross) : Cursor.Default;
+    }
+
+    // ---- find photo ----
+
+    private void TglFindPhoto_Click(object? sender, RoutedEventArgs e)
+    {
+        if (tglFindPhoto.IsChecked == true) tglColorPicker.IsChecked = false;
+        pnlOriginal.Cursor = tglFindPhoto.IsChecked == true ? new Cursor(StandardCursorType.Hand) : Cursor.Default;
+    }
+
+    /// <summary>Turns off a click tool (find photo, background picker) if one is on; true if it did (Esc).</summary>
+    public bool CancelClickTool()
+    {
+        if (tglFindPhoto.IsChecked != true && tglColorPicker.IsChecked != true) return false;
+        tglFindPhoto.IsChecked = false;
+        tglColorPicker.IsChecked = false;
+        pnlOriginal.Cursor = Cursor.Default;
+        return true;
+    }
 
     private async void BtnResetBackground_Click(object? sender, RoutedEventArgs e)
     {

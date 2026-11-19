@@ -170,6 +170,12 @@
 	<sys:String x:Key="MsgPhotoRotated">Foto girada.</sys:String>
 	<sys:String x:Key="MsgExtractingCrop">Extraient retall manual...</sys:String>
 	<sys:String x:Key="MsgManualCropAdded">Retall manual afegit.</sys:String>
+	<sys:String x:Key="MsgFindingPhoto">Cercant la foto...</sys:String>
+	<sys:String x:Key="MsgNoPhotoFound">No s'ha trobat cap foto aquí. Fes clic més a prop del seu centre, o dibuixa-hi un requadre.</sys:String>
+	<sys:String x:Key="MsgPhotoFound">Foto trobada i afegida.</sys:String>
+	<sys:String x:Key="MsgPhotoRefitted">Requadre ajustat a la foto.</sys:String>
+	<sys:String x:Key="BtnFindPhoto">Troba la foto</sys:String>
+	<sys:String x:Key="TipFindPhoto">Fes clic en una foto per trobar-la i afegir-ne el requadre; fes clic dins d'un requadre per ajustar-lo a la foto. Torna a prémer el botó o Esc per acabar.</sys:String>
 	<sys:String x:Key="MsgRefineModeHelp">Mode d'ajust: dibuixa per retallar a mà, Enter per acceptar, Esc per cancel·lar.</sys:String>
 	<sys:String x:Key="MsgApplyingRefine">Aplicant ajust...</sys:String>
 	<sys:String x:Key="MsgRefineSuccess">Retall ajustat correctament.</sys:String>

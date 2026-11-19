@@ -135,6 +135,12 @@ internal static class ResourceKeys
     public const string MsgScannerErrorDetails = nameof(MsgScannerErrorDetails);
     public const string MsgExtractingCrop = nameof(MsgExtractingCrop);
     public const string MsgManualCropAdded = nameof(MsgManualCropAdded);
+    public const string MsgFindingPhoto = nameof(MsgFindingPhoto);
+    public const string MsgNoPhotoFound = nameof(MsgNoPhotoFound);
+    public const string MsgPhotoFound = nameof(MsgPhotoFound);
+    public const string MsgPhotoRefitted = nameof(MsgPhotoRefitted);
+    public const string BtnFindPhoto = nameof(BtnFindPhoto);
+    public const string TipFindPhoto = nameof(TipFindPhoto);
     public const string MsgRefineModeHelp = nameof(MsgRefineModeHelp);
     public const string MsgApplyingRefine = nameof(MsgApplyingRefine);
     public const string MsgRefineSuccess = nameof(MsgRefineSuccess);
