@@ -4,10 +4,8 @@ on:
   push:
     tags:
       - 'v*'
-  # Dry runs: build, package and smoke-test without publishing a release. A release PR into main runs them
-  # automatically, so packaging problems show up before a tag is pushed.
-  pull_request:
-    branches: [ main ]
+  # Dry run without publishing: Actions > Release Pipeline > Run workflow (builds, packages and smoke-tests;
+  # the release itself only happens for a v* tag).
   workflow_dispatch:
 
 concurrency:
