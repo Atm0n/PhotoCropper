@@ -4,9 +4,14 @@ using OpenCvSharp;
 namespace PhotoCropper.Core.Common;
 
 /// <summary>
-/// Copies an image's raw data (all channels, row by row) to or from an array, as Emgu's <c>Mat.CopyTo(T[])</c> and
-/// <c>Mat.SetTo(T[])</c> did. A view into a larger image (not continuous in memory) is copied out first.
+/// Copies an image's raw data (all channels, row by row) to or from a flat array. A view into a larger image (not
+/// continuous in memory) is copied out first.
 /// </summary>
+/// <remarks>
+/// OpenCvSharp's own calls don't fit these uses: <c>Mat.AsSpan</c> returns an empty span for a view into a larger
+/// image instead of failing, and <c>GetArray</c>/<c>SetArray</c> want one element per pixel (<c>Vec3b[]</c> for
+/// colour), rejecting flat byte arrays for multi-channel images and views.
+/// </remarks>
 public static class MatData
 {
     public static void CopyDataTo(this Mat mat, byte[] destination)
