@@ -16,9 +16,13 @@ on:
       - '.gitignore'
       - 'LICENSE'
   workflow_dispatch:
+  # The release workflow runs these same tests before it packages anything.
+  workflow_call:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # The "ci-" prefix matters when the release workflow calls this one: github.workflow is then the caller's name,
+  # and sharing the caller's own group would make each cancel or wait for the other.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
