@@ -204,6 +204,7 @@ internal sealed partial class CropsStageView : UserControl
         _gesture = vm.PressAt(ToScanPixel(_pressPoint, engine));
         if (_gesture is BoxGesture.Rotate or BoxGesture.Resize)
         {
+            if (_gesture == BoxGesture.Resize) UpdateMagnifier(e, engine);
             e.Handled = true;
             return;
         }
@@ -222,11 +223,16 @@ internal sealed partial class CropsStageView : UserControl
 
         if (_gesture is BoxGesture.Rotate or BoxGesture.Resize)
         {
-            if (vm.ActivateCurrentScan() is { } engine) vm.DragTo(ToScanPixel(e.GetPosition(pnlOriginal), engine));
+            if (vm.ActivateCurrentScan() is { } engine)
+            {
+                vm.DragTo(ToScanPixel(e.GetPosition(pnlOriginal), engine));
+                if (_gesture == BoxGesture.Resize) UpdateMagnifier(e, engine);
+            }
             return;
         }
 
         if (_gesture != BoxGesture.Draw) return;
+        if (vm.ActivateCurrentScan() is { } scan) UpdateMagnifier(e, scan);
         var rect = CoordinateMapper.ComputeNormalizedRect(_pressPoint, e.GetPosition(pnlOriginal));
         Canvas.SetLeft(rectCrop, rect.X);
         Canvas.SetTop(rectCrop, rect.Y);
@@ -238,6 +244,7 @@ internal sealed partial class CropsStageView : UserControl
     {
         var gesture = _gesture;
         _gesture = BoxGesture.None;
+        magnifier.Hide();
         if (ViewModel is not { } vm) return;
 
         var rect = CoordinateMapper.ComputeNormalizedRect(_pressPoint, e.GetPosition(pnlOriginal));
@@ -261,6 +268,36 @@ internal sealed partial class CropsStageView : UserControl
         }
 
         _ = vm.AddManualCropAsync(scanRect).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+    }
+
+    // ---- magnifier ----
+
+    /// <summary>
+    /// Shows the scan around the pointer, magnified, in a corner of the view: the top-left one, or the top-right
+    /// one when the pointer is near the first.
+    /// </summary>
+    private void UpdateMagnifier(PointerEventArgs e, PhotoCropperEngine engine)
+    {
+        if (img.Source is not Avalonia.Media.Imaging.Bitmap bitmap || engine.Original.Width <= 0) return;
+
+        Rect image = ImageRectInPanel();
+        double screenPerScanPixel = image.Width / engine.Original.Width;
+        Point pointer = e.GetPosition(pnlOriginal);
+        var center = new Point((pointer.X - image.X) / screenPerScanPixel, (pointer.Y - image.Y) / screenPerScanPixel);
+        // Four times the view's own zoom, up to 3 screen pixels per scan pixel (never less than the view).
+        double zoom = Math.Max(screenPerScanPixel, Math.Min(screenPerScanPixel * 4, 3));
+
+        if (magnifier.Parent is Visual host)
+        {
+            Point inHost = e.GetPosition(host);
+            double reach = magnifier.Width + 2 * magnifier.Margin.Left + 40;
+            bool nearLeft = inHost.X < reach && inHost.Y < reach;
+            bool nearRight = inHost.X > host.Bounds.Width - reach && inHost.Y < reach;
+            if (nearLeft) magnifier.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
+            else if (nearRight) magnifier.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left;
+        }
+
+        magnifier.Show(bitmap, center, zoom, engine.AcceptedCandidates, cropOverlay.BoxColor);
     }
 
     // ---- background colour ----
