@@ -76,8 +76,11 @@ if [[ -n "${APPIMAGE}" ]]; then
   record "AppImage: CLI finds ${EXPECTED} photos on the samples" $?
   echo "::endgroup::"
 
+  # An AppImage relies on the libraries every desktop has (fontconfig, OpenGL, X11: the AppImage "excludelist"),
+  # which a bare container lacks; install those, and nothing the app itself would need on top.
+  DESKTOP_BASE='apt-get install -y -qq --no-install-recommends libfontconfig1 libgl1 libx11-6 libice6 libsm6 > /dev/null'
   echo "::group::AppImage: GUI starts"
-  in_container "${APT_QUIET}; ${EXTRACT} && GUI=/tmp/squashfs-root/AppRun; ${GUI_CHECK}"
+  in_container "${APT_QUIET}; ${DESKTOP_BASE}; ${EXTRACT} && GUI=/tmp/squashfs-root/AppRun; ${GUI_CHECK}"
   record "AppImage: GUI starts" $?
   echo "::endgroup::"
 else
