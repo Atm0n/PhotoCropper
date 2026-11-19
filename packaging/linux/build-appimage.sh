@@ -12,6 +12,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 APPDIR=$(mktemp -d -t photocropper-appdir-XXXXXX)
+# mktemp -d makes the folder 0700; packaging tools (appimagetool) refuse an AppDir others can't read,
+# and the package's root would carry that mode.
+chmod 755 "${APPDIR}"
 trap 'rm -rf "${APPDIR}"' EXIT
 
 mkdir -p "${APPDIR}/usr/bin"
