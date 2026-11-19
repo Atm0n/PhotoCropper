@@ -55,26 +55,31 @@ public static class PhotoAtPointLocator
 
         // Painting over a dark scanner bezel can also paint over a dark photo touching the scan's edge, so a
         // search that finds nothing is repeated on the scan as it is.
-        var found = Find(scan, point, options, otherBoxes, neutralizeBezels: true, out var paper, out var surroundings)
-            ?? Find(scan, point, options, otherBoxes, neutralizeBezels: false, out paper, out surroundings);
+        var found = Find(scan, point, options, otherBoxes, neutralizeBezels: true, onPage: null, out var paper, out var surroundings, out var pageBox);
+        if (found == null && paper == null)
+        {
+            found = Find(scan, point, options, otherBoxes, neutralizeBezels: false, onPage: null, out paper, out surroundings, out pageBox);
+        }
 
         // An album page (photos stuck on coloured paper) on the scanner bed is itself a clean rectangle around the
         // click. Searched again with the paper as the background, the photo stands out from the paper instead.
-        if (found is { } page && paper is { } paperHsv)
+        bool onPaperFound = false;
+        if (paper is { } paperHsv)
         {
             var onPaper = options with { CustomBackgroundColorHsv = CvInterop.ToColor(paperHsv) };
-            var inner = Find(scan, point, onPaper, otherBoxes, neutralizeBezels: false, out _, out _);
-            if (inner is { } photo && Area(photo) < MaxPhotoOnPage * Area(page))
+            var inner = Find(scan, point, onPaper, otherBoxes, neutralizeBezels: false, pageBox, out _, out _, out _);
+            if (inner is { } photo && (found is not { } page || Area(photo) < MaxPhotoOnPage * Area(page)))
             {
                 found = photo;
+                onPaperFound = true;
             }
         }
         // A photo on an album page whose border is close to the scanner bed's colour stops at its picture. Against
         // the page's paper the whole print stands out, border included.
-        else if (found is { } picture && surroundings is { } paperAround)
+        if (!onPaperFound && found is { } picture && surroundings is { } paperAround)
         {
             var onPaper = options with { CustomBackgroundColorHsv = CvInterop.ToColor(paperAround) };
-            var print = Find(scan, point, onPaper, otherBoxes, neutralizeBezels: false, out _, out _);
+            var print = Find(scan, point, onPaper, otherBoxes, neutralizeBezels: false, onPage: null, out _, out _, out _);
             if (print is { } whole && Area(whole) >= 0.95 * Area(picture) && Area(whole) <= MaxPrintGrowth * Area(picture))
             {
                 found = whole;
@@ -87,12 +92,18 @@ public static class PhotoAtPointLocator
     /// <param name="surroundings">When the box's surroundings are one colour other than the background's (the paper
     /// of an album page the photo is stuck on), that colour (HSV).</param>
     /// <returns>The chosen box in scan pixels.</returns>
-    private static RotatedRect? Find(Mat scan, DrawingPointF point, DetectionOptions options, IReadOnlyList<RotatedBox> otherBoxes, bool neutralizeBezels, out Scalar? paper, out Scalar? surroundings)
+    /// <param name="onPage">When searching against an album page's paper: the page (scan pixels). Everything outside it
+    /// is painted as paper, so a photo reaching the page's edge doesn't merge with the scanner bed beyond.</param>
+    /// <param name="page">When <paramref name="paper"/> is set, the page it was found on (scan pixels).</param>
+    private static RotatedRect? Find(Mat scan, DrawingPointF point, DetectionOptions options, IReadOnlyList<RotatedBox> otherBoxes, bool neutralizeBezels, RotatedRect? onPage, out Scalar? paper, out Scalar? surroundings, out RotatedRect? page)
     {
         paper = null;
         surroundings = null;
-        using var image = WorkingImage.Create(scan, options, otherBoxes, neutralizeBezels);
-        var search = new Search(image, new Point2f((float)(point.X * image.Scale), (float)(point.Y * image.Scale)), otherBoxes);
+        page = null;
+        using var image = WorkingImage.Create(scan, options, otherBoxes, neutralizeBezels, onPage);
+        // On a page, the photo is well within it: the page's own outline is never the answer.
+        double maxArea = onPage is { } within ? MaxPhotoOnPage * Area(Scale(within, image.Scale)) : double.MaxValue;
+        var search = new Search(image, new Point2f((float)(point.X * image.Scale), (float)(point.Y * image.Scale)), otherBoxes, maxArea);
 
         bool lightBackground = image.BackgroundHsv.Val2 > 120;
         using Mat foreground = new();
@@ -114,7 +125,14 @@ public static class PhotoAtPointLocator
         {
             chosen = GrowToBackground(image, shape, search.Others);
             paper = PageColour(image, chosen.Value);
-            if (paper == null) surroundings = SurroundingColour(image, chosen.Value, search.Others);
+            if (paper != null) page = Scale(chosen.Value, 1.0 / image.Scale);
+            surroundings = SurroundingColour(image, chosen.Value, search.Others);
+        }
+        else if (search.LargestCovering is { } covering)
+        {
+            // Nothing but shapes covering the other photos: the clicked photo merged with the page they are on.
+            paper = PageColour(image, covering);
+            if (paper != null) page = Scale(covering, 1.0 / image.Scale);
         }
         return chosen is { } best ? Scale(best, 1.0 / image.Scale) : null;
     }
@@ -201,44 +219,89 @@ public static class PhotoAtPointLocator
             Cv2.Canny(blurred, edges, 30, 90);
         }
 
-        // Each side: the first smooth strip within the outer 12%, as a page's margin.
+        // Each side in segments: the first smooth strip (not the scanner bed's colour) within the outer 12% of the
+        // box. Photos can reach the page's edge along part of a side, so a side counts as paper when two of its
+        // five segments show it.
         int shorter = Math.Min(w, h);
         int thickness = Math.Max(3, shorter / 150);
+        const int segments = 5;
         var colours = new List<Scalar>();
         for (int side = 0; side < 4; side++)
         {
-            Scalar? found = null;
-            for (int depth = 2; depth + thickness <= shorter * 0.12; depth += thickness)
+            bool vertical = side >= 2;
+            int length = vertical ? h : w;
+            var sideColours = new List<Scalar>();
+            for (int k = 0; k < segments; k++)
             {
-                Rect strip = side switch
+                int from = length * k / segments, to = length * (k + 1) / segments;
+                for (int depth = 2; depth + thickness <= shorter * 0.12; depth += thickness)
                 {
-                    0 => new Rect(w / 10, depth, w - w / 5, thickness),             // top
-                    1 => new Rect(w / 10, h - depth - thickness, w - w / 5, thickness), // bottom
-                    2 => new Rect(depth, h / 10, thickness, h - h / 5),             // left
-                    _ => new Rect(w - depth - thickness, h / 10, thickness, h - h / 5), // right
-                };
-                using Mat e = new(edges, strip);
-                using Mat g = new(gray, strip);
-                if (Cv2.CountNonZero(e) > BackgroundEdgeDensity * strip.Width * strip.Height) continue;
-                Cv2.MeanStdDev(g, out _, out Scalar spread);
-                if (spread.Val0 > BackgroundStdDev) continue;
-                using Mat c = new(hsv, strip);
-                var mean = Cv2.Mean(c);
-                if (IsBackgroundColour(mean, image.BackgroundHsv)) continue; // a sliver of scanner bed inside the box
-                found = mean;
-                break;
+                    Rect strip = side switch
+                    {
+                        0 => new Rect(from, depth, to - from, thickness),
+                        1 => new Rect(from, h - depth - thickness, to - from, thickness),
+                        2 => new Rect(depth, from, thickness, to - from),
+                        _ => new Rect(w - depth - thickness, from, thickness, to - from),
+                    };
+                    using Mat e = new(edges, strip);
+                    if (Cv2.CountNonZero(e) > BackgroundEdgeDensity * strip.Width * strip.Height) continue;
+                    using Mat g = new(gray, strip);
+                    Cv2.MeanStdDev(g, out _, out Scalar spread);
+                    if (spread.Val0 > BackgroundStdDev) continue;
+                    using Mat c = new(hsv, strip);
+                    var mean = Cv2.Mean(c);
+                    if (IsBackgroundColour(mean, image.BackgroundHsv)) continue; // a sliver of scanner bed inside the box
+                    sideColours.Add(mean);
+                    break;
+                }
             }
-            if (found is { } colour) colours.Add(colour);
+            if (sideColours.Count >= 2) colours.AddRange(sideColours);
+            else colours.Add(new Scalar(-1)); // marks a side without paper
         }
+        int sidesWithPaper = 4 - colours.Count(c => c.Val0 < 0);
+        colours.RemoveAll(c => c.Val0 < 0);
         // Paper on at least three sides: an old page can be torn or trimmed along one.
-        if (colours.Count < 3) return null;
+        if (sidesWithPaper < 3) return null;
 
-        // One paper colour all round (the background's colour was skipped, so a white-bordered photo on a white bed
-        // has no "paper").
-        double s0 = colours.Min(c => c.Val1), s1 = colours.Max(c => c.Val1), v0 = colours.Min(c => c.Val2), v1 = colours.Max(c => c.Val2);
-        if (s1 - s0 > 40 || v1 - v0 > 30) return null; // aged paper varies
-        var paper = new Scalar(colours.Average(c => c.Val0), colours.Average(c => c.Val1), colours.Average(c => c.Val2));
-        return paper;
+        // One paper colour all round, give or take its ageing and a shadow or two: most of the samples close to their
+        // median. (The background's colour was skipped, so a white-bordered photo on a white bed has no "paper".)
+        if (MainColour(colours) == null) return null;
+
+        // It's a page. Its colour comes from smooth patches all over it (margins and the gaps between photos): an old
+        // page's edges are darker than the rest, and searching against the edges' colour would find the whole page.
+        int cell = Math.Max(6, shorter / 40);
+        var patches = new List<Scalar>();
+        for (int y = 0; y + cell <= h; y += cell)
+        {
+            for (int x = 0; x + cell <= w; x += cell)
+            {
+                var r = new Rect(x, y, cell, cell);
+                using Mat e = new(edges, r);
+                if (Cv2.CountNonZero(e) > 0) continue;
+                using Mat g = new(gray, r);
+                Cv2.MeanStdDev(g, out _, out Scalar spread);
+                if (spread.Val0 > BackgroundStdDev / 2) continue;
+                using Mat c = new(hsv, r);
+                var mean = Cv2.Mean(c);
+                if (!IsBackgroundColour(mean, image.BackgroundHsv)) patches.Add(mean);
+            }
+        }
+        return MainColour(patches) ?? MainColour(colours);
+    }
+
+    /// <summary>The samples' colour (the average of those close to their median) when at least 60% are close to it.</summary>
+    private static Scalar? MainColour(List<Scalar> colours)
+    {
+        if (colours.Count == 0) return null;
+        static double Median(IEnumerable<double> values)
+        {
+            var sorted = values.OrderBy(v => v).ToList();
+            return sorted[sorted.Count / 2];
+        }
+        var median = new Scalar(Median(colours.Select(c => c.Val0)), Median(colours.Select(c => c.Val1)), Median(colours.Select(c => c.Val2)));
+        var close = colours.Where(c => Math.Abs(c.Val1 - median.Val1) <= 25 && Math.Abs(c.Val2 - median.Val2) <= 25).ToList();
+        if (close.Count < 0.6 * colours.Count) return null;
+        return new Scalar(close.Average(c => c.Val0), close.Average(c => c.Val1), close.Average(c => c.Val2));
     }
 
     /// <summary>
@@ -309,10 +372,7 @@ public static class PhotoAtPointLocator
             if (found is { } colour) colours.Add(colour);
         }
         if (colours.Count < 3) return null;
-        double s0 = colours.Min(c => c.Val1), s1 = colours.Max(c => c.Val1), v0 = colours.Min(c => c.Val2), v1 = colours.Max(c => c.Val2);
-        if (s1 - s0 > 40 || v1 - v0 > 30) return null;
-        var around = new Scalar(colours.Average(c => c.Val0), colours.Average(c => c.Val1), colours.Average(c => c.Val2));
-        return IsBackgroundColour(around, image.BackgroundHsv) ? null : around;
+        return MainColour(colours) is { } around && !IsBackgroundColour(around, image.BackgroundHsv) ? around : null;
     }
 
     private static bool IsBackgroundColour(Scalar hsv, Scalar background) =>
@@ -372,7 +432,7 @@ public static class PhotoAtPointLocator
         /// <summary>The scan's size at working size.</summary>
         public required Size ScanSize { get; init; }
 
-        public static WorkingImage Create(Mat scan, DetectionOptions options, IReadOnlyList<RotatedBox> otherBoxes, bool neutralizeBezels)
+        public static WorkingImage Create(Mat scan, DetectionOptions options, IReadOnlyList<RotatedBox> otherBoxes, bool neutralizeBezels, RotatedRect? onPage)
         {
             using Mat original = PhotoCropperEngine.NormalizeToBgr(scan);
             Scalar backgroundHsv;
@@ -385,6 +445,17 @@ public static class PhotoAtPointLocator
                     : BackgroundAnalyzer.SampleBackgroundColor(fullHsv, [.. otherBoxes.Select(b => CvInterop.ToCv(b).Points())]);
             }
             Scalar backgroundBgr = BackgroundAnalyzer.HsvToBgr(backgroundHsv);
+
+            if (onPage is { } page)
+            {
+                // Searching on an album page: everything off the page (the scanner bed) is background too, and so is a thin
+                // band along the page's edge, whose outline would otherwise enclose (and fill in) the whole page.
+                float band = Math.Min(page.Size.Width, page.Size.Height) * 0.015f;
+                var inside = new RotatedRect(page.Center, new Size2f(page.Size.Width - 2 * band, page.Size.Height - 2 * band), page.Angle);
+                using Mat offPage = new(original.Size(), MatType.CV_8UC1, Scalar.All(255));
+                Cv2.FillConvexPoly(offPage, [.. inside.Points().Select(p => new Point((int)Math.Round(p.X), (int)Math.Round(p.Y)))], Scalar.All(0));
+                original.SetTo(backgroundBgr, offPage);
+            }
 
             int pad = Math.Max(20, Math.Min(original.Width, original.Height) / 50);
             using Mat padded = new();
@@ -447,8 +518,14 @@ public static class PhotoAtPointLocator
         private readonly double _imageArea;
         private readonly List<(RotatedRect Box, double Fill, double Area)> _candidates = [];
 
-        public Search(WorkingImage image, Point2f click, IReadOnlyList<RotatedBox> otherBoxes)
+        /// <summary>The largest shape around the click left out for covering other photos (an album page, often).</summary>
+        public RotatedRect? LargestCovering { get; private set; }
+
+        private readonly double _maxArea;
+
+        public Search(WorkingImage image, Point2f click, IReadOnlyList<RotatedBox> otherBoxes, double maxArea)
         {
+            _maxArea = maxArea;
             _image = image;
             _click = click;
             _imageArea = (double)image.ScanSize.Width * image.ScanSize.Height;
@@ -491,8 +568,12 @@ public static class PhotoAtPointLocator
         {
             double area = (double)box.Size.Width * box.Size.Height;
             double fraction = area / _imageArea;
-            if (fraction < MinAreaFraction || fraction > MaxAreaFraction) return;
-            if (SwallowsAnother(box, area)) return;
+            if (fraction < MinAreaFraction || fraction > MaxAreaFraction || area > _maxArea) return;
+            if (SwallowsAnother(box, area))
+            {
+                if (LargestCovering is not { } largest || area > Area(largest)) LargestCovering = box;
+                return;
+            }
             _candidates.Add((box, fill, area));
         }
 
