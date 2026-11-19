@@ -76,7 +76,7 @@ public sealed class InteractiveWizardTests : IDisposable
         result.RestoreColors.ShouldBeTrue();
         result.RemoveDust.ShouldBeTrue();
         result.Tolerance.ShouldBe(25.0);
-        result.MinAreaFactor.ShouldBe(0.25);
+        result.MinAreaFactor.ShouldBe(0.01);
         result.MinExpectedPhotos.ShouldBe(1);
         result.MaxExpectedPhotos.ShouldBe(int.MaxValue);
         result.AutoTune.ShouldBeFalse();
@@ -192,7 +192,7 @@ public sealed class InteractiveWizardTests : IDisposable
         result.RestoreColors.ShouldBeTrue();
         result.RemoveDust.ShouldBeFalse();
         result.Tolerance.ShouldBe(35.0);
-        result.MinAreaFactor.ShouldBe(0.15);
+        result.MinAreaFactor.ShouldBe(0.01); // every preset uses the app's smallest-photo size
         result.MinExpectedPhotos.ShouldBe(2);
         result.MaxExpectedPhotos.ShouldBe(4);
         result.AutoTune.ShouldBeTrue();

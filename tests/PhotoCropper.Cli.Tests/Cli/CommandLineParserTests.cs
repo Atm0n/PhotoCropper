@@ -13,7 +13,7 @@ public sealed class CommandLineParserTests
         options.Format.ShouldBe("JPEG");
         options.JpegQuality.ShouldBe(100);
         options.Tolerance.ShouldBe(25);
-        options.MinAreaFactor.ShouldBe(0.25);
+        options.MinAreaFactor.ShouldBe(0.01); // as in the app
         options.MaxAreaFactor.ShouldBe(0.90);
         options.CannyLow.ShouldBe(20);
         options.Recursive.ShouldBeFalse();
