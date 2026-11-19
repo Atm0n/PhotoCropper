@@ -1,6 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.TestHelpers;
@@ -18,10 +16,10 @@ public sealed class PhotoPipelineServiceTests : IDisposable
         _workDir = TestImageFactory.CreateTempDirectory("PhotoPipelineTests");
         ProjectWorkspaceService.InitializeWorkspace(_workDir);
         string scanPath = Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), "scan_0001.png");
-        using (var scan = new Mat(400, 400, DepthType.Cv8U, 3))
+        using (var scan = new Mat(400, 400, MatType.CV_8UC3))
         {
-            scan.SetTo(new MCvScalar(230, 230, 230));
-            scan.Save(scanPath);
+            scan.SetTo(new Scalar(230, 230, 230));
+            Cv2.ImWrite(scanPath, scan);
         }
         _scan = new WorkspaceScanEntry { RelativePath = Path.GetRelativePath(_workDir, scanPath), OriginalFileName = "scan_0001.png" };
         _session.Scans.Add(_scan);
@@ -29,8 +27,8 @@ public sealed class PhotoPipelineServiceTests : IDisposable
 
     private static Mat Photo(double shade, int width = 60, int height = 40)
     {
-        var mat = new Mat(height, width, DepthType.Cv8U, 3);
-        mat.SetTo(new MCvScalar(shade, shade * 0.8, shade * 0.6));
+        var mat = new Mat(height, width, MatType.CV_8UC3);
+        mat.SetTo(new Scalar(shade, shade * 0.8, shade * 0.6));
         return mat;
     }
 
@@ -151,7 +149,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     public void ImportPhoto_ShouldCopyIntoCroppedAndRenderWithItsOwnName()
     {
         string source = Path.Combine(_workDir, "grandma.jpg");
-        using (var img = Photo(120)) img.Save(source);
+        using (var img = Photo(120)) Cv2.ImWrite(source, img);
 
         var photo = PhotoPipelineService.ImportPhoto(_workDir, _session, source, RestorationSettings.None);
         PhotoPipelineService.RenderFinal(_workDir, _session, photo, new FinalRenderOptions { FileNamePattern = "{original}" });

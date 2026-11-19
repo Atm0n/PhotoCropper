@@ -1,10 +1,8 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Extraction;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.TestHelpers;
-using System.Drawing;
 using System.Net;
 using System.Security.Cryptography;
 
@@ -23,11 +21,11 @@ internal sealed class FakeInpaintingModel : IInpaintingModel
 
     public Mat Inpaint(Mat bgr, Mat mask)
     {
-        bgr.Size.ShouldBe(new Size(512, 512));
-        mask.Size.ShouldBe(new Size(512, 512));
+        bgr.Size().ShouldBe(new Size(512, 512));
+        mask.Size().ShouldBe(new Size(512, 512));
         Calls++;
         Mat result = bgr.Clone();
-        result.SetTo(new MCvScalar(0, 200, 0), mask);
+        result.SetTo(new Scalar(0, 200, 0), mask);
         return result;
     }
 }
@@ -47,8 +45,8 @@ public sealed class AiInpaintingTests : IDisposable
 
     private static Mat Grey(int width = 400, int height = 300, int channels = 3)
     {
-        var mat = new Mat(height, width, DepthType.Cv8U, channels);
-        mat.SetTo(channels == 4 ? new MCvScalar(128, 128, 128, 200) : new MCvScalar(128, 128, 128, 0));
+        var mat = new Mat(height, width, MatType.CV_8UC(channels));
+        mat.SetTo(channels == 4 ? new Scalar(128, 128, 128, 200) : new Scalar(128, 128, 128, 0));
         return mat;
     }
 
@@ -59,10 +57,10 @@ public sealed class AiInpaintingTests : IDisposable
         return stroke;
     }
 
-    private static MCvScalar MeanAt(Mat image, Rectangle area)
+    private static Scalar MeanAt(Mat image, Rect area)
     {
         using var region = new Mat(image, area);
-        return CvInvoke.Mean(region);
+        return Cv2.Mean(region);
     }
 
     [Fact]
@@ -74,9 +72,9 @@ public sealed class AiInpaintingTests : IDisposable
         using var repaired = PhotoRepairService.ApplyRepairs(photo, [Stroke(RepairMethod.Ai, 0.05f, 0.5f, 0.5f)]);
 
         _fake.Calls.ShouldBe(1);
-        MeanAt(repaired, new Rectangle(195, 145, 10, 10)).V1.ShouldBeGreaterThan(190, "the painted spot comes from the model");
-        MeanAt(repaired, new Rectangle(10, 10, 60, 60)).V1.ShouldBe(128, 1, "far away nothing changes");
-        MeanAt(repaired, new Rectangle(195, 145, 10, 10)).V0.ShouldBeLessThan(15);
+        MeanAt(repaired, new Rect(195, 145, 10, 10)).Val1.ShouldBeGreaterThan(190, "the painted spot comes from the model");
+        MeanAt(repaired, new Rect(10, 10, 60, 60)).Val1.ShouldBe(128, 1, "far away nothing changes");
+        MeanAt(repaired, new Rect(195, 145, 10, 10)).Val0.ShouldBeLessThan(15);
     }
 
     [Fact]
@@ -89,10 +87,10 @@ public sealed class AiInpaintingTests : IDisposable
         using var repairedAlpha = PhotoRepairService.ApplyRepairs(withAlpha, [Stroke(RepairMethod.Ai, 0.05f, 0.5f, 0.5f)]);
         using var repairedGrey = PhotoRepairService.ApplyRepairs(grey, [Stroke(RepairMethod.Ai, 0.05f, 0.5f, 0.5f)]);
 
-        repairedAlpha.NumberOfChannels.ShouldBe(4);
-        MeanAt(repairedAlpha, new Rectangle(0, 0, 400, 300)).V3.ShouldBe(200);
-        repairedGrey.NumberOfChannels.ShouldBe(1);
-        Math.Abs(MeanAt(repairedGrey, new Rectangle(195, 145, 10, 10)).V0 - 128).ShouldBeGreaterThan(5);
+        repairedAlpha.Channels().ShouldBe(4);
+        MeanAt(repairedAlpha, new Rect(0, 0, 400, 300)).Val3.ShouldBe(200);
+        repairedGrey.Channels().ShouldBe(1);
+        Math.Abs(MeanAt(repairedGrey, new Rect(195, 145, 10, 10)).Val0 - 128).ShouldBeGreaterThan(5);
     }
 
     [Fact]
@@ -101,11 +99,11 @@ public sealed class AiInpaintingTests : IDisposable
         AiInpainting.ModelOverride = null;
         AiInpainting.IsAvailable.ShouldBeFalse();
         using var photo = Grey();
-        CvInvoke.Line(photo, new Point(100, 150), new Point(300, 150), new MCvScalar(20, 20, 20), 3);
+        Cv2.Line(photo, new Point(100, 150), new Point(300, 150), new Scalar(20, 20, 20), 3);
 
         using var repaired = PhotoRepairService.ApplyRepairs(photo, [Stroke(RepairMethod.Ai, 0.015f, 0.25f, 0.5f, 0.75f, 0.5f)]);
 
-        MeanAt(repaired, new Rectangle(120, 149, 160, 3)).V0.ShouldBe(128, 6);
+        MeanAt(repaired, new Rect(120, 149, 160, 3)).Val0.ShouldBe(128, 6);
     }
 
     [Fact]
@@ -130,24 +128,24 @@ public sealed class AiInpaintingTests : IDisposable
         using var repaired = PhotoRepairService.ApplyRepairs(photo,
             [Stroke(RepairMethod.Quick, 0.02f, 0.1f, 0.1f), Stroke(RepairMethod.Ai, 0.02f, 0.9f, 0.9f)]);
 
-        MeanAt(repaired, new Rectangle(38, 28, 4, 4)).V1.ShouldBe(128, 3, "quick fill blends the grey around it");
-        MeanAt(repaired, new Rectangle(358, 268, 4, 4)).V1.ShouldBeGreaterThan(190, "AI fill comes from the model");
+        MeanAt(repaired, new Rect(38, 28, 4, 4)).Val1.ShouldBe(128, 3, "quick fill blends the grey around it");
+        MeanAt(repaired, new Rect(358, 268, 4, 4)).Val1.ShouldBeGreaterThan(190, "AI fill comes from the model");
     }
 
     [Fact]
     public void FindAreas_ShouldGroupNearbyDamageAndKeepDistantDamageApart()
     {
-        using var mask = Mat.Zeros(1000, 1000, DepthType.Cv8U, 1);
-        CvInvoke.Circle(mask, new Point(100, 100), 10, new MCvScalar(255), -1);
-        CvInvoke.Circle(mask, new Point(140, 100), 10, new MCvScalar(255), -1); // close to the first
-        CvInvoke.Circle(mask, new Point(900, 900), 10, new MCvScalar(255), -1); // far away
+        using var mask = new Mat(1000, 1000, MatType.CV_8UC1, Scalar.All(0));
+        Cv2.Circle(mask, new Point(100, 100), 10, new Scalar(255), -1);
+        Cv2.Circle(mask, new Point(140, 100), 10, new Scalar(255), -1); // close to the first
+        Cv2.Circle(mask, new Point(900, 900), 10, new Scalar(255), -1); // far away
 
         var areas = AiInpainting.FindAreas(mask, new Size(1000, 1000));
 
         areas.Count.ShouldBe(2);
         areas.ShouldAllBe(a => a.Width == a.Height && a.Width >= 250, "squares with surroundings for context");
-        areas.ShouldContain(a => a.Contains(new Rectangle(90, 90, 60, 20)));
-        areas.ShouldContain(a => a.Contains(new Rectangle(890, 890, 20, 20)));
+        areas.ShouldContain(a => a.Contains(new Rect(90, 90, 60, 20)));
+        areas.ShouldContain(a => a.Contains(new Rect(890, 890, 20, 20)));
     }
 
     [Fact]
@@ -233,7 +231,7 @@ public sealed class AiInpaintingTests : IDisposable
         AiModelStore.ModelDirectory = dir!;
         AiInpainting.ModelOverride = null;
 
-        using var photo = new Mat(600, 800, DepthType.Cv8U, 3);
+        using var photo = new Mat(600, 800, MatType.CV_8UC3);
         byte[] pixels = new byte[600 * 800 * 3];
         for (int y = 0; y < 600; y++)
             for (int x = 0; x < 800; x++)
@@ -243,18 +241,18 @@ public sealed class AiInpaintingTests : IDisposable
                 pixels[i + 1] = (byte)(90 + y * 100 / 600);
                 pixels[i + 2] = 150;
             }
-        photo.SetTo(pixels);
+        photo.SetData(pixels);
         using var expected = photo.Clone();
-        CvInvoke.Circle(photo, new Point(400, 300), 50, new MCvScalar(0, 0, 255), -1); // big red stain
+        Cv2.Circle(photo, new Point(400, 300), 50, new Scalar(0, 0, 255), -1); // big red stain
 
         using var repaired = PhotoRepairService.ApplyRepairs(photo, [Stroke(RepairMethod.Ai, 0.07f, 0.5f, 0.5f)]);
 
         using var diff = new Mat();
-        using var repairedCentre = new Mat(repaired, new Rectangle(360, 260, 80, 80));
-        using var expectedCentre = new Mat(expected, new Rectangle(360, 260, 80, 80));
-        CvInvoke.AbsDiff(repairedCentre, expectedCentre, diff);
-        var error = CvInvoke.Mean(diff);
-        ((error.V0 + error.V1 + error.V2) / 3).ShouldBeLessThan(12);
+        using var repairedCentre = new Mat(repaired, new Rect(360, 260, 80, 80));
+        using var expectedCentre = new Mat(expected, new Rect(360, 260, 80, 80));
+        Cv2.Absdiff(repairedCentre, expectedCentre, diff);
+        var error = Cv2.Mean(diff);
+        ((error.Val0 + error.Val1 + error.Val2) / 3).ShouldBeLessThan(12);
     }
 
     public void Dispose()

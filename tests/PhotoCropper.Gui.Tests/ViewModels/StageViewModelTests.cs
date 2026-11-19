@@ -1,6 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
@@ -25,12 +23,12 @@ public sealed class StageViewModelTests : IDisposable
     private ProjectPhoto AddCroppedPhoto(string scanName, bool restoreColors = false)
     {
         string scanPath = Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), scanName);
-        using (var scan = new Mat(200, 200, DepthType.Cv8U, 3)) { scan.SetTo(new MCvScalar(230, 230, 230)); scan.Save(scanPath); }
+        using (var scan = new Mat(200, 200, MatType.CV_8UC3)) { scan.SetTo(new Scalar(230, 230, 230)); Cv2.ImWrite(scanPath, scan); }
         var entry = new WorkspaceScanEntry { RelativePath = Path.GetRelativePath(_workDir, scanPath) };
         _host.Workspace!.Scans.Add(entry);
 
-        using var photo = new Mat(40, 60, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(90, 120, 150));
+        using var photo = new Mat(40, 60, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(90, 120, 150));
         var crop = new WorkspaceCropData { CenterX = 50, CenterY = 50, Width = 60, Height = 40 };
         var saved = PhotoPipelineService.SaveCroppedPhotos(_workDir, _host.Workspace, entry, [new CroppedPhotoInput(photo, crop)],
             new RestorationSettings { RestoreColors = restoreColors })[0];
@@ -442,7 +440,7 @@ public sealed class StageViewModelTests : IDisposable
     {
         AddCroppedPhoto("scan_0001.png");
         string emptyScan = Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), "scan_0002.png");
-        using (var scan = new Mat(200, 200, DepthType.Cv8U, 3)) { scan.SetTo(new MCvScalar(230, 230, 230)); scan.Save(emptyScan); }
+        using (var scan = new Mat(200, 200, MatType.CV_8UC3)) { scan.SetTo(new Scalar(230, 230, 230)); Cv2.ImWrite(emptyScan, scan); }
         _host.ScanItems.Add(new ScanSessionItem(Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), "scan_0001.png"), new DetectionOptions()));
         _host.ScanItems.Add(new ScanSessionItem(emptyScan, new DetectionOptions()));
         var vm = new ScanStageViewModel(_host);
@@ -515,7 +513,7 @@ public sealed class StageViewModelTests : IDisposable
     public void ScanStage_Refresh_ShouldLoadScanThumbnails()
     {
         string scanPath = Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), "scan_0009.png");
-        using (var scan = new Mat(300, 400, DepthType.Cv8U, 3)) { scan.SetTo(new MCvScalar(200, 180, 160)); scan.Save(scanPath); }
+        using (var scan = new Mat(300, 400, MatType.CV_8UC3)) { scan.SetTo(new Scalar(200, 180, 160)); Cv2.ImWrite(scanPath, scan); }
         _host.ScanItems.Add(new ScanSessionItem(scanPath, new DetectionOptions()));
         var vm = new ScanStageViewModel(_host);
 
@@ -528,7 +526,7 @@ public sealed class StageViewModelTests : IDisposable
     private string AddScan(string name, int width = 400, int height = 300)
     {
         string scanPath = Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), name);
-        using (var scan = new Mat(height, width, DepthType.Cv8U, 3)) { scan.SetTo(new MCvScalar(200, 180, 160)); scan.Save(scanPath); }
+        using (var scan = new Mat(height, width, MatType.CV_8UC3)) { scan.SetTo(new Scalar(200, 180, 160)); Cv2.ImWrite(scanPath, scan); }
         _host.ScanItems.Add(new ScanSessionItem(scanPath, new DetectionOptions()));
         return scanPath;
     }

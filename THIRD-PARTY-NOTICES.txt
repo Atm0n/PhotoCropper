@@ -25,8 +25,12 @@ MIT License (text in section A)
       Copyright (c) 2020 Shiqi Yu <shiqi.yu@gmail.com> - https://github.com/opencv/opencv_zoo
 
 Apache License 2.0 (text in section B)
-  - OpenCV (native libraries shipped with the Emgu CV runtime)
+  - OpenCvSharp (OpenCvSharp5 and its Windows and Linux runtime packages)
+      Copyright (c) 2008-2026 shimat - https://github.com/shimat/opencvsharp
+  - OpenCV (native library OpenCvSharpExtern, shipped with the OpenCvSharp runtime)
       Copyright (C) OpenCV Foundation and contributors - https://github.com/opencv/opencv
+  - Tesseract OCR (statically linked into the Linux OpenCvSharpExtern library)
+      Copyright (c) Google Inc. and the Tesseract contributors - https://github.com/tesseract-ocr/tesseract
   - SixLabors.ImageSharp (Six Labors Split License; used under the Apache License 2.0
     as part of open-source software)
       Copyright (c) Six Labors - https://github.com/SixLabors/ImageSharp
@@ -35,27 +39,22 @@ Apache License 2.0 (text in section B)
       Copyright (c) Samsung AI Center (Roman Suvorov et al.) - https://github.com/advimman/lama
       ONNX export by Carve - https://huggingface.co/Carve/LaMa-ONNX
 
-GNU General Public License v3.0 (text in LICENSE)
-  - Emgu CV (Emgu.CV, Emgu.CV.Bitmap and the Emgu CV runtime packages), used under the
-    open-source option of its dual license
-      Copyright (c) Emgu Corporation - https://www.emgu.com/
-
 GNU Lesser General Public License v2.1 or later (text in section C)
   - NAPS2.Sdk, NAPS2.Images.ImageSharp
       Copyright 2009-2026 NAPS2 Contributors - https://github.com/cyanfish/naps2
       The source code of these libraries is available at the address above.
-  - FFmpeg (opencv_videoio_ffmpeg, shipped with the OpenCV libraries on Windows)
+  - FFmpeg (Windows: opencv_videoio_ffmpeg510_64.dll next to the OpenCV library;
+    Linux: statically linked into libOpenCvSharpExtern.so)
       Copyright (c) the FFmpeg developers - https://ffmpeg.org/
-      Built by the OpenCV project without GPL or non-free parts; its source code is
-      available from https://github.com/opencv/opencv_3rdparty (its ffmpeg branches).
+      The Windows library is built by the OpenCV project without GPL or non-free parts;
+      its source code is available from https://github.com/opencv/opencv_3rdparty (its
+      ffmpeg branches). The Linux build is made by the OpenCvSharp project; its build
+      scripts are at https://github.com/shimat/opencvsharp and the FFmpeg source code
+      at https://ffmpeg.org/download.html.
 
 SIL Open Font License 1.1 (text in section D)
   - Inter typeface (bundled by Avalonia.Fonts.Inter)
       Copyright (c) 2016 The Inter Project Authors - https://github.com/rsms/inter
-
-Microsoft Visual C++ runtime (Windows: vcruntime140.dll, msvcp140*.dll, concrt140.dll)
-  Copyright (c) Microsoft Corporation; redistributed under the Visual Studio
-  redistributable terms.
 
 Packages these components depend on carry their own licenses, available from
 their NuGet packages.

@@ -1,7 +1,6 @@
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Emgu.CV;
 using PhotoCropper.Core;
 using PhotoCropper.Gui.Services;
 using System.Collections.ObjectModel;
@@ -75,7 +74,7 @@ internal sealed partial class CropsStageViewModel
                 for (int i = 0; i < engine.DetectedPhotos.Count; i++)
                 {
                     var mat = engine.DetectedPhotos[i];
-                    if (mat == null || mat.IsEmpty || mat.Width <= 0 || mat.Height <= 0) continue;
+                    if (mat == null || mat.Empty() || mat.Width <= 0 || mat.Height <= 0) continue;
                     Photos.Add(new CropPhotoItem(i, MatBitmapConverter.ToAvaloniaBitmap(mat), $"#{i + 1}", $"{mat.Width} × {mat.Height} px", OnItemSelectionChanged));
                 }
             }

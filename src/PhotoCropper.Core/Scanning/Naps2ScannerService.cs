@@ -1,5 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
+using OpenCvSharp;
 using NAPS2.Images;
 using NAPS2.Images.ImageSharp;
 using NAPS2.Scan;
@@ -110,8 +109,7 @@ public sealed class Naps2ScannerService : IScannerService
                     {
                         image.Save(ms, ImageFileFormat.Png);
                         var bytes = ms.ToArray();
-                        using var raw = new Mat();
-                        CvInvoke.Imdecode(bytes, ImreadModes.AnyColor, raw);
+                        using var raw = Cv2.ImDecode(bytes, ImreadModes.AnyColor);
                         var bgrMat = PhotoCropperEngine.NormalizeToBgr(raw);
                         mats.Add(bgrMat);
                     }

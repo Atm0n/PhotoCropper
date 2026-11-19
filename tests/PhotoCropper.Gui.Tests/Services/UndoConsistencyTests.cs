@@ -1,4 +1,4 @@
-using Emgu.CV;
+using OpenCvSharp;
 using PhotoCropper.Core;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
@@ -35,15 +35,15 @@ public sealed class UndoConsistencyTests : IDisposable
     {
         using var history = new UndoRedoHistory();
         using var engine = CreateEngineWithOneLandscapeCrop();
-        var originalSize = engine.DetectedPhotos[0].Size;
+        var originalSize = engine.DetectedPhotos[0].Size();
 
         engine.RotatePhotoCounterClockwise(0);
         history.PushRotate(0, 0, clockwise: false);
 
         history.Undo([engine]);
 
-        engine.DetectedPhotos[0].Size.ShouldBe(originalSize);
-        engine.RawDetectedPhotos[0].Size.ShouldBe(originalSize);
+        engine.DetectedPhotos[0].Size().ShouldBe(originalSize);
+        engine.RawDetectedPhotos[0].Size().ShouldBe(originalSize);
         engine.PhotoRotations[0].ShouldBe(0);
 
         history.Redo([engine]);
@@ -62,7 +62,7 @@ public sealed class UndoConsistencyTests : IDisposable
         history.Undo([engine]);
 
         engine.PhotoRotations[0].ShouldBe(0);
-        engine.RawDetectedPhotos[0].Size.ShouldBe(engine.DetectedPhotos[0].Size);
+        engine.RawDetectedPhotos[0].Size().ShouldBe(engine.DetectedPhotos[0].Size());
     }
 
     [Fact]
@@ -102,8 +102,8 @@ public sealed class UndoConsistencyTests : IDisposable
         history.Undo([engine]);
 
         engine.PhotoRotations[0].ShouldBe(90);
-        engine.RawDetectedPhotos[0].Size.ShouldBe(rawBefore.Size);
-        CvInvoke.Norm(engine.RawDetectedPhotos[0], rawBefore, Emgu.CV.CvEnum.NormType.L1).ShouldBe(0);
+        engine.RawDetectedPhotos[0].Size().ShouldBe(rawBefore.Size());
+        Cv2.Norm(engine.RawDetectedPhotos[0], rawBefore, NormTypes.L1).ShouldBe(0);
     }
 
     [Fact]
@@ -119,10 +119,10 @@ public sealed class UndoConsistencyTests : IDisposable
             previousRaw: beforeRaw, newRaw: engine.RawDetectedPhotos[0]);
 
         history.Undo([engine]);
-        engine.RawDetectedPhotos[0].Size.ShouldBe(beforeRaw.Size);
+        engine.RawDetectedPhotos[0].Size().ShouldBe(beforeRaw.Size());
 
         history.Redo([engine]);
-        engine.RawDetectedPhotos[0].Size.ShouldBe(new System.Drawing.Size(100, 50));
+        engine.RawDetectedPhotos[0].Size().ShouldBe(new OpenCvSharp.Size(100, 50));
     }
 
     public void Dispose()

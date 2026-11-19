@@ -1,5 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
+using OpenCvSharp;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Extraction;
 using PhotoCropper.Core.Models;
@@ -112,9 +111,8 @@ public static class RestoreStage
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         byte[] bytes = File.ReadAllBytes(path);
-        Mat image = new();
-        CvInvoke.Imdecode(bytes, ImreadModes.Unchanged, image);
-        if (image.IsEmpty)
+        Mat image = Cv2.ImDecode(bytes, ImreadModes.Unchanged);
+        if (image.Empty())
         {
             image.Dispose();
             throw new InvalidOperationException($"Could not decode image '{path}'.");

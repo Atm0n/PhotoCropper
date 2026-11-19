@@ -1,4 +1,3 @@
-using Emgu.CV.Structure;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 
@@ -10,7 +9,7 @@ public readonly record struct CropCandidate
     public Point[] ShapePoints { get; init; }
     public Rectangle Rect { get; init; }
     public double Score { get; init; }
-    public RotatedRect Rotated { get; init; }
+    public RotatedBox Rotated { get; init; }
     public double Area { get; init; }
     public double Rectangularity { get; init; }
     public double Convexity { get; init; }
@@ -26,7 +25,7 @@ public readonly record struct CropCandidate
         Point[] shapePoints,
         Rectangle rect,
         double score,
-        RotatedRect rotated,
+        RotatedBox rotated,
         double area,
         double rectangularity,
         double convexity)

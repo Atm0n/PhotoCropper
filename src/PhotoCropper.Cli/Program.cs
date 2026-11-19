@@ -1,5 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
+using OpenCvSharp;
 using PhotoCropper.Cli.Models;
 using PhotoCropper.Cli.Parsing;
 using PhotoCropper.Cli.Services;
@@ -16,7 +15,7 @@ internal static class Program
     internal static int Main(string[] args)
     {
         ArgumentNullException.ThrowIfNull(args);
-        CvInvoke.LogLevel = LogLevel.Error;
+        Cv2.SetLogLevel(LogLevel.ERROR);
         Environment.SetEnvironmentVariable("OPENCV_LOG_LEVEL", "ERROR");
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.InputEncoding = System.Text.Encoding.UTF8;

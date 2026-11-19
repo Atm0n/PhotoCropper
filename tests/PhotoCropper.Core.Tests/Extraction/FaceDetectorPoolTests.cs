@@ -1,6 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Extraction;
 
 namespace PhotoCropper.Core.Tests.Extraction;
@@ -17,8 +15,8 @@ public sealed class FaceDetectorPoolTests
 {
     private static Mat Photo()
     {
-        var photo = new Mat(200, 200, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(120, 140, 160));
+        var photo = new Mat(200, 200, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(120, 140, 160));
         return photo;
     }
 

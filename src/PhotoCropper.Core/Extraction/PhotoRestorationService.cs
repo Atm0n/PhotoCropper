@@ -1,7 +1,5 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
-using System.Drawing;
+using OpenCvSharp;
+using PhotoCropper.Core.Common;
 
 namespace PhotoCropper.Core.Extraction;
 
@@ -24,25 +22,23 @@ public static class PhotoRestorationService
     {
         ArgumentNullException.ThrowIfNull(photo);
         ArgumentNullException.ThrowIfNull(settings);
-        if (photo.IsEmpty || photo.Width < 20 || photo.Height < 20 || !settings.ChangesPhoto) return photo;
+        if (photo.Empty() || photo.Width < 20 || photo.Height < 20 || !settings.ChangesPhoto) return photo;
 
-        bool hasAlpha = photo.NumberOfChannels == 4;
+        bool hasAlpha = photo.Channels() == 4;
         using Mat bgr = new();
         using Mat alpha = new();
 
         if (hasAlpha)
         {
-            using var channels = new Emgu.CV.Util.VectorOfMat();
-            CvInvoke.Split(photo, channels);
+            using var channels = MatChannels.Split(photo);
             // channels[0] = B, channels[1] = G, channels[2] = R, channels[3] = A
             channels[3].CopyTo(alpha);
 
-            using var bgrVec = new Emgu.CV.Util.VectorOfMat(channels[0], channels[1], channels[2]);
-            CvInvoke.Merge(bgrVec, bgr);
+            Cv2.Merge([channels[0], channels[1], channels[2]], bgr);
         }
-        else if (photo.NumberOfChannels == 1)
+        else if (photo.Channels() == 1)
         {
-            CvInvoke.CvtColor(photo, bgr, ColorConversion.Gray2Bgr);
+            Cv2.CvtColor(photo, bgr, ColorConversionCodes.GRAY2BGR);
         }
         else
         {
@@ -114,14 +110,12 @@ public static class PhotoRestorationService
             throw;
         }
 
-        if (hasAlpha && !alpha.IsEmpty)
+        if (hasAlpha && !alpha.Empty())
         {
-            using var outChannels = new Emgu.CV.Util.VectorOfMat();
-            CvInvoke.Split(finalBgr, outChannels);
+            using var outChannels = MatChannels.Split(finalBgr);
 
-            using var outWithAlpha = new Emgu.CV.Util.VectorOfMat(outChannels[0], outChannels[1], outChannels[2], alpha);
             Mat bgraResult = new();
-            CvInvoke.Merge(outWithAlpha, bgraResult);
+            Cv2.Merge([outChannels[0], outChannels[1], outChannels[2], alpha], bgraResult);
             finalBgr.Dispose();
             return bgraResult;
         }
@@ -134,27 +128,27 @@ public static class PhotoRestorationService
     /// of natural structure. A speck's own outline always produces edges, so only edges in a small ring
     /// <em>around</em> it count: many of them mean a contour or detail runs through, and the candidate is kept.
     /// </summary>
-    private static bool IsIsolatedDefect(Emgu.CV.Util.VectorOfVectorOfPoint contours, int index, Rectangle bounds, Mat edges)
+    private static bool IsIsolatedDefect(Point[][] contours, int index, Rect bounds, Mat edges)
     {
         const int ring = 4;
-        Rectangle area = Rectangle.Inflate(bounds, ring, ring);
-        area.Intersect(new Rectangle(0, 0, edges.Width, edges.Height));
+        Rect area = Rect.Inflate(bounds, ring, ring);
+        area = area.Intersect(new Rect(0, 0, edges.Width, edges.Height));
         if (area.Width <= 0 || area.Height <= 0) return false;
 
         // The defect itself, grown by 2 px so its own outline edges fall inside it.
-        using Mat own = Mat.Zeros(area.Height, area.Width, DepthType.Cv8U, 1);
-        CvInvoke.DrawContours(own, contours, index, new MCvScalar(255), -1, LineType.EightConnected, null, int.MaxValue, new Point(-area.X, -area.Y));
-        using Mat grow = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5), new Point(-1, -1));
-        CvInvoke.Dilate(own, own, grow, new Point(-1, -1), 1, BorderType.Constant, new MCvScalar());
+        using Mat own = new Mat(area.Height, area.Width, MatType.CV_8UC1, Scalar.All(0));
+        Cv2.DrawContours(own, [contours[index]], 0, new Scalar(255), -1, LineTypes.Link8, null, int.MaxValue, new Point(-area.X, -area.Y));
+        using Mat grow = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5), new Point(-1, -1));
+        Cv2.Dilate(own, own, grow, new Point(-1, -1), 1, BorderTypes.Constant, new Scalar());
 
         using Mat edgeArea = new(edges, area);
         using Mat foreignEdges = new();
-        CvInvoke.Subtract(edgeArea, own, foreignEdges);
+        Cv2.Subtract(edgeArea, own, foreignEdges);
 
         // Dust on clean background has no edges of its own in the ring at all; a corner or contour passing by does.
         // Being strict here errs on the side of leaving a speck rather than smearing real detail.
         const int maxForeignEdgePixels = 2;
-        return CvInvoke.CountNonZero(foreignEdges) <= maxForeignEdgePixels;
+        return Cv2.CountNonZero(foreignEdges) <= maxForeignEdgePixels;
     }
 
     /// <summary>Disposes <paramref name="current"/> and replaces it with <paramref name="next"/>.</summary>
@@ -172,41 +166,38 @@ public static class PhotoRestorationService
     internal static bool IsMonochrome(Mat bgr)
     {
         ArgumentNullException.ThrowIfNull(bgr);
-        if (bgr.IsEmpty) return false;
-        if (bgr.NumberOfChannels == 1) return true;
+        if (bgr.Empty()) return false;
+        if (bgr.Channels() == 1) return true;
 
         // A small copy is enough to judge colour content.
         using Mat small = new();
         double scale = Math.Min(1.0, 256.0 / Math.Max(bgr.Width, bgr.Height));
-        CvInvoke.Resize(bgr, small, new Size(Math.Max(1, (int)(bgr.Width * scale)), Math.Max(1, (int)(bgr.Height * scale))), 0, 0, Inter.Area);
+        Cv2.Resize(bgr, small, new Size(Math.Max(1, (int)(bgr.Width * scale)), Math.Max(1, (int)(bgr.Height * scale))), 0, 0, InterpolationFlags.Area);
 
         using Mat lab = new();
-        CvInvoke.CvtColor(small, lab, ColorConversion.Bgr2Lab);
-        using var channels = new Emgu.CV.Util.VectorOfMat();
-        CvInvoke.Split(lab, channels);
+        Cv2.CvtColor(small, lab, ColorConversionCodes.BGR2Lab);
+        using var channels = MatChannels.Split(lab);
 
         using Mat a = new();
         using Mat b = new();
-        channels[1].ConvertTo(a, DepthType.Cv32F);
-        channels[2].ConvertTo(b, DepthType.Cv32F);
+        channels[1].ConvertTo(a, MatType.CV_32F);
+        channels[2].ConvertTo(b, MatType.CV_32F);
 
         // Distance of each pixel's chroma from the photo's average tint.
-        double meanA = CvInvoke.Mean(a).V0;
-        double meanB = CvInvoke.Mean(b).V0;
+        double meanA = Cv2.Mean(a).Val0;
+        double meanB = Cv2.Mean(b).Val0;
         using Mat da = new();
         using Mat db = new();
-        using var meanAArray = new ScalarArray(meanA);
-        using var meanBArray = new ScalarArray(meanB);
-        CvInvoke.Subtract(a, meanAArray, da);
-        CvInvoke.Subtract(b, meanBArray, db);
+        Cv2.Subtract(a, new Scalar(meanA), da);
+        Cv2.Subtract(b, new Scalar(meanB), db);
         using Mat distance = new();
         using Mat angle = new();
-        CvInvoke.CartToPolar(da, db, distance, angle);
+        Cv2.CartToPolar(da, db, distance, angle);
 
         // Black and white if fewer than 2% of pixels stray noticeably from the common tint.
         using Mat offTint = new();
-        CvInvoke.Threshold(distance, offTint, 8.0, 1.0, ThresholdType.Binary);
-        double offTintFraction = CvInvoke.Mean(offTint).V0;
+        Cv2.Threshold(distance, offTint, 8.0, 1.0, ThresholdTypes.Binary);
+        double offTintFraction = Cv2.Mean(offTint).Val0;
         return offTintFraction < 0.02;
     }
 
@@ -214,19 +205,20 @@ public static class PhotoRestorationService
     private static Mat ApplyLocalContrast(Mat bgr, double clipLimit)
     {
         using Mat lab = new();
-        CvInvoke.CvtColor(bgr, lab, ColorConversion.Bgr2Lab);
-        using var labChannels = new Emgu.CV.Util.VectorOfMat();
-        CvInvoke.Split(lab, labChannels);
+        Cv2.CvtColor(bgr, lab, ColorConversionCodes.BGR2Lab);
+        using var labChannels = MatChannels.Split(lab);
 
         using Mat lEnhanced = new();
-        CvInvoke.CLAHE(labChannels[0], clipLimit, new Size(8, 8), lEnhanced);
+        using (var clahe = Cv2.CreateCLAHE(clipLimit, new Size(8, 8)))
+        {
+            clahe.Apply(labChannels[0], lEnhanced);
+        }
 
-        using var merged = new Emgu.CV.Util.VectorOfMat(lEnhanced, labChannels[1], labChannels[2]);
         using Mat enhancedLab = new();
-        CvInvoke.Merge(merged, enhancedLab);
+        Cv2.Merge([lEnhanced, labChannels[1], labChannels[2]], enhancedLab);
 
         Mat result = new();
-        CvInvoke.CvtColor(enhancedLab, result, ColorConversion.Lab2Bgr);
+        Cv2.CvtColor(enhancedLab, result, ColorConversionCodes.Lab2BGR);
         return result;
     }
 
@@ -234,29 +226,27 @@ public static class PhotoRestorationService
     private static Mat ApplyVibrancy(Mat bgr, float factor)
     {
         using Mat hsv = new();
-        CvInvoke.CvtColor(bgr, hsv, ColorConversion.Bgr2Hsv);
-        using var hsvChannels = new Emgu.CV.Util.VectorOfMat();
-        CvInvoke.Split(hsv, hsvChannels);
+        Cv2.CvtColor(bgr, hsv, ColorConversionCodes.BGR2HSV);
+        using var hsvChannels = MatChannels.Split(hsv);
 
         using Mat satLut = CreateVibrancyLookupTable(factor);
         using Mat satEnhanced = new();
-        CvInvoke.LUT(hsvChannels[1], satLut, satEnhanced);
+        Cv2.LUT(hsvChannels[1], satLut, satEnhanced);
 
-        using var merged = new Emgu.CV.Util.VectorOfMat(hsvChannels[0], satEnhanced, hsvChannels[2]);
         using Mat finalHsv = new();
-        CvInvoke.Merge(merged, finalHsv);
+        Cv2.Merge([hsvChannels[0], satEnhanced, hsvChannels[2]], finalHsv);
 
         Mat result = new();
-        CvInvoke.CvtColor(finalHsv, result, ColorConversion.Hsv2Bgr);
+        Cv2.CvtColor(finalHsv, result, ColorConversionCodes.HSV2BGR);
         return result;
     }
 
     private static Mat ToNeutralGray(Mat bgr)
     {
         using Mat gray = new();
-        CvInvoke.CvtColor(bgr, gray, ColorConversion.Bgr2Gray);
+        Cv2.CvtColor(bgr, gray, ColorConversionCodes.BGR2GRAY);
         Mat result = new();
-        CvInvoke.CvtColor(gray, result, ColorConversion.Gray2Bgr);
+        Cv2.CvtColor(gray, result, ColorConversionCodes.GRAY2BGR);
         return result;
     }
 
@@ -274,45 +264,41 @@ public static class PhotoRestorationService
                 double alpha = 1.0 + Math.Clamp(settings.Contrast, -100, 100) / 100.0 * 0.6;      // 0.4 .. 1.6
                 double beta = 128.0 * (1.0 - alpha) + Math.Clamp(settings.Brightness, -100, 100) * 0.5; // ±50 levels
                 Mat adjusted = new();
-                current.ConvertTo(adjusted, DepthType.Cv8U, alpha, beta);
+                current.ConvertTo(adjusted, MatType.CV_8U, alpha, beta);
                 Replace(ref current, adjusted);
             }
 
             if (settings.Warmth != 0 || settings.Tint != 0)
             {
                 using Mat lab = new();
-                CvInvoke.CvtColor(current, lab, ColorConversion.Bgr2Lab);
-                using var channels = new Emgu.CV.Util.VectorOfMat();
-                CvInvoke.Split(lab, channels);
+                Cv2.CvtColor(current, lab, ColorConversionCodes.BGR2Lab);
+                using var channels = MatChannels.Split(lab);
 
                 using Mat aShifted = new();
                 using Mat bShifted = new();
-                channels[1].ConvertTo(aShifted, DepthType.Cv8U, 1.0, Math.Clamp(settings.Tint, -100, 100) * 0.15);   // magenta +, green -
-                channels[2].ConvertTo(bShifted, DepthType.Cv8U, 1.0, Math.Clamp(settings.Warmth, -100, 100) * 0.20); // yellow +, blue -
+                channels[1].ConvertTo(aShifted, MatType.CV_8U, 1.0, Math.Clamp(settings.Tint, -100, 100) * 0.15);   // magenta +, green -
+                channels[2].ConvertTo(bShifted, MatType.CV_8U, 1.0, Math.Clamp(settings.Warmth, -100, 100) * 0.20); // yellow +, blue -
 
-                using var merged = new Emgu.CV.Util.VectorOfMat(channels[0], aShifted, bShifted);
                 using Mat shiftedLab = new();
-                CvInvoke.Merge(merged, shiftedLab);
+                Cv2.Merge([channels[0], aShifted, bShifted], shiftedLab);
                 Mat result = new();
-                CvInvoke.CvtColor(shiftedLab, result, ColorConversion.Lab2Bgr);
+                Cv2.CvtColor(shiftedLab, result, ColorConversionCodes.Lab2BGR);
                 Replace(ref current, result);
             }
 
             if (settings.Saturation != 0 && settings.ColorMode != Workspace.PhotoColorMode.BlackAndWhiteNeutral)
             {
                 using Mat hsv = new();
-                CvInvoke.CvtColor(current, hsv, ColorConversion.Bgr2Hsv);
-                using var channels = new Emgu.CV.Util.VectorOfMat();
-                CvInvoke.Split(hsv, channels);
+                Cv2.CvtColor(current, hsv, ColorConversionCodes.BGR2HSV);
+                using var channels = MatChannels.Split(hsv);
 
                 using Mat sScaled = new();
-                channels[1].ConvertTo(sScaled, DepthType.Cv8U, 1.0 + Math.Clamp(settings.Saturation, -100, 100) / 100.0, 0);
+                channels[1].ConvertTo(sScaled, MatType.CV_8U, 1.0 + Math.Clamp(settings.Saturation, -100, 100) / 100.0, 0);
 
-                using var merged = new Emgu.CV.Util.VectorOfMat(channels[0], sScaled, channels[2]);
                 using Mat scaledHsv = new();
-                CvInvoke.Merge(merged, scaledHsv);
+                Cv2.Merge([channels[0], sScaled, channels[2]], scaledHsv);
                 Mat result = new();
-                CvInvoke.CvtColor(scaledHsv, result, ColorConversion.Hsv2Bgr);
+                Cv2.CvtColor(scaledHsv, result, ColorConversionCodes.HSV2BGR);
                 Replace(ref current, result);
             }
 
@@ -332,79 +318,75 @@ public static class PhotoRestorationService
     public static Mat InpaintDustAndScratches(Mat bgr, double inpaintRadius = 2.5)
     {
         ArgumentNullException.ThrowIfNull(bgr);
-        if (bgr.IsEmpty || bgr.Width < 30 || bgr.Height < 30) return bgr.Clone();
+        if (bgr.Empty() || bgr.Width < 30 || bgr.Height < 30) return bgr.Clone();
 
         using Mat gray = new();
-        CvInvoke.CvtColor(bgr, gray, ColorConversion.Bgr2Gray);
+        Cv2.CvtColor(bgr, gray, ColorConversionCodes.BGR2GRAY);
 
         // Median blur removes fine natural film grain so we only target true dust/scratches
         using Mat smooth = new();
-        CvInvoke.MedianBlur(gray, smooth, 3);
+        Cv2.MedianBlur(gray, smooth, 3);
 
         // 3x3 to 5x5 elliptical structuring element for isolated dust & thin lines
         // Black-hat/top-hat only find features smaller than the kernel, so it grows with resolution: dust that is
         // 2 px on a small photo is 8 px on a 600 DPI scan. About 1/200 of the shorter side, odd, 5..15 px.
         int kernelSize = Math.Clamp(Math.Min(bgr.Width, bgr.Height) / 200, 5, 15) | 1;
-        using Mat kernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(kernelSize, kernelSize), new Point(-1, -1));
+        using Mat kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(kernelSize, kernelSize), new Point(-1, -1));
 
         using Mat blackHat = new();
-        CvInvoke.MorphologyEx(smooth, blackHat, MorphOp.Blackhat, kernel, new Point(-1, -1), 1, BorderType.Reflect, new MCvScalar());
+        Cv2.MorphologyEx(smooth, blackHat, MorphTypes.BlackHat, kernel, new Point(-1, -1), 1, BorderTypes.Reflect, new Scalar());
 
         using Mat topHat = new();
-        CvInvoke.MorphologyEx(smooth, topHat, MorphOp.Tophat, kernel, new Point(-1, -1), 1, BorderType.Reflect, new MCvScalar());
+        Cv2.MorphologyEx(smooth, topHat, MorphTypes.TopHat, kernel, new Point(-1, -1), 1, BorderTypes.Reflect, new Scalar());
 
         using Mat threshBlack = new();
         using Mat threshTop = new();
-        CvInvoke.Threshold(blackHat, threshBlack, 28, 255, ThresholdType.Binary);
-        CvInvoke.Threshold(topHat, threshTop, 35, 255, ThresholdType.Binary);
+        Cv2.Threshold(blackHat, threshBlack, 28, 255, ThresholdTypes.Binary);
+        Cv2.Threshold(topHat, threshTop, 35, 255, ThresholdTypes.Binary);
 
         using Mat defectMask = new();
-        CvInvoke.BitwiseOr(threshBlack, threshTop, defectMask);
+        Cv2.BitwiseOr(threshBlack, threshTop, defectMask);
 
         // Edges, used to protect natural detail (eyes, contours, text) from being inpainted.
         using Mat edges = new();
-        CvInvoke.Canny(smooth, edges, 60, 160);
+        Cv2.Canny(smooth, edges, 60, 160);
 
-        using var contours = new Emgu.CV.Util.VectorOfVectorOfPoint();
-        using Mat hierarchy = new();
-        CvInvoke.FindContours(defectMask, contours, hierarchy, RetrType.External, ChainApproxMethod.ChainApproxSimple);
+        Cv2.FindContours(defectMask, out Point[][] contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
 
-        using Mat filteredMask = Mat.Zeros(defectMask.Rows, defectMask.Cols, DepthType.Cv8U, 1);
+        using Mat filteredMask = new Mat(defectMask.Rows, defectMask.Cols, MatType.CV_8UC1, Scalar.All(0));
         int maxDefectArea = Math.Max(25, (int)(bgr.Width * bgr.Height * 0.0008)); // max 0.08% of photo area
 
-        for (int i = 0; i < contours.Size; i++)
+        for (int i = 0; i < contours.Length; i++)
         {
-            using var contour = contours[i];
-            Rectangle bounds = CvInvoke.BoundingRectangle(contour);
+            Rect bounds = Cv2.BoundingRect(contours[i]);
 
             // Ignore large blobs: those are image features, not dust.
             if (bounds.Width * bounds.Height > maxDefectArea * 2) continue;
 
             if (IsIsolatedDefect(contours, i, bounds, edges))
             {
-                CvInvoke.DrawContours(filteredMask, contours, i, new MCvScalar(255), -1);
+                Cv2.DrawContours(filteredMask, [contours[i]], 0, new Scalar(255), -1);
             }
         }
 
         // Slightly dilate the defects to cover boundary penumbra
         using Mat finalMask = new();
-        using Mat dilateKernel = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3), new Point(-1, -1));
-        CvInvoke.Dilate(filteredMask, finalMask, dilateKernel, new Point(-1, -1), 1, BorderType.Reflect, new MCvScalar());
+        using Mat dilateKernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3), new Point(-1, -1));
+        Cv2.Dilate(filteredMask, finalMask, dilateKernel, new Point(-1, -1), 1, BorderTypes.Reflect, new Scalar());
 
         // Inpaint defects using Fast Marching Method (Telea)
         Mat result = new();
-        CvInvoke.Inpaint(bgr, finalMask, result, inpaintRadius, InpaintType.Telea);
+        Cv2.Inpaint(bgr, finalMask, result, inpaintRadius, InpaintTypes.Telea);
         return result;
     }
 
     private static Mat ApplySoftWhiteBalance(Mat bgr, double damping)
     {
-        using var channels = new Emgu.CV.Util.VectorOfMat();
-        CvInvoke.Split(bgr, channels);
+        using var channels = MatChannels.Split(bgr);
 
-        double meanB = CvInvoke.Mean(channels[0]).V0;
-        double meanG = CvInvoke.Mean(channels[1]).V0;
-        double meanR = CvInvoke.Mean(channels[2]).V0;
+        double meanB = Cv2.Mean(channels[0]).Val0;
+        double meanG = Cv2.Mean(channels[1]).Val0;
+        double meanR = Cv2.Mean(channels[2]).Val0;
         double grayAvg = (meanB + meanG + meanR) / 3.0;
 
         if (meanB < 1.0 || meanG < 1.0 || meanR < 1.0) return bgr.Clone();
@@ -422,13 +404,12 @@ public static class PhotoRestorationService
         using Mat gScaled = new();
         using Mat rScaled = new();
 
-        channels[0].ConvertTo(bScaled, DepthType.Cv8U, gainB, 0);
-        channels[1].ConvertTo(gScaled, DepthType.Cv8U, gainG, 0);
-        channels[2].ConvertTo(rScaled, DepthType.Cv8U, gainR, 0);
+        channels[0].ConvertTo(bScaled, MatType.CV_8U, gainB, 0);
+        channels[1].ConvertTo(gScaled, MatType.CV_8U, gainG, 0);
+        channels[2].ConvertTo(rScaled, MatType.CV_8U, gainR, 0);
 
-        using var scaledVec = new Emgu.CV.Util.VectorOfMat(bScaled, gScaled, rScaled);
         Mat result = new();
-        CvInvoke.Merge(scaledVec, result);
+        Cv2.Merge([bScaled, gScaled, rScaled], result);
         return result;
     }
 
@@ -440,17 +421,14 @@ public static class PhotoRestorationService
     private static Mat ApplyUnifiedContrastStretch(Mat bgr, double lowPercentile, double highPercentile)
     {
         using Mat lab = new();
-        CvInvoke.CvtColor(bgr, lab, ColorConversion.Bgr2Lab);
-        using var labChannels = new Emgu.CV.Util.VectorOfMat();
-        CvInvoke.Split(lab, labChannels);
+        Cv2.CvtColor(bgr, lab, ColorConversionCodes.BGR2Lab);
+        using var labChannels = MatChannels.Split(lab);
         using Mat gray = labChannels[0].Clone();
 
         using Mat hist = new();
-        using var vec = new Emgu.CV.Util.VectorOfMat(gray);
-        CvInvoke.CalcHist(vec, [0], null, hist, [256], [0, 256], false);
-
-        float[] histData = new float[256];
-        hist.CopyTo(histData);
+        using Mat noMask = new();
+        Cv2.CalcHist([gray], [0], noMask, hist, 1, [256], [new Rangef(0, 256)]);
+        hist.GetArray(out float[] histData);
 
         int totalPixels = gray.Width * gray.Height;
         int lowThreshold = (int)Math.Round(totalPixels * lowPercentile);
@@ -496,18 +474,17 @@ public static class PhotoRestorationService
             else lutBytes[i] = (byte)Math.Clamp(Math.Round((i - minVal) * 255.0 / range), 0, 255);
         }
 
-        using Mat lut = new(1, 256, DepthType.Cv8U, 1);
-        lut.SetTo(lutBytes);
+        using Mat lut = new(1, 256, MatType.CV_8UC1);
+        lut.SetData(lutBytes);
 
         using Mat stretchedL = new();
-        CvInvoke.LUT(gray, lut, stretchedL);
+        Cv2.LUT(gray, lut, stretchedL);
 
-        using var merged = new Emgu.CV.Util.VectorOfMat(stretchedL, labChannels[1], labChannels[2]);
         using Mat stretchedLab = new();
-        CvInvoke.Merge(merged, stretchedLab);
+        Cv2.Merge([stretchedL, labChannels[1], labChannels[2]], stretchedLab);
 
         Mat destination = new();
-        CvInvoke.CvtColor(stretchedLab, destination, ColorConversion.Lab2Bgr);
+        Cv2.CvtColor(stretchedLab, destination, ColorConversionCodes.Lab2BGR);
         return destination;
     }
 
@@ -521,8 +498,8 @@ public static class PhotoRestorationService
             lutBytes[i] = (byte)Math.Clamp(Math.Round(val), 0, 255);
         }
 
-        Mat lut = new(1, 256, DepthType.Cv8U, 1);
-        lut.SetTo(lutBytes);
+        Mat lut = new(1, 256, MatType.CV_8UC1);
+        lut.SetData(lutBytes);
         return lut;
     }
 }

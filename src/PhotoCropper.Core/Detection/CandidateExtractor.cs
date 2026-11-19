@@ -1,10 +1,7 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
-using Emgu.CV.Util;
+using OpenCvSharp;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Extraction;
 using PhotoCropper.Core.Models;
-using System.Drawing;
 
 namespace PhotoCropper.Core.Detection;
 
@@ -18,20 +15,19 @@ public static class CandidateExtractor
         double minAreaFactor,
         double maxAreaFactor,
         Mat? sourceColorMat = null,
-        MCvScalar? backgroundColorBgr = null)
+        Scalar? backgroundColorBgr = null)
     {
         ArgumentNullException.ThrowIfNull(foregroundMap);
 
         var result = new List<CropCandidate>();
 
-        using VectorOfVectorOfPoint contours = new();
-        CvInvoke.FindContours(foregroundMap, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
+        Cv2.FindContours(foregroundMap, out Point[][] contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
 
         double totalArea = (double)originalWidth * originalHeight;
         double minArea = totalArea * minAreaFactor;
         double maxArea = totalArea * maxAreaFactor;
 
-        for (int i = 0; i < contours.Size; i++)
+        for (int i = 0; i < contours.Length; i++)
         {
             var candidate = ProcessContour(
                 contours[i],
@@ -53,27 +49,26 @@ public static class CandidateExtractor
     }
 
     private static CropCandidate? ProcessContour(
-        IInputArray contour,
+        Point[] contour,
         int padOffset,
         int originalWidth,
         int originalHeight,
         double minArea,
         double maxArea,
         Mat? sourceColorMat,
-        MCvScalar? backgroundColorBgr)
+        Scalar? backgroundColorBgr)
     {
-        double contourArea = CvInvoke.ContourArea(contour);
+        double contourArea = Cv2.ContourArea(contour);
         if (contourArea < minArea || contourArea > maxArea) return null;
 
-        using VectorOfPoint hull = new();
-        CvInvoke.ConvexHull(contour, hull);
-        double hullArea = CvInvoke.ContourArea(hull);
+        Point[] hull = Cv2.ConvexHull(contour);
+        double hullArea = Cv2.ContourArea(hull);
 
-        RotatedRect padRr = CvInvoke.MinAreaRect(hull);
-        RotatedRect scanRr = new(new PointF(padRr.Center.X - padOffset, padRr.Center.Y - padOffset), padRr.Size, padRr.Angle);
+        RotatedRect padRr = Cv2.MinAreaRect(hull);
+        RotatedRect scanRr = new(new Point2f(padRr.Center.X - padOffset, padRr.Center.Y - padOffset), padRr.Size, padRr.Angle);
         RotatedRect rr = PhotoExtractionEngine.RegularizeNearRightAngles(scanRr, 0.35f);
 
-        PointF[] boxPts = rr.GetVertices();
+        Point2f[] boxPts = rr.Points();
         Point[] shapePoints = new Point[4];
         for (int p = 0; p < 4; p++)
         {
@@ -82,8 +77,6 @@ public static class CandidateExtractor
                 Math.Clamp((int)Math.Round(boxPts[p].Y), 0, originalHeight - 1)
             );
         }
-
-        using VectorOfPoint tempShape = new(shapePoints);
 
         float w = rr.Size.Width;
         float h = rr.Size.Height;
@@ -98,9 +91,9 @@ public static class CandidateExtractor
 
         if (rectangularity < 0.60 || convexity < 0.68) return null;
 
-        if (sourceColorMat != null && !sourceColorMat.IsEmpty && backgroundColorBgr.HasValue)
+        if (sourceColorMat != null && !sourceColorMat.Empty() && backgroundColorBgr.HasValue)
         {
-            Rectangle cBounds = CvInvoke.BoundingRectangle(contour);
+            Rect cBounds = Cv2.BoundingRect(contour);
             int clampX = Math.Clamp(cBounds.X, 0, sourceColorMat.Width - 1);
             int clampY = Math.Clamp(cBounds.Y, 0, sourceColorMat.Height - 1);
             int clampW = Math.Clamp(cBounds.Width, 1, sourceColorMat.Width - clampX);
@@ -108,16 +101,14 @@ public static class CandidateExtractor
 
             if (clampW >= 20 && clampH >= 20)
             {
-                using Mat roi = new(sourceColorMat, new Rectangle(clampX, clampY, clampW, clampH));
-                MCvScalar mean = new();
-                MCvScalar stdDev = new();
-                CvInvoke.MeanStdDev(roi, ref mean, ref stdDev);
+                using Mat roi = new(sourceColorMat, new Rect(clampX, clampY, clampW, clampH));
+                Cv2.MeanStdDev(roi, out Scalar mean, out Scalar stdDev);
 
-                double avgStdDev = (stdDev.V0 + stdDev.V1 + stdDev.V2) / 3.0;
+                double avgStdDev = (stdDev.Val0 + stdDev.Val1 + stdDev.Val2) / 3.0;
                 double colorDist = Math.Sqrt(
-                    Math.Pow(mean.V0 - backgroundColorBgr.Value.V0, 2) +
-                    Math.Pow(mean.V1 - backgroundColorBgr.Value.V1, 2) +
-                    Math.Pow(mean.V2 - backgroundColorBgr.Value.V2, 2));
+                    Math.Pow(mean.Val0 - backgroundColorBgr.Value.Val0, 2) +
+                    Math.Pow(mean.Val1 - backgroundColorBgr.Value.Val1, 2) +
+                    Math.Pow(mean.Val2 - backgroundColorBgr.Value.Val2, 2));
 
                 if (avgStdDev < 6.0 && colorDist < 22.0)
                 {
@@ -131,10 +122,10 @@ public static class CandidateExtractor
 
         return new CropCandidate
         {
-            ShapePoints = shapePoints,
-            Rect = CvInvoke.BoundingRectangle(tempShape),
+            ShapePoints = CvInterop.ToPoints(shapePoints),
+            Rect = CvInterop.ToRectangle(Cv2.BoundingRect(shapePoints)),
             Score = score,
-            Rotated = rr,
+            Rotated = CvInterop.ToBox(rr),
             Area = contourArea,
             Rectangularity = rectangularity,
             Convexity = convexity

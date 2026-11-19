@@ -1,7 +1,11 @@
-using Emgu.CV.Structure;
+using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.TestHelpers;
-using System.Drawing;
+using Point2f = System.Drawing.PointF;
+using Rect = System.Drawing.Rectangle;
+using RotatedRect = PhotoCropper.Core.Models.RotatedBox;
+using Size = System.Drawing.Size;
+using Size2f = System.Drawing.SizeF;
 
 namespace PhotoCropper.Core.Tests.Engine;
 
@@ -15,7 +19,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     private readonly string _scanPath;
 
     // A 160x80 box whose top-left corner is at (420, 460).
-    private static readonly RotatedRect Box = new(new PointF(500, 500), new SizeF(160, 80), 0);
+    private static readonly RotatedRect Box = new(new Point2f(500, 500), new Size2f(160, 80), 0);
 
     public RefinementPersistenceTests()
     {
@@ -35,7 +39,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     [Fact]
     public void MapPhotoCropToScan_Unrotated_ShouldOffsetFromBoxCorner()
     {
-        var mapped = PhotoCropperEngine.MapPhotoCropToScan(Box, 0, new Size(160, 80), new Rectangle(10, 10, 100, 50));
+        var mapped = PhotoCropperEngine.MapPhotoCropToScan(Box, 0, new Size(160, 80), new Rect(10, 10, 100, 50));
 
         ShouldBeBox(mapped, 420 + 10 + 50, 460 + 10 + 25, 100, 50);
     }
@@ -48,7 +52,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     public void MapPhotoCropToScan_Rotated_ShouldMapLeftHalfToTheMatchingSideOfTheBox(
         int rotation, int shownWidth, int shownHeight, float expectedCx, float expectedCy)
     {
-        var leftHalf = new Rectangle(0, 0, shownWidth / 2, shownHeight);
+        var leftHalf = new Rect(0, 0, shownWidth / 2, shownHeight);
 
         var mapped = PhotoCropperEngine.MapPhotoCropToScan(Box, rotation, new Size(shownWidth, shownHeight), leftHalf);
 
@@ -68,9 +72,9 @@ public sealed class RefinementPersistenceTests : IDisposable
         engine.RestoreFromSavedCrops([new WorkspaceCropData { CenterX = 500, CenterY = 500, Width = 160, Height = 80 }]);
         for (int i = 0; i < userQuarterTurns; i++) engine.RotatePhoto(0);
 
-        var shown = engine.DetectedPhotos[0].Size;
-        engine.ApplyCropToPhoto(0, new Rectangle(5, 7, shown.Width - 20, shown.Height - 15));
-        var refinedSize = engine.DetectedPhotos[0].Size;
+        var shown = engine.DetectedPhotos[0].Size();
+        engine.ApplyCropToPhoto(0, new Rect(5, 7, shown.Width - 20, shown.Height - 15));
+        var refinedSize = engine.DetectedPhotos[0].Size();
 
         // Persist the way the GUI does on export, then restore into a fresh engine.
         var cand = engine.AcceptedCandidates[0];
@@ -99,7 +103,7 @@ public sealed class RefinementPersistenceTests : IDisposable
         using var engine = new PhotoCropperEngine(_scanPath) { AutoOrientPhotos = false };
         engine.RestoreFromSavedCrops([new WorkspaceCropData { CenterX = 500, CenterY = 500, Width = 160, Height = 80 }]);
 
-        engine.ApplyCropToPhoto(0, new Rectangle(10, 10, 100, 50));
+        engine.ApplyCropToPhoto(0, new Rect(10, 10, 100, 50));
 
         ShouldBeBox(engine.AcceptedCandidates[0].Rotated, 480, 495, 100, 50);
     }
@@ -123,7 +127,7 @@ public sealed class RefinementPersistenceTests : IDisposable
         engine.DetectPhotos();
         int before = engine.DetectedPhotos.Count;
 
-        engine.AddManualCrop(new Rectangle(1500, 1500, 300, 200));
+        engine.AddManualCrop(new Rect(1500, 1500, 300, 200));
 
         engine.DetectedPhotos.Count.ShouldBe(before + 1);
         engine.RawDetectedPhotos.Count.ShouldBe(engine.DetectedPhotos.Count);

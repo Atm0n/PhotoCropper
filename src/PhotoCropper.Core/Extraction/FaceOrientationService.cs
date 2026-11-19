@@ -6,9 +6,8 @@
 // and licensed under the Apache License, Version 2.0.
 // -------------------------------------------------------------------------------------------------
 
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using System.Drawing;
+using OpenCvSharp;
+using PhotoCropper.Core.Common;
 using System.Reflection;
 
 namespace PhotoCropper.Core.Extraction;
@@ -41,7 +40,7 @@ public static class FaceOrientationService
     private const int YuNetConfidenceIndex = 14;
     static FaceOrientationService()
     {
-        CvInvoke.LogLevel = LogLevel.Error;
+        Cv2.SetLogLevel(LogLevel.ERROR);
     }
 
     private static readonly Lazy<string?> LazyModelPath = new(ExtractModelToTemp);
@@ -170,7 +169,7 @@ public static class FaceOrientationService
         try
         {
             // Input size and score threshold are set per call before detecting.
-            return new FaceDetectorYN(modelPath, string.Empty, new Size(320, 320), 0.45f, 0.3f, 5000);
+            return FaceDetectorYN.Create(modelPath, string.Empty, new Size(320, 320), 0.45f, 0.3f, 5000);
         }
         catch (Exception ex)
         {
@@ -186,7 +185,7 @@ public static class FaceOrientationService
     public static int DetectFaceRotation(Mat photo, float scoreThreshold = 0.45f)
     {
         ArgumentNullException.ThrowIfNull(photo);
-        if (photo.IsEmpty || photo.Width < 60 || photo.Height < 60) return -1;
+        if (photo.Empty() || photo.Width < 60 || photo.Height < 60) return -1;
         if (LazyModelPath.Value == null || !File.Exists(LazyModelPath.Value)) return -1;
 
         // Resize image to max 320px for fast face detection (<2ms per pass)
@@ -196,16 +195,16 @@ public static class FaceOrientationService
         int h = (int)Math.Round(photo.Height * scale);
 
         using Mat small = new();
-        CvInvoke.Resize(photo, small, new Size(w, h), 0, 0, Inter.Linear);
+        Cv2.Resize(photo, small, new Size(w, h), 0, 0, InterpolationFlags.Linear);
 
         using Mat bgrSmall = new();
-        if (small.NumberOfChannels == 4)
+        if (small.Channels() == 4)
         {
-            CvInvoke.CvtColor(small, bgrSmall, ColorConversion.Bgra2Bgr);
+            Cv2.CvtColor(small, bgrSmall, ColorConversionCodes.BGRA2BGR);
         }
-        else if (small.NumberOfChannels == 1)
+        else if (small.Channels() == 1)
         {
-            CvInvoke.CvtColor(small, bgrSmall, ColorConversion.Gray2Bgr);
+            Cv2.CvtColor(small, bgrSmall, ColorConversionCodes.GRAY2BGR);
         }
         else
         {
@@ -253,15 +252,15 @@ public static class FaceOrientationService
             {
                 90 => RotateFlags.Rotate90Clockwise,
                 180 => RotateFlags.Rotate180,
-                270 => RotateFlags.Rotate90CounterClockwise,
+                270 => RotateFlags.Rotate90Counterclockwise,
                 _ => RotateFlags.Rotate180
             };
-            CvInvoke.Rotate(bgrSmall, candidate, flag);
+            Cv2.Rotate(bgrSmall, candidate, flag);
         }
 
         try
         {
-            detector.InputSize = candidate.Size;
+            detector.SetInputSize(candidate.Size());
             detector.SetScoreThreshold(scoreThreshold);
 
             using Mat faces = new();
@@ -277,30 +276,35 @@ public static class FaceOrientationService
 
     internal static float ScoreFaceData(Mat faces, float scoreThreshold)
     {
-        if (faces.IsEmpty || faces.Rows == 0) return 0f;
+        if (faces.Empty()) return 0f;
+        int rows = faces.Rows;
+        int cols = faces.Cols;
+        if (rows == 0) return 0f;
 
-        float[,] data = (float[,])faces.GetData();
+        // One row per face: box, five landmarks, confidence (see the YuNet indices above).
+        float[] values = new float[rows * cols];
+        faces.CopyDataTo(values);
         float totalScore = 0f;
 
-        for (int i = 0; i < faces.Rows; i++)
+        for (int i = 0; i < rows; i++)
         {
-            float score = data[i, YuNetConfidenceIndex];
+            float score = values[i * cols + YuNetConfidenceIndex];
             if (score < scoreThreshold) continue;
 
-            float faceW = data[i, YuNetBboxWidthIndex];
-            float faceH = data[i, YuNetBboxHeightIndex];
+            float faceW = values[i * cols + YuNetBboxWidthIndex];
+            float faceH = values[i * cols + YuNetBboxHeightIndex];
 
-            float rightEyeX = data[i, YuNetRightEyeXIndex];
-            float rightEyeY = data[i, YuNetRightEyeYIndex];
-            float leftEyeX = data[i, YuNetLeftEyeXIndex];
-            float leftEyeY = data[i, YuNetLeftEyeYIndex];
+            float rightEyeX = values[i * cols + YuNetRightEyeXIndex];
+            float rightEyeY = values[i * cols + YuNetRightEyeYIndex];
+            float leftEyeX = values[i * cols + YuNetLeftEyeXIndex];
+            float leftEyeY = values[i * cols + YuNetLeftEyeYIndex];
 
-            float noseY = data[i, YuNetNoseYIndex];
+            float noseY = values[i * cols + YuNetNoseYIndex];
 
-            float mouthRightX = data[i, YuNetMouthRightXIndex];
-            float mouthRightY = data[i, YuNetMouthRightYIndex];
-            float mouthLeftX = data[i, YuNetMouthLeftXIndex];
-            float mouthLeftY = data[i, YuNetMouthLeftYIndex];
+            float mouthRightX = values[i * cols + YuNetMouthRightXIndex];
+            float mouthRightY = values[i * cols + YuNetMouthRightYIndex];
+            float mouthLeftX = values[i * cols + YuNetMouthLeftXIndex];
+            float mouthLeftY = values[i * cols + YuNetMouthLeftYIndex];
 
             float eyeMidY = (rightEyeY + leftEyeY) * 0.5f;
             float mouthMidY = (mouthRightY + mouthLeftY) * 0.5f;

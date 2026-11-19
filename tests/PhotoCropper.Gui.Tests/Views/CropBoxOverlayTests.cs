@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using Emgu.CV.Structure;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Gui.Controls;
 
@@ -12,7 +11,7 @@ public sealed class CropBoxOverlayTests
     // Axis-aligned 200x100 box centred at (500, 400): corners (400,350) (600,350) (600,450) (400,450).
     private static CropCandidate Box() => new()
     {
-        Rotated = new RotatedRect(new System.Drawing.PointF(500, 400), new System.Drawing.SizeF(200, 100), 0),
+        Rotated = new RotatedBox(new System.Drawing.PointF(500, 400), new System.Drawing.SizeF(200, 100), 0),
         Area = 200 * 100,
         ShapePoints = [],
         Rect = new System.Drawing.Rectangle(400, 350, 200, 100),

@@ -1,6 +1,5 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Extraction;
 
 namespace PhotoCropper.Core.Tests.Extraction;
@@ -41,8 +40,8 @@ public class FaceOrientationServiceTests
     public void DetectFaceRotation_TooSmallPhoto_ReturnsMinusOne()
     {
         // Arrange
-        using Mat photo = new Mat(10, 10, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(0, 0, 0));
+        using Mat photo = new Mat(10, 10, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(0, 0, 0));
 
         // Act
         int rotation = FaceOrientationService.DetectFaceRotation(photo);
@@ -55,8 +54,8 @@ public class FaceOrientationServiceTests
     public void DetectFaceRotation_NoFaceFound_ReturnsMinusOne()
     {
         // Arrange - create a blank black image large enough to process
-        using Mat photo = new Mat(200, 200, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(0, 0, 0));
+        using Mat photo = new Mat(200, 200, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(0, 0, 0));
 
         // Act
         int rotation = FaceOrientationService.DetectFaceRotation(photo);
@@ -109,7 +108,7 @@ public class FaceOrientationServiceTests
         System.Runtime.InteropServices.GCHandle handle = System.Runtime.InteropServices.GCHandle.Alloc(mockData, System.Runtime.InteropServices.GCHandleType.Pinned);
         try
         {
-            using Mat facesMat = new Mat(1, 15, DepthType.Cv32F, 1, handle.AddrOfPinnedObject(), 15 * sizeof(float));
+            using Mat facesMat = new Mat(1, 15, MatType.CV_32FC1); facesMat.SetData(mockData);
 
             // Act
             float score = FaceOrientationService.ScoreFaceData(facesMat, 0.45f);
@@ -154,7 +153,7 @@ public class FaceOrientationServiceTests
         System.Runtime.InteropServices.GCHandle handle = System.Runtime.InteropServices.GCHandle.Alloc(mockData, System.Runtime.InteropServices.GCHandleType.Pinned);
         try
         {
-            using Mat facesMat = new Mat(1, 15, DepthType.Cv32F, 1, handle.AddrOfPinnedObject(), 15 * sizeof(float));
+            using Mat facesMat = new Mat(1, 15, MatType.CV_32FC1); facesMat.SetData(mockData);
 
             // Act
             float score = FaceOrientationService.ScoreFaceData(facesMat, 0.45f);

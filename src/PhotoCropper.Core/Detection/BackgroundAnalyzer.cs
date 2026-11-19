@@ -1,17 +1,14 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
-using System.Drawing;
+using OpenCvSharp;
 
 namespace PhotoCropper.Core.Detection;
 
 public static class BackgroundAnalyzer
 {
-    public static MCvScalar SampleBackgroundColor(Mat hsv)
+    public static Scalar SampleBackgroundColor(Mat hsv)
     {
         ArgumentNullException.ThrowIfNull(hsv);
         int s = 15; // sample box size
-        if (hsv.Width < s * 3 + 20 || hsv.Height < s * 3 + 20) return new MCvScalar();
+        if (hsv.Width < s * 3 + 20 || hsv.Height < s * 3 + 20) return new Scalar();
 
         int halfW = hsv.Width / 2;
         int halfH = hsv.Height / 2;
@@ -23,7 +20,7 @@ public static class BackgroundAnalyzer
         if (hsv.Width >= 400 && insetX < 25) insetX = 25;
         if (hsv.Height >= 400 && insetY < 25) insetY = 25;
 
-        var rects = new Rectangle[]
+        var rects = new Rect[]
         {
             new(insetX, insetY, s, s),                               // Top-Left
             new(halfW - s / 2, insetY, s, s),                        // Top-Center
@@ -42,10 +39,10 @@ public static class BackgroundAnalyzer
         foreach (var r in rects)
         {
             using Mat m = new(hsv, r);
-            var mean = CvInvoke.Mean(m);
-            hVals.Add(mean.V0);
-            sVals.Add(mean.V1);
-            vVals.Add(mean.V2);
+            var mean = Cv2.Mean(m);
+            hVals.Add(mean.Val0);
+            sVals.Add(mean.Val1);
+            vVals.Add(mean.Val2);
         }
 
         hVals.Sort();
@@ -57,13 +54,13 @@ public static class BackgroundAnalyzer
         double medianS = (sVals[3] + sVals[4]) / 2.0;
         double medianV = (vVals[3] + vVals[4]) / 2.0;
 
-        return new MCvScalar(medianH, medianS, medianV);
+        return new Scalar(medianH, medianS, medianV);
     }
 
-    public static MCvScalar SamplePixelBackgroundColor(Mat bgr, int x, int y, int sampleSize = 5)
+    public static Scalar SamplePixelBackgroundColor(Mat bgr, int x, int y, int sampleSize = 5)
     {
         ArgumentNullException.ThrowIfNull(bgr);
-        if (bgr.IsEmpty) return new MCvScalar();
+        if (bgr.Empty()) return new Scalar();
 
         x = Math.Clamp(x, 0, bgr.Width - 1);
         y = Math.Clamp(y, 0, bgr.Height - 1);
@@ -74,33 +71,33 @@ public static class BackgroundAnalyzer
         int w = Math.Min(bgr.Width - startX, sampleSize);
         int h = Math.Min(bgr.Height - startY, sampleSize);
 
-        using Mat sampledArea = new(bgr, new Rectangle(startX, startY, w, h));
+        using Mat sampledArea = new(bgr, new Rect(startX, startY, w, h));
         using Mat bgrSampled = PhotoCropperEngine.NormalizeToBgr(sampledArea);
         using Mat hsvSampled = new();
-        CvInvoke.CvtColor(bgrSampled, hsvSampled, ColorConversion.Bgr2Hsv);
-        return CvInvoke.Mean(hsvSampled);
+        Cv2.CvtColor(bgrSampled, hsvSampled, ColorConversionCodes.BGR2HSV);
+        return Cv2.Mean(hsvSampled);
     }
 
-    public static MCvScalar HsvToBgr(MCvScalar hsvColor)
+    public static Scalar HsvToBgr(Scalar hsvColor)
     {
-        using Mat hsvPixel = new(1, 1, DepthType.Cv8U, 3);
+        using Mat hsvPixel = new(1, 1, MatType.CV_8UC3);
         hsvPixel.SetTo(hsvColor);
         using Mat bgrPixel = new();
-        CvInvoke.CvtColor(hsvPixel, bgrPixel, ColorConversion.Hsv2Bgr);
-        return CvInvoke.Mean(bgrPixel);
+        Cv2.CvtColor(hsvPixel, bgrPixel, ColorConversionCodes.HSV2BGR);
+        return Cv2.Mean(bgrPixel);
     }
 
-    public static Mat CreateBackgroundMask(Mat hsv, MCvScalar avgColor, double tolerance)
+    public static Mat CreateBackgroundMask(Mat hsv, Scalar avgColor, double tolerance)
     {
         ArgumentNullException.ThrowIfNull(hsv);
 
         // If the background is neutral / light (low saturation, high value like scanner lids),
         // hue is unstable and noise-prone. In this regime, match based on low saturation
         // and allow an extended Value range to absorb CIS sensor lid shadows and off-white gradients.
-        bool isNeutralLight = avgColor.V1 < 65 && avgColor.V2 > 110;
+        bool isNeutralLight = avgColor.Val1 < 65 && avgColor.Val2 > 110;
 
-        MCvScalar lower;
-        MCvScalar upper;
+        Scalar lower;
+        Scalar upper;
 
         if (isNeutralLight)
         {
@@ -109,30 +106,30 @@ public static class BackgroundAnalyzer
             // Tolerance 0: tight match to lid (V within 8 levels)
             // Tolerance 25 (default): absorbs ~19 levels of shadow
             // Tolerance 100: absorbs up to ~53 levels of shadow without eating photo content (V stays >= 160)
-            double maxS = Math.Clamp(avgColor.V1 + 10.0 + (tolerance * 0.25), 25.0, 60.0);
-            double minV = Math.Max(160.0, avgColor.V2 - (8.0 + tolerance * 0.45));
+            double maxS = Math.Clamp(avgColor.Val1 + 10.0 + (tolerance * 0.25), 25.0, 60.0);
+            double minV = Math.Max(160.0, avgColor.Val2 - (8.0 + tolerance * 0.45));
 
-            lower = new MCvScalar(0, 0, minV);
-            upper = new MCvScalar(180, maxS, 255);
+            lower = new Scalar(0, 0, minV);
+            upper = new Scalar(180, maxS, 255);
         }
         else
         {
             double hTol = tolerance * 0.4;
             double sTol = tolerance;
-            double vTol = avgColor.V2 > 128 ? tolerance * 1.5 : tolerance;
+            double vTol = avgColor.Val2 > 128 ? tolerance * 1.5 : tolerance;
 
-            lower = new MCvScalar(Math.Max(0, avgColor.V0 - hTol), Math.Max(0, avgColor.V1 - sTol), Math.Max(0, avgColor.V2 - vTol));
-            upper = new MCvScalar(Math.Min(180, avgColor.V0 + hTol), Math.Min(255, avgColor.V1 + sTol), Math.Min(255, avgColor.V2 + vTol));
+            lower = new Scalar(Math.Max(0, avgColor.Val0 - hTol), Math.Max(0, avgColor.Val1 - sTol), Math.Max(0, avgColor.Val2 - vTol));
+            upper = new Scalar(Math.Min(180, avgColor.Val0 + hTol), Math.Min(255, avgColor.Val1 + sTol), Math.Min(255, avgColor.Val2 + vTol));
         }
 
         Mat mask = new();
-        using ScalarArray lowerArray = new(lower);
-        using ScalarArray upperArray = new(upper);
-        CvInvoke.InRange(hsv, lowerArray, upperArray, mask);
+        Scalar lowerArray = lower;
+        Scalar upperArray = upper;
+        Cv2.InRange(hsv, lowerArray, upperArray, mask);
         return mask;
     }
 
-    public static (int Top, int Bottom, int Left, int Right) DetectBezelMargins(Mat source, MCvScalar avgBgHsv, double tolerance = 30)
+    public static (int Top, int Bottom, int Left, int Right) DetectBezelMargins(Mat source, Scalar avgBgHsv, double tolerance = 30)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -148,7 +145,7 @@ public static class BackgroundAnalyzer
         using Mat rawSmallSource = new();
         if (scale < 0.999)
         {
-            CvInvoke.Resize(source, rawSmallSource, new Size(scaledW, scaledH), 0, 0, Inter.Area);
+            Cv2.Resize(source, rawSmallSource, new Size(scaledW, scaledH), 0, 0, InterpolationFlags.Area);
         }
         else
         {
@@ -158,7 +155,7 @@ public static class BackgroundAnalyzer
         using Mat smallSource = PhotoCropperEngine.NormalizeToBgr(rawSmallSource);
 
         using Mat hsv = new();
-        CvInvoke.CvtColor(smallSource, hsv, ColorConversion.Bgr2Hsv);
+        Cv2.CvtColor(smallSource, hsv, ColorConversionCodes.BGR2HSV);
         using Mat bgMask = CreateBackgroundMask(hsv, avgBgHsv, tolerance);
 
         int maxBezelX = Math.Clamp(scaledW / 30, 4, 30);
@@ -187,10 +184,10 @@ public static class BackgroundAnalyzer
         for (int i = 0; i < maxDepth; i++)
         {
             int idx = fromStart ? i : crossLength - 1 - i;
-            var rect = isHorizontal ? new Rectangle(0, idx, length, 1) : new Rectangle(idx, 0, 1, length);
+            var rect = isHorizontal ? new Rect(0, idx, length, 1) : new Rect(idx, 0, 1, length);
 
             using Mat slice = new(bgMask, rect);
-            int nonBg = length - CvInvoke.CountNonZero(slice);
+            int nonBg = length - Cv2.CountNonZero(slice);
 
             if (nonBg >= length * 0.70)
             {

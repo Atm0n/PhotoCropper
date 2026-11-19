@@ -10,10 +10,10 @@
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.6" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="coverlet.collector" Version="10.1.1" />
-    <PackageVersion Include="Emgu.CV" Version="5.0.0.6584" />
-    <PackageVersion Include="Emgu.CV.Bitmap" Version="5.0.0.6584" />
-    <PackageVersion Include="Emgu.CV.runtime.ubuntu-24.04-x64" Version="5.0.0.6584" />
-    <PackageVersion Include="Emgu.CV.runtime.windows" Version="5.0.0.6584" />
+    <PackageVersion Include="OpenCvSharp5" Version="5.1.0.20261115" />
+    <PackageVersion Include="OpenCvSharp5.runtime.win" Version="5.1.0.20261115" />
+    <!-- Portable Linux build (glibc 2.28+): only libc/libstdc++ from the system; "headless" keeps dnn (YuNet) but no GTK. -->
+    <PackageVersion Include="OpenCvSharp5.official.runtime.linux-x64.headless" Version="5.1.0.20261115" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />

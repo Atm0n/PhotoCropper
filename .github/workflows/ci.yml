@@ -83,7 +83,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           # Names any library OpenCV needs that the install step missed, instead of a test failing to load it.
-          lib=$(find . -path '*/bin/Release/*' -name libcvextern.so -print -quit)
+          lib=$(find . -path '*/bin/Release/*' -name libOpenCvSharpExtern.so -print -quit)
           missing=$(ldd "$lib" | grep "not found" || true)
           if [ -n "$missing" ]; then echo "Missing for $lib:"; echo "$missing"; exit 1; fi
 

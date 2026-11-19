@@ -1,7 +1,6 @@
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using Emgu.CV;
-using Emgu.CV.CvEnum;
+using OpenCvSharp;
 
 namespace PhotoCropper.Gui.Services;
 
@@ -11,38 +10,38 @@ internal static class MatBitmapConverter
     {
         ArgumentNullException.ThrowIfNull(mat);
 
-        if (mat.IsEmpty || mat.Width <= 0 || mat.Height <= 0)
+        if (mat.Empty() || mat.Width <= 0 || mat.Height <= 0)
         {
             throw new ArgumentException("Cannot convert an empty or zero-sized Mat to Bitmap.", nameof(mat));
         }
 
-        if (mat.NumberOfChannels == 4)
+        if (mat.Channels() == 4)
         {
             return new Bitmap(
                 PixelFormat.Bgra8888,
                 AlphaFormat.Premul,
-                mat.DataPointer,
+                mat.Data,
                 new Avalonia.PixelSize(mat.Width, mat.Height),
                 new Avalonia.Vector(96, 96),
-                mat.Step);
+                (int)mat.Step());
         }
 
         using Mat bgraMat = new();
-        if (mat.NumberOfChannels == 1)
+        if (mat.Channels() == 1)
         {
-            CvInvoke.CvtColor(mat, bgraMat, ColorConversion.Gray2Bgra);
+            Cv2.CvtColor(mat, bgraMat, ColorConversionCodes.GRAY2BGRA);
         }
         else
         {
-            CvInvoke.CvtColor(mat, bgraMat, ColorConversion.Bgr2Bgra);
+            Cv2.CvtColor(mat, bgraMat, ColorConversionCodes.BGR2BGRA);
         }
 
         return new Bitmap(
             PixelFormat.Bgra8888,
             AlphaFormat.Premul,
-            bgraMat.DataPointer,
+            bgraMat.Data,
             new Avalonia.PixelSize(bgraMat.Width, bgraMat.Height),
             new Avalonia.Vector(96, 96),
-            bgraMat.Step);
+            (int)bgraMat.Step());
     }
 }

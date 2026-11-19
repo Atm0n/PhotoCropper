@@ -1,8 +1,6 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Workspace;
-using System.Drawing;
 
 namespace PhotoCropper.Core.Extraction;
 
@@ -15,8 +13,8 @@ public static class PhotoRepairService
     public static Mat CreateMask(Size size, IEnumerable<RepairStroke> strokes)
     {
         ArgumentNullException.ThrowIfNull(strokes);
-        Mat mask = Mat.Zeros(size.Height, size.Width, DepthType.Cv8U, 1);
-        var white = new MCvScalar(255);
+        Mat mask = new Mat(size.Height, size.Width, MatType.CV_8UC1, Scalar.All(0));
+        var white = new Scalar(255);
 
         foreach (var stroke in strokes)
         {
@@ -24,18 +22,18 @@ public static class PhotoRepairService
             int radius = Math.Max(1, (int)Math.Round(stroke.Radius * size.Width));
 
             Point previous = ToPixel(stroke, 0, size);
-            CvInvoke.Circle(mask, previous, radius, white, -1, LineType.AntiAlias);
+            Cv2.Circle(mask, previous, radius, white, -1, LineTypes.AntiAlias);
             for (int i = 1; i < stroke.PointCount; i++)
             {
                 Point next = ToPixel(stroke, i, size);
-                CvInvoke.Line(mask, previous, next, white, radius * 2, LineType.AntiAlias);
-                CvInvoke.Circle(mask, next, radius, white, -1, LineType.AntiAlias);
+                Cv2.Line(mask, previous, next, white, radius * 2, LineTypes.AntiAlias);
+                Cv2.Circle(mask, next, radius, white, -1, LineTypes.AntiAlias);
                 previous = next;
             }
         }
 
         // Anti-aliased edges are partial; anything touched is repaired.
-        CvInvoke.Threshold(mask, mask, 0, 255, ThresholdType.Binary);
+        Cv2.Threshold(mask, mask, 0, 255, ThresholdTypes.Binary);
         return mask;
     }
 
@@ -49,25 +47,21 @@ public static class PhotoRepairService
     {
         ArgumentNullException.ThrowIfNull(image);
         ArgumentNullException.ThrowIfNull(strokes);
-        if (image.IsEmpty || strokes.Count == 0) return image;
+        if (image.Empty() || strokes.Count == 0) return image;
 
-        if (image.NumberOfChannels == 4)
+        if (image.Channels() == 4)
         {
-            using var channels = new Emgu.CV.Util.VectorOfMat();
-            CvInvoke.Split(image, channels);
-            using var bgrVec = new Emgu.CV.Util.VectorOfMat(channels[0], channels[1], channels[2]);
+            using var channels = MatChannels.Split(image);
             using Mat bgr = new();
-            CvInvoke.Merge(bgrVec, bgr);
+            Cv2.Merge([channels[0], channels[1], channels[2]], bgr);
 
             Mat repairedBgr = RepairColour(bgr, strokes);
             try
             {
                 if (ReferenceEquals(repairedBgr, bgr)) return image;
-                using var outChannels = new Emgu.CV.Util.VectorOfMat();
-                CvInvoke.Split(repairedBgr, outChannels);
-                using var withAlpha = new Emgu.CV.Util.VectorOfMat(outChannels[0], outChannels[1], outChannels[2], channels[3]);
+                using var outChannels = MatChannels.Split(repairedBgr);
                 Mat result = new();
-                CvInvoke.Merge(withAlpha, result);
+                Cv2.Merge([outChannels[0], outChannels[1], outChannels[2], channels[3]], result);
                 return result;
             }
             finally
@@ -92,8 +86,8 @@ public static class PhotoRepairService
         {
             if (quick.Count > 0)
             {
-                using Mat mask = CreateMask(image.Size, quick);
-                if (CvInvoke.CountNonZero(mask) > 0)
+                using Mat mask = CreateMask(image.Size(), quick);
+                if (Cv2.CountNonZero(mask) > 0)
                 {
                     current = FillWithGrain(current, mask, InpaintRadius(quick, image.Width));
                 }
@@ -101,8 +95,8 @@ public static class PhotoRepairService
 
             if (ai.Count > 0)
             {
-                using Mat mask = CreateMask(image.Size, ai);
-                if (CvInvoke.CountNonZero(mask) > 0)
+                using Mat mask = CreateMask(image.Size(), ai);
+                if (Cv2.CountNonZero(mask) > 0)
                 {
                     using Mat? generated = AiInpainting.Fill(current, mask);
                     Mat next = generated != null
@@ -146,7 +140,7 @@ public static class PhotoRepairService
     private static Mat FillWithGrain(Mat bgr, Mat mask, double inpaintRadius)
     {
         using Mat filled = new();
-        CvInvoke.Inpaint(bgr, mask, filled, inpaintRadius, InpaintType.Telea);
+        Cv2.Inpaint(bgr, mask, filled, inpaintRadius, InpaintTypes.Telea);
         return AddMatchingGrain(filled, mask, inpaintRadius);
     }
 
@@ -160,31 +154,31 @@ public static class PhotoRepairService
             // Grain = the image minus a slightly blurred copy, measured in a ring just outside the repair.
             int ringWidth = (int)Math.Max(6, inpaintRadius * 2);
             using Mat ring = new();
-            using (Mat grow = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(ringWidth * 2 + 1, ringWidth * 2 + 1), new Point(-1, -1)))
+            using (Mat grow = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(ringWidth * 2 + 1, ringWidth * 2 + 1), new Point(-1, -1)))
             {
-                CvInvoke.Dilate(mask, ring, grow, new Point(-1, -1), 1, BorderType.Constant, new MCvScalar());
+                Cv2.Dilate(mask, ring, grow, new Point(-1, -1), 1, BorderTypes.Constant, new Scalar());
             }
-            CvInvoke.Subtract(ring, mask, ring);
-            if (CvInvoke.CountNonZero(ring) < 20) return filled.Clone();
+            Cv2.Subtract(ring, mask, ring);
+            if (Cv2.CountNonZero(ring) < 20) return filled.Clone();
 
             using Mat source = new();
-            filled.ConvertTo(source, DepthType.Cv32F);
+            filled.ConvertTo(source, MatType.CV_32F);
             using Mat smooth = new();
-            CvInvoke.GaussianBlur(source, smooth, new Size(0, 0), 1.5);
+            Cv2.GaussianBlur(source, smooth, new Size(0, 0), 1.5);
             using Mat grain = new();
-            CvInvoke.Subtract(source, smooth, grain);
+            Cv2.Subtract(source, smooth, grain);
 
             // Robust measurements (median-based), so edges crossing the ring (a window frame, a horizon) don't count
             // as grain. Only the grain missing inside the fill is added: a quick fill has almost none, while an AI
             // fill already has some texture of its own.
-            int channelCount = filled.NumberOfChannels;
+            int channelCount = filled.Channels();
             double[] around = RobustGrain(grain, ring, channelCount);
             using Mat inside = new();
-            using (Mat shrink = CvInvoke.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5), new Point(-1, -1)))
+            using (Mat shrink = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(5, 5), new Point(-1, -1)))
             {
-                CvInvoke.Erode(mask, inside, shrink, new Point(-1, -1), 1, BorderType.Constant, new MCvScalar());
+                Cv2.Erode(mask, inside, shrink, new Point(-1, -1), 1, BorderTypes.Constant, new Scalar());
             }
-            double[] existing = CvInvoke.CountNonZero(inside) >= 20 ? RobustGrain(grain, inside, channelCount) : new double[channelCount];
+            double[] existing = Cv2.CountNonZero(inside) >= 20 ? RobustGrain(grain, inside, channelCount) : new double[channelCount];
             double[] strengths = new double[channelCount];
             for (int c = 0; c < channelCount; c++)
             {
@@ -193,36 +187,34 @@ public static class PhotoRepairService
             if (strengths.Average() < 0.5) return filled.Clone(); // smooth photo, or the fill already matches
 
             // One noise pattern for all channels (film grain is mostly in brightness), scaled per channel.
-            using Mat shapedNoise = CreateNoise(filled.Size, mask);
+            using Mat shapedNoise = CreateNoise(filled.Size(), mask);
 
             // Soft-edged weight so the added grain fades in at the boundary of the repair.
             using Mat weight = new();
-            mask.ConvertTo(weight, DepthType.Cv32F, 1.0 / 255.0);
-            CvInvoke.GaussianBlur(weight, weight, new Size(0, 0), 1.0);
+            mask.ConvertTo(weight, MatType.CV_32F, 1.0 / 255.0);
+            Cv2.GaussianBlur(weight, weight, new Size(0, 0), 1.0);
             using Mat weightedNoise = new();
-            CvInvoke.Multiply(shapedNoise, weight, weightedNoise);
+            Cv2.Multiply(shapedNoise, weight, weightedNoise);
 
             var perChannel = new List<Mat>(channelCount);
-            using var noiseChannels = new Emgu.CV.Util.VectorOfMat();
             try
             {
                 for (int c = 0; c < channelCount; c++)
                 {
                     var channelNoise = new Mat();
                     perChannel.Add(channelNoise);
-                    weightedNoise.ConvertTo(channelNoise, DepthType.Cv32F, strengths[c]);
-                    noiseChannels.Push(channelNoise);
+                    weightedNoise.ConvertTo(channelNoise, MatType.CV_32F, strengths[c]);
                 }
 
                 using Mat noiseAll = new();
-                CvInvoke.Merge(noiseChannels, noiseAll);
+                Cv2.Merge([.. perChannel], noiseAll);
 
                 using Mat filledFloat = new();
-                filled.ConvertTo(filledFloat, DepthType.Cv32F);
-                CvInvoke.Add(filledFloat, noiseAll, filledFloat);
+                filled.ConvertTo(filledFloat, MatType.CV_32F);
+                Cv2.Add(filledFloat, noiseAll, filledFloat);
 
                 Mat result = new();
-                filledFloat.ConvertTo(result, DepthType.Cv8U);
+                filledFloat.ConvertTo(result, MatType.CV_8U);
                 return result;
             }
             finally
@@ -240,9 +232,9 @@ public static class PhotoRepairService
     {
         int rows = grain.Rows, cols = grain.Cols;
         float[] values = new float[rows * cols * channelCount];
-        grain.CopyTo(values);
+        grain.CopyDataTo(values);
         byte[] selected = new byte[rows * cols];
-        region.CopyTo(selected);
+        region.CopyDataTo(selected);
 
         var perChannel = new List<float>[channelCount];
         for (int c = 0; c < channelCount; c++) perChannel[c] = [];
@@ -271,13 +263,13 @@ public static class PhotoRepairService
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Visual film grain, not security: a fixed, reproducible seed is the point")]
     private static Mat CreateNoise(Size size, Mat mask)
     {
-        Mat noise = Mat.Zeros(size.Height, size.Width, DepthType.Cv32F, 1);
+        Mat noise = new Mat(size.Height, size.Width, MatType.CV_32FC1, Scalar.All(0));
         using Mat points = new();
-        CvInvoke.FindNonZero(mask, points);
-        if (points.IsEmpty) return noise;
+        Cv2.FindNonZero(mask, points);
+        if (points.Empty()) return noise;
 
-        Rectangle area = Rectangle.Inflate(CvInvoke.BoundingRectangle(points), 4, 4);
-        area.Intersect(new Rectangle(Point.Empty, size));
+        Rect area = Rect.Inflate(Cv2.BoundingRect(points), 4, 4);
+        area = area.Intersect(new Rect(0, 0, size.Width, size.Height));
 
         var random = new Random(20241117); // NOSONAR: visual film grain with a fixed seed, not security
         var values = new float[area.Width * area.Height];
@@ -289,17 +281,15 @@ public static class PhotoRepairService
             values[i] = (float)(Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2));
         }
 
-        using Mat raw = new(area.Height, area.Width, DepthType.Cv32F, 1);
-        raw.SetTo(values);
+        using Mat raw = new(area.Height, area.Width, MatType.CV_32FC1);
+        raw.SetData(values);
         using Mat shaped = new();
-        CvInvoke.GaussianBlur(raw, shaped, new Size(0, 0), 0.6);
+        Cv2.GaussianBlur(raw, shaped, new Size(0, 0), 0.6);
 
         // Blurring lowers the strength; scale back to exactly 1 within this area.
-        var mean = new MCvScalar();
-        var std = new MCvScalar();
-        CvInvoke.MeanStdDev(shaped, ref mean, ref std);
+        Cv2.MeanStdDev(shaped, out Scalar mean, out Scalar std);
         using Mat region = new(noise, area);
-        shaped.ConvertTo(region, DepthType.Cv32F, std.V0 > 0 ? 1.0 / std.V0 : 1.0, std.V0 > 0 ? -mean.V0 / std.V0 : 0);
+        shaped.ConvertTo(region, MatType.CV_32F, std.Val0 > 0 ? 1.0 / std.Val0 : 1.0, std.Val0 > 0 ? -mean.Val0 / std.Val0 : 0);
         return noise;
     }
 

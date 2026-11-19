@@ -1,5 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
+using OpenCvSharp;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Workspace;
@@ -50,9 +49,9 @@ public sealed class PipelineEquivalenceTests : IDisposable
 
             using var final = RestoreStage.ReadImage(photos[i].Final!.GetFullPath(_workDir));
             var expected = engine.DetectedPhotos[i];
-            final.Size.ShouldBe(expected.Size);
-            final.NumberOfChannels.ShouldBe(expected.NumberOfChannels);
-            CvInvoke.Norm(final, expected, NormType.L1).ShouldBe(0, $"photo {i + 1} differs from the engine's output");
+            final.Size().ShouldBe(expected.Size());
+            final.Channels().ShouldBe(expected.Channels());
+            Cv2.Norm(final, expected, NormTypes.L1).ShouldBe(0, $"photo {i + 1} differs from the engine's output");
         }
     }
 

@@ -1,6 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
@@ -17,7 +15,7 @@ public sealed class RestoreStageTests : IDisposable
     {
         string path = Path.Combine(_tempDir, name);
         using var mat = TestImageFactory.CreateFadedPhoto(120, 80);
-        mat.Save(path);
+        Cv2.ImWrite(path, mat);
         return path;
     }
 
@@ -44,7 +42,7 @@ public sealed class RestoreStageTests : IDisposable
 
         using var a = RestoreStage.ReadImage(plain.Path);
         using var b = RestoreStage.ReadImage(restored.Path);
-        CvInvoke.Norm(a, b, NormType.L1).ShouldBeGreaterThan(0);
+        Cv2.Norm(a, b, NormTypes.L1).ShouldBeGreaterThan(0);
     }
 
     [Fact]

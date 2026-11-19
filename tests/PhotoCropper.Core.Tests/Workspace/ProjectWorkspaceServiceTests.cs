@@ -1,9 +1,6 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.TestHelpers;
-using System.Drawing;
 
 namespace PhotoCropper.Core.Tests.Workspace;
 
@@ -55,8 +52,8 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     public void StageRawScanFromMat_ShouldWritePngFile()
     {
         string workDir = Path.Combine(_tempDir, "Project4");
-        using Mat mat = new(200, 200, DepthType.Cv8U, 3);
-        mat.SetTo(new MCvScalar(128, 128, 128));
+        using Mat mat = new(200, 200, MatType.CV_8UC3);
+        mat.SetTo(new Scalar(128, 128, 128));
 
         string stagedPath = ProjectWorkspaceService.StageRawScanFromMat(workDir, mat);
 
@@ -69,10 +66,10 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     {
         string workDir = Path.Combine(_tempDir, "Project5");
         string sourceFile = Path.Combine(_tempDir, "source.jpg");
-        using (Mat mat = new(100, 100, DepthType.Cv8U, 3))
+        using (Mat mat = new(100, 100, MatType.CV_8UC3))
         {
-            mat.SetTo(new MCvScalar(255, 255, 255));
-            mat.Save(sourceFile);
+            mat.SetTo(new Scalar(255, 255, 255));
+            Cv2.ImWrite(sourceFile, mat);
         }
 
         string stagedPath = ProjectWorkspaceService.StageRawScanFromFile(workDir, sourceFile);
@@ -94,7 +91,7 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
             ExtractedPhotoCount = 2
         };
         entry.Rotations.Add(90);
-        entry.ManualCrops.Add(new Rectangle(10, 10, 200, 200));
+        entry.ManualCrops.Add(new System.Drawing.Rectangle(10, 10, 200, 200));
         state.Scans.Add(entry);
 
         ProjectWorkspaceService.SaveSession(workDir, state);

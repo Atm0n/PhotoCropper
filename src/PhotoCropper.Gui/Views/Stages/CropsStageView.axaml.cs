@@ -29,7 +29,7 @@ internal sealed partial class CropsStageView : UserControl
     private BoxGesture _gesture;
 
     /// <summary>The scan currently shown, so editing boxes only repaints the overlay instead of re-uploading the scan.</summary>
-    private Emgu.CV.Mat? _shownScan;
+    private OpenCvSharp.Mat? _shownScan;
 
     private bool _rightPanelCollapsed;
     private GridLength _savedRightColumnWidth = new(1, GridUnitType.Star);
@@ -59,7 +59,7 @@ internal sealed partial class CropsStageView : UserControl
     public void ShowScan(PhotoCropperEngine? engine)
     {
         var scan = engine?.Original;
-        if (scan == null || scan.IsEmpty)
+        if (scan == null || scan.Empty())
         {
             SetScanImage(null);
             return;
@@ -70,7 +70,7 @@ internal sealed partial class CropsStageView : UserControl
         btnResetBackground.IsEnabled = engine!.CustomBackgroundColorHsv != null;
     }
 
-    private void SetScanImage(Emgu.CV.Mat? mat)
+    private void SetScanImage(OpenCvSharp.Mat? mat)
     {
         var oldSource = img.Source as IDisposable;
         img.Source = mat != null ? MatBitmapConverter.ToAvaloniaBitmap(mat) : null;

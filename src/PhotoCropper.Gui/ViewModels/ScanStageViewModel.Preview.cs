@@ -1,6 +1,6 @@
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Emgu.CV.Structure;
+using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
 using PointF = System.Drawing.PointF;
@@ -158,7 +158,7 @@ internal sealed partial class ScanStageViewModel
         {
             // Another scan was selected meanwhile.
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or Emgu.CV.Util.CvException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or OpenCvSharp.OpenCVException)
         {
             System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not preview scan '{row.FilePath}': {ex.Message}");
             if (!token.IsCancellationRequested) PreviewStatus = string.Empty;
@@ -199,7 +199,7 @@ internal sealed partial class ScanStageViewModel
     }
 
     private static PointF[] ToCorners(WorkspaceCropData c) =>
-        new RotatedRect(new PointF(c.CenterX, c.CenterY), new SizeF(c.Width, c.Height), c.Angle).GetVertices();
+        new RotatedBox(new PointF(c.CenterX, c.CenterY), new SizeF(c.Width, c.Height), c.Angle).GetVertices();
 
     private void ReplacePreview(Bitmap? bitmap)
     {

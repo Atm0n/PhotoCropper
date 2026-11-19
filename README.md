@@ -1,6 +1,6 @@
 # PhotoCropper
 
-An intelligent, cross-platform .NET 11 desktop application designed to automatically detect, straighten, and extract multiple photos from a single scanner bed image. Built with Avalonia UI and Emgu.CV (OpenCV).
+An intelligent, cross-platform .NET 11 desktop application designed to automatically detect, straighten, and extract multiple photos from a single scanner bed image. Built with Avalonia UI and OpenCvSharp (OpenCV).
 
 ## Documentation
 
@@ -142,7 +142,6 @@ The solution consists of four main projects organized under `src/` and `tests/`:
 The codebase strictly enforces the highest standard of static analysis and memory hygiene:
 - **Warnings-as-Errors Policy:** Enforced solution-wide via `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<AnalysisLevel>latest-All</AnalysisLevel>` inside `Directory.Build.props`. A few rules are suppressed there on purpose: `CA2007` (ConfigureAwait, not needed in a desktop app), `CA1305` (culture-specific formatting), `CA1707` (underscores in test names), `CA1031` (catching general exceptions at boundaries) and `NETSDK1206` (RID warnings from native packages).
 - **Zero-Warning Success:** Compiles with `0 Warnings` and `0 Errors` across both Debug and Release configurations.
-- **NuGet Compatibility (`NU1701`):** `Directory.Build.props` explicitly suppresses `NU1701` (`<NoWarn>$(NoWarn);...;NU1701</NoWarn>`). Emgu CV's Windows runtime package (`Emgu.CV.runtime.windows`) bundles MSVC C++ Redistributable sub-packages (`Emgu.runtime.windows.msvc.rt.*`) whose internal package metadata uses `.NETFramework` target tags. Suppressing `NU1701` allows NuGet to perform standard framework fallback on modern .NET without failing solution-wide `TreatWarningsAsErrors`.
 - **OpenCV & Avalonia Memory Safety (CA2000):** Implements explicit `using` statements, unmanaged resource trackers, proactive native `Bitmap` disposal, and bounded undo action queues to guarantee zero memory leaks.
 - **Encapsulation & Security:** Core internal helper elements expose APIs through read-only interfaces (`IReadOnlyList`, `IReadOnlySet`, `Collection<T>`) to guarantee architectural robustness.
 - **Clean Structure:** No `#region` / `#endregion` directives; decomposed monolithic components into clean, single-responsibility services.
@@ -353,7 +352,7 @@ dotnet publish src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -c Release -r linux-
   - "Resolution-robust Large Mask Inpainting with Fourier Convolutions" by Roman Suvorov et al., Samsung AI Center ([advimman/lama](https://github.com/advimman/lama)); ONNX export by Carve ([Carve/LaMa-ONNX](https://huggingface.co/Carve/LaMa-ONNX)).
   - Licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 - **ONNX Runtime**: runs the LaMa model ([microsoft/onnxruntime](https://github.com/microsoft/onnxruntime), MIT License).
-- **Emgu.CV**: .NET cross-platform wrapper for OpenCV ([Emgu CV](https://www.emgu.com/)).
+- **OpenCvSharp**: .NET wrapper for OpenCV by shimat ([shimat/opencvsharp](https://github.com/shimat/opencvsharp), Apache License 2.0), with its prebuilt OpenCV 5.1 runtimes for Windows and Linux.
 - **Avalonia UI**: Cross-platform desktop XAML UI framework ([Avalonia UI](https://avaloniaui.net/)).
 - **NAPS2.Sdk**: Cross-platform scanning framework supporting TWAIN, WIA, SANE, and eSCL by Ben Olden-Cooligan ([NAPS2](https://www.naps2.com/sdk)).
 

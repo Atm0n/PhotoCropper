@@ -1,6 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.TestHelpers;
 
 namespace PhotoCropper.Core.Tests.Engine;
@@ -12,10 +10,10 @@ public sealed class OverlayScaleTests : IDisposable
     private PhotoCropperEngine CreateEngine(int width, int height)
     {
         string path = Path.Combine(_tempDir, $"scan_{width}x{height}.png");
-        using (var scan = new Mat(height, width, DepthType.Cv8U, 3))
+        using (var scan = new Mat(height, width, MatType.CV_8UC3))
         {
-            scan.SetTo(new MCvScalar(240, 240, 240));
-            scan.Save(path);
+            scan.SetTo(new Scalar(240, 240, 240));
+            Cv2.ImWrite(path, scan);
         }
         return new PhotoCropperEngine(path);
     }

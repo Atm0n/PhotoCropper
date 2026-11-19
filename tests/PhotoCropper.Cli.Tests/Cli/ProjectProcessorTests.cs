@@ -102,10 +102,10 @@ public sealed class ProjectProcessorTests : IDisposable
     {
         string blank = Path.Combine(_tempDir, "blank");
         Directory.CreateDirectory(blank);
-        using (var empty = new Emgu.CV.Mat(600, 600, Emgu.CV.CvEnum.DepthType.Cv8U, 3))
+        using (var empty = new OpenCvSharp.Mat(600, 600, OpenCvSharp.MatType.CV_8UC3))
         {
-            empty.SetTo(new Emgu.CV.Structure.MCvScalar(255, 255, 255));
-            Emgu.CV.CvInvoke.Imwrite(Path.Combine(blank, "empty.png"), empty);
+            empty.SetTo(new OpenCvSharp.Scalar(255, 255, 255));
+            OpenCvSharp.Cv2.ImWrite(Path.Combine(blank, "empty.png"), empty);
         }
         using var console = new TestConsole();
 

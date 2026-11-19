@@ -1,5 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
+using OpenCvSharp;
 using PhotoCropper.Core.Common;
 using System.Collections.Concurrent;
 
@@ -143,7 +142,7 @@ public static class PhotoExporter
         int totalValidPhotos = 0;
         for (int p = 0; p < photos.Count; p++)
         {
-            if (!photos[p].IsEmpty) totalValidPhotos++;
+            if (!photos[p].Empty()) totalValidPhotos++;
         }
 
         string extension = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
@@ -155,7 +154,7 @@ public static class PhotoExporter
         int saveCounter = 1;
         for (int i = 0; i < photos.Count; i++)
         {
-            if (photos[i].IsEmpty) continue;
+            if (photos[i].Empty()) continue;
             string relativeFileName = FileNameTemplateHelper.FormatFileName(
                 fileNamePattern,
                 baseFileName,
@@ -208,21 +207,20 @@ public static class PhotoExporter
         ArgumentNullException.ThrowIfNull(format);
 
         bool isPng = string.Equals(format, "PNG", StringComparison.OrdinalIgnoreCase);
-        using Emgu.CV.Util.VectorOfByte buf = new();
+        byte[] fileBytes;
         if (isPng)
         {
-            CvInvoke.Imencode(".png", photo, buf);
+            Cv2.ImEncode(".png", photo, out fileBytes);
         }
         else
         {
-            KeyValuePair<ImwriteFlags, int>[] parameters = [
-                new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegQuality, jpegQuality),
-                new KeyValuePair<ImwriteFlags, int>(ImwriteFlags.JpegOptimize, 1)
+            ImageEncodingParam[] parameters = [
+                new ImageEncodingParam(ImwriteFlags.JpegQuality, jpegQuality),
+                new ImageEncodingParam(ImwriteFlags.JpegOptimize, 1)
             ];
-            CvInvoke.Imencode(".jpg", photo, buf, parameters);
+            Cv2.ImEncode(".jpg", photo, out fileBytes, parameters);
         }
 
-        byte[] fileBytes = buf.ToArray();
         if (metadata?.HasMetadata == true)
         {
             fileBytes = isPng

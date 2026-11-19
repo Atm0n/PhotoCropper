@@ -1,6 +1,4 @@
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
+using OpenCvSharp;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
 using PhotoCropper.TestHelpers;
@@ -25,9 +23,9 @@ public sealed class ExportCleanupTests : IDisposable
     private string CreateScan(string name, string? directory = null)
     {
         string path = Path.Combine(directory ?? _tempDir, name);
-        using Mat scan = new(50, 50, DepthType.Cv8U, 3);
-        scan.SetTo(new MCvScalar(200, 200, 200));
-        scan.Save(path);
+        using Mat scan = new(50, 50, MatType.CV_8UC3);
+        scan.SetTo(new Scalar(200, 200, 200));
+        Cv2.ImWrite(path, scan);
         return path;
     }
 
@@ -40,8 +38,8 @@ public sealed class ExportCleanupTests : IDisposable
 
     private static Mat Photo()
     {
-        var photo = new Mat(10, 10, DepthType.Cv8U, 3);
-        photo.SetTo(new MCvScalar(0, 0, 0));
+        var photo = new Mat(10, 10, MatType.CV_8UC3);
+        photo.SetTo(new Scalar(0, 0, 0));
         return photo;
     }
 
