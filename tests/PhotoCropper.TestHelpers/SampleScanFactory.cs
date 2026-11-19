@@ -26,7 +26,7 @@ public static class SampleScanFactory
     {
         ArgumentOutOfRangeException.ThrowIfNegative(photoCount);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(photoCount, 4);
-        var random = new Random(seed);
+        var random = new Random(seed); // NOSONAR: reproducible test images from a fixed seed, not security
         if (photoCount == 0) photoCount = random.Next(1, 5);
 
         using var scan = CreateBed(random, width, height);
