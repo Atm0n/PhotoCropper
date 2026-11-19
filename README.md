@@ -348,7 +348,7 @@ dotnet publish src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -c Release -r linux-
 
 - **YuNet Face Detection Model (`face_detection_yunet_2023mar.onnx`)**:
   - Developed by Shiqi Yu & OpenCV Zoo contributors ([opencv/opencv_zoo](https://github.com/opencv/opencv_zoo)).
-  - Licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+  - Licensed under the [MIT License](https://github.com/opencv/opencv_zoo/blob/main/models/face_detection_yunet/LICENSE).
 - **LaMa inpainting model (`lama_fp32.onnx`, optional download)**:
   - "Resolution-robust Large Mask Inpainting with Fourier Convolutions" by Roman Suvorov et al., Samsung AI Center ([advimman/lama](https://github.com/advimman/lama)); ONNX export by Carve ([Carve/LaMa-ONNX](https://huggingface.co/Carve/LaMa-ONNX)).
   - Licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
@@ -356,6 +356,8 @@ dotnet publish src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -c Release -r linux-
 - **Emgu.CV**: .NET cross-platform wrapper for OpenCV ([Emgu CV](https://www.emgu.com/)).
 - **Avalonia UI**: Cross-platform desktop XAML UI framework ([Avalonia UI](https://avaloniaui.net/)).
 - **NAPS2.Sdk**: Cross-platform scanning framework supporting TWAIN, WIA, SANE, and eSCL by Ben Olden-Cooligan ([NAPS2](https://www.naps2.com/sdk)).
+
+Every package and installer includes [`THIRD-PARTY-NOTICES.txt`](THIRD-PARTY-NOTICES.txt), which lists every bundled component with its copyright and full license text.
 
 ---
 

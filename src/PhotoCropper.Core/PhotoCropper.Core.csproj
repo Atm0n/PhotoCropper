@@ -11,7 +11,14 @@
 		<PackageReference Include="Emgu.CV.Bitmap" />
 		<PackageReference Include="NAPS2.Sdk" />
 		<PackageReference Include="NAPS2.Images.ImageSharp" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime" GeneratePathProperty="true" />
+	</ItemGroup>
+
+	<!-- License notices travel with every app that references Core (GUI and CLI builds, publish folders, installers). -->
+	<ItemGroup>
+		<None Include="..\..\LICENSE" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+		<None Include="..\..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+		<None Include="$(PkgMicrosoft_ML_OnnxRuntime)\ThirdPartyNotices.txt" Link="ONNXRUNTIME-THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="'$(PkgMicrosoft_ML_OnnxRuntime)' != ''" />
 	</ItemGroup>
 
 	<ItemGroup>
