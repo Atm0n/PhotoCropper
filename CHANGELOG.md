@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Find Photo tool (🎯) in the Crops stage**: click inside a photo the detection missed and its crop box is added; click inside an existing box and it is re-fitted to the photo. Works on scans whose photos cover the scan's edges and on album pages, including photos stuck to the page or reaching its edge. Undo and Esc work as usual.
 - Every download (installer, AppImage, .deb, zips) now includes `LICENSE.txt` and `THIRD-PARTY-NOTICES.txt` with the copyright and license text of every bundled component (Avalonia, OpenCvSharp/OpenCV, FFmpeg, ONNX Runtime, NAPS2, ImageSharp, the Inter font and the YuNet face model), plus ONNX Runtime's own notices.
 
 ### Changed
