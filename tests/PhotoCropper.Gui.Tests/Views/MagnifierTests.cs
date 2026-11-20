@@ -59,6 +59,35 @@ public sealed class MagnifierTests
     }
 
     [Fact]
+    public void Render_AfterItsImageWasDisposed_ShouldNotThrow()
+    {
+        // The crash from the Finish editor: a preview rendered again mid-drag disposes the bitmap the magnifier shows.
+        TestAppBuilder.EnsureInitialized();
+        var scan = Scan();
+        var magnifier = new Magnifier();
+        magnifier.Show(scan, new Avalonia.Point(500, 400), zoom: 4, null, Colors.Lime);
+        scan.Dispose();
+
+        Should.NotThrow(() => Render(magnifier).Dispose());
+    }
+
+    [Fact]
+    public void ReplaceSource_ShouldDrawTheNewRendering()
+    {
+        TestAppBuilder.EnsureInitialized();
+        using var old = Scan();
+        using var white = new Mat(800, 1000, MatType.CV_8UC3, Scalar.All(255));
+        using var replaced = MatBitmapConverter.ToAvaloniaBitmap(white);
+        var magnifier = new Magnifier();
+        magnifier.Show(old, new Avalonia.Point(300, 400), zoom: 4, null, Colors.Lime);
+
+        magnifier.ReplaceSource(replaced);
+        using var bitmap = Render(magnifier);
+
+        Pixel(bitmap, 30, 30).ShouldBe(Colors.White, "drawn from the new, all-white image");
+    }
+
+    [Fact]
     public void Render_PastTheScanEdgeShowsTheBackdrop()
     {
         TestAppBuilder.EnsureInitialized();

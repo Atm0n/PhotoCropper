@@ -181,12 +181,17 @@ internal sealed partial class CompareImageViewer : UserControl
             cnvStrokes.Width = size.Width;
             cnvStrokes.Height = size.Height;
             ClearStrokes(keepLive: false);
+            if (_drag == DragMode.Trim) _drag = DragMode.None; // another photo: the edge being dragged was the last one's
+            magnifier.Hide();
             _userZoomed = false;
             FitToView();
             return;
         }
 
-        // Same photo, updated render: finished strokes are now part of the image.
+        // Same photo, updated render: the magnifier must not keep drawing from the old one, which is disposed now.
+        if (Shown is { } shown) magnifier.ReplaceSource(shown);
+
+        // Finished strokes are now part of the image.
         if (afterChanged) ClearStrokes(keepLive: true);
         UpdateSplit();
         UpdateTrimOverlay();

@@ -46,6 +46,17 @@ internal sealed class Magnifier : Control
         InvalidateVisual();
     }
 
+    /// <summary>
+    /// Switches to a new rendering of the same image while shown (e.g. a preview rendered again mid-drag): the old
+    /// bitmap is about to be disposed, and must not be drawn from again.
+    /// </summary>
+    public void ReplaceSource(Bitmap source)
+    {
+        if (!IsVisible || _source == null) return;
+        _source = source;
+        InvalidateVisual();
+    }
+
     public void Hide()
     {
         IsVisible = false;
@@ -60,14 +71,16 @@ internal sealed class Magnifier : Control
         var frame = new Rect(size);
         context.FillRectangle(Backdrop, frame);
 
-        if (_source is { } source)
+        // The bitmap is owned elsewhere and can be disposed between Show and this render (a preview replaced in the
+        // meantime): draw nothing rather than fail the whole frame.
+        if (_source is { } source && TryGetPixelSize(source, out PixelSize pixels))
         {
             // The part of the scan shown, in scan pixels, centred on the point.
             double w = size.Width / _zoom, h = size.Height / _zoom;
             var shown = new Rect(_center.X - w / 2, _center.Y - h / 2, w, h);
             Point ToView(double x, double y) => new((x - shown.X) * _zoom, (y - shown.Y) * _zoom);
 
-            var inScan = shown.Intersect(new Rect(0, 0, source.PixelSize.Width, source.PixelSize.Height));
+            var inScan = shown.Intersect(new Rect(0, 0, pixels.Width, pixels.Height));
             if (inScan.Width > 0 && inScan.Height > 0)
             {
                 var topLeft = ToView(inScan.X, inScan.Y);
@@ -103,5 +116,19 @@ internal sealed class Magnifier : Control
             context.DrawLine(pen, new Point(cx, cy + gap), new Point(cx, cy + gap + arm));
         }
         context.DrawRectangle(null, FramePen, frame.Deflate(1));
+    }
+
+    private static bool TryGetPixelSize(Bitmap bitmap, out PixelSize size)
+    {
+        try
+        {
+            size = bitmap.PixelSize;
+            return true;
+        }
+        catch (ObjectDisposedException)
+        {
+            size = default;
+            return false;
+        }
     }
 }
