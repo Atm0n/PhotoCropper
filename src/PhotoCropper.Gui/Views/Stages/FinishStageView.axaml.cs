@@ -22,6 +22,10 @@ internal sealed partial class FinishStageView : UserControl
             if (e.Property == CompareImageViewer.ZoomProperty) txtZoom.Text = $"{viewer.Zoom * 100:0}%";
         };
 
+        // Ctrl+click / Shift+click on a photo marks it for the bulk actions instead of opening it. Tunnel, so the
+        // list box doesn't select (open) the photo first.
+        lstPhotos.AddHandler(PointerPressedEvent, OnPhotoPointerPressed, RoutingStrategies.Tunnel);
+
         // Tunnel: the editor's keys work wherever the focus is inside this view.
         AddHandler(KeyDownEvent, OnEditorKeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyUpEvent, OnEditorKeyUp, RoutingStrategies.Tunnel);
@@ -43,6 +47,17 @@ internal sealed partial class FinishStageView : UserControl
     }
 
     private FinishStageViewModel? ViewModel => DataContext as FinishStageViewModel;
+
+    private void OnPhotoPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        bool control = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
+        bool shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        if (!control && !shift) return;
+        if (ViewModel is not { } vm || (e.Source as Control)?.DataContext is not FinishPhotoViewModel row) return;
+
+        vm.ToggleMark(row, range: shift);
+        e.Handled = true;
+    }
 
     private void ZoomIn_Click(object? sender, RoutedEventArgs e) => viewer.ZoomIn();
 

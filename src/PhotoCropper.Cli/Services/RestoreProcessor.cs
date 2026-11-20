@@ -22,7 +22,7 @@ internal static class RestoreProcessor
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(photoFiles);
 
-        var restoration = new RestorationSettings { RestoreColors = options.RestoreColors, RemoveDust = options.RemoveDust };
+        var restoration = new RestorationSettings { RestoreColors = options.RestoreColors, RemoveDust = options.RemoveDust, TrimWhiteBorders = options.TrimBorders };
         var metadata = CreateExportMetadata(options);
 
         // Restored photos keep their names unless a pattern was asked for: there is one photo per file.
@@ -89,6 +89,7 @@ internal static class RestoreProcessor
         grid.AddRow("[bold cyan]Output Format:[/]", $"[bold white]{options.Format}[/] (Quality: {options.JpegQuality})");
         grid.AddRow("[bold cyan]Restoration:[/]", restoration.RestoreColors ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Dust Inpainting:[/]", restoration.RestoreColors && restoration.RemoveDust ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
+        if (restoration.TrimWhiteBorders) grid.AddRow("[bold cyan]White Borders:[/]", "[bold green]Trimmed[/]");
         grid.AddRow("[bold cyan]Naming Pattern:[/]", $"[bold white]{Markup.Escape(pattern)}[/]");
         grid.AddRow("[bold cyan]Output:[/]", Markup.Escape(options.OutputDirectory ?? $"<photo folder>/{DefaultOutputFolderName}"));
         AnsiConsole.Write(new Panel(grid).Header("[bold cyan]PhotoCropper CLI - Restore[/]").Border(BoxBorder.Rounded).BorderColor(Color.Cyan1));

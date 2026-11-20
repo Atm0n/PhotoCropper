@@ -70,6 +70,8 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **Landscape & Water Scene Heuristics:** Evaluates sky gradients (blue and overcast), horizon textures, ground/vegetation, and water bodies (seas, lakes, rivers) with strict non-landscape guards to prevent false indoor rotations.
 - **Vintage Photo Color & Contrast Restoration (per photo, in the Finish stage):**
   - **Presets:** Faded colour print, Black & white, Sepia, Only clean dust, None. Apply one, tweak it, then "Copy settings to all".
+  - **Several photos at once:** Ctrl+click or Shift+click photos in the grid (or tick their box) to select several; a bar above the grid applies a preset, turns the white-border trim on or off, or exports just those photos. "Copy settings to selected" copies the open photo's settings to them.
+  - **Trim white border (optional):** leaves a print's white or cream border out of the final photo; `Cropped/` keeps the whole print. It only trims when all four sides show a clean, even border (one side may be wider, as on a Polaroid), so photos without one are left whole; the editor preview darkens what will be cut.
   - **Automatic restoration** at Gentle, Normal or Strong, with each part optional: colour cast removal (damped gray-world white balance, gains limited to `[0.85, 1.18]`), contrast (levels stretch and CLAHE on lightness only, so colour casts are not amplified) and faded-colour revival (vibrancy that spares skin tones).
   - **Black & white handling:** black-and-white and sepia prints are detected automatically and skip white balance and saturation, keeping their tone; or choose "neutral grey" to remove tinting.
   - **Manual adjustments:** brightness, contrast, warmth, tint and saturation (-100 to 100).
@@ -274,6 +276,7 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `--no-orient` | Don't turn photos upright automatically (face and landscape detection) | on |
 | `--no-restore` | Don't restore colours and contrast | on |
 | `--no-dust` | Don't remove dust and hairline scratches | on |
+| `--trim-borders` | Leave out prints' white borders (photos without a clear border are kept whole; not in `--stage crop`) | off |
 | `-r, --recursive` | Recursively process subdirectories when input is a folder | `false` |
 | `-v, --verbose` | Display individual photo dimensions and debug details | `false` |
 | `-h, --help` | Display usage instructions and examples | — |

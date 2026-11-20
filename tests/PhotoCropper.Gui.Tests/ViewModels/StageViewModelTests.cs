@@ -118,6 +118,71 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
+    public void FinishStage_CtrlAndShiftClick_ShouldMarkPhotosForTheBulkActions()
+    {
+        for (int i = 1; i <= 4; i++) AddCroppedPhoto($"scan_000{i}.png");
+        using var vm = Finish();
+        vm.Refresh();
+
+        vm.ToggleMark(vm.Photos[0], range: false);          // Ctrl+click
+        vm.ToggleMark(vm.Photos[2], range: true);           // Shift+click: 0..2
+        vm.MarkedCount.ShouldBe(3);
+        vm.Photos[3].IsMarked.ShouldBeFalse();
+
+        vm.ToggleMark(vm.Photos[1], range: false);          // Ctrl+click again: unmarks
+        vm.MarkedCount.ShouldBe(2);
+        vm.HasMarks.ShouldBeTrue();
+
+        vm.MarkAllCommand.Execute(null);
+        vm.MarkedCount.ShouldBe(4);
+        vm.ClearMarksCommand.Execute(null);
+        vm.HasMarks.ShouldBeFalse();
+        vm.SelectedPhoto.ShouldBeNull("marking never opens the editor");
+    }
+
+    [Fact]
+    public void FinishStage_BulkActions_ShouldChangeOnlyTheMarkedPhotos()
+    {
+        for (int i = 1; i <= 3; i++) AddCroppedPhoto($"scan_000{i}.png");
+        using var vm = Finish();
+        vm.Refresh();
+        vm.Photos[0].IsMarked = true;
+        vm.Photos[2].IsMarked = true;
+
+        vm.ApplyPresetToMarkedCommand.Execute("bw");
+        vm.SetTrimForMarkedCommand.Execute("on");
+
+        foreach (int i in new[] { 0, 2 })
+        {
+            vm.Photos[i].Photo.Restoration.ShouldBe(RestorationSettings.BlackAndWhite with { TrimWhiteBorders = true });
+        }
+        vm.Photos[1].Photo.Restoration.ShouldBe(RestorationSettings.None);
+
+        // A preset afterwards changes the colours but keeps the trim choice.
+        vm.ApplyPresetToMarkedCommand.Execute("sepia");
+        vm.Photos[0].Photo.Restoration.ShouldBe(RestorationSettings.Sepia with { TrimWhiteBorders = true });
+
+        vm.SetTrimForMarkedCommand.Execute("off");
+        vm.Photos[2].TrimWhiteBorders.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task FinishStage_ExportSelected_ShouldWriteOnlyTheMarkedPhotos()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        AddCroppedPhoto("scan_0002.png");
+        using var vm = Finish();
+        vm.Refresh();
+        vm.Photos[1].IsMarked = true;
+
+        await vm.ExportMarkedCommand.ExecuteAsync(null);
+
+        vm.Photos[1].IsStale.ShouldBeFalse();
+        vm.Photos[0].IsStale.ShouldBeTrue();
+        vm.Photos[0].Photo.Final.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task FinishStage_RepairStroke_ShouldBeStoredWithTheBrushSizeAndPhotoSize()
     {
         AddCroppedPhoto("scan_0001.png");

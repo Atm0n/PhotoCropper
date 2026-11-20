@@ -130,7 +130,7 @@ internal static class ProjectProcessor
     private static List<ScanResult> CropScans(CliOptions options, string workDir, WorkspaceSessionState session, IAnsiConsole console)
     {
         var detection = BatchProcessor.CreateDetectionOptions(options);
-        var restoration = new RestorationSettings { RestoreColors = options.RestoreColors, RemoveDust = options.RemoveDust };
+        var restoration = new RestorationSettings { RestoreColors = options.RestoreColors, RemoveDust = options.RemoveDust, TrimWhiteBorders = options.TrimBorders };
         var entries = session.Scans.ToList();
         var results = new ConcurrentDictionary<int, ScanResult>();
 

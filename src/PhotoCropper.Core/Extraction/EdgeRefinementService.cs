@@ -52,6 +52,145 @@ public static class EdgeRefinementService
         return finalRect;
     }
 
+    /// <summary>
+    /// The picture inside a print's white (or cream) border, or null when the photo has no such border. All four
+    /// corners must be light, little saturated and alike (a border, not a bright sky along one edge), and the border
+    /// trimmed must be thin, so a photo without one is never cut into.
+    /// </summary>
+    public static Rect? GetWhiteBorderRect(Mat photo)
+    {
+        ArgumentNullException.ThrowIfNull(photo);
+        if (photo.Empty() || photo.Width < 40 || photo.Height < 40) return null;
+
+        using Mat bgr = new();
+        if (photo.Channels() == 1) Cv2.CvtColor(photo, bgr, ColorConversionCodes.GRAY2BGR);
+        else if (photo.Channels() == 4) Cv2.CvtColor(photo, bgr, ColorConversionCodes.BGRA2BGR);
+        else photo.CopyTo(bgr);
+        using Mat hsv = new();
+        Cv2.CvtColor(bgr, hsv, ColorConversionCodes.BGR2HSV);
+
+        int s = Math.Max(5, Math.Min(photo.Width, photo.Height) / 60);
+        Rect[] corners =
+        [
+            new(0, 0, s, s), new(photo.Width - s, 0, s, s),
+            new(0, photo.Height - s, s, s), new(photo.Width - s, photo.Height - s, s, s),
+        ];
+        var means = corners.Select(c =>
+        {
+            using Mat patch = new(hsv, c);
+            return Cv2.Mean(patch);
+        }).ToList();
+        if (means.Any(m => m.Val2 < MinBorderBrightness || m.Val1 > MaxBorderSaturation)) return null;
+        if (means.Max(m => m.Val2) - means.Min(m => m.Val2) > MaxBorderCornerSpread) return null;
+
+        // Pixels of the border's colour: as light as the corners (give or take) and near-neutral.
+        double borderValue = means.Average(m => m.Val2);
+        using Mat border = new();
+        Cv2.InRange(hsv, new Scalar(0, 0, borderValue - BorderValueTolerance), new Scalar(180, MaxBorderSaturation, 255), border);
+
+        // Border pixels per row and per column (sums of a 0/255 mask).
+        using Mat perRow = new();
+        using Mat perColumn = new();
+        Cv2.Reduce(border, perRow, ReduceDimension.Column, ReduceTypes.Sum, MatType.CV_32SC1.Depth);
+        Cv2.Reduce(border, perColumn, ReduceDimension.Row, ReduceTypes.Sum, MatType.CV_32SC1.Depth);
+
+        // How sharply the brightness changes across each line (mean |gradient| perpendicular to it): low in a smooth
+        // border, a peak at the straight edge where the picture starts.
+        using Mat gray = new();
+        Cv2.CvtColor(bgr, gray, ColorConversionCodes.BGR2GRAY);
+        using Mat gradX = new();
+        using Mat gradY = new();
+        Cv2.Sobel(gray, gradX, MatType.CV_32F, 1, 0);
+        Cv2.Sobel(gray, gradY, MatType.CV_32F, 0, 1);
+        using Mat absX = new();
+        using Mat absY = new();
+        Cv2.ConvertScaleAbs(gradX, absX);
+        Cv2.ConvertScaleAbs(gradY, absY);
+        using Mat edgePerRow = new();
+        using Mat edgePerColumn = new();
+        Cv2.Reduce(absY, edgePerRow, ReduceDimension.Column, ReduceTypes.Avg, MatType.CV_32FC1.Depth);
+        Cv2.Reduce(absX, edgePerColumn, ReduceDimension.Row, ReduceTypes.Avg, MatType.CV_32FC1.Depth);
+
+        // From each edge inwards, the border goes on while most of the line is border-coloured; a slightly tilted
+        // print still has most of each line in its border, and a white shirt in the picture doesn't fill a line.
+        // It also stops at a sharp straight edge: a light picture (a black-and-white portrait's pale background)
+        // can be border-coloured, but the picture's edge still shows. The outermost lines can be a sliver of the bed
+        // and the print's own edge (a thin dark line, or its shadow), so the border is the last run of border lines
+        // that starts within the outer few percent. It must end at a clean edge: a vignette or light sand fading
+        // out is no border.
+        int Depth(bool rows, bool fromEnd)
+        {
+            int count = rows ? photo.Height : photo.Width;
+            int length = rows ? photo.Width : photo.Height;
+            int Index(int d) => fromEnd ? count - 1 - d : d;
+            double Share(int d) => (rows ? perRow.Get<int>(Index(d), 0) : perColumn.Get<int>(0, Index(d))) / 255.0 / length;
+            double Edge(int d) => rows ? edgePerRow.Get<float>(Index(d), 0) : edgePerColumn.Get<float>(0, Index(d));
+            bool IsBorder(int d) => Share(d) >= BorderLineShare;
+
+            int limit = (int)(count * MaxBorderShare);
+            int edge = Math.Min(limit, Math.Max(4, (int)(count * BorderEdgeShare)));
+            int minRun = Math.Max(MinBorderPixels, (int)(count * MinBorderShare));
+            int step = Math.Max(MinBorderPixels, (int)(count * BorderStepShare));
+            int end = 0;
+            for (int start = 0; start < edge; start++)
+            {
+                if (!IsBorder(start) || (start > 0 && IsBorder(start - 1))) continue; // not the start of a run
+
+                // The border's own texture (grain): the median over a few lines a little inside the run's start, clear
+                // of the print's edge just outside it.
+                var grain = Enumerable.Range(start + 2, 2 * minRun).Where(d => d < count && IsBorder(d)).Select(Edge).OrderBy(x => x).ToList();
+                double smooth = grain.Count > 0 ? grain[grain.Count / 2] : 0;
+                double sharp = Math.Max(BorderEdgeMin, smooth * BorderEdgeFactor);
+                bool IsPictureEdge(int d) => d < count && Edge(d) >= sharp;
+
+                int e = start;
+                while (e < limit && IsBorder(e) && !(e - start >= minRun && IsPictureEdge(e))) e++;
+                if (e >= limit) return -1; // border-like beyond the limit: not a border
+                if (e - start < minRun) continue;
+
+                // A clean edge: the picture's edge, or the colour changing within a few lines.
+                bool clean = Enumerable.Range(Math.Max(0, e - 1), step + 1).Any(d => d < count && (IsPictureEdge(d) || Share(d) < BorderPictureShare));
+                if (clean) end = e;
+            }
+            return end; // 0: no border on this side
+        }
+
+        int top = Depth(rows: true, fromEnd: false), bottom = Depth(rows: true, fromEnd: true);
+        int left = Depth(rows: false, fromEnd: false), right = Depth(rows: false, fromEnd: true);
+        if (top < 0 || bottom < 0 || left < 0 || right < 0) return null;
+
+        // A print's border goes all the way round, and three of its sides are alike: only one may be wider (a
+        // Polaroid's, which can end up on any side once the photo is turned upright). Light content along an edge
+        // (a white sheet, a pale wall) fails this: it doesn't frame the picture evenly on every side.
+        int[] depths = [top, bottom, left, right];
+        Array.Sort(depths);
+        int minDepth = Math.Max(MinBorderPixels, (int)(Math.Min(photo.Width, photo.Height) * MinBorderShare));
+        if (depths[0] < minDepth) return null;
+        if (depths[2] > depths[0] * MaxBorderSideRatio + MinBorderPixels) return null;
+
+        // A couple of pixels more, past the soft edge between border and picture.
+        top += BorderEdgeMargin; bottom += BorderEdgeMargin; left += BorderEdgeMargin; right += BorderEdgeMargin;
+        return new Rect(left, top, photo.Width - left - right, photo.Height - top - bottom);
+    }
+
+    // A print's border: light (HSV value), near-neutral, the same at every corner, and at most a quarter of each
+    // side (a Polaroid's wide bottom edge included).
+    private const double MinBorderBrightness = 170;
+    private const double MaxBorderSaturation = 60;
+    private const double MaxBorderCornerSpread = 50;
+    private const double MaxBorderShare = 0.2;
+    private const double BorderValueTolerance = 30;
+    private const double BorderLineShare = 0.8;
+    private const int MinBorderPixels = 3;
+    private const double MinBorderShare = 0.005;
+    private const double MaxBorderSideRatio = 2.5;
+    private const int BorderEdgeMargin = 2;
+    private const double BorderEdgeShare = 0.06;
+    private const double BorderEdgeMin = 12;
+    private const double BorderEdgeFactor = 3;
+    private const double BorderStepShare = 0.015;
+    private const double BorderPictureShare = 0.5;
+
     public static Mat ApplyCrop(Mat photo, Rect rect)
     {
         ArgumentNullException.ThrowIfNull(photo);

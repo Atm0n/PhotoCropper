@@ -106,6 +106,10 @@ internal static class CommandLineParser
             {
                 options.RemoveDust = false;
             }
+            else if (arg == "--trim-borders")
+            {
+                options.TrimBorders = true;
+            }
             else if (arg == "--auto-orient")
             {
                 options.AutoOrient = true;
@@ -299,6 +303,7 @@ internal static class CommandLineParser
             Photos:
               --no-restore            Don't restore colours (white balance, contrast, faded colours)
               --no-dust               Don't remove dust and scratches
+              --trim-borders          Leave out prints' white borders (photos without one are kept whole)
               --no-orient             Don't turn photos upright automatically
               --year <YYYY>           Year taken, written to the photos' metadata and {year}
               --date <YYYY-MM-DD>     Date taken, written to the metadata and {date}

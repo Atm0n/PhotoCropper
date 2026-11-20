@@ -35,6 +35,9 @@ internal sealed class CliOptions
     public bool AutoOrient { get; set; } = true;
     public bool RestoreColors { get; set; } = true;
     public bool RemoveDust { get; set; } = true;
+
+    /// <summary>Leave out prints' white borders when restoring (the app's per-photo "Trim white border").</summary>
+    public bool TrimBorders { get; set; }
     public int Threads { get; set; } = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
     public bool Recursive { get; set; }
     public bool Verbose { get; set; }
