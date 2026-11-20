@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Photo types in Finish**: each photo is labelled black & white, sepia, faded colour or colour, and the chips above the grid show one type at a time, with how many photos each has. "Select all" then selects just that type. **Suggested by type** gives each selected photo the preset that suits its kind of print: Black & white, Sepia, Faded colour print, or Only clean dust for colour photos in good shape. Types are told from the photos' colours; aged or toned black-and-white prints and prints on tinted album pages count as black and white.
+
 ### Changed
 - **Finish, several photos at once**: the bar now has a checkbox each for automatic restoration, dust removal and border trimming, in place of the "Trim border: on / off" buttons. Each shows whether all, none or (with a dash) only some of the selected photos have it, and one click turns it on for all of them, or off when all had it.
 
