@@ -727,10 +727,11 @@ public sealed class StageViewModelTests : IDisposable
 
         vm.Refresh();
 
-        SpinWait.SpinUntil(() => vm.PreviewBoxes != null, TimeSpan.FromSeconds(5)).ShouldBeTrue();
+        // The boxes and the row's count are set one after the other by the background preview: wait for both.
+        string twoPhotos = LocalizationService.Format(ResourceKeys.ScanStatusPhotos, "{0} photos", 2);
+        SpinWait.SpinUntil(() => vm.PreviewBoxes != null && vm.Scans[0].PhotosText == twoPhotos, TimeSpan.FromSeconds(5)).ShouldBeTrue();
         _host.PrepareCalls.ShouldBe(1);
         vm.PreviewBoxes!.Count.ShouldBe(2);
-        vm.Scans[0].PhotosText.ShouldBe(LocalizationService.Format(ResourceKeys.ScanStatusPhotos, "{0} photos", 2));
     }
 
     public void Dispose()
