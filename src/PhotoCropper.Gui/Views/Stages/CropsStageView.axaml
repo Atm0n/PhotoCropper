@@ -124,6 +124,10 @@
 					</Panel>
 				</ScrollViewer>
 					
+					<!-- Zoomed view while a corner is dragged or a box drawn; moves aside when the pointer comes near -->
+					<controls:Magnifier Grid.Column="1" x:Name="magnifier" Width="220" Height="220" Margin="12"
+										HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="False" ZIndex="30"/>
+
 					<!-- Localized "Thinking" indicator for Live Preview -->
 					<Border Grid.Column="1" x:Name="pnlLocalLoading" Background="{DynamicResource AppModalBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="20" Padding="15,8" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsDetectionPending}" ZIndex="20">
 						<StackPanel Orientation="Horizontal" Spacing="8">

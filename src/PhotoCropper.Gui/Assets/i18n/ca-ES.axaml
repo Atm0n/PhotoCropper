@@ -189,7 +189,7 @@
 	<sys:String x:Key="HelpManualCrop">Arrossega un rectangle sobre l'escaneig per afegir una foto que no s'hagi detectat. S'afegeix a la llista i queda seleccionada.</sys:String>
 	<sys:String x:Key="HelpRefine">Dibuixa un retall més ajustat dins d'una foto, per exemple per treure un marge blanc de l'escàner. En acceptar, la foto es torna a retallar i la seva caixa a l'escaneig s'hi ajusta (Retorn per acceptar, Esc per cancel·lar).</sys:String>
 	<sys:String x:Key="HelpInteractiveBoxesTitle">Editar les caixes</sys:String>
-	<sys:String x:Key="HelpInteractiveBoxes">Fes clic dins d'una caixa per veure'n la foto. Arrossega una cantonada per canviar-ne la mida i la nansa blava per girar-la; la foto es torna a extreure quan la deixes anar. Fes clic a la ✕ vermella de la cantonada superior dreta per eliminar-la. Tots els canvis es poden desfer.</sys:String>
+	<sys:String x:Key="HelpInteractiveBoxes">Fes clic dins d'una caixa per veure'n la foto. Arrossega una cantonada per canviar-ne la mida (mentre arrossegues apareix en una cantonada una vista ampliada del punt, per ajustar la vora just a la de la foto) i la nansa blava per girar-la; la foto es torna a extreure quan la deixes anar. Fes clic a la ✕ vermella de la cantonada superior dreta per eliminar-la. Tots els canvis es poden desfer.</sys:String>
 	<sys:String x:Key="HelpDpiTitle">Resolució de l'escaneig</sys:String>
 	<sys:String x:Key="HelpDpi">La resolució de l'escàner (per exemple 300 o 600 PPP) es conserva a les fotos exportades, perquè s'imprimeixin a la seva mida real.</sys:String>
 	<sys:String x:Key="HelpAutoOrientTitle">Orientació amb IA i paisatge</sys:String>
