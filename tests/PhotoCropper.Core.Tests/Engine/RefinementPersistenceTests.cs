@@ -39,7 +39,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     [Fact]
     public void MapPhotoCropToScan_Unrotated_ShouldOffsetFromBoxCorner()
     {
-        var mapped = PhotoCropperEngine.MapPhotoCropToScan(Box, 0, new Size(160, 80), new Rect(10, 10, 100, 50));
+        var mapped = PhotoCropper.Core.Detection.CropGeometry.MapPhotoCropToScan(Box, 0, new Size(160, 80), new Rect(10, 10, 100, 50));
 
         ShouldBeBox(mapped, 420 + 10 + 50, 460 + 10 + 25, 100, 50);
     }
@@ -54,7 +54,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     {
         var leftHalf = new Rect(0, 0, shownWidth / 2, shownHeight);
 
-        var mapped = PhotoCropperEngine.MapPhotoCropToScan(Box, rotation, new Size(shownWidth, shownHeight), leftHalf);
+        var mapped = PhotoCropper.Core.Detection.CropGeometry.MapPhotoCropToScan(Box, rotation, new Size(shownWidth, shownHeight), leftHalf);
 
         mapped.Center.X.ShouldBe(expectedCx, 0.6f);
         mapped.Center.Y.ShouldBe(expectedCy, 0.6f);

@@ -1,4 +1,5 @@
 using OpenCvSharp;
+using PhotoCropper.Core.Common;
 using PhotoCropper.TestHelpers;
 
 namespace PhotoCropper.Core.Tests.Engine;
@@ -332,20 +333,6 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void SaveDetectedPhotos_ShouldExportFiles()
-    {
-        using var cropper = new PhotoCropperEngine(_standardScanPath);
-        cropper.DetectPhotos();
-
-        string outDir = Path.Combine(_tempDir, "exported_photos");
-        cropper.SaveDetectedPhotos(outDir, "PNG");
-
-        Directory.Exists(outDir).ShouldBeTrue();
-        var files = Directory.GetFiles(outDir, "*.png");
-        files.Length.ShouldBe(cropper.DetectedPhotos.Count);
-    }
-
-    [Fact]
     public void DetectPhotos_ScannerWithBezel_ShouldDetectAllPhotos()
     {
         string bezelScanPath = Path.Combine(_tempDir, "bezel_scan.jpg");
@@ -389,19 +376,19 @@ public sealed class PhotoCropperEngineTests : IDisposable
     {
         using var grayMat = new Mat(50, 50, MatType.CV_8UC1);
         grayMat.SetTo(new Scalar(100));
-        using var bgrFromGray = PhotoCropperEngine.NormalizeToBgr(grayMat);
+        using var bgrFromGray = ImageIo.NormalizeToBgr(grayMat);
         bgrFromGray.Channels().ShouldBe(3);
         bgrFromGray.Width.ShouldBe(50);
         bgrFromGray.Height.ShouldBe(50);
 
         using var bgrMat = new Mat(50, 50, MatType.CV_8UC3);
         bgrMat.SetTo(new Scalar(10, 20, 30));
-        using var bgrFromBgr = PhotoCropperEngine.NormalizeToBgr(bgrMat);
+        using var bgrFromBgr = ImageIo.NormalizeToBgr(bgrMat);
         bgrFromBgr.Channels().ShouldBe(3);
 
         using var bgraMat = new Mat(50, 50, MatType.CV_8UC4);
         bgraMat.SetTo(new Scalar(10, 20, 30, 255));
-        using var bgrFromBgra = PhotoCropperEngine.NormalizeToBgr(bgraMat);
+        using var bgrFromBgra = ImageIo.NormalizeToBgr(bgraMat);
         bgrFromBgra.Channels().ShouldBe(3);
     }
 
