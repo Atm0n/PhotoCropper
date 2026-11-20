@@ -122,6 +122,7 @@ internal static class ResourceKeys
     public const string MsgProjectNameInvalid = nameof(MsgProjectNameInvalid);
     public const string MsgProjectExists = nameof(MsgProjectExists);
     public const string MsgProjectCreateFailed = nameof(MsgProjectCreateFailed);
+    public const string MsgProjectInUse = nameof(MsgProjectInUse);
     public const string BtnImportScans = nameof(BtnImportScans);
     public const string BtnImportPhotos = nameof(BtnImportPhotos);
     public const string ScanStatusNotChecked = nameof(ScanStatusNotChecked);

@@ -75,6 +75,7 @@
 	<sys:String x:Key="MsgProjectNameInvalid">A project name can't contain \ / : * ? " &lt; &gt; |</sys:String>
 	<sys:String x:Key="MsgProjectExists">There is already a folder called '{0}' there. Choose another name, or use Open project.</sys:String>
 	<sys:String x:Key="MsgProjectCreateFailed">Could not create the project folder: {0}</sys:String>
+	<sys:String x:Key="MsgProjectInUse">'{0}' is already open in another PhotoCropper window. Switch to that window, or close it first: two windows saving the same project would lose each other's work.</sys:String>
 	<sys:String x:Key="BtnScanStage">🖨  Scan</sys:String>
 	<sys:String x:Key="BtnImportScans">Import scans…</sys:String>
 	<sys:String x:Key="ScanStageEmpty">No scans yet. Scan with your scanner or import scan files to begin.&#x0a;Double-click a scan to adjust its crops.</sys:String>

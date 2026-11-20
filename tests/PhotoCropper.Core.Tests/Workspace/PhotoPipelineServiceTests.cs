@@ -146,6 +146,59 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
+    public void RenderFinal_ShouldMoveAsideFilesNoPhotoOwnsInsteadOfWritingACopy()
+    {
+        // Left in Final/ by an older version, or by an export whose record was lost (e.g. two windows saving).
+        string finalDir = ProjectWorkspaceService.GetFinalDirectory(_workDir);
+        Directory.CreateDirectory(finalDir);
+        File.WriteAllText(Path.Combine(finalDir, "scan_0001_1.jpg"), "old export");
+        File.WriteAllText(Path.Combine(finalDir, "scan_0001_1 (1).jpg"), "lost export");
+        File.WriteAllText(Path.Combine(finalDir, "scan_0001_10.jpg"), "another photo");
+        using var a = Photo(100);
+        var photo = Save((a, Box(100, 100)))[0];
+
+        PhotoPipelineService.RenderFinal(_workDir, _session, photo, new FinalRenderOptions());
+
+        Path.GetFileName(Full(photo.Final!)).ShouldBe("scan_0001_1.jpg");
+        Directory.GetFiles(finalDir).Select(Path.GetFileName).Order().ShouldBe(["scan_0001_1.jpg", "scan_0001_10.jpg"]);
+        string older = Path.Combine(finalDir, PhotoPipelineService.OlderFinalsFolderName);
+        File.ReadAllText(Path.Combine(older, "scan_0001_1.jpg")).ShouldBe("old export");
+        File.ReadAllText(Path.Combine(older, "scan_0001_1 (1).jpg")).ShouldBe("lost export");
+    }
+
+    [Fact]
+    public void RenderFinal_ShouldKeepAnotherPhotosFileUnderTheSameName()
+    {
+        using var a = Photo(100);
+        using var b = Photo(150);
+        var photos = Save((a, Box(100, 100)), (b, Box(300, 100)));
+        var options = new FinalRenderOptions { FileNamePattern = "{original}" }; // both are "scan_0001.jpg"
+
+        PhotoPipelineService.RenderFinal(_workDir, _session, photos[0], options);
+        PhotoPipelineService.RenderFinal(_workDir, _session, photos[1], options);
+
+        Path.GetFileName(Full(photos[0].Final!)).ShouldBe("scan_0001.jpg");
+        Path.GetFileName(Full(photos[1].Final!)).ShouldBe("scan_0001 (1).jpg");
+        File.Exists(Full(photos[0].Final!)).ShouldBeTrue();
+        Directory.Exists(Path.Combine(ProjectWorkspaceService.GetFinalDirectory(_workDir), PhotoPipelineService.OlderFinalsFolderName)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void RenderFinal_ToAnotherFolder_ShouldNotMoveFilesThere()
+    {
+        string outside = Path.Combine(_workDir, "Elsewhere");
+        Directory.CreateDirectory(outside);
+        File.WriteAllText(Path.Combine(outside, "scan_0001_1.jpg"), "the user's own file");
+        using var a = Photo(100);
+        var photo = Save((a, Box(100, 100)))[0];
+
+        PhotoPipelineService.RenderFinal(_workDir, _session, photo, new FinalRenderOptions { OutputDirectory = outside });
+
+        Path.GetFileName(Full(photo.Final!)).ShouldBe("scan_0001_1 (1).jpg");
+        File.ReadAllText(Path.Combine(outside, "scan_0001_1.jpg")).ShouldBe("the user's own file");
+    }
+
+    [Fact]
     public void ImportPhoto_ShouldCopyIntoCroppedAndRenderWithItsOwnName()
     {
         string source = Path.Combine(_workDir, "grandma.jpg");

@@ -1,5 +1,6 @@
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
 using PhotoCropper.Gui.ViewModels;
 
@@ -15,6 +16,9 @@ internal sealed partial class MainWindow : IStartHost
 
     /// <summary>The project shown behind the start screen; null until one has been opened in this run.</summary>
     private string? _openProject;
+
+    /// <summary>Keeps <see cref="_openProject"/> from being opened by another window at the same time.</summary>
+    private ProjectLock? _projectLock;
 
     internal bool IsStartScreenOpen => _startVm.IsOpen;
 
@@ -62,7 +66,7 @@ internal sealed partial class MainWindow : IStartHost
         return folders.Count > 0 ? folders[0].Path.LocalPath : null;
     }
 
-    async Task IStartHost.OpenProjectAsync(string folder, bool restoreOnly)
+    async Task<bool> IStartHost.OpenProjectAsync(string folder, bool restoreOnly)
     {
         var settings = SettingsManager.Instance.Settings;
         settings.RecentProjectFolders = RecentProjects.Add(settings.RecentProjectFolders, folder);
@@ -71,7 +75,10 @@ internal sealed partial class MainWindow : IStartHost
         // The project that is already open: just go back to it.
         if (!RecentProjects.SameFolder(folder, _openProject))
         {
+            if (ProjectLock.TryAcquire(folder) is not { } projectLock) return false;
             await SwitchToProjectAsync(folder);
+            _projectLock?.Dispose(); // the previous project, saved by the switch
+            _projectLock = projectLock;
             _openProject = folder;
             ApplyStage(AppStage.Scan);
         }
@@ -81,6 +88,7 @@ internal sealed partial class MainWindow : IStartHost
             await SetStageAsync(AppStage.Finish);
             if (_finishStageVm != null) await _finishStageVm.ImportPhotosCommand.ExecuteAsync(null);
         }
+        return true;
     }
 
     void IStartHost.ForgetRecentProject(string folder)

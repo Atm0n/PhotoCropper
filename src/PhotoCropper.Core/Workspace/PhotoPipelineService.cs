@@ -281,20 +281,30 @@ public static class PhotoPipelineService
             : options.OutputDirectory;
         Directory.CreateDirectory(finalDir);
 
-        // Replace this photo's previous final file, but only if it is still exactly what we wrote.
-        DeleteIfUnchanged(workDirectory, photo.Final);
-
-        string target = PhotoExporter.ResolveUniqueExportPath(Path.Combine(finalDir, fileName));
-        try
+        lock (FinalNamesLock)
         {
-            File.WriteAllBytes(target, bytes);
-        }
-        finally
-        {
-            PhotoExporter.ReleaseExportPath(target);
-        }
+            // Replace this photo's previous final file, but only if it is still exactly what we wrote.
+            DeleteIfUnchanged(workDirectory, photo.Final);
 
-        photo.Final = ProjectFile.FromDisk(workDirectory, target);
+            // Files under this name that no photo of the project owns (left by an older version, or by an export
+            // whose record was lost) would otherwise push this one to "name (1)": move them aside instead.
+            if (IsProjectFinalDirectory(workDirectory, finalDir))
+            {
+                MoveAsideUntrackedFinals(workDirectory, session, finalDir, fileName);
+            }
+
+            string target = PhotoExporter.ResolveUniqueExportPath(Path.Combine(finalDir, fileName));
+            try
+            {
+                File.WriteAllBytes(target, bytes);
+            }
+            finally
+            {
+                PhotoExporter.ReleaseExportPath(target);
+            }
+
+            photo.Final = ProjectFile.FromDisk(workDirectory, target);
+        }
         photo.FinalRenderedFrom = renderedFrom;
         photo.FinalRenderedWith = restoration;
         photo.FinalRenderedRepairs = repairsFingerprint;
@@ -402,6 +412,73 @@ public static class PhotoPipelineService
 
         File.WriteAllBytes(path, bytes);
         return ProjectFile.FromDisk(workDirectory, path);
+    }
+
+    /// <summary>Final/'s subfolder for files moved out of the way of new exports.</summary>
+    public const string OlderFinalsFolderName = "_older";
+
+    /// <summary>Held while a final photo's name is chosen and its file written and recorded.</summary>
+    private static readonly Lock FinalNamesLock = new();
+
+    private static bool IsProjectFinalDirectory(string workDirectory, string directory) =>
+        string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(ProjectWorkspaceService.GetFinalDirectory(workDirectory))),
+            StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Moves <paramref name="fileName"/> and its "name (n)" copies into Final/_older when no photo of the session
+    /// has them as its final file. Returns how many were moved.
+    /// </summary>
+    internal static int MoveAsideUntrackedFinals(string workDirectory, WorkspaceSessionState session, string finalDir, string fileName)
+    {
+        string stem = Path.GetFileNameWithoutExtension(fileName);
+        string extension = Path.GetExtension(fileName);
+        var sameName = new System.Text.RegularExpressions.Regex(
+            "^" + System.Text.RegularExpressions.Regex.Escape(stem) + @"( \(\d+\))?" + System.Text.RegularExpressions.Regex.Escape(extension) + "$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        List<string> candidates;
+        try
+        {
+            candidates = [.. Directory.EnumerateFiles(finalDir).Where(f => sameName.IsMatch(Path.GetFileName(f)))];
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return 0;
+        }
+        if (candidates.Count == 0) return 0;
+
+        HashSet<string> tracked;
+        lock (session)
+        {
+            tracked = new HashSet<string>(
+                session.Photos.Where(p => p.Final != null).Select(p => Path.GetFullPath(p.Final!.GetFullPath(workDirectory))),
+                StringComparer.OrdinalIgnoreCase);
+        }
+
+        int moved = 0;
+        string olderDir = Path.Combine(finalDir, OlderFinalsFolderName);
+        foreach (string file in candidates)
+        {
+            if (tracked.Contains(Path.GetFullPath(file))) continue;
+            try
+            {
+                Directory.CreateDirectory(olderDir);
+                string target = Path.Combine(olderDir, Path.GetFileName(file));
+                for (int n = 1; File.Exists(target); n++)
+                {
+                    target = Path.Combine(olderDir, $"{Path.GetFileNameWithoutExtension(file)} ({n}){Path.GetExtension(file)}");
+                }
+                File.Move(file, target);
+                moved++;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not move '{file}' aside: {ex.Message}");
+            }
+        }
+        return moved;
     }
 
     private static void DeleteIfUnchanged(string workDirectory, ProjectFile? file)
