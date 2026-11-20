@@ -446,6 +446,8 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
 
     public void ShowStatus(string message) => lblStatus.Text = message;
 
+    public void NotifyExportCompleted(string message, bool succeeded) => _notificationService.NotifyExportCompleted(message, succeeded);
+
     public void OpenFolder(string path)
     {
         Directory.CreateDirectory(path);

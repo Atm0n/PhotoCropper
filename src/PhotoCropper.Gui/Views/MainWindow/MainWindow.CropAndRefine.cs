@@ -23,10 +23,4 @@ internal sealed partial class MainWindow
         _cropsVm.LoadFromSettings();
         await _cropsVm.ReprocessAsync();
     }
-
-    private async void BtnResetBackground_Click(object? sender, RoutedEventArgs e)
-    {
-        if (ScanSessions.Count == 0) return;
-        await _cropsVm.ResetBackgroundColorAsync();
-    }
 }

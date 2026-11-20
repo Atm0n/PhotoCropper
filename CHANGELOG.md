@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Finish, several photos at once**: the bar now has a checkbox each for automatic restoration, dust removal and border trimming, in place of the "Trim border: on / off" buttons. Each shows whether all, none or (with a dash) only some of the selected photos have it, and one click turns it on for all of them, or off when all had it.
+
+### Fixed
+- Finish export now shows the completion notification and flashes the taskbar, as the export settings say; both settings did nothing before.
+
 ## [3.2.0] - 2026-11-20
 
 ### Added

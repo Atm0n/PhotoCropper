@@ -414,34 +414,6 @@ public static class PhotoExporter
         }
     }
 
-    public static void EmbedJpegMetadata(string filePath, PhotoCropper.Core.Models.PhotoExportMetadata metadata)
-    {
-        ArgumentNullException.ThrowIfNull(filePath);
-        ArgumentNullException.ThrowIfNull(metadata);
-        if (!File.Exists(filePath)) return;
-
-        byte[] bytes = File.ReadAllBytes(filePath);
-        byte[] updated = ExifMetadataWriter.InjectJpegMetadata(bytes, metadata);
-        if (updated != bytes)
-        {
-            WriteBytesToFile(filePath, updated);
-        }
-    }
-
-    public static void EmbedPngMetadata(string filePath, PhotoCropper.Core.Models.PhotoExportMetadata metadata)
-    {
-        ArgumentNullException.ThrowIfNull(filePath);
-        ArgumentNullException.ThrowIfNull(metadata);
-        if (!File.Exists(filePath)) return;
-
-        byte[] bytes = File.ReadAllBytes(filePath);
-        byte[] updated = ExifMetadataWriter.InjectPngMetadata(bytes, metadata);
-        if (updated != bytes)
-        {
-            WriteBytesToFile(filePath, updated);
-        }
-    }
-
     public static byte[] ApplyJpegDpi(byte[] bytes, int xDpi, int yDpi)
     {
         ArgumentNullException.ThrowIfNull(bytes);
@@ -479,19 +451,6 @@ public static class PhotoExporter
         Buffer.BlockCopy(bytes, 2, newBytes, 2 + jfifHeader.Length, bytes.Length - 2);
 
         return newBytes;
-    }
-
-    public static void EmbedJpegDpi(string filePath, int xDpi, int yDpi)
-    {
-        ArgumentNullException.ThrowIfNull(filePath);
-        if (!File.Exists(filePath)) return;
-
-        byte[] bytes = File.ReadAllBytes(filePath);
-        byte[] updated = ApplyJpegDpi(bytes, xDpi, yDpi);
-        if (updated != bytes)
-        {
-            WriteBytesToFile(filePath, updated);
-        }
     }
 
     public static byte[] ApplyPngDpi(byte[] bytes, int xDpi, int yDpi)
@@ -532,19 +491,6 @@ public static class PhotoExporter
         Buffer.BlockCopy(bytes, insertPos, newBytes, insertPos + physChunk.Length, bytes.Length - insertPos);
 
         return newBytes;
-    }
-
-    public static void EmbedPngDpi(string filePath, int xDpi, int yDpi)
-    {
-        ArgumentNullException.ThrowIfNull(filePath);
-        if (!File.Exists(filePath)) return;
-
-        byte[] bytes = File.ReadAllBytes(filePath);
-        byte[] updated = ApplyPngDpi(bytes, xDpi, yDpi);
-        if (updated != bytes)
-        {
-            WriteBytesToFile(filePath, updated);
-        }
     }
 
     private static uint CalculatePngCrc(byte[] data)
