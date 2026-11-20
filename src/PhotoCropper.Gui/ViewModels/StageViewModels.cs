@@ -58,6 +58,10 @@ internal interface IStageHost
 
     void SaveWorkspace();
     void ShowStatus(string message);
+
+    /// <summary>Tells the user a long export has finished: a popup and a taskbar flash, as the export settings allow.</summary>
+    void NotifyExportCompleted(string message, bool succeeded);
+
     void OpenFolder(string path);
 }
 
@@ -1080,9 +1084,11 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         foreach (var row in stale) row.NotifyRecordChanged();
         UpdateSummary();
 
-        _host.ShowStatus(failures.Count == 0
+        string message = failures.Count == 0
             ? LocalizationService.Format(ResourceKeys.MsgFinalExported, "Exported {0} photos to Final.", done)
-            : LocalizationService.Format(ResourceKeys.MsgExportFailedStatus, "Saved {0} photos; {1} scan(s) failed to export.", done, failures.Count));
+            : LocalizationService.Format(ResourceKeys.MsgExportFailedStatus, "Saved {0} photos; {1} could not be exported.", done, failures.Count);
+        _host.ShowStatus(message);
+        _host.NotifyExportCompleted(message, failures.Count == 0);
     }
 
     /// <summary>Imports photos that were already cropped (e.g. elsewhere) so they can be restored here.</summary>

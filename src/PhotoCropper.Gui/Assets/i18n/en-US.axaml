@@ -48,7 +48,7 @@
 	<sys:String x:Key="ScanCounter">Scan {0} of {1}</sys:String>
 	<sys:String x:Key="ProcessingScan">Processing Scan...</sys:String>
 	<sys:String x:Key="TitleExportFailed">Some Scans Could Not Be Exported</sys:String>
-	<sys:String x:Key="MsgExportFailedStatus">Saved {0} photos; {1} scan(s) failed to export.</sys:String>
+	<sys:String x:Key="MsgExportFailedStatus">Saved {0} photos; {1} could not be exported.</sys:String>
 	<sys:String x:Key="TitleUnexpectedError">Unexpected Error</sys:String>
 	<sys:String x:Key="MsgUnexpectedError">Something went wrong: {0}&#x0a;&#x0a;Your work is still open; consider saving it now.&#x0a;A crash report was saved to:&#x0a;{1}</sys:String>
 	<sys:String x:Key="StageScan">1  Scan</sys:String>

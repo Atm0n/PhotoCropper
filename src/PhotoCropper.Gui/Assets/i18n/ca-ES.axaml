@@ -48,7 +48,7 @@
 	<sys:String x:Key="ScanCounter">Escaneig {0} de {1}</sys:String>
 	<sys:String x:Key="ProcessingScan">Processant...</sys:String>
 	<sys:String x:Key="TitleExportFailed">No s'han pogut exportar alguns escanejos</sys:String>
-	<sys:String x:Key="MsgExportFailedStatus">S'han guardat {0} fotos; {1} escaneig(s) no s'han pogut exportar.</sys:String>
+	<sys:String x:Key="MsgExportFailedStatus">S'han guardat {0} fotos; {1} no s'han pogut exportar.</sys:String>
 	<sys:String x:Key="TitleUnexpectedError">Error inesperat</sys:String>
 	<sys:String x:Key="MsgUnexpectedError">Alguna cosa ha fallat: {0}&#x0a;&#x0a;La teva feina continua oberta; et recomanem desar-la ara.&#x0a;S'ha desat un informe de l'error a:&#x0a;{1}</sys:String>
 	<sys:String x:Key="StageScan">1  Escanejar</sys:String>

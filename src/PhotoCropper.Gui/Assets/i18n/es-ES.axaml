@@ -48,7 +48,7 @@
 	<sys:String x:Key="ScanCounter">Escaneo {0} de {1}</sys:String>
 	<sys:String x:Key="ProcessingScan">Procesando...</sys:String>
 	<sys:String x:Key="TitleExportFailed">No se han podido exportar algunos escaneos</sys:String>
-	<sys:String x:Key="MsgExportFailedStatus">Se han guardado {0} fotos; {1} escaneo(s) no se han podido exportar.</sys:String>
+	<sys:String x:Key="MsgExportFailedStatus">Se han guardado {0} fotos; {1} no se han podido exportar.</sys:String>
 	<sys:String x:Key="TitleUnexpectedError">Error inesperado</sys:String>
 	<sys:String x:Key="MsgUnexpectedError">Algo ha fallado: {0}&#x0a;&#x0a;Tu trabajo sigue abierto; te recomendamos guardarlo ahora.&#x0a;Se ha guardado un informe del error en:&#x0a;{1}</sys:String>
 	<sys:String x:Key="StageScan">1  Escanear</sys:String>

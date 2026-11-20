@@ -77,6 +77,7 @@ public sealed class StageViewModelTests : IDisposable
         File.Exists(vm.Photos[0].Photo.Final!.GetFullPath(_workDir)).ShouldBeTrue();
         vm.ExportCommand.CanExecute(null).ShouldBeFalse();
         _host.Saves.ShouldBeGreaterThan(0);
+        _host.Notified.ShouldHaveSingleItem().Succeeded.ShouldBeTrue();
     }
 
     [Fact]
@@ -705,6 +706,8 @@ public sealed class StageViewModelTests : IDisposable
         public async Task<bool> RunBusyAsync(string message, Func<Task> work) { await work(); return true; }
         public void SaveWorkspace() => Saves++;
         public void ShowStatus(string message) { }
+        public List<(string Message, bool Succeeded)> Notified { get; } = [];
+        public void NotifyExportCompleted(string message, bool succeeded) => Notified.Add((message, succeeded));
         public void OpenFolder(string path) { }
     }
 }
