@@ -94,42 +94,65 @@ public static class EdgeRefinementService
         Cv2.Reduce(border, perRow, ReduceDimension.Column, ReduceTypes.Sum, MatType.CV_32SC1.Depth);
         Cv2.Reduce(border, perColumn, ReduceDimension.Row, ReduceTypes.Sum, MatType.CV_32SC1.Depth);
 
+        // How sharply the brightness changes across each line (mean |gradient| perpendicular to it): low in a smooth
+        // border, a peak at the straight edge where the picture starts.
+        using Mat gray = new();
+        Cv2.CvtColor(bgr, gray, ColorConversionCodes.BGR2GRAY);
+        using Mat gradX = new();
+        using Mat gradY = new();
+        Cv2.Sobel(gray, gradX, MatType.CV_32F, 1, 0);
+        Cv2.Sobel(gray, gradY, MatType.CV_32F, 0, 1);
+        using Mat absX = new();
+        using Mat absY = new();
+        Cv2.ConvertScaleAbs(gradX, absX);
+        Cv2.ConvertScaleAbs(gradY, absY);
+        using Mat edgePerRow = new();
+        using Mat edgePerColumn = new();
+        Cv2.Reduce(absY, edgePerRow, ReduceDimension.Column, ReduceTypes.Avg, MatType.CV_32FC1.Depth);
+        Cv2.Reduce(absX, edgePerColumn, ReduceDimension.Row, ReduceTypes.Avg, MatType.CV_32FC1.Depth);
+
         // From each edge inwards, the border goes on while most of the line is border-coloured; a slightly tilted
         // print still has most of each line in its border, and a white shirt in the picture doesn't fill a line.
-        // The outermost lines can be a sliver of the bed and the print's own edge (a thin dark line, or its shadow),
-        // so the border is the last run of border lines that starts within the outer few percent. It must end at a
-        // clean edge (the picture starts within a few lines): a vignette or light sand fading out is no border.
+        // It also stops at a sharp straight edge: a light picture (a black-and-white portrait's pale background)
+        // can be border-coloured, but the picture's edge still shows. The outermost lines can be a sliver of the bed
+        // and the print's own edge (a thin dark line, or its shadow), so the border is the last run of border lines
+        // that starts within the outer few percent. It must end at a clean edge: a vignette or light sand fading
+        // out is no border.
         int Depth(bool rows, bool fromEnd)
         {
             int count = rows ? photo.Height : photo.Width;
             int length = rows ? photo.Width : photo.Height;
-            double Share(int d)
-            {
-                int i = fromEnd ? count - 1 - d : d;
-                return (rows ? perRow.Get<int>(i, 0) : perColumn.Get<int>(0, i)) / 255.0 / length;
-            }
+            int Index(int d) => fromEnd ? count - 1 - d : d;
+            double Share(int d) => (rows ? perRow.Get<int>(Index(d), 0) : perColumn.Get<int>(0, Index(d))) / 255.0 / length;
+            double Edge(int d) => rows ? edgePerRow.Get<float>(Index(d), 0) : edgePerColumn.Get<float>(0, Index(d));
             bool IsBorder(int d) => Share(d) >= BorderLineShare;
 
             int limit = (int)(count * MaxBorderShare);
             int edge = Math.Min(limit, Math.Max(4, (int)(count * BorderEdgeShare)));
             int minRun = Math.Max(MinBorderPixels, (int)(count * MinBorderShare));
+            int step = Math.Max(MinBorderPixels, (int)(count * BorderStepShare));
             int end = 0;
             for (int start = 0; start < edge; start++)
             {
                 if (!IsBorder(start) || (start > 0 && IsBorder(start - 1))) continue; // not the start of a run
-                int e = start;
-                while (e < limit && IsBorder(e)) e++;
-                if (e >= limit) return -1; // border-coloured beyond the limit: not a border
-                if (e - start >= minRun) end = e;
-            }
-            if (end == 0) return 0; // no border on this side
 
-            int step = Math.Max(MinBorderPixels, (int)(count * BorderStepShare));
-            for (int d = end; d < Math.Min(count, end + step); d++)
-            {
-                if (Share(d) < BorderPictureShare) return end;
+                // The border's own texture (grain): the median over a few lines a little inside the run's start, clear
+                // of the print's edge just outside it.
+                var grain = Enumerable.Range(start + 2, 2 * minRun).Where(d => d < count && IsBorder(d)).Select(Edge).OrderBy(x => x).ToList();
+                double smooth = grain.Count > 0 ? grain[grain.Count / 2] : 0;
+                double sharp = Math.Max(BorderEdgeMin, smooth * BorderEdgeFactor);
+                bool IsPictureEdge(int d) => d < count && Edge(d) >= sharp;
+
+                int e = start;
+                while (e < limit && IsBorder(e) && !(e - start >= minRun && IsPictureEdge(e))) e++;
+                if (e >= limit) return -1; // border-like beyond the limit: not a border
+                if (e - start < minRun) continue;
+
+                // A clean edge: the picture's edge, or the colour changing within a few lines.
+                bool clean = Enumerable.Range(Math.Max(0, e - 1), step + 1).Any(d => d < count && (IsPictureEdge(d) || Share(d) < BorderPictureShare));
+                if (clean) end = e;
             }
-            return -1; // fades out instead of ending at an edge
+            return end; // 0: no border on this side
         }
 
         int top = Depth(rows: true, fromEnd: false), bottom = Depth(rows: true, fromEnd: true);
@@ -154,7 +177,7 @@ public static class EdgeRefinementService
     // side (a Polaroid's wide bottom edge included).
     private const double MinBorderBrightness = 170;
     private const double MaxBorderSaturation = 60;
-    private const double MaxBorderCornerSpread = 35;
+    private const double MaxBorderCornerSpread = 50;
     private const double MaxBorderShare = 0.2;
     private const double BorderValueTolerance = 30;
     private const double BorderLineShare = 0.8;
@@ -162,7 +185,9 @@ public static class EdgeRefinementService
     private const double MinBorderShare = 0.005;
     private const double MaxBorderSideRatio = 2.5;
     private const int BorderEdgeMargin = 2;
-    private const double BorderEdgeShare = 0.04;
+    private const double BorderEdgeShare = 0.06;
+    private const double BorderEdgeMin = 12;
+    private const double BorderEdgeFactor = 3;
     private const double BorderStepShare = 0.015;
     private const double BorderPictureShare = 0.5;
 
