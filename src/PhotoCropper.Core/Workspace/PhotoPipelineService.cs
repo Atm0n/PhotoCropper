@@ -436,14 +436,10 @@ public static class PhotoPipelineService
     {
         string stem = Path.GetFileNameWithoutExtension(fileName);
         string extension = Path.GetExtension(fileName);
-        var sameName = new System.Text.RegularExpressions.Regex(
-            "^" + System.Text.RegularExpressions.Regex.Escape(stem) + @"( \(\d+\))?" + System.Text.RegularExpressions.Regex.Escape(extension) + "$",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-
         List<string> candidates;
         try
         {
-            candidates = [.. Directory.EnumerateFiles(finalDir).Where(f => sameName.IsMatch(Path.GetFileName(f)))];
+            candidates = [.. Directory.EnumerateFiles(finalDir).Where(f => IsNameOrNumberedCopy(Path.GetFileName(f), stem, extension))];
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -474,6 +470,23 @@ public static class PhotoPipelineService
             }
         }
         return deleted;
+    }
+
+    /// <summary>True for "stem.ext" and its copies "stem (n).ext", ignoring case.</summary>
+    internal static bool IsNameOrNumberedCopy(string name, string stem, string extension)
+    {
+        if (!name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) return false;
+        var baseName = name.AsSpan(0, name.Length - extension.Length);
+        if (!baseName.StartsWith(stem, StringComparison.OrdinalIgnoreCase)) return false;
+
+        var suffix = baseName[stem.Length..];
+        if (suffix.IsEmpty) return true;
+        if (suffix.Length < 4 || !suffix.StartsWith(" (", StringComparison.Ordinal) || suffix[^1] != ')') return false;
+        foreach (char c in suffix[2..^1])
+        {
+            if (!char.IsAsciiDigit(c)) return false;
+        }
+        return true;
     }
 
     private static void DeleteFile(string workDirectory, ProjectFile? file)

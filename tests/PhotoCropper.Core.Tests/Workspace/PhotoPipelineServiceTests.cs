@@ -165,6 +165,20 @@ public sealed class PhotoPipelineServiceTests : IDisposable
         new FileInfo(Full(photo.Final!)).Length.ShouldNotBe("old export".Length);
     }
 
+    [Theory]
+    [InlineData("scan_0001_1.jpg", true)]
+    [InlineData("SCAN_0001_1.JPG", true)]
+    [InlineData("scan_0001_1 (1).jpg", true)]
+    [InlineData("scan_0001_1 (23).jpg", true)]
+    [InlineData("scan_0001_10.jpg", false)]
+    [InlineData("scan_0001_1 ().jpg", false)]
+    [InlineData("scan_0001_1 (a).jpg", false)]
+    [InlineData("scan_0001_1(1).jpg", false)]
+    [InlineData("scan_0001_1 (1).png", false)]
+    [InlineData("scan_0001.jpg", false)]
+    public void IsNameOrNumberedCopy_ShouldMatchOnlyTheNameAndItsNumberedCopies(string name, bool expected) =>
+        PhotoPipelineService.IsNameOrNumberedCopy(name, "scan_0001_1", ".jpg").ShouldBe(expected);
+
     [Fact]
     public void RenderFinal_ShouldReplaceItsOwnFileEvenIfItWasEdited()
     {
