@@ -273,7 +273,7 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `--auto-tune [mode]` | Search for better detection settings: `mismatch` (scans outside `--min/--max-photos`; used when no mode is given), `always`, `low-coverage` or `off` | `low-coverage` with `--project`, otherwise `off` |
 | `--min-coverage <percent>` | What counts as low coverage for `--auto-tune low-coverage` | `50` |
 | `--copy-undetected <dir>` | Copy scans where no photo was found to this folder | — |
-| `-w, --wizard` | Step-by-step interactive setup | — |
+| `-w, --wizard` | Step-by-step interactive setup for the one-step batch, a single stage (crop or restore), or a project | — |
 | `-y, --yes` | Never ask questions (e.g. the post-batch auto-tune prompt) | — |
 | `--no-orient` | Don't turn photos upright automatically (face and landscape detection) | on |
 | `--no-restore` | Don't restore colours and contrast | on |
