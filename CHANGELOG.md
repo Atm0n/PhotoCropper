@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Finish, several photos at once**: the bar now has a checkbox each for automatic restoration, dust removal and border trimming, in place of the "Trim border: on / off" buttons. Each shows whether all, none or (with a dash) only some of the selected photos have it, and one click turns it on for all of them, or off when all had it.
 
 ### Fixed
+- **Trim white border** now finds the border on far more real prints. A crop often holds a band of album page or a sliver of scanner bed outside the print, scalloped (deckle) edges cast small shadows, and worn corners show the bed: each of these stopped it before. Now everything light around the picture (bed, page, border) is trimmed up to where the picture starts, and a print with a pale background along one edge is no longer mistaken for a bordered one. On a real 126-photo album it trims 18 of its 22 bordered prints, against 11 before, and still none of the 74 without a border.
 - Finish export now shows the completion notification and flashes the taskbar, as the export settings say; both settings did nothing before.
 
 ## [3.2.0] - 2026-11-20
