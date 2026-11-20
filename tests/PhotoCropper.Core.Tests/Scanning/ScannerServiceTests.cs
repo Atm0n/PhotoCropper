@@ -61,6 +61,28 @@ public sealed class ScannerServiceTests
         devices.ShouldNotBeNull();
     }
 
+    /// <summary>
+    /// On Linux, every scanner SANE knows must be listed. SANE's "test" backend provides two virtual scanners
+    /// (test:0 and test:1); the Linux CI job turns it on, elsewhere this test is skipped.
+    /// </summary>
+    [Fact]
+    public async Task Naps2ScannerService_OnLinux_ListsSanesTestScanners()
+    {
+        const string saneBackends = "/etc/sane.d/dll.conf";
+        bool testBackendOn = OperatingSystem.IsLinux() && File.Exists(saneBackends) &&
+            (await File.ReadAllLinesAsync(saneBackends, TestContext.Current.CancellationToken)).Any(l => l.Trim() == "test");
+        Assert.SkipUnless(testBackendOn, "Needs Linux with SANE's test backend turned on in /etc/sane.d/dll.conf.");
+
+        using var service = new Naps2ScannerService();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(60));
+
+        var devices = await service.GetDevicesAsync(includeNetwork: false, cancellationToken: cts.Token);
+
+        devices.Select(d => d.Id).ShouldContain("SANE:test:0");
+        devices.ShouldAllBe(d => d.Driver == ScannerDriverType.Sane);
+    }
+
     [Fact]
     public async Task Naps2ScannerService_DisposedInstance_ThrowsObjectDisposedException()
     {

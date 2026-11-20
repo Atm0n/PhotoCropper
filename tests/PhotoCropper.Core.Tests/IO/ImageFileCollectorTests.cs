@@ -73,6 +73,38 @@ public sealed class ImageFileCollectorTests : IDisposable
         collected.ShouldNotContain(subImage);
     }
 
+    [Fact]
+    public void CollectFiles_GivenFiles_ShouldKeepOnlyImagesWhateverTheExtensionsCase()
+    {
+        string jpg = Path.Combine(_tempDir, "photo1.JPG");
+        string png = Path.Combine(_tempDir, "photo2.png");
+        string txt = Path.Combine(_tempDir, "notes.txt");
+        foreach (var f in new[] { jpg, png, txt }) File.WriteAllText(f, "dummy");
+
+        var collected = ImageFileCollector.CollectFiles([jpg, png, txt], recursive: false);
+
+        collected.ShouldBe([Path.GetFullPath(jpg), Path.GetFullPath(png)], ignoreOrder: true);
+    }
+
+    [Fact]
+    public void CollectFiles_SameFileGivenTwiceAndThroughItsFolder_ShouldListItOnce()
+    {
+        string photo = Path.Combine(_tempDir, "duplicate.jpeg");
+        File.WriteAllText(photo, "dummy");
+
+        var collected = ImageFileCollector.CollectFiles([photo, photo, _tempDir], recursive: false);
+
+        collected.ShouldBe([Path.GetFullPath(photo)]);
+    }
+
+    [Fact]
+    public void CollectFiles_MissingPath_ShouldBeSkipped()
+    {
+        var collected = ImageFileCollector.CollectFiles([Path.Combine(_tempDir, "does_not_exist.jpg")], recursive: false);
+
+        collected.ShouldBeEmpty();
+    }
+
     public void Dispose()
     {
         try

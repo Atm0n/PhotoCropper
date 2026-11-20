@@ -73,6 +73,15 @@ jobs:
           sudo rm -f ~/apt-cache/lock
           sudo chown -R "$USER" ~/apt-cache
 
+      # SANE's "test" backend adds two virtual scanners, so the scanner tests can check that PhotoCropper lists
+      # what SANE sees without a real scanner.
+      - name: Enable SANE Test Scanners (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo sed -i 's/^#test$/test/' /etc/sane.d/dll.conf
+          grep -qx test /etc/sane.d/dll.conf || echo test | sudo tee -a /etc/sane.d/dll.conf
+          scanimage -L
+
       - name: Restore Dependencies
         run: dotnet restore PhotoCropper.slnx
 

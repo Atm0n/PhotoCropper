@@ -100,4 +100,28 @@ public class AutoOrientationServiceTests
         // Assert
         rotation.ShouldBe(180);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(90)]
+    [InlineData(180)]
+    public void DetectRequiredRotation_ThenOrientPhoto_ShouldLeaveThePhotoUpright(int turned)
+    {
+        using Mat photo = TestImageFactory.CreateSkyLandscapePhoto(200, 200, turned);
+        AutoOrientationService.DetectRequiredRotation(photo).ShouldBe(turned);
+
+        using Mat oriented = AutoOrientationService.OrientPhoto(photo);
+        AutoOrientationService.DetectRequiredRotation(oriented).ShouldBe(0);
+    }
+
+    [Fact]
+    public void DetectRequiredRotation_ShouldHandleBgraAndGreyscale()
+    {
+        // 4 channels: extracted photos have transparent margins.
+        using Mat bgra = new(200, 200, MatType.CV_8UC4, new Scalar(200, 100, 50, 255));
+        AutoOrientationService.DetectRequiredRotation(bgra).ShouldBe(0);
+
+        using Mat gray = new(200, 200, MatType.CV_8UC1, new Scalar(128));
+        AutoOrientationService.DetectRequiredRotation(gray).ShouldBe(0);
+    }
 }

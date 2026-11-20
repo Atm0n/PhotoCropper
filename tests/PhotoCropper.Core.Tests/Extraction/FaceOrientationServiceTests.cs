@@ -105,21 +105,14 @@ public class FaceOrientationServiceTests
         mockData[12] = 65f;
         mockData[13] = 80f;
 
-        System.Runtime.InteropServices.GCHandle handle = System.Runtime.InteropServices.GCHandle.Alloc(mockData, System.Runtime.InteropServices.GCHandleType.Pinned);
-        try
-        {
-            using Mat facesMat = new Mat(1, 15, MatType.CV_32FC1); facesMat.SetData(mockData);
+        using Mat facesMat = new(1, 15, MatType.CV_32FC1);
+        facesMat.SetData(mockData);
 
-            // Act
-            float score = FaceOrientationService.ScoreFaceData(facesMat, 0.45f);
+        // Act
+        float score = FaceOrientationService.ScoreFaceData(facesMat, 0.45f);
 
-            // Assert
-            score.ShouldBe(0.9f);
-        }
-        finally
-        {
-            handle.Free();
-        }
+        // Assert
+        score.ShouldBe(0.9f);
     }
 
     [Fact]
@@ -150,20 +143,13 @@ public class FaceOrientationServiceTests
         mockData[12] = 80f;
         mockData[13] = 65f;
 
-        System.Runtime.InteropServices.GCHandle handle = System.Runtime.InteropServices.GCHandle.Alloc(mockData, System.Runtime.InteropServices.GCHandleType.Pinned);
-        try
-        {
-            using Mat facesMat = new Mat(1, 15, MatType.CV_32FC1); facesMat.SetData(mockData);
+        using Mat facesMat = new(1, 15, MatType.CV_32FC1);
+        facesMat.SetData(mockData);
 
-            // Act
-            float score = FaceOrientationService.ScoreFaceData(facesMat, 0.45f);
+        // Act
+        float score = FaceOrientationService.ScoreFaceData(facesMat, 0.45f);
 
-            // Assert
-            score.ShouldBe(0f); // Because eyes are stacked vertically, fails geometric checks
-        }
-        finally
-        {
-            handle.Free();
-        }
+        // Assert
+        score.ShouldBe(0f); // Because eyes are stacked vertically, fails geometric checks
     }
 }
