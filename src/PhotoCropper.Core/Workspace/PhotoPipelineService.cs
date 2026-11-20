@@ -283,14 +283,19 @@ public static class PhotoPipelineService
 
         lock (FinalNamesLock)
         {
-            // Replace this photo's previous final file, but only if it is still exactly what we wrote.
-            DeleteIfUnchanged(workDirectory, photo.Final);
-
-            // Files under this name that no photo of the project owns (left by an older version, or by an export
-            // whose record was lost) would otherwise push this one to "name (1)": move them aside instead.
             if (IsProjectFinalDirectory(workDirectory, finalDir))
             {
-                MoveAsideUntrackedFinals(workDirectory, session, finalDir, fileName);
+                // The project's Final/ holds what the last export made: the new file replaces this photo's
+                // previous one and anything else under its name that no other photo owns (left by an older
+                // version, or by an export whose record was lost), along with its "name (n)" copies.
+                DeleteFile(workDirectory, photo.Final);
+                RemoveReplacedFinals(workDirectory, session, photo, finalDir, fileName);
+            }
+            else
+            {
+                // Another folder may hold the user's own files: replace this photo's previous file only if it is
+                // still exactly what we wrote, and never overwrite anything else.
+                DeleteIfUnchanged(workDirectory, photo.Final);
             }
 
             string target = PhotoExporter.ResolveUniqueExportPath(Path.Combine(finalDir, fileName));
@@ -414,9 +419,6 @@ public static class PhotoPipelineService
         return ProjectFile.FromDisk(workDirectory, path);
     }
 
-    /// <summary>Final/'s subfolder for files moved out of the way of new exports.</summary>
-    public const string OlderFinalsFolderName = "_older";
-
     /// <summary>Held while a final photo's name is chosen and its file written and recorded.</summary>
     private static readonly Lock FinalNamesLock = new();
 
@@ -427,10 +429,10 @@ public static class PhotoPipelineService
             StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Moves <paramref name="fileName"/> and its "name (n)" copies into Final/_older when no photo of the session
-    /// has them as its final file. Returns how many were moved.
+    /// Deletes <paramref name="fileName"/> and its "name (n)" copies from <paramref name="finalDir"/>, except the
+    /// final files of the session's other photos. Returns how many were deleted.
     /// </summary>
-    internal static int MoveAsideUntrackedFinals(string workDirectory, WorkspaceSessionState session, string finalDir, string fileName)
+    internal static int RemoveReplacedFinals(string workDirectory, WorkspaceSessionState session, ProjectPhoto photo, string finalDir, string fileName)
     {
         string stem = Path.GetFileNameWithoutExtension(fileName);
         string extension = Path.GetExtension(fileName);
@@ -449,36 +451,42 @@ public static class PhotoPipelineService
         }
         if (candidates.Count == 0) return 0;
 
-        HashSet<string> tracked;
+        HashSet<string> others;
         lock (session)
         {
-            tracked = new HashSet<string>(
-                session.Photos.Where(p => p.Final != null).Select(p => Path.GetFullPath(p.Final!.GetFullPath(workDirectory))),
+            others = new HashSet<string>(
+                session.Photos.Where(p => p != photo && p.Final != null).Select(p => Path.GetFullPath(p.Final!.GetFullPath(workDirectory))),
                 StringComparer.OrdinalIgnoreCase);
         }
 
-        int moved = 0;
-        string olderDir = Path.Combine(finalDir, OlderFinalsFolderName);
+        int deleted = 0;
         foreach (string file in candidates)
         {
-            if (tracked.Contains(Path.GetFullPath(file))) continue;
+            if (others.Contains(Path.GetFullPath(file))) continue;
             try
             {
-                Directory.CreateDirectory(olderDir);
-                string target = Path.Combine(olderDir, Path.GetFileName(file));
-                for (int n = 1; File.Exists(target); n++)
-                {
-                    target = Path.Combine(olderDir, $"{Path.GetFileNameWithoutExtension(file)} ({n}){Path.GetExtension(file)}");
-                }
-                File.Move(file, target);
-                moved++;
+                File.Delete(file);
+                deleted++;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not move '{file}' aside: {ex.Message}");
+                System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not replace '{file}': {ex.Message}");
             }
         }
-        return moved;
+        return deleted;
+    }
+
+    private static void DeleteFile(string workDirectory, ProjectFile? file)
+    {
+        if (file == null) return;
+        try
+        {
+            File.Delete(file.GetFullPath(workDirectory));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not remove '{file.RelativePath}': {ex.Message}");
+        }
     }
 
     private static void DeleteIfUnchanged(string workDirectory, ProjectFile? file)

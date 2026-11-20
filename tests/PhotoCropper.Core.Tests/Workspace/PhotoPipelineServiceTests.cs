@@ -146,7 +146,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void RenderFinal_ShouldMoveAsideFilesNoPhotoOwnsInsteadOfWritingACopy()
+    public void RenderFinal_ShouldReplaceFilesNoOtherPhotoOwnsInsteadOfWritingACopy()
     {
         // Left in Final/ by an older version, or by an export whose record was lost (e.g. two windows saving).
         string finalDir = ProjectWorkspaceService.GetFinalDirectory(_workDir);
@@ -161,9 +161,22 @@ public sealed class PhotoPipelineServiceTests : IDisposable
 
         Path.GetFileName(Full(photo.Final!)).ShouldBe("scan_0001_1.jpg");
         Directory.GetFiles(finalDir).Select(Path.GetFileName).Order().ShouldBe(["scan_0001_1.jpg", "scan_0001_10.jpg"]);
-        string older = Path.Combine(finalDir, PhotoPipelineService.OlderFinalsFolderName);
-        File.ReadAllText(Path.Combine(older, "scan_0001_1.jpg")).ShouldBe("old export");
-        File.ReadAllText(Path.Combine(older, "scan_0001_1 (1).jpg")).ShouldBe("lost export");
+        File.ReadAllText(Path.Combine(finalDir, "scan_0001_10.jpg")).ShouldBe("another photo");
+        new FileInfo(Full(photo.Final!)).Length.ShouldNotBe("old export".Length);
+    }
+
+    [Fact]
+    public void RenderFinal_ShouldReplaceItsOwnFileEvenIfItWasEdited()
+    {
+        using var a = Photo(100);
+        var photo = Save((a, Box(100, 100)))[0];
+        PhotoPipelineService.RenderFinal(_workDir, _session, photo, new FinalRenderOptions());
+        File.WriteAllText(Full(photo.Final!), "edited outside the app");
+        photo.Restoration = new RestorationSettings { RestoreColors = true };
+
+        PhotoPipelineService.RenderFinal(_workDir, _session, photo, new FinalRenderOptions());
+
+        Directory.GetFiles(ProjectWorkspaceService.GetFinalDirectory(_workDir)).Select(Path.GetFileName).ShouldBe(["scan_0001_1.jpg"]);
     }
 
     [Fact]
@@ -180,7 +193,6 @@ public sealed class PhotoPipelineServiceTests : IDisposable
         Path.GetFileName(Full(photos[0].Final!)).ShouldBe("scan_0001.jpg");
         Path.GetFileName(Full(photos[1].Final!)).ShouldBe("scan_0001 (1).jpg");
         File.Exists(Full(photos[0].Final!)).ShouldBeTrue();
-        Directory.Exists(Path.Combine(ProjectWorkspaceService.GetFinalDirectory(_workDir), PhotoPipelineService.OlderFinalsFolderName)).ShouldBeFalse();
     }
 
     [Fact]
