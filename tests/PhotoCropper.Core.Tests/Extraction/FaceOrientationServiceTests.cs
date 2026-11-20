@@ -152,4 +152,15 @@ public class FaceOrientationServiceTests
         // Assert
         score.ShouldBe(0f); // Because eyes are stacked vertically, fails geometric checks
     }
+
+    // Face scores for the photo turned by 0, 90, 180 and 270 degrees; 0.45 is the detection threshold.
+    [Theory]
+    [InlineData(0f, 0f, 0.47f, 0f, -1)]    // one weak "face" in a crowd, only upside down: not trusted
+    [InlineData(0f, 0f, 0f, 0f, -1)]       // no faces
+    [InlineData(0.47f, 0f, 0f, 0f, 0)]     // a weak face upright keeps the photo as placed
+    [InlineData(0f, 0.77f, 0f, 0f, 90)]    // a real face, lying on its side
+    [InlineData(0.80f, 0.64f, 0f, 0f, 0)]  // upright wins when both look like faces
+    [InlineData(0.51f, 0.49f, 2.19f, 0.73f, 180)] // a family, upside down
+    public void ChooseFaceRotation_ShouldTurnOnlyForConfidentFaces(float up, float cw, float flip, float ccw, int expected) =>
+        FaceOrientationService.ChooseFaceRotation([up, cw, flip, ccw], 0.45f).ShouldBe(expected);
 }

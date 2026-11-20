@@ -217,27 +217,43 @@ public static class FaceOrientationService
 
         try
         {
-            int[] rotations = [0, 90, 180, 270];
-            int bestRot = -1;
-            float bestScore = scoreThreshold;
-
-            foreach (int rot in rotations)
-            {
-                float score = ScoreRotation(detector, bgrSmall, rot, scoreThreshold);
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    bestRot = rot;
-                }
-            }
-
-            return bestRot;
+            float[] scores = [.. Rotations.Select(rot => ScoreRotation(detector, bgrSmall, rot, scoreThreshold))];
+            return ChooseFaceRotation(scores, scoreThreshold);
         }
         finally
         {
             ReturnDetector(detector);
         }
     }
+
+    private static readonly int[] Rotations = [0, 90, 180, 270];
+
+    /// <summary>
+    /// Picks the clockwise turn whose upright faces score highest, from the scores of turning the photo by 0, 90, 180
+    /// and 270 degrees; -1 when no turn has a face worth trusting.
+    /// </summary>
+    internal static int ChooseFaceRotation(IReadOnlyList<float> scores, float scoreThreshold)
+    {
+        ArgumentNullException.ThrowIfNull(scores);
+        int bestRot = -1;
+        float bestScore = scoreThreshold;
+        for (int i = 0; i < Rotations.Length; i++)
+        {
+            if (scores[i] > bestScore)
+            {
+                bestScore = scores[i];
+                bestRot = Rotations[i];
+            }
+        }
+
+        // A single weak "face" found only when the photo is turned (a pattern in a crowd, foliage or fruit) is
+        // not enough to turn it: real faces score well above this, and upright is the safer guess.
+        if (bestRot > 0 && bestScore < MinimumScoreToTurn) return -1;
+        return bestRot;
+    }
+
+    /// <summary>The lowest total face score that turns a photo away from how it was placed.</summary>
+    internal const float MinimumScoreToTurn = 0.6f;
 
     private static float ScoreRotation(FaceDetectorYN detector, Mat bgrSmall, int rot, float scoreThreshold)
     {
