@@ -23,6 +23,7 @@ internal static class BatchProcessor
             // the restore stage doesn't recompress a JPEG.
             options.RestoreColors = false;
             options.RemoveDust = false;
+            options.TrimBorders = false; // part of restoring: Cropped/ keeps the whole print
             options.Format = AppConstants.FormatPng;
         }
 
@@ -117,6 +118,7 @@ internal static class BatchProcessor
 
                         if (photoCount > 0)
                         {
+                            if (options.TrimBorders) engine.TrimWhiteBorders();
                             PhotoExporter.SavePhotos(
                                 engine.DetectedPhotos,
                                 scanPath,
@@ -398,6 +400,7 @@ internal static class BatchProcessor
         grid.AddRow("[bold cyan]Auto-Orient:[/]", options.AutoOrient ? "[bold green]Enabled (AI Face + Sky)[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Restoration:[/]", options.RestoreColors ? "[bold green]Enabled (Auto-WB + CLAHE)[/]" : "[grey]Disabled[/]");
         grid.AddRow("[bold cyan]Dust Inpainting:[/]", options.RemoveDust ? "[bold green]Enabled (Morphological)[/]" : "[grey]Disabled[/]");
+        if (options.TrimBorders) grid.AddRow("[bold cyan]White Borders:[/]", "[bold green]Trimmed[/]");
         if (options.MinExpectedPhotos > 1 || options.MaxExpectedPhotos < int.MaxValue)
         {
             string rangeText = options.MaxExpectedPhotos < int.MaxValue

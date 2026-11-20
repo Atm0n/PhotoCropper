@@ -10,8 +10,6 @@
 	<sys:String x:Key="LblEdgeThreshold">Llindar de Vores</sys:String>
 	<sys:String x:Key="LblAutoOrient">Auto-Orientar (IA / Paisatge)</sys:String>
 	<sys:String x:Key="TipAutoOrient">Endreça i orienta automàticament les fotos usant detecció facial per IA i anàlisi de paisatges/aigua.</sys:String>
-	<sys:String x:Key="LblTrimBorders">Retallar vores blanques</sys:String>
-	<sys:String x:Key="TipTrimBorders">Deixa fora la vora blanca o crema de les còpies: les caixes trobades automàticament (i amb Troba la foto) s'ajusten a la imatge de dins. Les fotos sense vora no canvien, i les caixes que dibuixes o ajustes a mà no es toquen mai. Activar-ho o desactivar-ho torna a detectar l'escaneig obert.</sys:String>
 	<sys:String x:Key="LblRestoreColors">Restaurar Color i Contrast</sys:String>
 	<sys:String x:Key="TipRestoreColors">Neutralitza el grogueig per envelliment, recupera ombres i llums amb LAB CLAHE i reviu colors descolorits.</sys:String>
 	<sys:String x:Key="LblRemoveDust">Eliminar Pols i Ratllades</sys:String>
@@ -115,6 +113,18 @@
 	<sys:String x:Key="LblAfter">Després (tal com s'exportarà)</sys:String>
 	<sys:String x:Key="LblUpdatingPreview">actualitzant…</sys:String>
 	<sys:String x:Key="BtnCopySettingsToAll">Copiar els ajustos a totes</sys:String>
+	<sys:String x:Key="LblBorder">Vora</sys:String>
+	<sys:String x:Key="LblTrimBorders">Retallar la vora blanca</sys:String>
+	<sys:String x:Key="TipTrimBorders">Deixa fora la vora blanca o crema de la còpia a la foto final i conserva només la imatge. La previsualització enfosqueix el que es retallarà. Les fotos sense una vora clara no canvien; la foto retallada sempre conserva la còpia sencera.</sys:String>
+	<sys:String x:Key="BtnTrimOn">Retallar vora: sí</sys:String>
+	<sys:String x:Key="BtnTrimOff">Retallar vora: no</sys:String>
+	<sys:String x:Key="BtnExportMarked">Exporta les seleccionades</sys:String>
+	<sys:String x:Key="LblMarkedCount">{0} seleccionades</sys:String>
+	<sys:String x:Key="TipMarkPhoto">Selecciona aquesta foto per a les accions en bloc (o Ctrl+clic; Maj+clic selecciona un interval)</sys:String>
+	<sys:String x:Key="TipMarkAll">Selecciona totes les fotos per a les accions en bloc</sys:String>
+	<sys:String x:Key="BtnCopySettingsToMarked">Copia els ajustos a les seleccionades</sys:String>
+	<sys:String x:Key="TipCopySettingsToMarked">Dona a les fotos seleccionades els ajustos d'aquesta foto (les reparacions no es copien)</sys:String>
+	<sys:String x:Key="TipFinishGrid">Fes clic en una foto per editar-la; Ctrl+clic o Maj+clic per seleccionar-ne diverses i canviar-les alhora</sys:String>
 	<sys:String x:Key="TipCopySettingsToAll">Aplicar a totes les fotos els ajustos de restauració de la foto seleccionada</sys:String>
 	<sys:String x:Key="LblAutoRestore">Restauració automàtica</sys:String>
 	<sys:String x:Key="LblPresets">Preajustos</sys:String>
@@ -191,7 +201,7 @@
 	<sys:String x:Key="HelpManualCrop">Arrossega un rectangle sobre l'escaneig per afegir una foto que no s'hagi detectat. S'afegeix a la llista i queda seleccionada.</sys:String>
 	<sys:String x:Key="HelpRefine">Dibuixa un retall més ajustat dins d'una foto, per exemple per treure un marge blanc de l'escàner. En acceptar, la foto es torna a retallar i la seva caixa a l'escaneig s'hi ajusta (Retorn per acceptar, Esc per cancel·lar).</sys:String>
 	<sys:String x:Key="HelpInteractiveBoxesTitle">Editar les caixes</sys:String>
-	<sys:String x:Key="HelpInteractiveBoxes">Fes clic dins d'una caixa per veure'n la foto. Arrossega una cantonada per canviar-ne la mida (mentre arrossegues apareix en una cantonada una vista ampliada del punt, per ajustar la vora just a la de la foto) i la nansa blava per girar-la; la foto es torna a extreure quan la deixes anar. Fes clic a la ✕ vermella de la cantonada superior dreta per eliminar-la. Les caixes segueixen la vora de la còpia; marca «Retallar vores blanques» per deixar fora la vora blanca. Tots els canvis es poden desfer.</sys:String>
+	<sys:String x:Key="HelpInteractiveBoxes">Fes clic dins d'una caixa per veure'n la foto. Arrossega una cantonada per canviar-ne la mida (mentre arrossegues apareix en una cantonada una vista ampliada del punt, per ajustar la vora just a la de la foto) i la nansa blava per girar-la; la foto es torna a extreure quan la deixes anar. Fes clic a la ✕ vermella de la cantonada superior dreta per eliminar-la. Tots els canvis es poden desfer.</sys:String>
 	<sys:String x:Key="HelpDpiTitle">Resolució de l'escaneig</sys:String>
 	<sys:String x:Key="HelpDpi">La resolució de l'escàner (per exemple 300 o 600 PPP) es conserva a les fotos exportades, perquè s'imprimeixin a la seva mida real.</sys:String>
 	<sys:String x:Key="HelpAutoOrientTitle">Orientació amb IA i paisatge</sys:String>
@@ -276,7 +286,7 @@
 	<sys:String x:Key="HelpReviewDesc">Recorre totes les fotos de tots els escanejos a mida completa per girar-les (R) o eliminar-les (Supr) ràpidament; la roda o les fletxes passen d'una a l'altra. Una diapositiva final mostra què s'ha fet. Esc o un doble clic tornen a l'editor.</sys:String>
 	<sys:String x:Key="HelpZoom">Fes servir el control de zoom o Ctrl + roda del ratolí per apropar-te a l'escaneig al voltant del punter, per editar les caixes amb precisió.</sys:String>
 	<sys:String x:Key="HelpFinishEditorTitle">Editor de fotos</sys:String>
-	<sys:String x:Key="HelpFinishEditorDesc">Fes clic en una foto per obrir-la a tota la finestra: amplia i desplaça, arrossega la divisió d'abans i després, o mantén premut Espai per veure l'original. La tira de fotos i ← / → canvien de foto; Esc torna a la graella.</sys:String>
+	<sys:String x:Key="HelpFinishEditorDesc">Fes clic en una foto per obrir-la a tota la finestra: amplia i desplaça, arrossega la divisió d'abans i després, o mantén premut Espai per veure l'original. La tira de fotos i ← / → canvien de foto; Esc torna a la graella. Ctrl+clic o Maj+clic a les fotos de la graella (o marca-les) per seleccionar-ne diverses: la barra de sobre aplica un ajust predefinit, activa o desactiva el retall de la vora blanca, o les exporta totes amb un clic. «Retallar la vora blanca» deixa fora la vora blanca de la còpia a la foto final; la previsualització enfosqueix el que es retallarà.</sys:String>
 	<sys:String x:Key="HelpRepairTitle">Pinzell de reparació i emplenat amb IA</sys:String>
 	<sys:String x:Key="HelpRepairDesc">Pinta sobre ratllades, plecs, estrips o taques amb el pinzell de reparació i s'omplen amb un gra igual al de la foto. Per a danys grans, tria Farciment: IA per fer servir el model LaMa (una descàrrega única de 208 MB que funciona al teu ordinador). Els traços es desen per foto i es poden desfer o esborrar.</sys:String>
 	<sys:String x:Key="HelpSaveTitle">Desar</sys:String>

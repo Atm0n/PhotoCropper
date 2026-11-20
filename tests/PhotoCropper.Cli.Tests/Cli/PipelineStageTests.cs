@@ -76,6 +76,65 @@ public sealed class PipelineStageTests : IDisposable
         Directory.GetFiles(output).Select(Path.GetFileName).Order().ShouldBe(["a.jpg", "b.jpg"]);
     }
 
+    [Fact]
+    public void Parse_TrimBorders_ShouldBeOffUnlessAsked()
+    {
+        CommandLineParser.Parse([]).TrimBorders.ShouldBeFalse();
+        CommandLineParser.Parse(["--trim-borders"]).TrimBorders.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AllStages_WithTrimBorders_ShouldLeaveOutThePrintsBorder(bool trim)
+    {
+        var scan = SampleScanFactory.CreateBorderedPrintScan(Path.Combine(_tempDir, "print.png"), seed: 3);
+        string output = Path.Combine(_tempDir, trim ? "trimmed" : "whole");
+        var options = new CliOptions
+        {
+            OutputDirectory = output, Format = "PNG", NonInteractive = true, Threads = 1,
+            AutoOrient = false, RestoreColors = false, RemoveDust = false, TrimBorders = trim,
+        };
+
+        BatchProcessor.Execute(options, [scan.Path]).ShouldBe(0);
+
+        using var photo = OpenCvSharp.Cv2.ImRead(Directory.GetFiles(output, "*.png").Single());
+        int expected = trim ? 540 : 600; // the picture, or the whole print with its 30 px border
+        photo.Width.ShouldBeInRange(expected - 10, expected + 4);
+    }
+
+    [Fact]
+    public void CropStage_ShouldKeepTheWholePrintEvenWithTrimBorders()
+    {
+        var scan = SampleScanFactory.CreateBorderedPrintScan(Path.Combine(_tempDir, "print.png"), seed: 4);
+        string output = Path.Combine(_tempDir, "cropped");
+        var options = new CliOptions { Stage = PipelineStage.Crop, OutputDirectory = output, NonInteractive = true, Threads = 1, AutoOrient = false, TrimBorders = true };
+
+        BatchProcessor.Execute(options, [scan.Path]).ShouldBe(0);
+
+        using var photo = OpenCvSharp.Cv2.ImRead(Directory.GetFiles(output, "*.png").Single());
+        photo.Width.ShouldBeInRange(590, 604);
+    }
+
+    [Fact]
+    public void RestoreStage_WithTrimBorders_ShouldLeaveOutThePrintsBorder()
+    {
+        var scan = SampleScanFactory.CreateBorderedPrintScan(Path.Combine(_tempDir, "print.png"), seed: 5, x: 0, y: 0);
+        string input = Directory.CreateDirectory(Path.Combine(_tempDir, "prints")).FullName;
+        using (var whole = OpenCvSharp.Cv2.ImRead(scan.Path))
+        using (var print = new OpenCvSharp.Mat(whole, new OpenCvSharp.Rect(0, 0, 600, 450)))
+        {
+            OpenCvSharp.Cv2.ImWrite(Path.Combine(input, "print.png"), print);
+        }
+        var options = new CliOptions { Stage = PipelineStage.Restore, NonInteractive = true, Threads = 1, Format = "PNG", RestoreColors = false, RemoveDust = false, TrimBorders = true };
+
+        RestoreProcessor.Execute(options, [Path.Combine(input, "print.png")]).ShouldBe(0);
+
+        using var restored = OpenCvSharp.Cv2.ImRead(Path.Combine(input, RestoreProcessor.DefaultOutputFolderName, "print.png"));
+        restored.Width.ShouldBeInRange(530, 544);
+        restored.Height.ShouldBeInRange(380, 394);
+    }
+
     public void Dispose()
     {
         try

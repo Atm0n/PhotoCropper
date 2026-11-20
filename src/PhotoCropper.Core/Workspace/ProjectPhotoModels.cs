@@ -136,12 +136,18 @@ public sealed record RestorationSettings
     public int Tint { get; init; }
     public int Saturation { get; init; }
 
+    /// <summary>
+    /// Leave out the print's white or cream border, keeping only the picture (when the photo has such a border; see
+    /// <see cref="Extraction.EdgeRefinementService.GetWhiteBorderRect"/>). The cropped photo keeps the whole print.
+    /// </summary>
+    public bool TrimWhiteBorders { get; init; }
+
     /// <summary>True when any manual adjustment is set.</summary>
     public bool HasManualAdjustments => Brightness != 0 || Contrast != 0 || Warmth != 0 || Tint != 0 || Saturation != 0;
 
     /// <summary>True when applying these settings would change the photo at all.</summary>
     public bool ChangesPhoto =>
-        RestoreColors || RemoveDust || HasManualAdjustments || ColorMode == PhotoColorMode.BlackAndWhiteNeutral;
+        RestoreColors || RemoveDust || HasManualAdjustments || ColorMode == PhotoColorMode.BlackAndWhiteNeutral || TrimWhiteBorders;
 
     public static RestorationSettings None { get; } = new();
 

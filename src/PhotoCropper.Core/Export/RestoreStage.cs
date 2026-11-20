@@ -34,9 +34,29 @@ public static class RestoreStage
         return PhotoExporter.EncodePhoto(finalImage, format, jpegQuality, metadata, xDpi, yDpi);
     }
 
-    /// <summary>Repairs then restores <paramref name="image"/>, always returning a new Mat the caller owns.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The result is returned to the caller; intermediate images are disposed on every path")]
+    /// <summary>
+    /// Repairs, restores and (when <see cref="RestorationSettings.TrimWhiteBorders"/> is set) trims the white border
+    /// of <paramref name="image"/>, always returning a new Mat the caller owns.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The result is returned to the caller")]
     public static Mat Render(Mat image, RestorationSettings restoration, IReadOnlyCollection<RepairStroke>? repairs = null)
+    {
+        Mat rendered = RenderKeepingBorder(image, restoration, repairs, out Rect? picture);
+        if (picture is not { } keep) return rendered;
+        using (rendered)
+        {
+            return EdgeRefinementService.ApplyCrop(rendered, keep);
+        }
+    }
+
+    /// <summary>
+    /// Like <see cref="Render"/>, but a white border to trim is left in place and reported instead: the preview shows
+    /// the whole photo (so it lines up with the original, and repair strokes stay where they were painted) with the
+    /// part that will be cut marked.
+    /// </summary>
+    /// <param name="picture">The picture inside the border, when the border is to be trimmed; otherwise null.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The result is returned to the caller; intermediate images are disposed on every path")]
+    public static Mat RenderKeepingBorder(Mat image, RestorationSettings restoration, IReadOnlyCollection<RepairStroke>? repairs, out Rect? picture)
     {
         ArgumentNullException.ThrowIfNull(image);
         ArgumentNullException.ThrowIfNull(restoration);
@@ -44,6 +64,9 @@ public static class RestoreStage
         // Each step returns its input when it has nothing to do.
         Mat repaired = repairs is { Count: > 0 } ? PhotoRepairService.ApplyRepairs(image, repairs) : image;
         bool ownsRepaired = !ReferenceEquals(repaired, image);
+
+        // Measured before colour restoration, which can tint the border.
+        picture = restoration.TrimWhiteBorders ? EdgeRefinementService.GetWhiteBorderRect(repaired) : null;
 
         Mat restored;
         try

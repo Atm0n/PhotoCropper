@@ -19,10 +19,6 @@ internal sealed class UserSettings
     public string PreferredFormat { get; set; } = AppConstants.FormatJpeg; // JPEG or PNG
     public int JpegQuality { get; set; } = AppConstants.DefaultJpegQuality; // 1-100 (default: 100 maximum quality)
     public bool AutoOrientPhotos { get; set; } = true;
-
-    /// <summary>Boxes found automatically leave out a print's white border (off: they follow the print's edge).</summary>
-    public bool TrimWhiteBorders { get; set; }
-
     public bool RestoreVintageColors { get; set; }
     public bool RemoveDustAndScratches { get; set; }
     public bool AutoTuneOnScanChange { get; set; }
@@ -144,7 +140,6 @@ internal sealed class SettingsManager
         Settings.MaxAreaFactor = defaults.MaxAreaFactor;
         Settings.CannyLowThreshold = defaults.CannyLowThreshold;
         Settings.AutoOrientPhotos = defaults.AutoOrientPhotos;
-        Settings.TrimWhiteBorders = defaults.TrimWhiteBorders;
         Settings.RestoreVintageColors = defaults.RestoreVintageColors;
         Settings.RemoveDustAndScratches = defaults.RemoveDustAndScratches;
         Settings.AutoTuneOnScanChange = defaults.AutoTuneOnScanChange;

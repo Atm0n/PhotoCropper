@@ -274,6 +274,7 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `--no-orient` | Don't turn photos upright automatically (face and landscape detection) | on |
 | `--no-restore` | Don't restore colours and contrast | on |
 | `--no-dust` | Don't remove dust and hairline scratches | on |
+| `--trim-borders` | Leave out prints' white borders (photos without a clear border are kept whole; not in `--stage crop`) | off |
 | `-r, --recursive` | Recursively process subdirectories when input is a folder | `false` |
 | `-v, --verbose` | Display individual photo dimensions and debug details | `false` |
 | `-h, --help` | Display usage instructions and examples | — |

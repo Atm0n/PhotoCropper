@@ -285,6 +285,22 @@ internal sealed partial class FinishPhotoViewModel : ObservableObject
         set => Update(s => s with { RemoveDust = value });
     }
 
+    /// <summary>Leave out the print's white border in the final photo (the cropped photo keeps the whole print).</summary>
+    public bool TrimWhiteBorders
+    {
+        get => Photo.Restoration.TrimWhiteBorders;
+        set => Update(s => s with { TrimWhiteBorders = value });
+    }
+
+    /// <summary>Chosen in the grid (Ctrl+click, Shift+click or its tick) for the bulk actions.</summary>
+    [ObservableProperty]
+    public partial bool IsMarked { get; set; }
+
+    partial void OnIsMarkedChanged(bool value) => MarkChanged?.Invoke(this);
+
+    /// <summary>Raised when <see cref="IsMarked"/> changes, so the stage can count the selection.</summary>
+    public event Action<FinishPhotoViewModel>? MarkChanged;
+
     /// <summary>0 = Gentle, 1 = Normal, 2 = Strong (bound to a ComboBox).</summary>
     public int StrengthIndex
     {
@@ -349,12 +365,15 @@ internal sealed partial class FinishPhotoViewModel : ObservableObject
 
     private static int ToAdjustment(double value) => (int)Math.Round(Math.Clamp(value, -100, 100));
 
-    /// <summary>Replaces all settings with a preset ("faded", "bw", "sepia", "dust", "none").</summary>
+    /// <summary>
+    /// Replaces the colour settings with a preset ("faded", "bw", "sepia", "dust", "none"). Whether the border is
+    /// trimmed is about the print, not its colours, so it stays as it is.
+    /// </summary>
     [RelayCommand]
-    private void ApplyPreset(string? name)
+    public void ApplyPreset(string? name)
     {
         var preset = RestorationSettings.FromPresetName(name);
-        if (preset != null) ApplySettings(preset);
+        if (preset != null) Update(s => preset with { TrimWhiteBorders = s.TrimWhiteBorders });
     }
 
     /// <summary>Sets the manual adjustments back to 0, keeping the automatic settings.</summary>
@@ -481,6 +500,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
             foreach (var photo in photos)
             {
                 var row = new FinishPhotoViewModel(photo, OnPhotoChanged);
+                row.MarkChanged += _ => UpdateMarks();
                 Photos.Add(row);
                 _ = LoadThumbnailAsync(row, photo.Cropped!.GetFullPath(workDir));
             }
@@ -488,8 +508,94 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
         // Keep the previewed photo selected across refreshes (e.g. after importing).
         SelectedPhoto = selectedId == null ? null : Photos.FirstOrDefault(p => p.Title == selectedId);
+        _markAnchor = null;
+        UpdateMarks();
         UpdateSummary();
     }
+
+    // ---- Several photos at once: marked in the grid, then one click applies to all of them ----
+
+    private FinishPhotoViewModel? _markAnchor;
+
+    /// <summary>How many photos are marked.</summary>
+    [ObservableProperty]
+    public partial int MarkedCount { get; set; }
+
+    public bool HasMarks => MarkedCount > 0;
+
+    /// <summary>"3 selected", for the bulk actions bar.</summary>
+    public string MarkedText => LocalizationService.Format(ResourceKeys.LblMarkedCount, "{0} selected", MarkedCount);
+
+    partial void OnMarkedCountChanged(int value)
+    {
+        OnPropertyChanged(nameof(HasMarks));
+        OnPropertyChanged(nameof(MarkedText));
+    }
+
+    private List<FinishPhotoViewModel> Marked => [.. Photos.Where(p => p.IsMarked)];
+
+    private void UpdateMarks() => MarkedCount = Photos.Count(p => p.IsMarked);
+
+    /// <summary>
+    /// Ctrl+click marks or unmarks one photo; Shift+click marks every photo from the last one clicked to this one.
+    /// </summary>
+    public void ToggleMark(FinishPhotoViewModel row, bool range)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        int to = Photos.IndexOf(row);
+        if (to < 0) return;
+        int from = range && _markAnchor != null ? Photos.IndexOf(_markAnchor) : -1;
+        if (from >= 0)
+        {
+            for (int i = Math.Min(from, to); i <= Math.Max(from, to); i++) Photos[i].IsMarked = true;
+        }
+        else
+        {
+            row.IsMarked = !row.IsMarked;
+        }
+        _markAnchor = row;
+    }
+
+    [RelayCommand]
+    private void MarkAll()
+    {
+        foreach (var row in Photos) row.IsMarked = true;
+    }
+
+    [RelayCommand]
+    private void ClearMarks()
+    {
+        foreach (var row in Photos) row.IsMarked = false;
+        _markAnchor = null;
+    }
+
+    /// <summary>Applies a preset to every marked photo.</summary>
+    [RelayCommand]
+    private void ApplyPresetToMarked(string? name)
+    {
+        foreach (var row in Marked) row.ApplyPreset(name);
+    }
+
+    /// <summary>Turns border trimming on ("on") or off for every marked photo.</summary>
+    [RelayCommand]
+    private void SetTrimForMarked(string? value)
+    {
+        bool trim = string.Equals(value, "on", StringComparison.OrdinalIgnoreCase);
+        foreach (var row in Marked) row.TrimWhiteBorders = trim;
+    }
+
+    /// <summary>Copies the open photo's settings to every marked photo.</summary>
+    [RelayCommand]
+    private void CopySettingsToMarked()
+    {
+        var settings = SelectedPhoto?.Photo.Restoration;
+        if (settings == null) return;
+        foreach (var row in Marked) row.ApplySettings(settings);
+    }
+
+    /// <summary>Exports the marked photos that are new or changed since their last export.</summary>
+    [RelayCommand]
+    private Task ExportMarked() => ExportRowsAsync([.. Marked.Where(p => p.IsStale)]);
 
     private static async Task LoadThumbnailAsync(FinishPhotoViewModel row, string path)
     {
@@ -859,7 +965,8 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
         try
         {
-            using Mat rendered = Core.Export.RestoreStage.Render(fullQuality ? full : small, request.Restoration, repairs);
+            using Mat rendered = Core.Export.RestoreStage.RenderKeepingBorder(fullQuality ? full : small, request.Restoration, repairs, out var picture);
+            if (picture is { } keep) ShadeOutside(rendered, keep);
             if (!fullQuality) return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(rendered), sourceSize);
 
             using Mat shrunk = Shrink(rendered);
@@ -870,6 +977,19 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
             before.Dispose();
             throw;
         }
+    }
+
+    /// <summary>
+    /// Darkens everything outside <paramref name="keep"/>: the border the final photo leaves out. The preview keeps
+    /// the whole photo so it lines up with the original and repair strokes land where they are painted.
+    /// </summary>
+    private static void ShadeOutside(Mat image, OpenCvSharp.Rect keep)
+    {
+        using Mat shade = new(image.Size(), OpenCvSharp.MatType.CV_8UC1, OpenCvSharp.Scalar.All(255));
+        OpenCvSharp.Cv2.Rectangle(shade, keep, OpenCvSharp.Scalar.All(0), -1);
+        using Mat darker = new();
+        image.ConvertTo(darker, -1, 0.35, 0);
+        darker.CopyTo(image, shade);
     }
 
     /// <summary>A copy no larger than <see cref="PreviewMaxSize"/> on its longest side.</summary>
@@ -926,14 +1046,15 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     /// <summary>Writes the final version of every photo that is new or changed since its last export.</summary>
     [RelayCommand(CanExecute = nameof(CanExport))]
-    private async Task Export()
+    private Task Export() => ExportRowsAsync([.. Photos.Where(p => p.IsStale)]);
+
+    private async Task ExportRowsAsync(List<FinishPhotoViewModel> stale)
     {
         var workspace = _host.Workspace;
         string? workDir = _host.WorkDirectory;
-        if (workspace == null || workDir == null) return;
+        if (workspace == null || workDir == null || stale.Count == 0) return;
 
         var options = _host.GetRenderOptions();
-        var stale = Photos.Where(p => p.IsStale).ToList();
         int done = 0;
         var failures = new List<string>();
 

@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Trim white borders** (Crops stage, next to Auto-Orient; off by default): boxes found automatically and with Find Photo leave out a print's white or cream border and keep only the picture. It's cautious: a border must frame the picture evenly on every side and end at a clean edge, so photos without one (light skies, sheets, vignettes fading to white) are never cut into, though some worn or scalloped borders are left in place. Boxes you draw or resize, and boxes already saved, are never changed.
+- **Trim white border** (Finish stage, per photo; off by default): the final photo leaves out the print's white or cream border and keeps only the picture; the preview shades what will be cut, and the cropped photo always keeps the whole print. It's cautious: a border must frame the picture on every side and end at a clean edge, so photos without one (light skies, sheets, vignettes fading to white) are never cut into, though some worn or scalloped borders are left in place. Presets keep each photo's choice.
+- **Several photos at once in Finish**: Ctrl+click or Shift+click photos in the grid (or tick them), then one click applies a preset, turns border trimming on or off, or exports just those photos. With a photo open, "Copy settings to selected" gives the selection its settings.
+- **CLI `--trim-borders`**: the same border trimming for the one-step batch, `--stage restore` and new photos in `--project` mode (`--stage crop` keeps the whole print).
 
 ### Fixed
 - **The `.deb` couldn't be installed on Ubuntu 26.04** (or any release newer than its list of ICU versions): it required one of `libicu66`–`libicu76`, and 26.04 ships `libicu78`. ICU is now only recommended (so `apt` still installs it), and the `photocropper` and `photocropper-cli` launchers run the app without culture data where it's missing, as the AppImage already did. The release's package tests now run on Ubuntu 24.04 and 26.04.

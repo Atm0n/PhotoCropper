@@ -195,6 +195,27 @@ public static class SampleScanFactory
         return new AlbumScan(path, [print]);
     }
 
+    /// <summary>
+    /// A dark bed with one print on it: a <paramref name="pictureWidth"/> × <paramref name="pictureHeight"/> picture on a
+    /// white border <paramref name="border"/> pixels wide, its outside corner at (<paramref name="x"/>, <paramref name="y"/>).
+    /// </summary>
+    /// <returns>The scan and the picture's rectangle (inside the border).</returns>
+    public static AlbumScan CreateBorderedPrintScan(string path, int seed, int pictureWidth = 540, int pictureHeight = 390, int border = 30, int x = 400, int y = 300)
+    {
+        var random = new Random(seed); // NOSONAR: reproducible test images from a fixed seed, not security
+        int printWidth = pictureWidth + 2 * border, printHeight = pictureHeight + 2 * border;
+        using var scan = new Mat(Math.Max(1200, y + printHeight + 200), Math.Max(1600, x + printWidth + 200), MatType.CV_8UC3, new Scalar(60, 60, 60));
+        using (var print = new Mat(scan, new Rect(x, y, printWidth, printHeight))) print.SetTo(new Scalar(238, 240, 242));
+        var picture = new Rect(x + border, y + border, pictureWidth, pictureHeight);
+        using (var content = CreatePhoto(random, pictureWidth, pictureHeight))
+        using (var target = new Mat(scan, picture))
+        {
+            content.CopyTo(target);
+        }
+        Cv2.ImWrite(path, scan);
+        return new AlbumScan(path, [picture]);
+    }
+
     /// <summary>A photo-like image: a two-colour gradient, a few soft shapes, and grain.</summary>
     private static Mat CreatePhoto(Random random, int width, int height)
     {

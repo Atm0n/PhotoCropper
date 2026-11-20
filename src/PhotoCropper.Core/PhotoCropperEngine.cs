@@ -33,10 +33,6 @@ public class PhotoCropperEngine : IDisposable
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; }
     public bool RemoveDustAndScratches { get; set; }
-
-    /// <summary>Boxes found automatically (detection, Find Photo) leave out a print's white border.</summary>
-    public bool TrimWhiteBorders { get; set; }
-
     public string BoundingBoxColor { get; set; } = Common.AppConstants.DefaultBoundingBoxColor;
 
     public Mat Original { get; set; }
@@ -116,7 +112,6 @@ public class PhotoCropperEngine : IDisposable
         AutoOrientPhotos = options.AutoOrientPhotos;
         RestoreVintageColors = options.RestoreVintageColors;
         RemoveDustAndScratches = options.RemoveDustAndScratches;
-        TrimWhiteBorders = options.TrimWhiteBorders;
         BoundingBoxColor = options.BoundingBoxColor;
     }
 
@@ -131,7 +126,6 @@ public class PhotoCropperEngine : IDisposable
         AutoOrientPhotos = AutoOrientPhotos,
         RestoreVintageColors = RestoreVintageColors,
         RemoveDustAndScratches = RemoveDustAndScratches,
-        TrimWhiteBorders = TrimWhiteBorders,
         BoundingBoxColor = BoundingBoxColor
     };
 
@@ -517,27 +511,29 @@ public class PhotoCropperEngine : IDisposable
         // Only keep candidates that produced a photo, so AcceptedCandidates[i] always matches DetectedPhotos[i].
         var kept = ExtractAndProcessCandidates(acceptedCandidates, padded, pad);
         AcceptedCandidates = [.. kept.Select(k => k.Candidate)];
-
-        if (TrimWhiteBorders)
-        {
-            for (int i = 0; i < DetectedPhotos.Count; i++) TrimWhiteBorder(i);
-        }
     }
 
     /// <summary>
-    /// Shrinks photo <paramref name="index"/> and its box to the picture inside a print's white border, if it has one
-    /// (see <see cref="EdgeRefinementService.GetWhiteBorderRect"/>). Measured on the raw copy: colour restoration can
-    /// tint the border.
+    /// Shrinks each photo, and its box, to the picture inside a print's white border, where it has one (see
+    /// <see cref="EdgeRefinementService.GetWhiteBorderRect"/>). For the CLI's one-step batch; the app and the
+    /// project pipeline trim when restoring (<see cref="Workspace.RestorationSettings.TrimWhiteBorders"/>), so the
+    /// cropped photo keeps the whole print.
     /// </summary>
-    private void TrimWhiteBorder(int index)
+    /// <returns>How many photos were trimmed.</returns>
+    public int TrimWhiteBorders()
     {
-        Mat measured = index < RawDetectedPhotos.Count && RawDetectedPhotos[index].Size() == DetectedPhotos[index].Size()
-            ? RawDetectedPhotos[index]
-            : DetectedPhotos[index];
-        if (EdgeRefinementService.GetWhiteBorderRect(measured) is { } picture)
+        int trimmed = 0;
+        for (int i = 0; i < DetectedPhotos.Count; i++)
         {
-            ApplyCropToPhoto(index, CvInterop.ToRectangle(picture));
+            // Measured on the raw copy: colour restoration can tint the border.
+            Mat measured = i < RawDetectedPhotos.Count && RawDetectedPhotos[i].Size() == DetectedPhotos[i].Size()
+                ? RawDetectedPhotos[i]
+                : DetectedPhotos[i];
+            if (EdgeRefinementService.GetWhiteBorderRect(measured) is not { } picture) continue;
+            ApplyCropToPhoto(i, CvInterop.ToRectangle(picture));
+            trimmed++;
         }
+        return trimmed;
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Mat is returned to caller")]
@@ -895,11 +891,7 @@ public class PhotoCropperEngine : IDisposable
             var refitted = boxes.ToList();
             refitted[inside] = candidate with { OrientationDegrees = boxes[inside].OrientationDegrees };
             UpdateCandidates(refitted);
-            if (ApplyGrabHandleResize(inside))
-            {
-                if (TrimWhiteBorders) TrimWhiteBorder(inside);
-                return (inside, false);
-            }
+            if (ApplyGrabHandleResize(inside)) return (inside, false);
             UpdateCandidates(before);
             return (-1, false);
         }
@@ -914,7 +906,6 @@ public class PhotoCropperEngine : IDisposable
         DetectedPhotos.Add(photo);
         RawDetectedPhotos.Add(raw);
         AcceptedCandidates = [.. boxes, candidate with { OrientationDegrees = orientation }];
-        if (TrimWhiteBorders) TrimWhiteBorder(DetectedPhotos.Count - 1);
         return (DetectedPhotos.Count - 1, true);
     }
 

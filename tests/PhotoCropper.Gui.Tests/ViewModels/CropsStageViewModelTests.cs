@@ -104,23 +104,6 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task TrimBorders_IsSavedAndDetectsTheScanAgainWithIt()
-    {
-        using var vm = CreateViewModel(1);
-        await vm.LoadCurrentScanAsync();
-        _host.BusyMessages.Clear();
-
-        vm.TrimBorders = true;
-        await WaitUntil(() => _host.BusyMessages.Count > 0);
-
-        _settings.TrimWhiteBorders.ShouldBeTrue();
-        _settingsSaves.ShouldBeGreaterThan(0);
-        _sessions.Sessions[0].Options.TrimWhiteBorders.ShouldBeTrue();
-        _sessions.Sessions[0].Engine!.TrimWhiteBorders.ShouldBeTrue();
-        vm.GetDetectionOptions().TrimWhiteBorders.ShouldBeTrue();
-    }
-
-    [Fact]
     public async Task ShowOptions_UpdatesTheControlsWithoutRedetecting()
     {
         using var vm = CreateViewModel(1);

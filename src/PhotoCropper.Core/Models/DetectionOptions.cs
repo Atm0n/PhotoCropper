@@ -13,10 +13,6 @@ public record DetectionOptions
     public bool AutoOrientPhotos { get; set; } = true;
     public bool RestoreVintageColors { get; set; }
     public bool RemoveDustAndScratches { get; set; }
-
-    /// <summary>Boxes found automatically (detection, Find Photo) leave out a print's white border.</summary>
-    public bool TrimWhiteBorders { get; set; }
-
     public string BoundingBoxColor { get; set; } = AppConstants.DefaultBoundingBoxColor;
 
     /// <summary>

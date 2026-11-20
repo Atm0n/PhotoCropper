@@ -72,7 +72,6 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private double _maxAreaPercent = 90;
     [ObservableProperty] private double _edgeThreshold = 20;
     [ObservableProperty] private bool _autoOrient = true;
-    [ObservableProperty] private bool _trimBorders;
     [ObservableProperty] private bool _autoTuneOnScanChange;
     [ObservableProperty] private bool _autoAdjustOnLowCoverage = true;
 
@@ -115,7 +114,6 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
             MaxAreaPercent = s.MaxAreaFactor;
             EdgeThreshold = s.CannyLowThreshold;
             AutoOrient = s.AutoOrientPhotos;
-            TrimBorders = s.TrimWhiteBorders;
             AutoTuneOnScanChange = s.AutoTuneOnScanChange;
             AutoAdjustOnLowCoverage = s.AutoAdjustOnLowCoverage;
             _restoreColors = s.RestoreVintageColors;
@@ -140,7 +138,6 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
             MaxAreaPercent = options.MaxAreaFactor * 100.0;
             EdgeThreshold = options.CannyLowThreshold;
             AutoOrient = options.AutoOrientPhotos;
-            TrimBorders = options.TrimWhiteBorders;
             _restoreColors = options.RestoreVintageColors;
             _removeDust = options.RemoveDustAndScratches;
             AutoTuneOnScanChange = s.AutoTuneOnScanChange;
@@ -161,7 +158,6 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
         CannyLowThreshold = EdgeThreshold,
         CannyHighThreshold = EdgeThreshold * AppConstants.DefaultCannyHighRatio,
         AutoOrientPhotos = AutoOrient,
-        TrimWhiteBorders = TrimBorders,
         RestoreVintageColors = _restoreColors,
         RemoveDustAndScratches = _removeDust,
         BoundingBoxColor = _settings().DetectionBoxColor,
@@ -178,15 +174,6 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
         _settings().AutoOrientPhotos = value;
         _saveSettings();
         Current!.Options.AutoOrientPhotos = value;
-        _ = ReprocessAsync();
-    }
-
-    partial void OnTrimBordersChanged(bool value)
-    {
-        if (_isShowingOptions || !CanStartWork) return;
-        _settings().TrimWhiteBorders = value;
-        _saveSettings();
-        Current!.Options.TrimWhiteBorders = value;
         _ = ReprocessAsync();
     }
 

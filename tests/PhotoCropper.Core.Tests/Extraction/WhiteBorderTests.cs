@@ -1,6 +1,8 @@
 using OpenCvSharp;
 using PhotoCropper.Core.Common;
+using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Extraction;
+using PhotoCropper.Core.Workspace;
 using PhotoCropper.TestHelpers;
 
 namespace PhotoCropper.Core.Tests.Extraction;
@@ -137,38 +139,70 @@ public sealed class WhiteBorderTests : IDisposable
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void DetectPhotos_TrimsTheBorderOnlyWhenAsked(bool trim)
+    public void Render_TrimsTheBorderOnlyWhenAsked(bool trim)
     {
-        using var engine = new PhotoCropperEngine(BorderedPrintScan()) { AutoOrientPhotos = false, TrimWhiteBorders = trim };
+        using var picture = Picture(400, 300, 7);
+        using var print = Print(picture, 24, 24, 24, 24);
 
+        using var rendered = RestoreStage.Render(print, RestorationSettings.None with { TrimWhiteBorders = trim });
+
+        rendered.Width.ShouldBeInRange(trim ? 395 : 448, trim ? 400 : 448);
+        rendered.Height.ShouldBeInRange(trim ? 295 : 348, trim ? 300 : 348);
+    }
+
+    [Fact]
+    public void Render_TrimsAfterRestoringColours()
+    {
+        using var picture = Picture(400, 300, 8);
+        using var print = Print(picture, 24, 24, 24, 24);
+        var settings = RestorationSettings.BlackAndWhite with { TrimWhiteBorders = true };
+
+        using var rendered = RestoreStage.Render(print, settings);
+
+        rendered.Width.ShouldBeInRange(395, 400);
+        // Black and white: no colour left in the picture.
+        using var hsv = new Mat();
+        Cv2.CvtColor(rendered, hsv, ColorConversionCodes.BGR2HSV);
+        Cv2.Mean(hsv).Val1.ShouldBeLessThan(10);
+    }
+
+    [Fact]
+    public void RenderKeepingBorder_ShowsTheWholePrintAndReportsThePicture()
+    {
+        using var picture = Picture(400, 300, 9);
+        using var print = Print(picture, 24, 24, 24, 24);
+
+        using var rendered = RestoreStage.RenderKeepingBorder(print, RestorationSettings.None with { TrimWhiteBorders = true }, null, out Rect? inside);
+
+        rendered.Width.ShouldBe(448);
+        inside.ShouldNotBeNull();
+        ShouldBeNear(inside.Value, new Rect(24, 24, 400, 300));
+    }
+
+    [Fact]
+    public void Presets_ShouldNotTurnTrimmingOn()
+    {
+        foreach (var name in new[] { "faded", "bw", "sepia", "dust", "none" })
+        {
+            RestorationSettings.FromPresetName(name)!.TrimWhiteBorders.ShouldBeFalse(name);
+        }
+        RestorationSettings.None.ChangesPhoto.ShouldBeFalse();
+        (RestorationSettings.None with { TrimWhiteBorders = true }).ChangesPhoto.ShouldBeTrue();
+    }
+
+    // The CLI's one-step batch trims the extracted photos themselves (and their boxes).
+    [Fact]
+    public void Engine_TrimWhiteBorders_ShrinksPhotoAndBoxToThePicture()
+    {
+        using var engine = new PhotoCropperEngine(BorderedPrintScan()) { AutoOrientPhotos = false };
         engine.DetectPhotos();
-
         engine.DetectedPhotos.Count.ShouldBe(1);
-        var expected = trim ? new Rect(430, 330, 540, 390) : new Rect(400, 300, 600, 450);
-        ShouldBeNear(BoxBounds(engine, 0), expected, 8);
-        engine.DetectedPhotos[0].Width.ShouldBeInRange(expected.Width - 10, expected.Width + 10);
-        engine.DetectedPhotos[0].Height.ShouldBeInRange(expected.Height - 10, expected.Height + 10);
-    }
+        ShouldBeNear(BoxBounds(engine, 0), new Rect(400, 300, 600, 450), 8);
 
-    [Fact]
-    public void FindPhotoAt_WithTrimOn_GivesThePictureInsideTheBorder()
-    {
-        using var engine = new PhotoCropperEngine(BorderedPrintScan()) { AutoOrientPhotos = false, TrimWhiteBorders = true };
-        engine.RestoreFromSavedCrops([]);
+        engine.TrimWhiteBorders().ShouldBe(1);
 
-        var (index, added) = engine.FindPhotoAt(new System.Drawing.PointF(700, 525));
-
-        added.ShouldBeTrue();
-        ShouldBeNear(BoxBounds(engine, index), new Rect(430, 330, 540, 390), 8);
-    }
-
-    [Fact]
-    public void Option_ShouldRoundTripThroughDetectionOptions()
-    {
-        using var engine = new PhotoCropperEngine(BorderedPrintScan());
-        engine.ApplyOptions(engine.CurrentOptions with { TrimWhiteBorders = true });
-
-        engine.TrimWhiteBorders.ShouldBeTrue();
-        engine.CurrentOptions.TrimWhiteBorders.ShouldBeTrue();
+        ShouldBeNear(BoxBounds(engine, 0), new Rect(430, 330, 540, 390), 8);
+        engine.DetectedPhotos[0].Width.ShouldBeInRange(530, 550);
+        engine.RawDetectedPhotos[0].Width.ShouldBe(engine.DetectedPhotos[0].Width);
     }
 }
