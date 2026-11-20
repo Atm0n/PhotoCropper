@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-11-20
+
 ### Added
 - **Adjust the trim by hand** (Finish editor, Border section): **Adjust** shows the trim as a frame on the photo; drag its edges, or a corner for two at once, to set exactly what the final photo keeps, with a magnifier showing the edge while you drag. **Automatic** goes back to the border found automatically. The frame belongs to the photo: presets and "Copy settings" keep each photo's own. What the trim leaves out is now shaded live in the viewer.
 - **Photo types in Finish**: each photo is labelled black & white, sepia, faded colour or colour, and the chips above the grid show one type at a time, with how many photos each has. "Select all" then selects just that type. **Suggested by type** gives each selected photo the preset that suits its kind of print: Black & white, Sepia, Faded colour print, or Only clean dust for colour photos in good shape. Types are told from the photos' colours; aged or toned black-and-white prints and prints on tinted album pages count as black and white.
