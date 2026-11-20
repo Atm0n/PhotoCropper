@@ -513,6 +513,29 @@ public class PhotoCropperEngine : IDisposable
         AcceptedCandidates = [.. kept.Select(k => k.Candidate)];
     }
 
+    /// <summary>
+    /// Shrinks each photo, and its box, to the picture inside a print's white border, where it has one (see
+    /// <see cref="EdgeRefinementService.GetWhiteBorderRect"/>). For the CLI's one-step batch; the app and the
+    /// project pipeline trim when restoring (<see cref="Workspace.RestorationSettings.TrimWhiteBorders"/>), so the
+    /// cropped photo keeps the whole print.
+    /// </summary>
+    /// <returns>How many photos were trimmed.</returns>
+    public int TrimWhiteBorders()
+    {
+        int trimmed = 0;
+        for (int i = 0; i < DetectedPhotos.Count; i++)
+        {
+            // Measured on the raw copy: colour restoration can tint the border.
+            Mat measured = i < RawDetectedPhotos.Count && RawDetectedPhotos[i].Size() == DetectedPhotos[i].Size()
+                ? RawDetectedPhotos[i]
+                : DetectedPhotos[i];
+            if (EdgeRefinementService.GetWhiteBorderRect(measured) is not { } picture) continue;
+            ApplyCropToPhoto(i, CvInterop.ToRectangle(picture));
+            trimmed++;
+        }
+        return trimmed;
+    }
+
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Mat is returned to caller")]
     private (Mat Padded, Scalar AvgBackgroundColorHsv, Scalar BgBgr, int Pad) PreparePaddedDetectionImage()
     {

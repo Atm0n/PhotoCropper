@@ -37,12 +37,24 @@ if [[ -f "${PKG_DIR}/usr/lib/photocropper/PhotoCropper.Cli" ]]; then
   chmod +x "${PKG_DIR}/usr/lib/photocropper/PhotoCropper.Cli"
 fi
 
-# Symlinks in /usr/bin
-ln -sf "/usr/lib/photocropper/PhotoCropper.Gui" "${PKG_DIR}/usr/bin/photocropper"
-ln -sf "/usr/lib/photocropper/PhotoCropper.Gui" "${PKG_DIR}/usr/bin/PhotoCropper"
+# Launchers in /usr/bin. .NET aborts at startup without ICU (libicu), and Ubuntu renames its package every release
+# (libicu74 in 24.04, libicu78 in 26.04, ...), so the package only recommends it; where it's missing, the launcher
+# runs the app without culture data (numbers and dates formatted invariantly), as the AppImage's AppRun does.
+write_launcher() { # launcher path, program
+  cat > "$1" <<EOF
+#!/bin/sh
+if ! /sbin/ldconfig -p 2> /dev/null | grep -q 'libicuuc\.so'; then
+  export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+fi
+exec "$2" "\$@"
+EOF
+  chmod 755 "$1"
+}
+write_launcher "${PKG_DIR}/usr/bin/photocropper" /usr/lib/photocropper/PhotoCropper.Gui
+ln -sf photocropper "${PKG_DIR}/usr/bin/PhotoCropper"
 if [[ -f "${PKG_DIR}/usr/lib/photocropper/PhotoCropper.Cli" ]]; then
-  ln -sf "/usr/lib/photocropper/PhotoCropper.Cli" "${PKG_DIR}/usr/bin/photocropper-cli"
-  ln -sf "/usr/lib/photocropper/PhotoCropper.Cli" "${PKG_DIR}/usr/bin/PhotoCropper.Cli"
+  write_launcher "${PKG_DIR}/usr/bin/photocropper-cli" /usr/lib/photocropper/PhotoCropper.Cli
+  ln -sf photocropper-cli "${PKG_DIR}/usr/bin/PhotoCropper.Cli"
 fi
 
 # Desktop & icons & metainfo
@@ -63,8 +75,8 @@ Priority: optional
 Architecture: amd64
 Installed-Size: ${INSTALLED_SIZE}
 Maintainer: Atm0n <https://github.com/Atm0n/PhotoCropper>
-Depends: libgl1, libglib2.0-0 | libglib2.0-0t64, libx11-6, libfontconfig1, libicu76 | libicu74 | libicu72 | libicu71 | libicu70 | libicu67 | libicu66
-Recommends: libsane1, sane-utils
+Depends: libgl1, libglib2.0-0 | libglib2.0-0t64, libx11-6, libfontconfig1
+Recommends: libsane1, sane-utils, libicu80 | libicu79 | libicu78 | libicu77 | libicu76 | libicu74 | libicu72 | libicu71 | libicu70 | libicu67 | libicu66
 Homepage: https://github.com/Atm0n/PhotoCropper
 Description: Batch photo cropper and scanner image extractor
  PhotoCropper automatically detects, crops, deskews, and restores multiple photos

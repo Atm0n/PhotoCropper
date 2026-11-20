@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Smoke-tests the Linux release packages the way a user gets them: each check runs in a fresh ubuntu:24.04
-# container that has only what the package itself brings (the .deb's declared dependencies; nothing for the
+# Smoke-tests the Linux release packages the way a user gets them: each check runs in a fresh container of each
+# Ubuntu LTS in IMAGES (the oldest supported and the newest, whose library versions differ), with only what the
+# package itself brings (the .deb's declared dependencies; nothing for the
 # AppImage). It catches packaging mistakes the unit tests can't see, such as a native library missing from the
 # published app or a dependency the .deb forgets to declare.
 #
@@ -14,7 +15,7 @@ set -uo pipefail
 PACKAGES="$(cd "${1:?packages folder}" && (pwd -W 2> /dev/null || pwd))"
 SAMPLES="$(cd "${2:?sample scans folder}" && (pwd -W 2> /dev/null || pwd))"
 export MSYS_NO_PATHCONV=1
-IMAGE="ubuntu:24.04"
+IMAGES=(ubuntu:24.04 ubuntu:26.04)
 EXPECTED=$(awk '$1 == "total" { print $2 }' "${SAMPLES}/expected.txt")
 DEB=$(find "${PACKAGES}" -maxdepth 1 -name '*.deb' | head -1)
 APPIMAGE=$(find "${PACKAGES}" -maxdepth 1 -name '*.AppImage' | head -1)
@@ -52,15 +53,22 @@ GUI_CHECK='
 
 APT_QUIET='export DEBIAN_FRONTEND=noninteractive; apt-get update -qq > /dev/null'
 
+for IMAGE in "${IMAGES[@]}"; do
 if [[ -n "${DEB}" ]]; then
-  echo "::group::.deb: CLI on the sample scans"
+  echo "::group::${IMAGE} .deb: CLI on the sample scans"
   in_container "${APT_QUIET}; apt-get install -y -qq /pkgs/$(basename "${DEB}") > /dev/null && CLI=photocropper-cli; ${CLI_CHECK}"
-  record ".deb: CLI finds ${EXPECTED} photos on the samples" $?
+  record "${IMAGE} .deb: CLI finds ${EXPECTED} photos on the samples" $?
   echo "::endgroup::"
 
-  echo "::group::.deb: GUI starts"
+  echo "::group::${IMAGE} .deb: GUI starts"
   in_container "${APT_QUIET}; apt-get install -y -qq /pkgs/$(basename "${DEB}") > /dev/null && GUI=photocropper; ${GUI_CHECK}"
-  record ".deb: GUI starts" $?
+  record "${IMAGE} .deb: GUI starts" $?
+  echo "::endgroup::"
+
+  # Without recommended packages there is no ICU: the launcher must run the app without culture data instead.
+  echo "::group::${IMAGE} .deb without recommends (no ICU): CLI on the sample scans"
+  in_container "${APT_QUIET}; apt-get install -y -qq --no-install-recommends /pkgs/$(basename "${DEB}") > /dev/null && CLI=photocropper-cli; ${CLI_CHECK}"
+  record "${IMAGE} .deb without ICU: CLI finds ${EXPECTED} photos on the samples" $?
   echo "::endgroup::"
 else
   record ".deb: package found in ${PACKAGES}" 1
@@ -71,21 +79,22 @@ if [[ -n "${APPIMAGE}" ]]; then
   # app through AppRun, as the AppImage does (the CLI through a photocropper-cli link, as users set it up).
   EXTRACT="cd /tmp && cp /pkgs/$(basename "${APPIMAGE}") app && chmod +x app && ./app --appimage-extract > /dev/null"
 
-  echo "::group::AppImage: CLI on the sample scans"
+  echo "::group::${IMAGE} AppImage: CLI on the sample scans"
   in_container "${EXTRACT} && ln -s squashfs-root/AppRun /tmp/photocropper-cli && CLI=/tmp/photocropper-cli; ${CLI_CHECK}"
-  record "AppImage: CLI finds ${EXPECTED} photos on the samples" $?
+  record "${IMAGE} AppImage: CLI finds ${EXPECTED} photos on the samples" $?
   echo "::endgroup::"
 
   # An AppImage relies on the libraries every desktop has (fontconfig, OpenGL, X11: the AppImage "excludelist"),
   # which a bare container lacks; install those, and nothing the app itself would need on top.
   DESKTOP_BASE='apt-get install -y -qq --no-install-recommends libfontconfig1 libgl1 libx11-6 libice6 libsm6 > /dev/null'
-  echo "::group::AppImage: GUI starts"
+  echo "::group::${IMAGE} AppImage: GUI starts"
   in_container "${APT_QUIET}; ${DESKTOP_BASE}; ${EXTRACT} && GUI=/tmp/squashfs-root/AppRun; ${GUI_CHECK}"
-  record "AppImage: GUI starts" $?
+  record "${IMAGE} AppImage: GUI starts" $?
   echo "::endgroup::"
 else
   record "AppImage: package found in ${PACKAGES}" 1
 fi
+done
 
 echo
 echo "Linux package smoke tests:"
