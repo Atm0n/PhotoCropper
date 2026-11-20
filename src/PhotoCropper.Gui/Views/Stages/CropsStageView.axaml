@@ -295,6 +295,7 @@
 						<ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="10,0">
 							<StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center" HorizontalAlignment="Center">
 								<CheckBox x:Name="chkAutoOrient" Content="{DynamicResource LblAutoOrient}" ToolTip.Tip="{DynamicResource TipAutoOrient}" IsChecked="{Binding AutoOrient}" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
+								<CheckBox x:Name="chkTrimBorders" Content="{DynamicResource LblTrimBorders}" ToolTip.Tip="{DynamicResource TipTrimBorders}" IsChecked="{Binding TrimBorders}" VerticalAlignment="Center" FontSize="10" Focusable="False"/>
 							</StackPanel>
 						</ScrollViewer>
 					

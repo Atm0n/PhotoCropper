@@ -10,6 +10,8 @@
 	<sys:String x:Key="LblEdgeThreshold">Edge Threshold</sys:String>
 	<sys:String x:Key="LblAutoOrient">Auto-Orient (AI / Landscape)</sys:String>
 	<sys:String x:Key="TipAutoOrient">Automatically straightens and orients photos upright using AI face detection and outdoor landscape/water scene cues.</sys:String>
+	<sys:String x:Key="LblTrimBorders">Trim white borders</sys:String>
+	<sys:String x:Key="TipTrimBorders">Leaves out a print's white or cream border: boxes found automatically (and with Find Photo) shrink to the picture inside it. Photos without a border are left as they are; boxes you draw or resize are never changed. Turning it on or off detects the open scan again.</sys:String>
 	<sys:String x:Key="LblRestoreColors">Restore Vintage Colors</sys:String>
 	<sys:String x:Key="TipRestoreColors">Neutralizes aging yellow casts, recovers shadow/highlight contrast via LAB CLAHE, and revives faded photo pigments.</sys:String>
 	<sys:String x:Key="LblRemoveDust">Remove Dust &amp; Scratches</sys:String>
@@ -189,7 +191,7 @@
 	<sys:String x:Key="HelpManualCrop">Drag a rectangle on the scan to add a photo that was not detected. It is added to the list and selected.</sys:String>
 	<sys:String x:Key="HelpRefine">Draw a tighter crop inside one photo, e.g. to trim a white scanner margin. Accepting re-crops the photo and moves its box on the scan to match (Enter to accept, Esc to cancel).</sys:String>
 	<sys:String x:Key="HelpInteractiveBoxesTitle">Editing boxes</sys:String>
-	<sys:String x:Key="HelpInteractiveBoxes">Click inside a box to show its photo. Drag a corner to resize it (a magnified view of the spot appears in a corner while you drag, so you can put the edge exactly on the photo's) and the blue handle to rotate it; the photo is re-extracted when you let go. Click the red ✕ on the top-right corner to delete it. Every change can be undone.</sys:String>
+	<sys:String x:Key="HelpInteractiveBoxes">Click inside a box to show its photo. Drag a corner to resize it (a magnified view of the spot appears in a corner while you drag, so you can put the edge exactly on the photo's) and the blue handle to rotate it; the photo is re-extracted when you let go. Click the red ✕ on the top-right corner to delete it. Boxes follow the print's edge; tick "Trim white borders" to leave out a print's white border instead. Every change can be undone.</sys:String>
 	<sys:String x:Key="HelpDpiTitle">Scan resolution</sys:String>
 	<sys:String x:Key="HelpDpi">The scanner's resolution (e.g. 300 or 600 DPI) is kept in the exported photos, so they print at their real size.</sys:String>
 	<sys:String x:Key="HelpAutoOrientTitle">AI &amp; Landscape Orientation</sys:String>
