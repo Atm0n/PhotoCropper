@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **The `.deb` couldn't be installed on Ubuntu 26.04** (or any release newer than its list of ICU versions): it required one of `libicu66`–`libicu76`, and 26.04 ships `libicu78`. ICU is now only recommended (so `apt` still installs it), and the `photocropper` and `photocropper-cli` launchers run the app without culture data where it's missing, as the AppImage already did. The release's package tests now run on Ubuntu 24.04 and 26.04.
+
 ## [3.1.0] - 2026-11-19
 
 ### Added
