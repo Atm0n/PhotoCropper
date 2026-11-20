@@ -128,6 +128,73 @@ public static class PhotoPipelineService
     }
 
     /// <summary>
+    /// Turns a photo a quarter turn, after cropping (e.g. from the Finish stage): its file in Cropped/ is rotated
+    /// losslessly, its box on the scan records the turn (so the Crops stage and later saves agree), and its repair
+    /// strokes and hand-set trim, kept as fractions of the photo, turn with it. The final photo becomes out of date.
+    /// </summary>
+    public static void RotatePhoto(string workDirectory, WorkspaceSessionState session, ProjectPhoto photo, bool clockwise)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workDirectory);
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(photo);
+        if (photo.Cropped == null) return;
+
+        string path = photo.Cropped.GetFullPath(workDirectory);
+        var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(path);
+        byte[] png;
+        int width, height;
+        using (Mat image = RestoreStage.ReadImage(path))
+        using (Mat rotated = new())
+        {
+            width = image.Width;
+            height = image.Height;
+            Cv2.Rotate(image, rotated, clockwise ? RotateFlags.Rotate90Clockwise : RotateFlags.Rotate90Counterclockwise);
+            png = PhotoExporter.EncodePhoto(rotated, AppConstants.FormatPng, 100, null, xDpi, yDpi);
+        }
+
+        lock (session)
+        {
+            int turn = clockwise ? 90 : 270;
+            // The scan's saved box for this photo: the same record, or the box it was cropped from.
+            var entry = photo.ScanRelativePath == null ? null : session.Scans.FirstOrDefault(s =>
+                string.Equals(s.RelativePath, photo.ScanRelativePath, StringComparison.OrdinalIgnoreCase));
+            var saved = photo.Crop == null || entry == null ? null
+                : entry.FinalCrops.FirstOrDefault(c => ReferenceEquals(c, photo.Crop))
+                  ?? entry.FinalCrops.Where(c => BoxOverlap(c, photo.Crop) >= SamePhotoOverlap).OrderByDescending(c => BoxOverlap(c, photo.Crop)).FirstOrDefault();
+            if (saved != null) saved.RotationDegrees = (saved.RotationDegrees + turn) % 360;
+            if (photo.Crop != null && !ReferenceEquals(photo.Crop, saved)) photo.Crop.RotationDegrees = (photo.Crop.RotationDegrees + turn) % 360;
+
+            // Strokes and the trim are fractions of the photo: map each point to where it lands on the turned photo.
+            (float X, float Y) Turn(float x, float y) => clockwise ? (1 - y, x) : (y, 1 - x);
+            // A stroke's radius is a fraction of the photo's width, which is now its old height.
+            var turnedRepairs = photo.Repairs.Select(stroke =>
+            {
+                var turnedStroke = new RepairStroke { Radius = stroke.Radius * width / height, Method = stroke.Method };
+                for (int i = 0; i + 1 < stroke.Points.Count; i += 2)
+                {
+                    var (x, y) = Turn(stroke.Points[i], stroke.Points[i + 1]);
+                    turnedStroke.Points.Add(x);
+                    turnedStroke.Points.Add(y);
+                }
+                return turnedStroke;
+            }).ToList();
+            photo.Repairs.Clear();
+            foreach (var stroke in turnedRepairs) photo.Repairs.Add(stroke);
+            (photo.RepairImageWidth, photo.RepairImageHeight) = (photo.RepairImageHeight, photo.RepairImageWidth);
+
+            if (photo.Restoration.ManualTrim is { } trim)
+            {
+                var turned = clockwise
+                    ? new TrimArea { Left = 1 - trim.Bottom, Top = trim.Left, Right = 1 - trim.Top, Bottom = trim.Right }
+                    : new TrimArea { Left = trim.Top, Top = 1 - trim.Right, Right = trim.Bottom, Bottom = 1 - trim.Left };
+                photo.Restoration = photo.Restoration with { ManualTrim = turned };
+            }
+
+            photo.Cropped = WriteIfChanged(workDirectory, path, png, photo.Cropped);
+        }
+    }
+
+    /// <summary>
     /// Imports an existing photo (e.g. one already cropped elsewhere) into Cropped/ as a lossless PNG, so it can be
     /// restored without being scanned or cropped.
     /// </summary>

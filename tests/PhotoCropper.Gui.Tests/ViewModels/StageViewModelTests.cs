@@ -195,6 +195,32 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task FinishStage_Rotate_ShouldTurnThePhotoAndTellTheScan()
+    {
+        var photo = AddCroppedPhoto("scan_0001.png");                     // 60 x 40
+        using var vm = Finish();
+        vm.Refresh();
+        await vm.WhenThumbnailsLoaded();
+        vm.SelectedPhoto = vm.Photos[0];
+
+        await vm.RotateClockwiseCommand.ExecuteAsync(null);
+
+        using (var cropped = Cv2.ImRead(photo.Cropped!.GetFullPath(_workDir)))
+        {
+            cropped.Width.ShouldBe(40);
+            cropped.Height.ShouldBe(60);
+        }
+        photo.Crop!.RotationDegrees.ShouldBe(90);
+        _host.CropsChanged.ShouldBe([photo.ScanRelativePath!]);           // Crops reloads the scan's boxes
+        _host.Saves.ShouldBeGreaterThan(0);
+        vm.Photos[0].IsStale.ShouldBeTrue();
+
+        vm.Photos[0].IsMarked = true;                                     // and several at once from the bar
+        await vm.RotateMarkedCommand.ExecuteAsync(null);
+        photo.Crop.RotationDegrees.ShouldBe(180);
+    }
+
+    [Fact]
     public void FinishStage_ManualTrim_ShouldBelongToItsPhoto()
     {
         AddCroppedPhoto("scan_0001.png");
@@ -808,6 +834,8 @@ public sealed class StageViewModelTests : IDisposable
         public FinalRenderOptions GetRenderOptions() => new();
         public async Task<bool> RunBusyAsync(string message, Func<Task> work) { await work(); return true; }
         public void SaveWorkspace() => Saves++;
+        public List<string> CropsChanged { get; } = [];
+        public void ScanCropsChanged(string scanRelativePath) => CropsChanged.Add(scanRelativePath);
         public void ShowStatus(string message) { }
         public List<(string Message, bool Succeeded)> Notified { get; } = [];
         public void NotifyExportCompleted(string message, bool succeeded) => Notified.Add((message, succeeded));

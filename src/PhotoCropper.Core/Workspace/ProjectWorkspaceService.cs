@@ -48,6 +48,7 @@ public static partial class ProjectWorkspaceService
     /// Upgrades a project to the RawScans → Cropped → Final layout. Before version 2.0, exports were written to
     /// Cropped/; they are final photos, so they move to Final/ (and the scans' export records follow them).
     /// Files the pipeline itself writes to Cropped/ ("*_pNN.png", "import_NNNN.png") are never moved.
+    /// Each photo's saved auto-orientation is also dropped, so it is detected again (see <see cref="ForgetAutoOrientation"/>).
     /// </summary>
     /// <returns>True when the session was changed and should be saved.</returns>
     public static bool MigrateToFolderPipeline(string workDirectory, WorkspaceSessionState session)
@@ -95,8 +96,22 @@ public static partial class ProjectWorkspaceService
             }
         }
 
+        ForgetAutoOrientation(session);
         session.Version = WorkspaceSessionState.CurrentVersion;
         return true;
+    }
+
+    /// <summary>
+    /// Drops the saved auto-orientation of each photo in an old project, so it is detected again when its crops are
+    /// restored: older versions found it with a weaker detector, and could save a wrong or missing one. A photo the
+    /// user turned by hand keeps its orientation, since that rotation was chosen on top of it.
+    /// </summary>
+    private static void ForgetAutoOrientation(WorkspaceSessionState session)
+    {
+        foreach (var crop in session.Scans.SelectMany(scan => scan.FinalCrops))
+        {
+            if (crop.RotationDegrees % 360 == 0) crop.AutoRotationDegrees = null;
+        }
     }
 
     private static string UniquePath(string path)

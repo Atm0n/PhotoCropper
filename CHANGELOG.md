@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Rotate in Finish**: ↺ ↻ in the editor (or R), and "Rotate 90°" for the selected photos, for the few photos whose orientation the Crops stage missed. The photo itself turns (losslessly), and so does its box on the scan, so Crops shows it the same way; its repair strokes and hand-set trim turn with it.
 - **Adjust the trim by hand** (Finish editor, Border section): **Adjust** shows the trim as a frame on the photo; drag its edges, or a corner for two at once, to set exactly what the final photo keeps, with a magnifier showing the edge while you drag. **Automatic** goes back to the border found automatically. The frame belongs to the photo: presets and "Copy settings" keep each photo's own. What the trim leaves out is now shaded live in the viewer.
 - **Photo types in Finish**: each photo is labelled black & white, sepia, faded colour or colour, and the chips above the grid show one type at a time, with how many photos each has. "Select all" then selects just that type. **Suggested by type** gives each selected photo the preset that suits its kind of print: Black & white, Sepia, Faded colour print, or Only clean dust for colour photos in good shape. Types are told from the photos' colours; aged or toned black-and-white prints and prints on tinted album pages count as black and white.
 
@@ -16,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Finish, several photos at once**: the bar now has a checkbox each for automatic restoration, dust removal and border trimming, in place of the "Trim border: on / off" buttons. Each shows whether all, none or (with a dash) only some of the selected photos have it, and one click turns it on for all of them, or off when all had it.
 
 ### Fixed
+- **Old projects** get each photo's orientation detected again when they are upgraded (opened for the first time in 3.x), instead of keeping one an older version saved, which could be wrong or missing. Photos turned by hand keep theirs.
+- A crash (*Cannot access a disposed object*) when the preview was rendered again while dragging a trim edge with the magnifier showing.
 - **Trim white border** now finds the border on far more real prints. A crop often holds a band of album page or a sliver of scanner bed outside the print, scalloped (deckle) edges cast small shadows, and worn corners show the bed: each of these stopped it before. Now everything light around the picture (bed, page, border) is trimmed up to where the picture starts, and a print with a pale background along one edge is no longer mistaken for a bordered one. On a real 126-photo album it trims 18 of its 22 bordered prints, against 11 before, and still none of the 74 without a border.
 - Finish export now shows the completion notification and flashes the taskbar, as the export settings say; both settings did nothing before.
 

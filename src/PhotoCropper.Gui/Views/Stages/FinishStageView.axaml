@@ -145,6 +145,8 @@
 						<CheckBox Margin="0,0,10,6" IsChecked="{Binding MarkedRestoreColors}" Content="{DynamicResource LblAutoRestore}" ToolTip.Tip="{DynamicResource TipBulkToggle}"/>
 						<CheckBox Margin="0,0,10,6" IsChecked="{Binding MarkedRemoveDust}" Content="{DynamicResource LblRemoveDust}" ToolTip.Tip="{DynamicResource TipBulkToggle}"/>
 						<CheckBox Margin="0,0,14,6" IsChecked="{Binding MarkedTrimWhiteBorders}" Content="{DynamicResource LblTrimBorders}" ToolTip.Tip="{DynamicResource TipBulkToggle}"/>
+						<Button Classes="bulk" Margin="0,0,14,6" Command="{Binding RotateMarkedCommand}" Content="{DynamicResource BtnRotate}"
+								ToolTip.Tip="{DynamicResource TipRotateCw}"/>
 						<Button Margin="0,0,6,6" Padding="10,4" CornerRadius="5" Command="{Binding ExportMarkedCommand}"
 								Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}"
 								Content="{DynamicResource BtnExportMarked}"/>
@@ -200,6 +202,10 @@
 								ToolTip.Tip="{DynamicResource TipPreviousPhoto}" Content="‹"/>
 						<Button DockPanel.Dock="Left" Command="{Binding NextPhotoCommand}" Padding="10,4" Margin="4,0,0,0" CornerRadius="5"
 								ToolTip.Tip="{DynamicResource TipNextPhoto}" Content="›"/>
+						<Button DockPanel.Dock="Left" Command="{Binding RotateCounterClockwiseCommand}" Padding="10,4" Margin="8,0,0,0" CornerRadius="5"
+								ToolTip.Tip="{DynamicResource TipRotateCcw}" Content="↺"/>
+						<Button DockPanel.Dock="Left" Command="{Binding RotateClockwiseCommand}" Padding="10,4" Margin="4,0,0,0" CornerRadius="5"
+								ToolTip.Tip="{DynamicResource TipRotateCw}" Content="↻"/>
 						<ContentControl DockPanel.Dock="Left" Content="{Binding SelectedPhoto}" VerticalAlignment="Center" Margin="12,0,0,0">
 							<ContentControl.ContentTemplate>
 								<DataTemplate x:DataType="vm:FinishPhotoViewModel">

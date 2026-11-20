@@ -51,6 +51,9 @@ internal interface IStageHost
     Task<bool> RunBusyAsync(string message, Func<Task> work);
 
     void SaveWorkspace();
+
+    /// <summary>A scan's saved boxes changed outside the Crops stage (e.g. a photo rotated in Finish): reload them.</summary>
+    void ScanCropsChanged(string scanRelativePath);
     void ShowStatus(string message);
 
     /// <summary>Tells the user a long export has finished: a popup and a taskbar flash, as the export settings allow.</summary>

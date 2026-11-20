@@ -120,6 +120,27 @@ public sealed class RefinementPersistenceTests : IDisposable
         engine.PhotoRotations.ContainsKey(0).ShouldBeFalse("auto-orientation is not a user rotation");
     }
 
+    [Theory]
+    [InlineData(null, 90)] // an old project's photo, its orientation forgotten when it was upgraded: detected again
+    [InlineData(0, 0)]     // a saved orientation is reused as it is
+    public void RestoreFromSavedCrops_WithoutSavedOrientation_ShouldDetectIt(int? saved, int expected)
+    {
+        // A landscape photo lying on its side on a white scan.
+        string scanPath = Path.Combine(_tempDir, "turned_landscape.png");
+        using (var scan = new OpenCvSharp.Mat(600, 600, OpenCvSharp.MatType.CV_8UC3, OpenCvSharp.Scalar.All(245)))
+        using (var photo = TestImageFactory.CreateSkyLandscapePhoto(240, 240, orientation: 90))
+        using (var target = new OpenCvSharp.Mat(scan, new OpenCvSharp.Rect(180, 180, 240, 240)))
+        {
+            photo.CopyTo(target);
+            OpenCvSharp.Cv2.ImWrite(scanPath, scan);
+        }
+        using var engine = new PhotoCropperEngine(scanPath) { AutoOrientPhotos = true };
+
+        engine.RestoreFromSavedCrops([new WorkspaceCropData { CenterX = 300, CenterY = 300, Width = 240, Height = 240, AutoRotationDegrees = saved }]);
+
+        engine.AcceptedCandidates[0].OrientationDegrees.ShouldBe(expected);
+    }
+
     [Fact]
     public void AddManualCrop_ShouldKeepPhotosRawCopiesAndBoxesAligned()
     {
