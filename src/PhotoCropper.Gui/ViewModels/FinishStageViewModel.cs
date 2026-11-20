@@ -138,26 +138,27 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     // The bulk bar's checkboxes: ticked when every marked photo has the option, empty when none has it, and a dash
     // when some have it. A click turns it on for all of them, or off when all of them already had it.
+    // A click on a dash always turns it on, whatever the checkbox sends (it may send false or null).
 
     /// <summary>Automatic restoration for the marked photos.</summary>
     public bool? MarkedRestoreColors
     {
         get => MarkedState(p => p.RestoreColors);
-        set => ToggleForMarked(MarkedRestoreColors, (p, on) => p.RestoreColors = on);
+        set => SetForMarked(MarkedRestoreColors == null || value != false, (p, on) => p.RestoreColors = on);
     }
 
     /// <summary>Dust and scratch removal for the marked photos.</summary>
     public bool? MarkedRemoveDust
     {
         get => MarkedState(p => p.RemoveDust);
-        set => ToggleForMarked(MarkedRemoveDust, (p, on) => p.RemoveDust = on);
+        set => SetForMarked(MarkedRemoveDust == null || value != false, (p, on) => p.RemoveDust = on);
     }
 
     /// <summary>White-border trimming for the marked photos.</summary>
     public bool? MarkedTrimWhiteBorders
     {
         get => MarkedState(p => p.TrimWhiteBorders);
-        set => ToggleForMarked(MarkedTrimWhiteBorders, (p, on) => p.TrimWhiteBorders = on);
+        set => SetForMarked(MarkedTrimWhiteBorders == null || value != false, (p, on) => p.TrimWhiteBorders = on);
     }
 
     private bool? MarkedState(Func<FinishPhotoViewModel, bool> option)
@@ -168,10 +169,8 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         return on == marked.Count ? true : on == 0 ? false : null;
     }
 
-    private void ToggleForMarked(bool? current, Action<FinishPhotoViewModel, bool> set)
+    private void SetForMarked(bool on, Action<FinishPhotoViewModel, bool> set)
     {
-        // Decided from the current state, not the value the checkbox sends, so a click on a dash always turns it on.
-        bool on = current != true;
         foreach (var row in Marked) set(row, on);
         RaiseMarkedToggles();
     }

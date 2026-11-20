@@ -106,7 +106,7 @@ internal sealed partial class ScanStageViewModel : ObservableObject
             {
                 using var stream = File.OpenRead(row.FilePath);
                 return Bitmap.DecodeToWidth(stream, ThumbnailWidth);
-            });
+            }, CancellationToken.None); // a thumbnail is small and cached: never cancelled
 
             // A load that outlives a rebuild may finish off the UI thread (always in tests): keep the cache consistent.
             lock (_thumbnails)
