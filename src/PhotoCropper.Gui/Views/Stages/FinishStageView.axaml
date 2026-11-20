@@ -15,6 +15,17 @@
 			<Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}"/>
 			<Setter Property="BorderThickness" Value="2"/>
 		</Style>
+		<Style Selector="Button.styleChip">
+			<Setter Property="Padding" Value="10,3"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Background" Value="{DynamicResource AppSubtleCardBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+		</Style>
+		<Style Selector="Button.styleChip.active">
+			<Setter Property="Background" Value="{DynamicResource AppButtonAccentBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AppButtonAccentTextBrush}"/>
+		</Style>
 		<Style Selector="Button.bulk">
 			<Setter Property="Padding" Value="8,4"/>
 			<Setter Property="CornerRadius" Value="5"/>
@@ -91,9 +102,30 @@
 			</Border>
 
 			<!-- Photo grid: click a photo to open it in the editor -->
-			<Grid Grid.Row="1" IsVisible="{Binding !IsEmpty}" RowDefinitions="Auto, *">
+			<Grid Grid.Row="1" IsVisible="{Binding !IsEmpty}" RowDefinitions="Auto, Auto, *">
+				<!-- Photo types: show one type at a time -->
+				<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8" IsVisible="{Binding !HasSelection}"
+							ToolTip.Tip="{DynamicResource TipStyleFilter}">
+					<ItemsControl ItemsSource="{Binding StyleFilters}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<StackPanel Orientation="Horizontal" Spacing="6"/>
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate x:DataType="vm:StyleFilterViewModel">
+								<Button Classes="styleChip" Classes.active="{Binding IsActive}" Content="{Binding Text}"
+										Command="{Binding $parent[UserControl].((vm:FinishStageViewModel)DataContext).ShowStyleCommand}"
+										CommandParameter="{Binding}"/>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+					<TextBlock Text="{DynamicResource LblSortingStyles}" IsVisible="{Binding IsSortingStyles}" FontSize="11"
+							   VerticalAlignment="Center" Foreground="{DynamicResource AppTextMutedBrush}"/>
+				</StackPanel>
+
 				<!-- Bulk actions for the photos marked in the grid (Ctrl+click, Shift+click or their tick) -->
-				<Border Grid.Row="0" Padding="10,8" Margin="0,0,0,8" CornerRadius="6"
+				<Border Grid.Row="1" Padding="10,8" Margin="0,0,0,8" CornerRadius="6"
 						Background="{DynamicResource AppCardBackgroundBrush}" BorderBrush="{DynamicResource AppAccentBrush}" BorderThickness="1">
 					<Border.IsVisible>
 						<MultiBinding Converter="{x:Static BoolConverters.And}">
@@ -103,13 +135,16 @@
 					</Border.IsVisible>
 					<WrapPanel>
 						<TextBlock Text="{Binding MarkedText}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,14,6"/>
+						<Button Classes="bulk" Margin="0,0,14,6" Command="{Binding ApplySuggestedToMarkedCommand}" Content="{DynamicResource BtnSuggestedPresets}"
+								ToolTip.Tip="{DynamicResource TipSuggestedPresets}" FontWeight="SemiBold"/>
 						<Button Classes="bulk" Margin="0,0,6,6" Command="{Binding ApplyPresetToMarkedCommand}" CommandParameter="faded" Content="{DynamicResource PresetFaded}"/>
 						<Button Classes="bulk" Margin="0,0,6,6" Command="{Binding ApplyPresetToMarkedCommand}" CommandParameter="bw" Content="{DynamicResource PresetBlackAndWhite}"/>
 						<Button Classes="bulk" Margin="0,0,6,6" Command="{Binding ApplyPresetToMarkedCommand}" CommandParameter="sepia" Content="{DynamicResource PresetSepia}"/>
 						<Button Classes="bulk" Margin="0,0,6,6" Command="{Binding ApplyPresetToMarkedCommand}" CommandParameter="dust" Content="{DynamicResource PresetOnlyDust}"/>
 						<Button Classes="bulk" Margin="0,0,14,6" Command="{Binding ApplyPresetToMarkedCommand}" CommandParameter="none" Content="{DynamicResource PresetNone}"/>
-						<Button Classes="bulk" Margin="0,0,6,6" Command="{Binding SetTrimForMarkedCommand}" CommandParameter="on" Content="{DynamicResource BtnTrimOn}" ToolTip.Tip="{DynamicResource TipTrimBorders}"/>
-						<Button Classes="bulk" Margin="0,0,14,6" Command="{Binding SetTrimForMarkedCommand}" CommandParameter="off" Content="{DynamicResource BtnTrimOff}"/>
+						<CheckBox Margin="0,0,10,6" IsChecked="{Binding MarkedRestoreColors}" Content="{DynamicResource LblAutoRestore}" ToolTip.Tip="{DynamicResource TipBulkToggle}"/>
+						<CheckBox Margin="0,0,10,6" IsChecked="{Binding MarkedRemoveDust}" Content="{DynamicResource LblRemoveDust}" ToolTip.Tip="{DynamicResource TipBulkToggle}"/>
+						<CheckBox Margin="0,0,14,6" IsChecked="{Binding MarkedTrimWhiteBorders}" Content="{DynamicResource LblTrimBorders}" ToolTip.Tip="{DynamicResource TipBulkToggle}"/>
 						<Button Margin="0,0,6,6" Padding="10,4" CornerRadius="5" Command="{Binding ExportMarkedCommand}"
 								Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}"
 								Content="{DynamicResource BtnExportMarked}"/>
@@ -117,7 +152,7 @@
 					</WrapPanel>
 				</Border>
 
-				<ListBox x:Name="lstPhotos" Grid.Row="1" ItemsSource="{Binding Photos}" IsVisible="{Binding !HasSelection}" SelectedItem="{Binding SelectedPhoto}"
+				<ListBox x:Name="lstPhotos" Grid.Row="2" ItemsSource="{Binding VisiblePhotos}" IsVisible="{Binding !HasSelection}" SelectedItem="{Binding SelectedPhoto}"
 						 ToolTip.Tip="{DynamicResource TipFinishGrid}"
 						 Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 					<ListBox.ItemsPanel>
@@ -136,7 +171,14 @@
 												  ToolTip.Tip="{DynamicResource TipMarkPhoto}"/>
 									</Panel>
 									<TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-									<TextBlock Text="{Binding SourceText}" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}" TextTrimming="CharacterEllipsis"/>
+									<DockPanel>
+										<Border DockPanel.Dock="Right" IsVisible="{Binding HasStyle}" Padding="6,1" CornerRadius="8" Margin="6,0,0,0"
+												Background="{DynamicResource AppSubtleCardBrush}">
+											<TextBlock Text="{Binding StyleText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+										</Border>
+										<TextBlock Text="{Binding SourceText}" FontSize="11" Foreground="{DynamicResource AppTextMutedBrush}" TextTrimming="CharacterEllipsis"
+												   VerticalAlignment="Center"/>
+									</DockPanel>
 									<CheckBox IsChecked="{Binding RestoreColors}" Content="{DynamicResource LblAutoRestore}"/>
 									<CheckBox IsChecked="{Binding RemoveDust}" Content="{DynamicResource LblRemoveDust}"/>
 									<CheckBox IsChecked="{Binding TrimWhiteBorders}" Content="{DynamicResource LblTrimBorders}" ToolTip.Tip="{DynamicResource TipTrimBorders}"/>
@@ -149,7 +191,7 @@
 				</ListBox>
 
 				<!-- Editor: the selected photo large (zoom, pan, before/after split), settings on the right, filmstrip below -->
-				<Grid Grid.RowSpan="2" IsVisible="{Binding HasSelection}" RowDefinitions="Auto, *, Auto" ColumnDefinitions="*, 12, 340">
+				<Grid Grid.RowSpan="3" IsVisible="{Binding HasSelection}" RowDefinitions="Auto, *, Auto" ColumnDefinitions="*, 12, 340">
 					<!-- Editor toolbar -->
 					<DockPanel Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,8" LastChildFill="False">
 						<Button DockPanel.Dock="Left" Command="{Binding ClosePreviewCommand}" Padding="10,4" CornerRadius="5"
@@ -185,7 +227,8 @@
 					<Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="6"
 							BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ClipToBounds="True">
 						<local:CompareImageViewer x:Name="viewer" Before="{Binding BeforePreview}" After="{Binding AfterPreview}"
-												  IsPainting="{Binding IsRepairMode}" BrushSize="{Binding BrushSize}"/>
+												  IsPainting="{Binding IsRepairMode}" BrushSize="{Binding BrushSize}"
+												  IsTrimming="{Binding IsTrimMode}" Trim="{Binding TrimPreview}"/>
 					</Border>
 
 					<!-- Sidebar: repair brush and the photo's settings; every change updates the photo -->
@@ -264,6 +307,13 @@
 													<!-- The print's border -->
 													<TextBlock Classes="sectionTitle" Text="{DynamicResource LblBorder}"/>
 													<CheckBox IsChecked="{Binding TrimWhiteBorders}" Content="{DynamicResource LblTrimBorders}" ToolTip.Tip="{DynamicResource TipTrimBorders}"/>
+													<StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,4">
+														<ToggleButton Padding="10,4" CornerRadius="5" Content="{DynamicResource BtnAdjustTrim}" ToolTip.Tip="{DynamicResource TipAdjustTrim}"
+																	  IsChecked="{Binding $parent[UserControl].((vm:FinishStageViewModel)DataContext).IsTrimMode}"/>
+														<Button Padding="10,4" CornerRadius="5" Content="{DynamicResource BtnAutoTrim}" ToolTip.Tip="{DynamicResource TipAutoTrim}"
+																IsVisible="{Binding HasManualTrim}"
+																Command="{Binding $parent[UserControl].((vm:FinishStageViewModel)DataContext).ResetTrimCommand}"/>
+													</StackPanel>
 
 													<!-- Automatic restoration -->
 													<TextBlock Classes="sectionTitle" Text="{DynamicResource LblAutomatic}"/>
@@ -329,7 +379,7 @@
 					</Border>
 
 					<!-- Filmstrip: every photo, to switch quickly -->
-					<ListBox x:Name="lstFilmstrip" Grid.Row="2" Grid.ColumnSpan="3" Margin="0,8,0,0" ItemsSource="{Binding Photos}"
+					<ListBox x:Name="lstFilmstrip" Grid.Row="2" Grid.ColumnSpan="3" Margin="0,8,0,0" ItemsSource="{Binding VisiblePhotos}"
 							 SelectedItem="{Binding SelectedPhoto}" Background="Transparent"
 							 ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Disabled">
 						<ListBox.ItemsPanel>

@@ -19,61 +19,114 @@ internal static class InteractiveWizard
                 .Centered()
                 .Color(Color.Cyan1));
 
-        console.Write(new Rule("[bold cyan]Interactive Batch Extractor Wizard[/]").RuleStyle("grey"));
+        console.Write(new Rule("[bold cyan]Interactive Wizard[/]").RuleStyle("grey"));
         console.MarkupLine("[grey]Follow the prompts below to configure and run photo extraction.[/]\n");
 
-        // 1. Input Selection
-        List<string> scanFiles = ConfigureInputs(console, options);
-        if (scanFiles.Count == 0)
+        // 0. What to do: the one-step batch, one of its stages, or an app project
+        WizardTask task = ConfigureTask(console, options);
+        bool cropping = task != WizardTask.RestoreOnly;
+        bool restoring = task != WizardTask.CropOnly;
+
+        // 1. Project folder and inputs
+        if (task == WizardTask.Project) ConfigureProjectDirectory(console, options);
+        List<string> scanFiles = ConfigureInputs(console, options, task);
+        if (scanFiles.Count == 0 && task != WizardTask.Project)
         {
             console.MarkupLine("[yellow]No input files provided. Wizard cancelled.[/]");
             return null;
         }
 
-        // 2. Output Directory
-        ConfigureOutputDirectory(console, options, scanFiles);
+        // 2. Output Directory (a project writes to its own Final/ folder)
+        if (task != WizardTask.Project) ConfigureOutputDirectory(console, options, scanFiles, task);
 
-        // 3. Format & Quality
-        ConfigureFormatAndQuality(console, options);
+        // 3. Format & Quality (the crop stage always writes lossless PNGs)
+        if (task != WizardTask.CropOnly) ConfigureFormatAndQuality(console, options);
 
         // 4. AI & Enhancements
-        ConfigureEnhancements(console, options);
+        ConfigureEnhancements(console, options, cropping, restoring);
 
         // 5. Detection Settings & Auto-Tune
-        ConfigureDetection(console, options);
+        if (cropping) ConfigureDetection(console, options);
 
-        // 6. Filename Pattern & EXIF Metadata
+        // 6. Filename Pattern & EXIF Metadata (restoring alone keeps each photo's name)
         ConfigureVintageExifMetadata(console, options);
-        ConfigureOutputFilenamePattern(console, options);
+        if (cropping) ConfigureOutputFilenamePattern(console, options);
 
         // 7. Performance / Threads
         ConfigurePerformance(console, options);
 
         // 8. Confirmation Summary
-        DisplaySummary(console, options, scanFiles.Count);
+        DisplaySummary(console, options, scanFiles.Count, task);
 
         bool confirmed = console.Prompt(
-            new ConfirmationPrompt("\n[bold green]Start batch extraction now?[/]")
+            new ConfirmationPrompt("\n[bold green]Start now?[/]")
             {
                 DefaultValue = true
             });
 
         if (!confirmed)
         {
-            console.MarkupLine("[yellow]Batch extraction cancelled by user.[/]");
+            console.MarkupLine("[yellow]Cancelled by user.[/]");
             return null;
         }
 
         return options;
     }
 
-    private static List<string> ConfigureInputs(IAnsiConsole console, CliOptions options)
+    /// <summary>What the wizard sets up: the one-step batch, one of its two stages, or an app project.</summary>
+    internal enum WizardTask { Batch, CropOnly, RestoreOnly, Project }
+
+    private const string TaskBatch = "Crop and restore scans in one step (Recommended)";
+    private const string TaskCrop = "Crop scans only (lossless PNGs, to check before restoring)";
+    private const string TaskRestore = "Restore photos that are already cropped";
+    private const string TaskProject = "Add scans to a PhotoCropper project (to finish in the app)";
+
+    private static WizardTask ConfigureTask(IAnsiConsole console, CliOptions options)
     {
+        string choice = console.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold]What do you want to do?[/]")
+                .AddChoices(TaskBatch, TaskCrop, TaskRestore, TaskProject));
+
+        WizardTask task = choice switch
+        {
+            TaskCrop => WizardTask.CropOnly,
+            TaskRestore => WizardTask.RestoreOnly,
+            TaskProject => WizardTask.Project,
+            _ => WizardTask.Batch,
+        };
+        options.Stage = task switch
+        {
+            WizardTask.CropOnly => PipelineStage.Crop,
+            WizardTask.RestoreOnly => PipelineStage.Restore,
+            _ => PipelineStage.All,
+        };
+        if (task != WizardTask.Project) options.ProjectDirectory = null;
+        console.MarkupLine($"  [grey]{Markup.Escape(choice)}[/]\n");
+        return task;
+    }
+
+    private static void ConfigureProjectDirectory(IAnsiConsole console, CliOptions options)
+    {
+        string defaultDir = options.ProjectDirectory
+            ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "PhotoCropper", "Project");
+        string raw = console.Prompt(
+            new TextPrompt<string>("[bold]Project folder[/] [grey](created if it doesn't exist; don't use one open in the app):[/]")
+                .DefaultValue(defaultDir));
+        options.ProjectDirectory = raw.Trim('"', '\'', ' ');
+        console.WriteLine();
+    }
+
+    private static List<string> ConfigureInputs(IAnsiConsole console, CliOptions options, WizardTask task = WizardTask.Batch)
+    {
+        string what = task == WizardTask.RestoreOnly ? "photo" : "scan";
         while (true)
         {
-            string inputPrompt = options.Inputs.Count > 0
-                ? $"[bold]Scan file or directory path[/] [grey](current: {options.Inputs[0]}):[/]"
-                : "[bold]Enter scan image file or directory path:[/]";
+            string inputPrompt = task == WizardTask.Project
+                ? "[bold]New scans to add, file or directory[/] [grey](press Enter for none):[/]"
+                : options.Inputs.Count > 0
+                    ? $"[bold]{what[0].ToString().ToUpperInvariant()}{what[1..]} file or directory path[/] [grey](current: {Markup.Escape(options.Inputs[0])}):[/]"
+                    : $"[bold]Enter {what} image file or directory path:[/]";
 
             string rawPath = console.Prompt(
                 new TextPrompt<string>(inputPrompt)
@@ -84,6 +137,12 @@ internal static class InteractiveWizard
 
             if (string.IsNullOrWhiteSpace(cleanedPath))
             {
+                if (task == WizardTask.Project)
+                {
+                    options.Inputs.Clear();
+                    console.WriteLine();
+                    return [];
+                }
                 if (options.Inputs.Count > 0)
                 {
                     cleanedPath = options.Inputs[0];
@@ -122,13 +181,14 @@ internal static class InteractiveWizard
                 continue;
             }
 
-            console.MarkupLine($"[bold green]✓ Found {collected.Count} scan file(s) ready for extraction.[/]\n");
+            console.MarkupLine($"[bold green]✓ Found {collected.Count} {what} file(s).[/]\n");
             return collected;
         }
     }
 
-    private static void ConfigureOutputDirectory(IAnsiConsole console, CliOptions options, List<string> scanFiles)
+    private static void ConfigureOutputDirectory(IAnsiConsole console, CliOptions options, List<string> scanFiles, WizardTask task = WizardTask.Batch)
     {
+        string folder = task == WizardTask.RestoreOnly ? RestoreProcessor.DefaultOutputFolderName : "cropped";
         string defaultDir;
         if (!string.IsNullOrWhiteSpace(options.OutputDirectory))
         {
@@ -136,20 +196,20 @@ internal static class InteractiveWizard
         }
         else if (options.Inputs.Count > 0 && Directory.Exists(options.Inputs[0]))
         {
-            defaultDir = Path.Combine(options.Inputs[0], "cropped");
+            defaultDir = Path.Combine(options.Inputs[0], folder);
         }
         else if (scanFiles.Count > 0)
         {
             string? parent = Path.GetDirectoryName(scanFiles[0]);
-            defaultDir = Path.Combine(string.IsNullOrEmpty(parent) ? "." : parent, "cropped");
+            defaultDir = Path.Combine(string.IsNullOrEmpty(parent) ? "." : parent, folder);
         }
         else
         {
-            defaultDir = Path.Combine(Environment.CurrentDirectory, "cropped");
+            defaultDir = Path.Combine(Environment.CurrentDirectory, folder);
         }
 
         string rawOut = console.Prompt(
-            new TextPrompt<string>("[bold]Destination directory for cropped photos:[/]")
+            new TextPrompt<string>(task == WizardTask.RestoreOnly ? "[bold]Destination directory for restored photos:[/]" : "[bold]Destination directory for cropped photos:[/]")
                 .DefaultValue(defaultDir));
 
         options.OutputDirectory = rawOut.Trim('"', '\'', ' ');
@@ -183,27 +243,46 @@ internal static class InteractiveWizard
         console.WriteLine();
     }
 
-    private static void ConfigureEnhancements(IAnsiConsole console, CliOptions options)
+    private static void ConfigureEnhancements(IAnsiConsole console, CliOptions options, bool cropping = true, bool restoring = true)
     {
         console.MarkupLine("[bold cyan]Image Processing & AI Enhancements[/]");
 
-        options.AutoOrient = console.Prompt(
-            new ConfirmationPrompt("  Enable AI Face & Landscape auto-orientation?")
-            {
-                DefaultValue = options.AutoOrient
-            });
+        if (cropping)
+        {
+            options.AutoOrient = console.Prompt(
+                new ConfirmationPrompt("  Enable AI Face & Landscape auto-orientation?")
+                {
+                    DefaultValue = options.AutoOrient
+                });
+        }
 
-        options.RestoreColors = console.Prompt(
-            new ConfirmationPrompt("  Enable Vintage Color Restoration (Auto-WB + CLAHE dynamic contrast)?")
-            {
-                DefaultValue = options.RestoreColors
-            });
+        if (restoring)
+        {
+            options.RestoreColors = console.Prompt(
+                new ConfirmationPrompt("  Enable Vintage Color Restoration (Auto-WB + CLAHE dynamic contrast)?")
+                {
+                    DefaultValue = options.RestoreColors
+                });
 
-        options.RemoveDust = console.Prompt(
-            new ConfirmationPrompt("  Enable Automated Dust, Hair & Scratch inpainting?")
-            {
-                DefaultValue = options.RemoveDust
-            });
+            options.RemoveDust = console.Prompt(
+                new ConfirmationPrompt("  Enable Automated Dust, Hair & Scratch inpainting?")
+                {
+                    DefaultValue = options.RemoveDust
+                });
+
+            options.TrimBorders = console.Prompt(
+                new ConfirmationPrompt("  Trim prints' white borders (photos without one are kept whole)?")
+                {
+                    DefaultValue = options.TrimBorders
+                });
+        }
+        else
+        {
+            // The crop stage keeps the photos as cropped: restoring (and trimming) is the next stage.
+            options.RestoreColors = false;
+            options.RemoveDust = false;
+            options.TrimBorders = false;
+        }
 
         console.WriteLine();
     }
@@ -439,7 +518,7 @@ internal static class InteractiveWizard
         console.WriteLine();
     }
 
-    private static void DisplaySummary(IAnsiConsole console, CliOptions options, int fileCount)
+    private static void DisplaySummary(IAnsiConsole console, CliOptions options, int fileCount, WizardTask task = WizardTask.Batch)
     {
         var table = new Table()
             .Border(TableBorder.Rounded)
@@ -447,18 +526,39 @@ internal static class InteractiveWizard
             .AddColumn(new TableColumn("[bold cyan]Parameter[/]").Width(24))
             .AddColumn(new TableColumn("[bold cyan]Configured Value[/]"));
 
-        table.AddRow("Total Scans", $"[bold white]{fileCount}[/] file(s)");
-        table.AddRow("Input Source", Markup.Escape(options.Inputs[0]) + (options.Recursive ? " [grey](recursive)[/]" : ""));
-        table.AddRow("Output Directory", $"[bold white]{Markup.Escape(options.OutputDirectory ?? "cropped")}[/]");
-        table.AddRow("Output Format", options.Format == "JPEG" ? $"[bold white]JPEG[/] (Quality: {options.JpegQuality})" : "[bold white]PNG[/] (Lossless)");
-        table.AddRow("Detection Profile", $"Tolerance: {options.Tolerance:0}, MinSize: {options.MinAreaFactor * 100:0}%, MaxSize: {options.MaxAreaFactor * 100:0}%");
-        table.AddRow("Min Expected Photos", $"{options.MinExpectedPhotos} photo(s) per scan");
-        table.AddRow("Max Expected Photos", options.MaxExpectedPhotos == int.MaxValue ? "[grey]Unlimited[/]" : $"{options.MaxExpectedPhotos} photo(s) per scan");
-        table.AddRow("⚡ Auto-Tune Sweep", options.AlwaysAutoTune ? "[bold green]Always[/]" : options.AutoTune ? "[bold yellow]On Mismatch[/]" : "[grey]Disabled[/]");
-        table.AddRow("AI Auto-Orientation", options.AutoOrient ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
-        table.AddRow("Color Restoration", options.RestoreColors ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
-        table.AddRow("Dust/Scratch Removal", options.RemoveDust ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
-        table.AddRow("Naming Pattern", $"[bold yellow]{Markup.Escape(options.FileNamePattern)}[/]");
+        bool cropping = task != WizardTask.RestoreOnly;
+        bool restoring = task != WizardTask.CropOnly;
+        table.AddRow("Task", task switch
+        {
+            WizardTask.CropOnly => "Crop only",
+            WizardTask.RestoreOnly => "Restore only",
+            WizardTask.Project => "Project",
+            _ => "Crop and restore",
+        });
+        if (task == WizardTask.Project) table.AddRow("Project Folder", $"[bold white]{Markup.Escape(options.ProjectDirectory ?? "")}[/]");
+        table.AddRow(cropping ? "Total Scans" : "Total Photos", $"[bold white]{fileCount}[/] file(s)");
+        if (options.Inputs.Count > 0) table.AddRow("Input Source", Markup.Escape(options.Inputs[0]) + (options.Recursive ? " [grey](recursive)[/]" : ""));
+        table.AddRow("Output Directory", task == WizardTask.Project
+            ? "[bold white]Final/[/] [grey](in the project)[/]"
+            : $"[bold white]{Markup.Escape(options.OutputDirectory ?? "cropped")}[/]");
+        table.AddRow("Output Format", task == WizardTask.CropOnly || options.Format != "JPEG"
+            ? "[bold white]PNG[/] (Lossless)"
+            : $"[bold white]JPEG[/] (Quality: {options.JpegQuality})");
+        if (cropping)
+        {
+            table.AddRow("Detection Profile", $"Tolerance: {options.Tolerance:0}, MinSize: {options.MinAreaFactor * 100:0}%, MaxSize: {options.MaxAreaFactor * 100:0}%");
+            table.AddRow("Min Expected Photos", $"{options.MinExpectedPhotos} photo(s) per scan");
+            table.AddRow("Max Expected Photos", options.MaxExpectedPhotos == int.MaxValue ? "[grey]Unlimited[/]" : $"{options.MaxExpectedPhotos} photo(s) per scan");
+            table.AddRow("⚡ Auto-Tune Sweep", options.AlwaysAutoTune ? "[bold green]Always[/]" : options.AutoTune ? "[bold yellow]On Mismatch[/]" : "[grey]Disabled[/]");
+            table.AddRow("AI Auto-Orientation", options.AutoOrient ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
+        }
+        if (restoring)
+        {
+            table.AddRow("Color Restoration", options.RestoreColors ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
+            table.AddRow("Dust/Scratch Removal", options.RemoveDust ? "[bold green]Enabled[/]" : "[grey]Disabled[/]");
+            table.AddRow("White Borders", options.TrimBorders ? "[bold green]Trimmed[/]" : "[grey]Kept[/]");
+        }
+        if (cropping) table.AddRow("Naming Pattern", $"[bold yellow]{Markup.Escape(options.FileNamePattern)}[/]");
 
         if (options.Year.HasValue || !string.IsNullOrWhiteSpace(options.Date) || !string.IsNullOrWhiteSpace(options.Description) || !string.IsNullOrWhiteSpace(options.Photographer))
         {
@@ -472,7 +572,7 @@ internal static class InteractiveWizard
 
         table.AddRow("Worker Threads", $"{options.Threads} CPU threads");
 
-        console.Write(new Panel(table).Header("[bold cyan]Batch Job Configuration Summary[/]").Border(BoxBorder.Rounded));
+        console.Write(new Panel(table).Header("[bold cyan]Configuration Summary[/]").Border(BoxBorder.Rounded));
     }
 
     private static CliOptions CloneOptions(CliOptions source)
@@ -489,6 +589,9 @@ internal static class InteractiveWizard
             AutoOrient = source.AutoOrient,
             RestoreColors = source.RestoreColors,
             RemoveDust = source.RemoveDust,
+            TrimBorders = source.TrimBorders,
+            Stage = source.Stage,
+            ProjectDirectory = source.ProjectDirectory,
             Threads = source.Threads,
             Recursive = source.Recursive,
             Verbose = source.Verbose,

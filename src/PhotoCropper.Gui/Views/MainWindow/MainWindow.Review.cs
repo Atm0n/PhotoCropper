@@ -11,8 +11,6 @@ internal sealed partial class MainWindow : IReviewHost
 
     internal bool IsInReviewMode => _reviewVm.IsOpen;
 
-    private async void BtnReviewPhotos_Click(object? sender, RoutedEventArgs e) => await OpenReviewModeAsync();
-
     private Task OpenReviewModeAsync()
     {
         if (isLoading || _isNavigating || ScanSessions.Count == 0) return Task.CompletedTask;

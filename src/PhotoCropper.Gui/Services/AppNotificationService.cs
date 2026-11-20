@@ -40,27 +40,18 @@ internal sealed class AppNotificationService
         ShowNotification(title, message, NotificationType.Error, expiration ?? TimeSpan.FromSeconds(6), onClick);
     }
 
-    public void NotifyExportCompleted(int photoCount, string destinationFolder)
+    /// <summary>The end of an export: flashes the taskbar button and shows the message, as the export settings allow.</summary>
+    public void NotifyExportCompleted(string message, bool succeeded)
     {
-        ArgumentNullException.ThrowIfNull(destinationFolder);
+        ArgumentNullException.ThrowIfNull(message);
 
-        var settings = SettingsManager.Instance.Settings;
-
-        if (settings.FlashTaskbarOnCompletion && _window != null)
+        if (SettingsManager.Instance.Settings.FlashTaskbarOnCompletion && _window != null)
         {
             WindowsTaskbarHelper.FlashWindow(_window);
         }
 
-        if (settings.ShowNotifications)
-        {
-            string title = "PhotoCropper";
-            string folderName = System.IO.Path.GetFileName(destinationFolder);
-            string message = photoCount == 1
-                ? $"Successfully exported 1 photo to '{folderName}'."
-                : $"Successfully exported {photoCount} photos to '{folderName}'.";
-
-            ShowSuccess(title, message, TimeSpan.FromSeconds(4));
-        }
+        if (succeeded) ShowSuccess("PhotoCropper", message);
+        else ShowWarning("PhotoCropper", message);
     }
 
     private void ShowNotification(string title, string message, NotificationType type, TimeSpan expiration, Action? onClick = null)

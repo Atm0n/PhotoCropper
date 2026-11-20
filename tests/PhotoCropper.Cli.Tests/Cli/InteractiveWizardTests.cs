@@ -28,6 +28,8 @@ public sealed class InteractiveWizardTests : IDisposable
         using var console = new TestConsole();
         console.Profile.Capabilities.Interactive = true;
 
+        // 0. Task (default: crop and restore in one step)
+        console.Input.PushKey(ConsoleKey.Enter);
         // 1. Input path
         console.Input.PushTextWithEnter(_tempDir);
         // 1b. Recursive confirmation prompt (default: false)
@@ -41,7 +43,8 @@ public sealed class InteractiveWizardTests : IDisposable
         // 3b. JPEG Quality (default: 100)
         console.Input.PushKey(ConsoleKey.Enter);
 
-        // 4. Enhancements (AutoOrient, RestoreColors, RemoveDust - defaults: yes)
+        // 4. Enhancements (AutoOrient, RestoreColors, RemoveDust - defaults: yes; TrimBorders - default: no)
+        console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
@@ -81,8 +84,10 @@ public sealed class InteractiveWizardTests : IDisposable
         result.MaxExpectedPhotos.ShouldBe(int.MaxValue);
         result.AutoTune.ShouldBeFalse();
         result.FileNamePattern.ShouldBe("{original}_{index}");
-        console.Output.ShouldContain("Interactive Batch Extractor Wizard");
-        console.Output.ShouldContain("Batch Job Configuration Summary");
+        console.Output.ShouldContain("Interactive Wizard");
+        console.Output.ShouldContain("Configuration Summary");
+        result.TrimBorders.ShouldBeFalse();
+        result.Stage.ShouldBe(Models.PipelineStage.All);
     }
 
     [Fact]
@@ -91,6 +96,8 @@ public sealed class InteractiveWizardTests : IDisposable
         using var console = new TestConsole();
         console.Profile.Capabilities.Interactive = true;
 
+        // 0. Task
+        console.Input.PushKey(ConsoleKey.Enter);
         // 1. Input path
         console.Input.PushTextWithEnter(_tempDir);
         // Recursive?
@@ -103,7 +110,8 @@ public sealed class InteractiveWizardTests : IDisposable
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
 
-        // 4. Enhancements
+        // 4. Enhancements (orient, colours, dust, trim)
+        console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
@@ -135,6 +143,8 @@ public sealed class InteractiveWizardTests : IDisposable
         using var console = new TestConsole();
         console.Profile.Capabilities.Interactive = true;
 
+        // 0. Task
+        console.Input.PushKey(ConsoleKey.Enter);
         // 1. Input path
         console.Input.PushTextWithEnter(_scanFile);
 
@@ -146,10 +156,11 @@ public sealed class InteractiveWizardTests : IDisposable
         console.Input.PushKey(ConsoleKey.DownArrow);
         console.Input.PushKey(ConsoleKey.Enter);
 
-        // 4. Enhancements: Disable auto-orient ('n'), keep colors ('y'), disable dust ('n')
+        // 4. Enhancements: Disable auto-orient ('n'), keep colors ('y'), disable dust ('n'), trim borders ('y')
         console.Input.PushTextWithEnter("n");
         console.Input.PushTextWithEnter("y");
         console.Input.PushTextWithEnter("n");
+        console.Input.PushTextWithEnter("y");
 
         // 5. Detection profile: Down arrow to Sensitive (index 1), then Enter
         console.Input.PushKey(ConsoleKey.DownArrow);
@@ -191,6 +202,7 @@ public sealed class InteractiveWizardTests : IDisposable
         result.AutoOrient.ShouldBeFalse();
         result.RestoreColors.ShouldBeTrue();
         result.RemoveDust.ShouldBeFalse();
+        result.TrimBorders.ShouldBeTrue();
         result.Tolerance.ShouldBe(35.0);
         result.MinAreaFactor.ShouldBe(0.01); // every preset uses the app's smallest-photo size
         result.MinExpectedPhotos.ShouldBe(2);
@@ -210,6 +222,7 @@ public sealed class InteractiveWizardTests : IDisposable
         using var console = new TestConsole();
         console.Profile.Capabilities.Interactive = true;
 
+        console.Input.PushKey(ConsoleKey.Enter); // Task
         console.Input.PushTextWithEnter(_scanFile);
         console.Input.PushKey(ConsoleKey.Enter); // Output dir
         console.Input.PushKey(ConsoleKey.Enter); // Format JPEG
@@ -217,6 +230,7 @@ public sealed class InteractiveWizardTests : IDisposable
         console.Input.PushKey(ConsoleKey.Enter); // AutoOrient
         console.Input.PushKey(ConsoleKey.Enter); // Colors
         console.Input.PushKey(ConsoleKey.Enter); // Dust
+        console.Input.PushKey(ConsoleKey.Enter); // Trim borders
         console.Input.PushKey(ConsoleKey.Enter); // Profile
         console.Input.PushKey(ConsoleKey.Enter); // Min photos
         console.Input.PushKey(ConsoleKey.Enter); // Max photos
@@ -236,6 +250,82 @@ public sealed class InteractiveWizardTests : IDisposable
         result.ShouldNotBeNull();
         result.Date.ShouldBe("1995-12-25");
         console.Output.ShouldContain("Date must be in valid format");
+    }
+
+    [Fact]
+    public void Run_CropOnly_ShouldAskNoRestorationOrFormatQuestions()
+    {
+        using var console = new TestConsole();
+        console.Profile.Capabilities.Interactive = true;
+        console.Input.PushKey(ConsoleKey.DownArrow);             // Task: crop only
+        console.Input.PushKey(ConsoleKey.Enter);
+        console.Input.PushTextWithEnter(_scanFile);
+        console.Input.PushKey(ConsoleKey.Enter);                 // Output dir
+        console.Input.PushKey(ConsoleKey.Enter);                 // AutoOrient (no format, colours, dust or trim)
+        for (int i = 0; i < 4; i++) console.Input.PushKey(ConsoleKey.Enter); // Profile, min, max, auto-tune
+        console.Input.PushKey(ConsoleKey.Enter);                 // EXIF
+        console.Input.PushKey(ConsoleKey.Enter);                 // Pattern
+        console.Input.PushKey(ConsoleKey.Enter);                 // Threads
+        console.Input.PushKey(ConsoleKey.Enter);                 // Confirm
+
+        var result = InteractiveWizard.Run(console).ShouldNotBeNull();
+
+        result.Stage.ShouldBe(Models.PipelineStage.Crop);
+        result.RestoreColors.ShouldBeFalse();
+        result.TrimBorders.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Run_RestoreOnly_ShouldAskNoDetectionQuestionsAndWriteToRestored()
+    {
+        using var console = new TestConsole();
+        console.Profile.Capabilities.Interactive = true;
+        console.Input.PushKey(ConsoleKey.DownArrow);             // Task: restore only
+        console.Input.PushKey(ConsoleKey.DownArrow);
+        console.Input.PushKey(ConsoleKey.Enter);
+        console.Input.PushTextWithEnter(_tempDir);
+        console.Input.PushKey(ConsoleKey.Enter);                 // Recursive
+        console.Input.PushKey(ConsoleKey.Enter);                 // Output dir: <photos>/restored
+        console.Input.PushKey(ConsoleKey.Enter);                 // Format JPEG
+        console.Input.PushKey(ConsoleKey.Enter);                 // Quality
+        console.Input.PushKey(ConsoleKey.Enter);                 // Colours (no auto-orient)
+        console.Input.PushKey(ConsoleKey.Enter);                 // Dust
+        console.Input.PushTextWithEnter("y");                    // Trim borders
+        console.Input.PushKey(ConsoleKey.Enter);                 // EXIF (no detection, no pattern)
+        console.Input.PushKey(ConsoleKey.Enter);                 // Threads
+        console.Input.PushKey(ConsoleKey.Enter);                 // Confirm
+
+        var result = InteractiveWizard.Run(console).ShouldNotBeNull();
+
+        result.Stage.ShouldBe(Models.PipelineStage.Restore);
+        result.TrimBorders.ShouldBeTrue();
+        Path.GetFileName(result.OutputDirectory).ShouldBe(RestoreProcessor.DefaultOutputFolderName);
+    }
+
+    [Fact]
+    public void Run_Project_ShouldAskForTheFolderAndAllowNoNewScans()
+    {
+        string project = Path.Combine(_tempDir, "Album");
+        using var console = new TestConsole();
+        console.Profile.Capabilities.Interactive = true;
+        for (int i = 0; i < 3; i++) console.Input.PushKey(ConsoleKey.DownArrow); // Task: project
+        console.Input.PushKey(ConsoleKey.Enter);
+        console.Input.PushTextWithEnter(project);                // Project folder
+        console.Input.PushKey(ConsoleKey.Enter);                 // No new scans (and no output dir question)
+        console.Input.PushKey(ConsoleKey.Enter);                 // Format
+        console.Input.PushKey(ConsoleKey.Enter);                 // Quality
+        for (int i = 0; i < 4; i++) console.Input.PushKey(ConsoleKey.Enter); // Orient, colours, dust, trim
+        for (int i = 0; i < 4; i++) console.Input.PushKey(ConsoleKey.Enter); // Profile, min, max, auto-tune
+        console.Input.PushKey(ConsoleKey.Enter);                 // EXIF
+        console.Input.PushKey(ConsoleKey.Enter);                 // Pattern
+        console.Input.PushKey(ConsoleKey.Enter);                 // Threads
+        console.Input.PushKey(ConsoleKey.Enter);                 // Confirm
+
+        var result = InteractiveWizard.Run(console).ShouldNotBeNull();
+
+        result.ProjectDirectory.ShouldBe(project);
+        result.Inputs.ShouldBeEmpty();
+        result.Stage.ShouldBe(Models.PipelineStage.All);
     }
 
     public void Dispose()

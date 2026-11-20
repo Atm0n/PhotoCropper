@@ -2,455 +2,13 @@ using Avalonia.Media.Imaging;
 using Mat = OpenCvSharp.Mat;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PhotoCropper.Core.Extraction;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 
 namespace PhotoCropper.Gui.ViewModels;
-
-/// <summary>The three steps of the workflow, matching the project folders RawScans → Cropped → Final.</summary>
-internal enum AppStage
-{
-    Scan,
-    Crops,
-    Finish
-}
-
-/// <summary>What the stage view-models need from the window, kept as an interface so they can be tested without UI.</summary>
-internal interface IStageHost
-{
-    /// <summary>The open project folder, or null when no project is open.</summary>
-    string? WorkDirectory { get; }
-
-    /// <summary>The open project's session, or null when no project is open.</summary>
-    WorkspaceSessionState? Workspace { get; }
-
-    IReadOnlyList<Core.Workspace.ScanSessionItem> Scans { get; }
-
-    Task ScanAsync();
-
-    /// <summary>Opens the scanner settings (device, resolution, page size).</summary>
-    Task ConfigureScannerAsync();
-
-    /// <summary>Finds a scan's photos as the Crops stage does (it is then ready there) and returns their boxes.</summary>
-    Task<IReadOnlyList<WorkspaceCropData>> PrepareScanAsync(int scanIndex, CancellationToken ct);
-
-    Task ImportScansAsync();
-    void OpenScanInCrops(int scanIndex);
-
-    /// <summary>Deletes a scan from the project and disk, with its photos.</summary>
-    Task DiscardScanAsync(int scanIndex);
-
-    /// <summary>Scans a new page to replace a scan, keeping its place in the list.</summary>
-    Task RescanAsync(int scanIndex);
-
-    /// <summary>Asks the user for photo files to import (e.g. photos cropped elsewhere).</summary>
-    Task<IReadOnlyList<string>> PickPhotosToImportAsync();
-
-    /// <summary>How final photos are written (format, quality, naming pattern, default metadata, output folder).</summary>
-    FinalRenderOptions GetRenderOptions();
-
-    /// <summary>Restoration given to photos that are new to the pipeline.</summary>
-    RestorationSettings DefaultRestoration { get; }
-
-    /// <summary>Runs work behind the loading overlay; returns false if it failed or was skipped.</summary>
-    Task<bool> RunBusyAsync(string message, Func<Task> work);
-
-    void SaveWorkspace();
-    void ShowStatus(string message);
-    void OpenFolder(string path);
-}
-
-/// <summary>One scan in the Scan stage list.</summary>
-internal sealed partial class ScanRowViewModel(int index, string fileName, string photosText, bool isFlagged, string filePath = "") : ObservableObject
-{
-    public int Index { get; } = index;
-    public string FileName { get; } = fileName;
-    public string FilePath { get; } = filePath;
-    [ObservableProperty]
-    public partial string PhotosText { get; set; } = photosText;
-
-    /// <summary>True when the scan needs attention in the Crops stage (e.g. no photos found).</summary>
-    [ObservableProperty]
-    public partial bool IsFlagged { get; set; } = isFlagged;
-
-    [ObservableProperty]
-    public partial Bitmap? Thumbnail { get; set; }
-
-    /// <summary>True after a first click on Discard: the next click deletes the scan.</summary>
-    [ObservableProperty]
-    public partial bool IsConfirmingDiscard { get; set; }
-}
-
-/// <summary>Stage 1: acquire scans (scanner or import) and see how many photos each one has.</summary>
-internal sealed partial class ScanStageViewModel : ObservableObject
-{
-    private readonly IStageHost _host;
-
-    public ScanStageViewModel(IStageHost host)
-    {
-        ArgumentNullException.ThrowIfNull(host);
-        _host = host;
-    }
-
-    public ObservableCollection<ScanRowViewModel> Scans { get; } = [];
-
-    [ObservableProperty]
-    public partial bool IsEmpty { get; set; } = true;
-
-    [ObservableProperty]
-    public partial string Summary { get; set; } = string.Empty;
-
-    /// <summary>Scan thumbnail width in pixels.</summary>
-    internal const int ThumbnailWidth = 320;
-
-    /// <summary>Decoded thumbnails by file path, reused while the file is unchanged (scans are large to decode).</summary>
-    private readonly Dictionary<string, (DateTime WriteTime, Bitmap Bitmap)> _thumbnails = new(StringComparer.OrdinalIgnoreCase);
-
-    public void Refresh()
-    {
-        var previousPaths = Scans.Select(r => r.FilePath).ToList();
-        string? previousSelection = SelectedScan?.FilePath;
-        int previousIndex = SelectedScan?.Index ?? 0;
-        _rebuildingList = true;
-        Scans.Clear();
-        var sessions = _host.Scans;
-        for (int i = 0; i < sessions.Count; i++)
-        {
-            var scan = sessions[i];
-            int? count = KnownPhotoCount(_host.Workspace, _host.WorkDirectory, scan);
-            var row = new ScanRowViewModel(i, Path.GetFileName(scan.FilePath), PhotoCountText(count), count == 0, scan.FilePath);
-            Scans.Add(row);
-            _ = LoadThumbnailAsync(row);
-        }
-
-        // Free thumbnails of scans that are gone (discarded or replaced).
-        lock (_thumbnails)
-        {
-            foreach (string stale in _thumbnails.Keys.Where(k => !sessions.Any(s => string.Equals(s.FilePath, k, StringComparison.OrdinalIgnoreCase))).ToList())
-            {
-                _thumbnails[stale].Bitmap.Dispose();
-                _thumbnails.Remove(stale);
-            }
-        }
-
-        IsEmpty = Scans.Count == 0;
-        Summary = LocalizationService.Format(ResourceKeys.StageScanStatus, "{0} scans", Scans.Count);
-        _rebuildingList = false;
-        RestoreSelection(previousPaths, Scans.Any(r => previousPaths.Contains(r.FilePath)) ? previousSelection : null,
-            Scans.Any(r => previousPaths.Contains(r.FilePath)) ? previousIndex : 0);
-    }
-
-    private async Task LoadThumbnailAsync(ScanRowViewModel row)
-    {
-        try
-        {
-            if (!File.Exists(row.FilePath)) return;
-            DateTime writeTime = File.GetLastWriteTimeUtc(row.FilePath);
-            lock (_thumbnails)
-            {
-                if (_thumbnails.TryGetValue(row.FilePath, out var cached) && cached.WriteTime == writeTime)
-                {
-                    row.Thumbnail = cached.Bitmap;
-                    return;
-                }
-            }
-
-            var bitmap = await Task.Run(() =>
-            {
-                using var stream = File.OpenRead(row.FilePath);
-                return Bitmap.DecodeToWidth(stream, ThumbnailWidth);
-            });
-
-            // A load that outlives a rebuild may finish off the UI thread (always in tests): keep the cache consistent.
-            lock (_thumbnails)
-            {
-                if (_thumbnails.TryGetValue(row.FilePath, out var replaced)) replaced.Bitmap.Dispose();
-                _thumbnails[row.FilePath] = (writeTime, bitmap);
-            }
-            row.Thumbnail = bitmap;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
-        {
-            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not load scan thumbnail '{row.FilePath}': {ex.Message}");
-        }
-    }
-
-    private static string PhotoCountText(int? count) => count switch
-    {
-        null => LocalizationService.GetString(ResourceKeys.ScanStatusNotChecked, "Not checked yet"),
-        0 => LocalizationService.GetString(ResourceKeys.ScanStatusNoPhotos, "No photos found"),
-        _ => LocalizationService.Format(ResourceKeys.ScanStatusPhotos, "{0} photos", count.Value)
-    };
-
-    /// <summary>How many photos the scan has, or null when it hasn't been detected yet ("not checked").</summary>
-    internal static int? KnownPhotoCount(WorkspaceSessionState? workspace, string? workDirectory, Core.Workspace.ScanSessionItem scan)
-    {
-        ArgumentNullException.ThrowIfNull(scan);
-        if (scan.IsActive) return scan.PhotoCount;
-
-        if (workspace != null && workDirectory != null)
-        {
-            string relative = Path.GetRelativePath(workDirectory, scan.FilePath);
-            int saved = PhotoPipelineService.GetScanPhotos(workspace, relative).Count;
-            if (saved > 0) return saved;
-        }
-
-        // Boxes saved as they were edited.
-        if (scan.SavedCrops is { } crops) return crops.Count;
-        return scan.PhotoCount > 0 ? scan.PhotoCount : null;
-    }
-
-    [RelayCommand]
-    private Task Scan() => _host.ScanAsync();
-
-    [RelayCommand]
-    private Task ConfigureScanner() => _host.ConfigureScannerAsync();
-
-    [RelayCommand]
-    private Task ImportScans() => _host.ImportScansAsync();
-
-    [RelayCommand]
-    private void OpenScan(ScanRowViewModel? row)
-    {
-        if (row != null) _host.OpenScanInCrops(row.Index);
-    }
-
-    /// <summary>
-    /// Deletes a scan (file and photos). Takes two clicks: the first asks for confirmation on that card only,
-    /// so a stray click can't delete a scan.
-    /// </summary>
-    [RelayCommand]
-    private async Task Discard(ScanRowViewModel? row)
-    {
-        if (row == null) return;
-
-        if (!row.IsConfirmingDiscard)
-        {
-            foreach (var other in Scans) other.IsConfirmingDiscard = false;
-            row.IsConfirmingDiscard = true;
-            return;
-        }
-
-        await _host.DiscardScanAsync(row.Index);
-        Refresh();
-    }
-
-    /// <summary>Scans a new page to replace this scan, keeping its place in the list.</summary>
-    [RelayCommand]
-    private async Task Rescan(ScanRowViewModel? row)
-    {
-        if (row == null) return;
-        foreach (var other in Scans) other.IsConfirmingDiscard = false;
-        await _host.RescanAsync(row.Index);
-        Refresh();
-    }
-}
-
-/// <summary>One photo in the Finish stage: its cropped thumbnail, restoration choices and export status.</summary>
-internal sealed partial class FinishPhotoViewModel : ObservableObject
-{
-    private readonly Action<FinishPhotoViewModel> _changed;
-
-    public FinishPhotoViewModel(ProjectPhoto photo, Action<FinishPhotoViewModel> changed)
-    {
-        ArgumentNullException.ThrowIfNull(photo);
-        ArgumentNullException.ThrowIfNull(changed);
-        Photo = photo;
-        _changed = changed;
-    }
-
-    public ProjectPhoto Photo { get; }
-
-    public string Title => Photo.Id;
-
-    public string SourceText => Photo.ScanRelativePath != null
-        ? Path.GetFileName(Photo.ScanRelativePath)
-        : LocalizationService.GetString(ResourceKeys.FinishSourceImported, "Imported");
-
-    [ObservableProperty]
-    public partial Bitmap? Thumbnail { get; set; }
-
-    // ---- Restoration settings (each change updates the photo's record and is saved shortly after) ----
-
-    public bool RestoreColors
-    {
-        get => Photo.Restoration.RestoreColors;
-        set => Update(s => s with { RestoreColors = value });
-    }
-
-    public bool RemoveDust
-    {
-        get => Photo.Restoration.RemoveDust;
-        set => Update(s => s with { RemoveDust = value });
-    }
-
-    /// <summary>Leave out the print's white border in the final photo (the cropped photo keeps the whole print).</summary>
-    public bool TrimWhiteBorders
-    {
-        get => Photo.Restoration.TrimWhiteBorders;
-        set => Update(s => s with { TrimWhiteBorders = value });
-    }
-
-    /// <summary>Chosen in the grid (Ctrl+click, Shift+click or its tick) for the bulk actions.</summary>
-    [ObservableProperty]
-    public partial bool IsMarked { get; set; }
-
-    partial void OnIsMarkedChanged(bool value) => MarkChanged?.Invoke(this);
-
-    /// <summary>Raised when <see cref="IsMarked"/> changes, so the stage can count the selection.</summary>
-    public event Action<FinishPhotoViewModel>? MarkChanged;
-
-    /// <summary>0 = Gentle, 1 = Normal, 2 = Strong (bound to a ComboBox).</summary>
-    public int StrengthIndex
-    {
-        get => (int)Photo.Restoration.Strength;
-        set => Update(s => s with { Strength = (RestorationStrength)Math.Clamp(value, 0, 2) });
-    }
-
-    public bool AutoWhiteBalance
-    {
-        get => Photo.Restoration.AutoWhiteBalance;
-        set => Update(s => s with { AutoWhiteBalance = value });
-    }
-
-    public bool AutoContrast
-    {
-        get => Photo.Restoration.AutoContrast;
-        set => Update(s => s with { AutoContrast = value });
-    }
-
-    public bool AutoSaturation
-    {
-        get => Photo.Restoration.AutoSaturation;
-        set => Update(s => s with { AutoSaturation = value });
-    }
-
-    /// <summary>0 = Auto, 1 = Colour, 2 = Black &amp; white (keep tone), 3 = Black &amp; white (neutral).</summary>
-    public int ColorModeIndex
-    {
-        get => (int)Photo.Restoration.ColorMode;
-        set => Update(s => s with { ColorMode = (PhotoColorMode)Math.Clamp(value, 0, 3) });
-    }
-
-    public double Brightness
-    {
-        get => Photo.Restoration.Brightness;
-        set => Update(s => s with { Brightness = ToAdjustment(value) });
-    }
-
-    public double Contrast
-    {
-        get => Photo.Restoration.Contrast;
-        set => Update(s => s with { Contrast = ToAdjustment(value) });
-    }
-
-    public double Warmth
-    {
-        get => Photo.Restoration.Warmth;
-        set => Update(s => s with { Warmth = ToAdjustment(value) });
-    }
-
-    public double Tint
-    {
-        get => Photo.Restoration.Tint;
-        set => Update(s => s with { Tint = ToAdjustment(value) });
-    }
-
-    public double Saturation
-    {
-        get => Photo.Restoration.Saturation;
-        set => Update(s => s with { Saturation = ToAdjustment(value) });
-    }
-
-    private static int ToAdjustment(double value) => (int)Math.Round(Math.Clamp(value, -100, 100));
-
-    /// <summary>
-    /// Replaces the colour settings with a preset ("faded", "bw", "sepia", "dust", "none"). Whether the border is
-    /// trimmed is about the print, not its colours, so it stays as it is.
-    /// </summary>
-    [RelayCommand]
-    public void ApplyPreset(string? name)
-    {
-        var preset = RestorationSettings.FromPresetName(name);
-        if (preset != null) Update(s => preset with { TrimWhiteBorders = s.TrimWhiteBorders });
-    }
-
-    /// <summary>Sets the manual adjustments back to 0, keeping the automatic settings.</summary>
-    [RelayCommand]
-    private void ResetAdjustments() =>
-        Update(s => s with { Brightness = 0, Contrast = 0, Warmth = 0, Tint = 0, Saturation = 0 });
-
-    /// <summary>Replaces this photo's settings (e.g. copied from another photo).</summary>
-    public void ApplySettings(RestorationSettings settings) => Update(_ => settings);
-
-    // ---- Repair brush ----
-
-    public int RepairCount => Photo.Repairs.Count;
-
-    public bool HasRepairs => Photo.Repairs.Count > 0;
-
-    /// <summary>
-    /// Adds a repair-brush stroke painted on the cropped photo of <paramref name="imageWidth"/> × <paramref name="imageHeight"/>.
-    /// Strokes left from an earlier crop of a different size couldn't be applied anyway, so they are replaced.
-    /// </summary>
-    public void AddRepair(RepairStroke stroke, int imageWidth, int imageHeight)
-    {
-        ArgumentNullException.ThrowIfNull(stroke);
-        if (stroke.PointCount == 0) return;
-
-        if (Photo.AreRepairsOutdated(imageWidth, imageHeight)) Photo.Repairs.Clear();
-        Photo.RepairImageWidth = imageWidth;
-        Photo.RepairImageHeight = imageHeight;
-        Photo.Repairs.Add(stroke);
-        OnRestorationChanged();
-    }
-
-    [RelayCommand]
-    private void UndoRepair()
-    {
-        if (Photo.Repairs.Count == 0) return;
-        Photo.Repairs.RemoveAt(Photo.Repairs.Count - 1);
-        OnRestorationChanged();
-    }
-
-    [RelayCommand]
-    private void ClearRepairs()
-    {
-        if (Photo.Repairs.Count == 0) return;
-        Photo.Repairs.Clear();
-        OnRestorationChanged();
-    }
-
-    private void Update(Func<RestorationSettings, RestorationSettings> change)
-    {
-        var updated = change(Photo.Restoration);
-        if (updated == Photo.Restoration) return; // records compare by value: nothing changed
-        Photo.Restoration = updated;
-        OnRestorationChanged();
-    }
-
-    public bool IsStale => Photo.IsFinalStale;
-
-    public string StatusText => Photo.Final == null
-        ? LocalizationService.GetString(ResourceKeys.FinishStatusNew, "Not exported yet")
-        : Photo.IsFinalStale
-            ? LocalizationService.GetString(ResourceKeys.FinishStatusStale, "Changed since export")
-            : LocalizationService.GetString(ResourceKeys.FinishStatusExported, "Exported");
-
-    /// <summary>Re-reads the record after it was changed elsewhere (e.g. after exporting).</summary>
-    public void NotifyRecordChanged()
-    {
-        // Every setting is read from the record, so refresh them all.
-        OnPropertyChanged(string.Empty);
-    }
-
-    private void OnRestorationChanged()
-    {
-        NotifyRecordChanged();
-        _changed(this);
-    }
-}
 
 /// <summary>Stage 3: restore cropped photos (each with its own settings) and export them to Final/.</summary>
 internal sealed partial class FinishStageViewModel : ObservableObject, IDisposable
@@ -468,6 +26,9 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     public ObservableCollection<FinishPhotoViewModel> Photos { get; } = [];
 
+    /// <summary>The photos shown in the grid and the filmstrip: all of them, or those of the chosen type.</summary>
+    public ObservableCollection<FinishPhotoViewModel> VisiblePhotos { get; } = [];
+
     [ObservableProperty]
     public partial bool HasProject { get; set; }
 
@@ -482,6 +43,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         string? selectedId = SelectedPhoto?.Title;
         foreach (var old in Photos) old.Thumbnail?.Dispose();
         Photos.Clear();
+        _thumbnailLoads.Clear();
 
         var workspace = _host.Workspace;
         string? workDir = _host.WorkDirectory;
@@ -502,9 +64,12 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
                 var row = new FinishPhotoViewModel(photo, OnPhotoChanged);
                 row.MarkChanged += _ => UpdateMarks();
                 Photos.Add(row);
-                _ = LoadThumbnailAsync(row, photo.Cropped!.GetFullPath(workDir));
+                _thumbnailLoads.Add(LoadThumbnailAsync(row, photo.Cropped!.GetFullPath(workDir)));
             }
         }
+
+        UpdateStyleFilters();
+        ShowOnlyFilter();
 
         // Keep the previewed photo selected across refreshes (e.g. after importing).
         SelectedPhoto = selectedId == null ? null : Photos.FirstOrDefault(p => p.Title == selectedId);
@@ -534,7 +99,11 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     private List<FinishPhotoViewModel> Marked => [.. Photos.Where(p => p.IsMarked)];
 
-    private void UpdateMarks() => MarkedCount = Photos.Count(p => p.IsMarked);
+    private void UpdateMarks()
+    {
+        MarkedCount = Photos.Count(p => p.IsMarked);
+        RaiseMarkedToggles();
+    }
 
     /// <summary>
     /// Ctrl+click marks or unmarks one photo; Shift+click marks every photo from the last one clicked to this one.
@@ -542,12 +111,12 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
     public void ToggleMark(FinishPhotoViewModel row, bool range)
     {
         ArgumentNullException.ThrowIfNull(row);
-        int to = Photos.IndexOf(row);
+        int to = VisiblePhotos.IndexOf(row);
         if (to < 0) return;
-        int from = range && _markAnchor != null ? Photos.IndexOf(_markAnchor) : -1;
+        int from = range && _markAnchor != null ? VisiblePhotos.IndexOf(_markAnchor) : -1;
         if (from >= 0)
         {
-            for (int i = Math.Min(from, to); i <= Math.Max(from, to); i++) Photos[i].IsMarked = true;
+            for (int i = Math.Min(from, to); i <= Math.Max(from, to); i++) VisiblePhotos[i].IsMarked = true;
         }
         else
         {
@@ -556,11 +125,106 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         _markAnchor = row;
     }
 
+    /// <summary>Marks every photo shown (all of them, or those of the chosen type).</summary>
     [RelayCommand]
     private void MarkAll()
     {
-        foreach (var row in Photos) row.IsMarked = true;
+        foreach (var row in VisiblePhotos) row.IsMarked = true;
     }
+
+    /// <summary>Gives each marked photo the preset that suits its kind of print (black and white, sepia, faded, colour).</summary>
+    [RelayCommand]
+    private void ApplySuggestedToMarked()
+    {
+        foreach (var row in Marked) row.ApplySuggestedPreset();
+    }
+
+    // ---- Photo types: shown on each card; the grid can show one type at a time ----
+
+    /// <summary>The chips above the grid: all photos, then each type found, with how many there are.</summary>
+    public ObservableCollection<StyleFilterViewModel> StyleFilters { get; } = [];
+
+    private PhotoStyle? _styleFilter;
+
+    /// <summary>The type shown, or null for every photo.</summary>
+    public PhotoStyle? StyleFilter => _styleFilter;
+
+    /// <summary>True while some photos haven't been looked at yet.</summary>
+    [ObservableProperty]
+    public partial bool IsSortingStyles { get; set; }
+
+    /// <summary>Shows only the photos of one type (null: all of them). Photos hidden by it are unmarked.</summary>
+    [RelayCommand]
+    private void ShowStyle(StyleFilterViewModel? filter)
+    {
+        _styleFilter = filter?.Style;
+        foreach (var row in Photos.Where(p => !Matches(p))) row.IsMarked = false;
+        UpdateStyleFilters();
+        ShowOnlyFilter();
+        UpdateMarks();
+    }
+
+    private bool Matches(FinishPhotoViewModel row) => _styleFilter is not { } style || row.Style == style;
+
+    // Types arrive from background loads; in the app they come back on the UI thread, in tests on any thread.
+    private readonly Lock _styleLock = new();
+
+    private void ShowOnlyFilter()
+    {
+        lock (_styleLock)
+        {
+            var shown = Photos.Where(Matches).ToList();
+            if (shown.SequenceEqual(VisiblePhotos)) return;
+            VisiblePhotos.Clear();
+            foreach (var row in shown) VisiblePhotos.Add(row);
+        }
+    }
+
+    private static readonly PhotoStyle[] FilterStyles = [PhotoStyle.BlackAndWhite, PhotoStyle.Sepia, PhotoStyle.FadedColor, PhotoStyle.Color];
+
+    private void UpdateStyleFilters()
+    {
+        lock (_styleLock)
+        {
+            RebuildStyleFilters();
+        }
+    }
+
+    private void RebuildStyleFilters()
+    {
+        StyleFilters.Clear();
+        StyleFilters.Add(new StyleFilterViewModel(null, LocalizationService.GetString(ResourceKeys.LblStyleAll, "All"), Photos.Count, _styleFilter == null));
+        foreach (var style in FilterStyles)
+        {
+            int count = Photos.Count(p => p.Style == style);
+            if (count > 0 || _styleFilter == style) StyleFilters.Add(new StyleFilterViewModel(style, StyleName(style), count, _styleFilter == style));
+        }
+        IsSortingStyles = Photos.Any(p => !p.HasStyle);
+    }
+
+    private void OnStyleKnown()
+    {
+        UpdateStyleFilters();
+        if (_styleFilter != null) ShowOnlyFilter();
+    }
+
+    /// <summary>A type's name as shown on cards and chips.</summary>
+    public static string StyleName(PhotoStyle style) => style switch
+    {
+        PhotoStyle.BlackAndWhite => LocalizationService.GetString(ResourceKeys.StyleBlackAndWhite, "Black & white"),
+        PhotoStyle.Sepia => LocalizationService.GetString(ResourceKeys.StyleSepia, "Sepia"),
+        PhotoStyle.FadedColor => LocalizationService.GetString(ResourceKeys.StyleFadedColor, "Faded colour"),
+        PhotoStyle.Color => LocalizationService.GetString(ResourceKeys.StyleColor, "Colour"),
+        _ => string.Empty
+    };
+
+    // Each file is looked at once per run: a refresh (e.g. after an export) reuses the result while the file is unchanged.
+    private static readonly ConcurrentDictionary<(string Path, DateTime WriteTime), PhotoStyle> StyleCache = new();
+
+    private readonly List<Task> _thumbnailLoads = [];
+
+    /// <summary>Completes when the thumbnails and types of the current photos are loaded (for tests).</summary>
+    internal Task WhenThumbnailsLoaded() => Task.WhenAll([.. _thumbnailLoads]);
 
     [RelayCommand]
     private void ClearMarks()
@@ -576,12 +240,50 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         foreach (var row in Marked) row.ApplyPreset(name);
     }
 
-    /// <summary>Turns border trimming on ("on") or off for every marked photo.</summary>
-    [RelayCommand]
-    private void SetTrimForMarked(string? value)
+    // The bulk bar's checkboxes: ticked when every marked photo has the option, empty when none has it, and a dash
+    // when some have it. A click turns it on for all of them, or off when all of them already had it.
+    // A click on a dash always turns it on, whatever the checkbox sends (it may send false or null).
+
+    /// <summary>Automatic restoration for the marked photos.</summary>
+    public bool? MarkedRestoreColors
     {
-        bool trim = string.Equals(value, "on", StringComparison.OrdinalIgnoreCase);
-        foreach (var row in Marked) row.TrimWhiteBorders = trim;
+        get => MarkedState(p => p.RestoreColors);
+        set => SetForMarked(MarkedRestoreColors == null || value != false, (p, on) => p.RestoreColors = on);
+    }
+
+    /// <summary>Dust and scratch removal for the marked photos.</summary>
+    public bool? MarkedRemoveDust
+    {
+        get => MarkedState(p => p.RemoveDust);
+        set => SetForMarked(MarkedRemoveDust == null || value != false, (p, on) => p.RemoveDust = on);
+    }
+
+    /// <summary>White-border trimming for the marked photos.</summary>
+    public bool? MarkedTrimWhiteBorders
+    {
+        get => MarkedState(p => p.TrimWhiteBorders);
+        set => SetForMarked(MarkedTrimWhiteBorders == null || value != false, (p, on) => p.TrimWhiteBorders = on);
+    }
+
+    private bool? MarkedState(Func<FinishPhotoViewModel, bool> option)
+    {
+        var marked = Marked;
+        if (marked.Count == 0) return false;
+        int on = marked.Count(option);
+        return on == marked.Count ? true : on == 0 ? false : null;
+    }
+
+    private void SetForMarked(bool on, Action<FinishPhotoViewModel, bool> set)
+    {
+        foreach (var row in Marked) set(row, on);
+        RaiseMarkedToggles();
+    }
+
+    private void RaiseMarkedToggles()
+    {
+        OnPropertyChanged(nameof(MarkedRestoreColors));
+        OnPropertyChanged(nameof(MarkedRemoveDust));
+        OnPropertyChanged(nameof(MarkedTrimWhiteBorders));
     }
 
     /// <summary>Copies the open photo's settings to every marked photo.</summary>
@@ -597,7 +299,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
     [RelayCommand]
     private Task ExportMarked() => ExportRowsAsync([.. Marked.Where(p => p.IsStale)]);
 
-    private static async Task LoadThumbnailAsync(FinishPhotoViewModel row, string path)
+    private async Task LoadThumbnailAsync(FinishPhotoViewModel row, string path)
     {
         try
         {
@@ -605,12 +307,24 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
             {
                 using var stream = File.OpenRead(path);
                 return Bitmap.DecodeToWidth(stream, ThumbnailWidth);
-            });
+            }, CancellationToken.None);
             row.Thumbnail = bitmap;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not load thumbnail '{path}': {ex.Message}");
+        }
+
+        try
+        {
+            row.Style = await Task.Run(() =>
+                StyleCache.GetOrAdd((path, File.GetLastWriteTimeUtc(path)), key => PhotoStyleClassifier.ClassifyFile(key.Path)),
+                CancellationToken.None);
+            OnStyleKnown();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or OpenCvSharp.OpenCVException)
+        {
+            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not tell the type of '{path}': {ex.Message}");
         }
     }
 
@@ -625,6 +339,8 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
     private void OnPhotoChanged(FinishPhotoViewModel row)
     {
         UpdateSummary();
+        if (row.IsMarked) RaiseMarkedToggles();
+        if (ReferenceEquals(row, SelectedPhoto) && !row.TrimWhiteBorders) IsTrimMode = false;
         CopySettingsToAllCommand.NotifyCanExecuteChanged();
 
         _changeCts?.Cancel();
@@ -689,6 +405,8 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     partial void OnSelectedPhotoChanged(FinishPhotoViewModel? value)
     {
+        IsTrimMode = false;
+        TrimPreview = null;
         OnPropertyChanged(nameof(HasSelection));
         CopySettingsToAllCommand.NotifyCanExecuteChanged();
         _ = UpdatePreviewAsync();
@@ -713,9 +431,12 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     private void StepPhoto(int step)
     {
-        if (SelectedPhoto == null || Photos.Count == 0) return;
-        int index = Photos.IndexOf(SelectedPhoto);
-        SelectedPhoto = Photos[((index + step) % Photos.Count + Photos.Count) % Photos.Count];
+        if (SelectedPhoto == null) return;
+        // Steps through the photos shown, so a filtered grid's filmstrip and arrows stay within that type.
+        var list = VisiblePhotos.Contains(SelectedPhoto) ? VisiblePhotos : Photos;
+        if (list.Count == 0) return;
+        int index = list.IndexOf(SelectedPhoto);
+        SelectedPhoto = list[((index + step) % list.Count + list.Count) % list.Count];
     }
 
     // ---- Repair brush (painting happens in the view; finished strokes arrive here) ----
@@ -762,6 +483,54 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     [RelayCommand]
     private void ToggleRepairMode() => IsRepairMode = !IsRepairMode;
+
+    // ---- Trim adjusted by hand (the edges are dragged in the view; the result arrives here) ----
+
+    /// <summary>The part of the shown photo that the final photo keeps, as fractions of its size; null when nothing is trimmed.</summary>
+    [ObservableProperty]
+    public partial System.Drawing.RectangleF? TrimPreview { get; set; }
+
+    /// <summary>Adjust mode: the trim's edges can be dragged on the photo.</summary>
+    [ObservableProperty]
+    public partial bool IsTrimMode { get; set; }
+
+    /// <summary>The whole photo: where adjusting starts when no border was found.</summary>
+    private static readonly System.Drawing.RectangleF WholePhoto = new(0, 0, 1, 1);
+
+    partial void OnIsTrimModeChanged(bool value)
+    {
+        if (!value)
+        {
+            if (SelectedPhoto is not { TrimWhiteBorders: true }) TrimPreview = null;
+            return;
+        }
+        IsRepairMode = false;
+        if (SelectedPhoto is { TrimWhiteBorders: false } row) row.TrimWhiteBorders = true;
+        TrimPreview ??= WholePhoto;
+    }
+
+    partial void OnIsRepairModeChanged(bool value)
+    {
+        if (value) IsTrimMode = false;
+    }
+
+    [RelayCommand]
+    private void ToggleTrimMode() => IsTrimMode = !IsTrimMode;
+
+    /// <summary>Keeps <paramref name="area"/> (fractions of the photo's width and height) of the open photo, set by hand.</summary>
+    internal void SetManualTrim(System.Drawing.RectangleF area)
+    {
+        if (SelectedPhoto is not { } row) return;
+        TrimPreview = area; // at once, so the frame doesn't jump back until the preview is rendered again
+        row.ManualTrim = new TrimArea { Left = area.Left, Top = area.Top, Right = area.Right, Bottom = area.Bottom };
+    }
+
+    /// <summary>Goes back to finding the border automatically.</summary>
+    [RelayCommand]
+    private void ResetTrim()
+    {
+        if (SelectedPhoto is { } row) row.ManualTrim = null;
+    }
 
     // ---- AI fill (LaMa): optional model, downloaded once on request ----
 
@@ -873,6 +642,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         if (row?.Photo.Cropped == null || workDir == null)
         {
             SetPreview(null, null);
+            TrimPreview = null;
             IsPreviewBusy = false;
             RepairsOutdated = false;
             return;
@@ -899,6 +669,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
             RepairsOutdated = row.Photo.AreRepairsOutdated(result.SourceSize.Width, result.SourceSize.Height);
         }
         SetPreview(result?.Before, result?.After);
+        if (result != null) TrimPreview = result.Trim ?? (IsTrimMode ? WholePhoto : null);
         IsPreviewBusy = false;
 
         // Dust removal and repairs fill in pixels, which looks slightly different at preview size than in the
@@ -918,11 +689,13 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
             return;
         }
         SetPreview(exact.Before, exact.After);
+        TrimPreview = exact.Trim ?? (IsTrimMode ? WholePhoto : null);
     }
 
     private sealed record PreviewRequest(string Path, RestorationSettings Restoration, List<RepairStroke> Repairs, System.Drawing.Size RepairImageSize);
 
-    private sealed record PreviewResult(Bitmap Before, Bitmap? After, System.Drawing.Size SourceSize) : IDisposable
+    /// <param name="Trim">The part the final photo keeps, as fractions of the photo's size; null when nothing is trimmed.</param>
+    private sealed record PreviewResult(Bitmap Before, Bitmap? After, System.Drawing.Size SourceSize, System.Drawing.RectangleF? Trim = null) : IDisposable
     {
         public void Dispose()
         {
@@ -965,31 +738,23 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
         try
         {
+            // The whole photo is shown, so it lines up with the original and repair strokes land where they are
+            // painted; the viewer shades what the trim leaves out.
             using Mat rendered = Core.Export.RestoreStage.RenderKeepingBorder(fullQuality ? full : small, request.Restoration, repairs, out var picture);
-            if (picture is { } keep) ShadeOutside(rendered, keep);
-            if (!fullQuality) return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(rendered), sourceSize);
+            System.Drawing.RectangleF? trim = picture is { } keep
+                ? new System.Drawing.RectangleF((float)keep.X / rendered.Width, (float)keep.Y / rendered.Height,
+                    (float)keep.Width / rendered.Width, (float)keep.Height / rendered.Height)
+                : null;
+            if (!fullQuality) return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(rendered), sourceSize, trim);
 
             using Mat shrunk = Shrink(rendered);
-            return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(shrunk), sourceSize);
+            return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(shrunk), sourceSize, trim);
         }
         catch
         {
             before.Dispose();
             throw;
         }
-    }
-
-    /// <summary>
-    /// Darkens everything outside <paramref name="keep"/>: the border the final photo leaves out. The preview keeps
-    /// the whole photo so it lines up with the original and repair strokes land where they are painted.
-    /// </summary>
-    private static void ShadeOutside(Mat image, OpenCvSharp.Rect keep)
-    {
-        using Mat shade = new(image.Size(), OpenCvSharp.MatType.CV_8UC1, OpenCvSharp.Scalar.All(255));
-        OpenCvSharp.Cv2.Rectangle(shade, keep, OpenCvSharp.Scalar.All(0), -1);
-        using Mat darker = new();
-        image.ConvertTo(darker, -1, 0.35, 0);
-        darker.CopyTo(image, shade);
     }
 
     /// <summary>A copy no larger than <see cref="PreviewMaxSize"/> on its longest side.</summary>
@@ -1080,9 +845,11 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         foreach (var row in stale) row.NotifyRecordChanged();
         UpdateSummary();
 
-        _host.ShowStatus(failures.Count == 0
+        string message = failures.Count == 0
             ? LocalizationService.Format(ResourceKeys.MsgFinalExported, "Exported {0} photos to Final.", done)
-            : LocalizationService.Format(ResourceKeys.MsgExportFailedStatus, "Saved {0} photos; {1} scan(s) failed to export.", done, failures.Count));
+            : LocalizationService.Format(ResourceKeys.MsgExportFailedStatus, "Saved {0} photos; {1} could not be exported.", done, failures.Count);
+        _host.ShowStatus(message);
+        _host.NotifyExportCompleted(message, failures.Count == 0);
     }
 
     /// <summary>Imports photos that were already cropped (e.g. elsewhere) so they can be restored here.</summary>
@@ -1131,4 +898,13 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
             _host.OpenFolder(ProjectWorkspaceService.GetFinalDirectory(_host.WorkDirectory));
         }
     }
+}
+
+/// <summary>One chip above the Finish grid: a photo type (or all photos) and how many photos it has.</summary>
+internal sealed class StyleFilterViewModel(PhotoStyle? style, string name, int count, bool isActive)
+{
+    public PhotoStyle? Style { get; } = style;
+    public int Count { get; } = count;
+    public bool IsActive { get; } = isActive;
+    public string Text { get; } = $"{name} ({count})";
 }

@@ -1,4 +1,5 @@
 using OpenCvSharp;
+using PhotoCropper.Core.Common;
 
 namespace PhotoCropper.Core.Detection;
 
@@ -128,7 +129,7 @@ public static class BackgroundAnalyzer
         int h = Math.Min(bgr.Height - startY, sampleSize);
 
         using Mat sampledArea = new(bgr, new Rect(startX, startY, w, h));
-        using Mat bgrSampled = PhotoCropperEngine.NormalizeToBgr(sampledArea);
+        using Mat bgrSampled = ImageIo.NormalizeToBgr(sampledArea);
         using Mat hsvSampled = new();
         Cv2.CvtColor(bgrSampled, hsvSampled, ColorConversionCodes.BGR2HSV);
         return Cv2.Mean(hsvSampled);
@@ -208,7 +209,7 @@ public static class BackgroundAnalyzer
             source.CopyTo(rawSmallSource);
         }
 
-        using Mat smallSource = PhotoCropperEngine.NormalizeToBgr(rawSmallSource);
+        using Mat smallSource = ImageIo.NormalizeToBgr(rawSmallSource);
 
         using Mat hsv = new();
         Cv2.CvtColor(smallSource, hsv, ColorConversionCodes.BGR2HSV);
@@ -229,6 +230,20 @@ public static class BackgroundAnalyzer
             (int)Math.Round(leftBezel * invScale),
             (int)Math.Round(rightBezel * invScale)
         );
+    }
+
+    /// <summary>
+    /// Paints the scanner's bezel margins (see <see cref="DetectBezelMargins"/>) over with the background colour, so
+    /// they don't join photos into one shape. <paramref name="pad"/> is the padding added around the scan, if any.
+    /// </summary>
+    public static void PaintBezels(Mat image, (int Top, int Bottom, int Left, int Right) margins, int pad, Scalar backgroundBgr)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        var (top, bottom, left, right) = margins;
+        if (top > 0) Cv2.Rectangle(image, new Rect(0, 0, image.Width, pad + top), backgroundBgr, -1);
+        if (bottom > 0) Cv2.Rectangle(image, new Rect(0, image.Height - pad - bottom, image.Width, pad + bottom), backgroundBgr, -1);
+        if (left > 0) Cv2.Rectangle(image, new Rect(0, 0, pad + left, image.Height), backgroundBgr, -1);
+        if (right > 0) Cv2.Rectangle(image, new Rect(image.Width - pad - right, 0, pad + right, image.Height), backgroundBgr, -1);
     }
 
     private static int MeasureBezelDepth(Mat bgMask, int maxDepth, int length, bool isHorizontal, bool fromStart)

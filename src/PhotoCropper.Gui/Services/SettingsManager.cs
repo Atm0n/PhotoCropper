@@ -126,12 +126,6 @@ internal sealed class SettingsManager
         }
     }
 
-    public void ResetToDefaults()
-    {
-        Settings = new UserSettings();
-        Save();
-    }
-
     public void ResetDetectionDefaults()
     {
         var defaults = new UserSettings();

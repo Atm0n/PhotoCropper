@@ -211,7 +211,7 @@ public static class PhotoExtractionEngine
         if (searchRoi.Width > 10 && searchRoi.Height > 10)
         {
             using Mat roiMat = new(original, searchRoi);
-            using Mat bgrRoi = PhotoCropperEngine.NormalizeToBgr(roiMat);
+            using Mat bgrRoi = ImageIo.NormalizeToBgr(roiMat);
             using Mat roiHsv = new();
             Cv2.CvtColor(bgrRoi, roiHsv, ColorConversionCodes.BGR2HSV);
             Scalar bgHsv = customBgHsv ?? BackgroundAnalyzer.SampleBackgroundColor(roiHsv);

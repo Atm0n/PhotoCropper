@@ -80,11 +80,6 @@ internal sealed partial class MainWindow
 
     private void UpdateEmptyStateVisibility() => _cropsVm.UpdateScanCounter();
 
-    private async void BtnDeleteScan_Click(object? sender, RoutedEventArgs e)
-    {
-        await DeleteCurrentScanAsync();
-    }
-
     private Task DeleteCurrentScanAsync() => DeleteScanAtAsync(CurrentIndex);
 
     /// <summary>

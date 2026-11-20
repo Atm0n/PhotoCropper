@@ -53,7 +53,7 @@ public sealed class PhotoExporterTests : IDisposable
         }
 
         // Set source JPEG DPI to 600x600
-        PhotoExporter.EmbedJpegDpi(scanPath, 600, 600);
+        File.WriteAllBytes(scanPath, PhotoExporter.ApplyJpegDpi(File.ReadAllBytes(scanPath), 600, 600));
         var (XDpi, YDpi) = PhotoExporter.GetDpiFromSource(scanPath);
         XDpi.ShouldBe(600);
         YDpi.ShouldBe(600);

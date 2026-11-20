@@ -23,8 +23,6 @@ internal sealed partial class MainWindow
         _cropsVm.DeleteSelectedPhotos();
     }
 
-    private async void BtnRotate_Click(object? sender, RoutedEventArgs e) => await RotateSelectedPhotosAsync();
-
     private Task RotateSelectedPhotosAsync() => isLoading ? Task.CompletedTask : _cropsVm.RotateSelectedPhotosAsync();
 
     private Task RotateSelectedPhotosCcwAsync() => isLoading ? Task.CompletedTask : _cropsVm.RotateSelectedPhotosCounterClockwiseAsync();
