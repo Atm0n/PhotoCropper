@@ -73,6 +73,55 @@ public sealed class WhiteBorderTests : IDisposable
         ShouldBeNear(rect.Value, new Rect(18, 18, 300, 300));
     }
 
+    /// <summary>A print lying on an album page: a band of pink page around it, wider on some sides, and a thin dark
+    /// line (the print's edge and its shadow) between page and border.</summary>
+    private static Mat OnAlbumPage(Mat print, int left, int top, int right, int bottom)
+    {
+        var page = new Mat(print.Height + top + bottom, print.Width + left + right, MatType.CV_8UC3, new Scalar(205, 214, 240));
+        Cv2.Rectangle(page, new Rect(left - 2, top - 2, print.Width + 4, print.Height + 4), new Scalar(150, 155, 165), 2);
+        using var target = new Mat(page, new Rect(left, top, print.Width, print.Height));
+        print.CopyTo(target);
+        return page;
+    }
+
+    [Fact]
+    public void GetWhiteBorderRect_PrintOnAnAlbumPage_ShouldLeaveOutPageAndBorder()
+    {
+        using var picture = Picture(400, 300, 7);
+        using var print = Print(picture, 20, 20, 20, 20);
+        using var crop = OnAlbumPage(print, 12, 8, 60, 14);
+
+        var rect = EdgeRefinementService.GetWhiteBorderRect(crop);
+
+        rect.ShouldNotBeNull();
+        ShouldBeNear(rect.Value, new Rect(12 + 20, 8 + 20, 400, 300));
+    }
+
+    [Fact]
+    public void GetWhiteBorderRect_WornCorner_ShouldStillFindTheBorder()
+    {
+        using var picture = Picture(400, 300, 8);
+        using var print = Print(picture, 24, 24, 24, 24);
+        // A torn or rounded corner shows the dark scanner lid.
+        Cv2.Rectangle(print, new Rect(0, 0, 14, 14), new Scalar(40, 40, 40), -1);
+
+        var rect = EdgeRefinementService.GetWhiteBorderRect(print);
+
+        rect.ShouldNotBeNull();
+        ShouldBeNear(rect.Value, new Rect(24, 24, 400, 300));
+    }
+
+    [Fact]
+    public void GetWhiteBorderRect_PaleBackgroundAlongOneEdge_ShouldBeNull()
+    {
+        // A portrait's pale studio background along the top, and only a light sliver of the scan on the other sides.
+        using var picture = Picture(400, 300, 9);
+        using (var sky = new Mat(picture, new Rect(0, 0, 400, 60))) sky.SetTo(new Scalar(232, 234, 236));
+        using var crop = Print(picture, 4, 0, 4, 4);
+
+        EdgeRefinementService.GetWhiteBorderRect(crop).ShouldBeNull();
+    }
+
     [Fact]
     public void GetWhiteBorderRect_PhotoWithoutABorder_ShouldBeNull()
     {
