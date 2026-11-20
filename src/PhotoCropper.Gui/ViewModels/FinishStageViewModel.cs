@@ -90,7 +90,11 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     private List<FinishPhotoViewModel> Marked => [.. Photos.Where(p => p.IsMarked)];
 
-    private void UpdateMarks() => MarkedCount = Photos.Count(p => p.IsMarked);
+    private void UpdateMarks()
+    {
+        MarkedCount = Photos.Count(p => p.IsMarked);
+        RaiseMarkedToggles();
+    }
 
     /// <summary>
     /// Ctrl+click marks or unmarks one photo; Shift+click marks every photo from the last one clicked to this one.
@@ -132,12 +136,51 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         foreach (var row in Marked) row.ApplyPreset(name);
     }
 
-    /// <summary>Turns border trimming on ("on") or off for every marked photo.</summary>
-    [RelayCommand]
-    private void SetTrimForMarked(string? value)
+    // The bulk bar's checkboxes: ticked when every marked photo has the option, empty when none has it, and a dash
+    // when some have it. A click turns it on for all of them, or off when all of them already had it.
+
+    /// <summary>Automatic restoration for the marked photos.</summary>
+    public bool? MarkedRestoreColors
     {
-        bool trim = string.Equals(value, "on", StringComparison.OrdinalIgnoreCase);
-        foreach (var row in Marked) row.TrimWhiteBorders = trim;
+        get => MarkedState(p => p.RestoreColors);
+        set => ToggleForMarked(MarkedRestoreColors, (p, on) => p.RestoreColors = on);
+    }
+
+    /// <summary>Dust and scratch removal for the marked photos.</summary>
+    public bool? MarkedRemoveDust
+    {
+        get => MarkedState(p => p.RemoveDust);
+        set => ToggleForMarked(MarkedRemoveDust, (p, on) => p.RemoveDust = on);
+    }
+
+    /// <summary>White-border trimming for the marked photos.</summary>
+    public bool? MarkedTrimWhiteBorders
+    {
+        get => MarkedState(p => p.TrimWhiteBorders);
+        set => ToggleForMarked(MarkedTrimWhiteBorders, (p, on) => p.TrimWhiteBorders = on);
+    }
+
+    private bool? MarkedState(Func<FinishPhotoViewModel, bool> option)
+    {
+        var marked = Marked;
+        if (marked.Count == 0) return false;
+        int on = marked.Count(option);
+        return on == marked.Count ? true : on == 0 ? false : null;
+    }
+
+    private void ToggleForMarked(bool? current, Action<FinishPhotoViewModel, bool> set)
+    {
+        // Decided from the current state, not the value the checkbox sends, so a click on a dash always turns it on.
+        bool on = current != true;
+        foreach (var row in Marked) set(row, on);
+        RaiseMarkedToggles();
+    }
+
+    private void RaiseMarkedToggles()
+    {
+        OnPropertyChanged(nameof(MarkedRestoreColors));
+        OnPropertyChanged(nameof(MarkedRemoveDust));
+        OnPropertyChanged(nameof(MarkedTrimWhiteBorders));
     }
 
     /// <summary>Copies the open photo's settings to every marked photo.</summary>
@@ -181,6 +224,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
     private void OnPhotoChanged(FinishPhotoViewModel row)
     {
         UpdateSummary();
+        if (row.IsMarked) RaiseMarkedToggles();
         CopySettingsToAllCommand.NotifyCanExecuteChanged();
 
         _changeCts?.Cancel();

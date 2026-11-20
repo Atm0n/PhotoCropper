@@ -151,7 +151,7 @@ public sealed class StageViewModelTests : IDisposable
         vm.Photos[2].IsMarked = true;
 
         vm.ApplyPresetToMarkedCommand.Execute("bw");
-        vm.SetTrimForMarkedCommand.Execute("on");
+        vm.MarkedTrimWhiteBorders = true;
 
         foreach (int i in new[] { 0, 2 })
         {
@@ -163,8 +163,34 @@ public sealed class StageViewModelTests : IDisposable
         vm.ApplyPresetToMarkedCommand.Execute("sepia");
         vm.Photos[0].Photo.Restoration.ShouldBe(RestorationSettings.Sepia with { TrimWhiteBorders = true });
 
-        vm.SetTrimForMarkedCommand.Execute("off");
+        vm.MarkedTrimWhiteBorders = false;
         vm.Photos[2].TrimWhiteBorders.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void FinishStage_BulkCheckboxes_ShouldShowAllNoneOrSomeAndTurnOnForAll()
+    {
+        for (int i = 1; i <= 3; i++) AddCroppedPhoto($"scan_000{i}.png");
+        using var vm = Finish();
+        vm.Refresh();
+        vm.MarkAllCommand.Execute(null);
+        vm.MarkedRestoreColors.ShouldBe(false);
+
+        vm.Photos[1].RestoreColors = true;              // changed on one card
+        vm.MarkedRestoreColors.ShouldBeNull();          // some: a dash
+
+        vm.MarkedRestoreColors = false;                 // a click on the dash (the checkbox may send false) ...
+        vm.Photos.ShouldAllBe(p => p.RestoreColors);    // ... turns it on for all
+        vm.MarkedRestoreColors.ShouldBe(true);
+
+        vm.MarkedRemoveDust = true;
+        vm.Photos.ShouldAllBe(p => p.RemoveDust);
+        vm.MarkedRemoveDust = false;                    // all had it: off for all
+        vm.Photos.ShouldAllBe(p => !p.RemoveDust);
+
+        vm.Photos[0].IsMarked = false;                  // the state follows the selection
+        vm.Photos[0].RestoreColors = false;
+        vm.MarkedRestoreColors.ShouldBe(true);
     }
 
     [Fact]

@@ -108,8 +108,9 @@
 						<Button Classes="bulk" Margin="0,0,6,6" Command="{Binding ApplyPresetToMarkedCommand}" CommandParameter="sepia" Content="{DynamicResource PresetSepia}"/>
 						<Button Classes="bulk" Margin="0,0,6,6" Command="{Binding ApplyPresetToMarkedCommand}" CommandParameter="dust" Content="{DynamicResource PresetOnlyDust}"/>
 						<Button Classes="bulk" Margin="0,0,14,6" Command="{Binding ApplyPresetToMarkedCommand}" CommandParameter="none" Content="{DynamicResource PresetNone}"/>
-						<Button Classes="bulk" Margin="0,0,6,6" Command="{Binding SetTrimForMarkedCommand}" CommandParameter="on" Content="{DynamicResource BtnTrimOn}" ToolTip.Tip="{DynamicResource TipTrimBorders}"/>
-						<Button Classes="bulk" Margin="0,0,14,6" Command="{Binding SetTrimForMarkedCommand}" CommandParameter="off" Content="{DynamicResource BtnTrimOff}"/>
+						<CheckBox Margin="0,0,10,6" IsChecked="{Binding MarkedRestoreColors}" Content="{DynamicResource LblAutoRestore}" ToolTip.Tip="{DynamicResource TipBulkToggle}"/>
+						<CheckBox Margin="0,0,10,6" IsChecked="{Binding MarkedRemoveDust}" Content="{DynamicResource LblRemoveDust}" ToolTip.Tip="{DynamicResource TipBulkToggle}"/>
+						<CheckBox Margin="0,0,14,6" IsChecked="{Binding MarkedTrimWhiteBorders}" Content="{DynamicResource LblTrimBorders}" ToolTip.Tip="{DynamicResource TipBulkToggle}"/>
 						<Button Margin="0,0,6,6" Padding="10,4" CornerRadius="5" Command="{Binding ExportMarkedCommand}"
 								Background="{DynamicResource AppButtonAccentBrush}" Foreground="{DynamicResource AppButtonAccentTextBrush}"
 								Content="{DynamicResource BtnExportMarked}"/>
