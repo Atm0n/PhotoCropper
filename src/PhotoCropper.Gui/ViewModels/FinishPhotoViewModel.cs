@@ -1,6 +1,7 @@
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PhotoCropper.Core.Extraction;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
 
@@ -20,6 +21,15 @@ internal sealed partial class FinishPhotoViewModel : ObservableObject
     }
 
     public ProjectPhoto Photo { get; }
+
+    /// <summary>What kind of print this is (black and white, sepia, faded or good colour), once looked at.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StyleText), nameof(HasStyle))]
+    public partial PhotoStyle Style { get; set; }
+
+    public bool HasStyle => Style != PhotoStyle.Unknown;
+
+    public string StyleText => FinishStageViewModel.StyleName(Style);
 
     public string Title => Photo.Id;
 
@@ -134,6 +144,9 @@ internal sealed partial class FinishPhotoViewModel : ObservableObject
         var preset = RestorationSettings.FromPresetName(name);
         if (preset != null) Update(s => preset with { TrimWhiteBorders = s.TrimWhiteBorders });
     }
+
+    /// <summary>Applies the preset that suits this kind of print (see <see cref="PhotoStyleClassifier.SuggestedPreset"/>).</summary>
+    public void ApplySuggestedPreset() => ApplyPreset(PhotoStyleClassifier.SuggestedPreset(Style));
 
     /// <summary>Sets the manual adjustments back to 0, keeping the automatic settings.</summary>
     [RelayCommand]

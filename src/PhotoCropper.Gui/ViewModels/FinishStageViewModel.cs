@@ -2,8 +2,10 @@ using Avalonia.Media.Imaging;
 using Mat = OpenCvSharp.Mat;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PhotoCropper.Core.Extraction;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 
 namespace PhotoCropper.Gui.ViewModels;
@@ -24,6 +26,9 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     public ObservableCollection<FinishPhotoViewModel> Photos { get; } = [];
 
+    /// <summary>The photos shown in the grid and the filmstrip: all of them, or those of the chosen type.</summary>
+    public ObservableCollection<FinishPhotoViewModel> VisiblePhotos { get; } = [];
+
     [ObservableProperty]
     public partial bool HasProject { get; set; }
 
@@ -38,6 +43,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         string? selectedId = SelectedPhoto?.Title;
         foreach (var old in Photos) old.Thumbnail?.Dispose();
         Photos.Clear();
+        _thumbnailLoads.Clear();
 
         var workspace = _host.Workspace;
         string? workDir = _host.WorkDirectory;
@@ -58,9 +64,12 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
                 var row = new FinishPhotoViewModel(photo, OnPhotoChanged);
                 row.MarkChanged += _ => UpdateMarks();
                 Photos.Add(row);
-                _ = LoadThumbnailAsync(row, photo.Cropped!.GetFullPath(workDir));
+                _thumbnailLoads.Add(LoadThumbnailAsync(row, photo.Cropped!.GetFullPath(workDir)));
             }
         }
+
+        UpdateStyleFilters();
+        ShowOnlyFilter();
 
         // Keep the previewed photo selected across refreshes (e.g. after importing).
         SelectedPhoto = selectedId == null ? null : Photos.FirstOrDefault(p => p.Title == selectedId);
@@ -102,12 +111,12 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
     public void ToggleMark(FinishPhotoViewModel row, bool range)
     {
         ArgumentNullException.ThrowIfNull(row);
-        int to = Photos.IndexOf(row);
+        int to = VisiblePhotos.IndexOf(row);
         if (to < 0) return;
-        int from = range && _markAnchor != null ? Photos.IndexOf(_markAnchor) : -1;
+        int from = range && _markAnchor != null ? VisiblePhotos.IndexOf(_markAnchor) : -1;
         if (from >= 0)
         {
-            for (int i = Math.Min(from, to); i <= Math.Max(from, to); i++) Photos[i].IsMarked = true;
+            for (int i = Math.Min(from, to); i <= Math.Max(from, to); i++) VisiblePhotos[i].IsMarked = true;
         }
         else
         {
@@ -116,11 +125,106 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         _markAnchor = row;
     }
 
+    /// <summary>Marks every photo shown (all of them, or those of the chosen type).</summary>
     [RelayCommand]
     private void MarkAll()
     {
-        foreach (var row in Photos) row.IsMarked = true;
+        foreach (var row in VisiblePhotos) row.IsMarked = true;
     }
+
+    /// <summary>Gives each marked photo the preset that suits its kind of print (black and white, sepia, faded, colour).</summary>
+    [RelayCommand]
+    private void ApplySuggestedToMarked()
+    {
+        foreach (var row in Marked) row.ApplySuggestedPreset();
+    }
+
+    // ---- Photo types: shown on each card; the grid can show one type at a time ----
+
+    /// <summary>The chips above the grid: all photos, then each type found, with how many there are.</summary>
+    public ObservableCollection<StyleFilterViewModel> StyleFilters { get; } = [];
+
+    private PhotoStyle? _styleFilter;
+
+    /// <summary>The type shown, or null for every photo.</summary>
+    public PhotoStyle? StyleFilter => _styleFilter;
+
+    /// <summary>True while some photos haven't been looked at yet.</summary>
+    [ObservableProperty]
+    public partial bool IsSortingStyles { get; set; }
+
+    /// <summary>Shows only the photos of one type (null: all of them). Photos hidden by it are unmarked.</summary>
+    [RelayCommand]
+    private void ShowStyle(StyleFilterViewModel? filter)
+    {
+        _styleFilter = filter?.Style;
+        foreach (var row in Photos.Where(p => !Matches(p))) row.IsMarked = false;
+        UpdateStyleFilters();
+        ShowOnlyFilter();
+        UpdateMarks();
+    }
+
+    private bool Matches(FinishPhotoViewModel row) => _styleFilter is not { } style || row.Style == style;
+
+    // Types arrive from background loads; in the app they come back on the UI thread, in tests on any thread.
+    private readonly Lock _styleLock = new();
+
+    private void ShowOnlyFilter()
+    {
+        lock (_styleLock)
+        {
+            var shown = Photos.Where(Matches).ToList();
+            if (shown.SequenceEqual(VisiblePhotos)) return;
+            VisiblePhotos.Clear();
+            foreach (var row in shown) VisiblePhotos.Add(row);
+        }
+    }
+
+    private static readonly PhotoStyle[] FilterStyles = [PhotoStyle.BlackAndWhite, PhotoStyle.Sepia, PhotoStyle.FadedColor, PhotoStyle.Color];
+
+    private void UpdateStyleFilters()
+    {
+        lock (_styleLock)
+        {
+            RebuildStyleFilters();
+        }
+    }
+
+    private void RebuildStyleFilters()
+    {
+        StyleFilters.Clear();
+        StyleFilters.Add(new StyleFilterViewModel(null, LocalizationService.GetString(ResourceKeys.LblStyleAll, "All"), Photos.Count, _styleFilter == null));
+        foreach (var style in FilterStyles)
+        {
+            int count = Photos.Count(p => p.Style == style);
+            if (count > 0 || _styleFilter == style) StyleFilters.Add(new StyleFilterViewModel(style, StyleName(style), count, _styleFilter == style));
+        }
+        IsSortingStyles = Photos.Any(p => !p.HasStyle);
+    }
+
+    private void OnStyleKnown()
+    {
+        UpdateStyleFilters();
+        if (_styleFilter != null) ShowOnlyFilter();
+    }
+
+    /// <summary>A type's name as shown on cards and chips.</summary>
+    public static string StyleName(PhotoStyle style) => style switch
+    {
+        PhotoStyle.BlackAndWhite => LocalizationService.GetString(ResourceKeys.StyleBlackAndWhite, "Black & white"),
+        PhotoStyle.Sepia => LocalizationService.GetString(ResourceKeys.StyleSepia, "Sepia"),
+        PhotoStyle.FadedColor => LocalizationService.GetString(ResourceKeys.StyleFadedColor, "Faded colour"),
+        PhotoStyle.Color => LocalizationService.GetString(ResourceKeys.StyleColor, "Colour"),
+        _ => string.Empty
+    };
+
+    // Each file is looked at once per run: a refresh (e.g. after an export) reuses the result while the file is unchanged.
+    private static readonly ConcurrentDictionary<(string Path, DateTime WriteTime), PhotoStyle> StyleCache = new();
+
+    private readonly List<Task> _thumbnailLoads = [];
+
+    /// <summary>Completes when the thumbnails and types of the current photos are loaded (for tests).</summary>
+    internal Task WhenThumbnailsLoaded() => Task.WhenAll([.. _thumbnailLoads]);
 
     [RelayCommand]
     private void ClearMarks()
@@ -195,7 +299,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
     [RelayCommand]
     private Task ExportMarked() => ExportRowsAsync([.. Marked.Where(p => p.IsStale)]);
 
-    private static async Task LoadThumbnailAsync(FinishPhotoViewModel row, string path)
+    private async Task LoadThumbnailAsync(FinishPhotoViewModel row, string path)
     {
         try
         {
@@ -203,12 +307,24 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
             {
                 using var stream = File.OpenRead(path);
                 return Bitmap.DecodeToWidth(stream, ThumbnailWidth);
-            });
+            }, CancellationToken.None);
             row.Thumbnail = bitmap;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not load thumbnail '{path}': {ex.Message}");
+        }
+
+        try
+        {
+            row.Style = await Task.Run(() =>
+                StyleCache.GetOrAdd((path, File.GetLastWriteTimeUtc(path)), key => PhotoStyleClassifier.ClassifyFile(key.Path)),
+                CancellationToken.None);
+            OnStyleKnown();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or OpenCvSharp.OpenCVException)
+        {
+            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not tell the type of '{path}': {ex.Message}");
         }
     }
 
@@ -312,9 +428,12 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     private void StepPhoto(int step)
     {
-        if (SelectedPhoto == null || Photos.Count == 0) return;
-        int index = Photos.IndexOf(SelectedPhoto);
-        SelectedPhoto = Photos[((index + step) % Photos.Count + Photos.Count) % Photos.Count];
+        if (SelectedPhoto == null) return;
+        // Steps through the photos shown, so a filtered grid's filmstrip and arrows stay within that type.
+        var list = VisiblePhotos.Contains(SelectedPhoto) ? VisiblePhotos : Photos;
+        if (list.Count == 0) return;
+        int index = list.IndexOf(SelectedPhoto);
+        SelectedPhoto = list[((index + step) % list.Count + list.Count) % list.Count];
     }
 
     // ---- Repair brush (painting happens in the view; finished strokes arrive here) ----
@@ -732,4 +851,13 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
             _host.OpenFolder(ProjectWorkspaceService.GetFinalDirectory(_host.WorkDirectory));
         }
     }
+}
+
+/// <summary>One chip above the Finish grid: a photo type (or all photos) and how many photos it has.</summary>
+internal sealed class StyleFilterViewModel(PhotoStyle? style, string name, int count, bool isActive)
+{
+    public PhotoStyle? Style { get; } = style;
+    public int Count { get; } = count;
+    public bool IsActive { get; } = isActive;
+    public string Text { get; } = $"{name} ({count})";
 }
