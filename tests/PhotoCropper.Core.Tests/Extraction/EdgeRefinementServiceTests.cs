@@ -15,9 +15,10 @@ public sealed class EdgeRefinementServiceTests
 
         Rect refined = EdgeRefinementService.GetRefinedCropRect(photo);
 
-        refined.X.ShouldBeGreaterThanOrEqualTo(70);
-        refined.Y.ShouldBeGreaterThanOrEqualTo(70);
-        refined.Width.ShouldBeLessThanOrEqualTo(860);
-        refined.Height.ShouldBeLessThanOrEqualTo(860);
+        // The dark centre is (80, 80) to (920, 920).
+        refined.X.ShouldBeInRange(70, 90);
+        refined.Y.ShouldBeInRange(70, 90);
+        refined.Right.ShouldBeInRange(910, 930);
+        refined.Bottom.ShouldBeInRange(910, 930);
     }
 }

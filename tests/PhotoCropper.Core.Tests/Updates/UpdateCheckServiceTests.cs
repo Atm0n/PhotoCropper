@@ -227,7 +227,9 @@ public sealed class UpdateCheckServiceTests
             client,
             TestContext.Current.CancellationToken);
 
-        result.ErrorMessage.ShouldNotBeNull();
+        result.IsUpdateAvailable.ShouldBeFalse();
+        result.LatestVersion.ShouldBeNull();
+        result.ErrorMessage.ShouldNotBeNullOrWhiteSpace();
     }
 
     private sealed class StatusHandler(HttpStatusCode statusCode, string? rateLimitRemaining = null) : HttpMessageHandler
