@@ -112,6 +112,10 @@
 
 				<!-- Recent projects -->
 				<StackPanel Spacing="8" IsVisible="{Binding !IsCreating}">
+					<Border IsVisible="{Binding OpenError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Padding="12,8" CornerRadius="6"
+							BorderThickness="1" BorderBrush="{DynamicResource AppDangerTextBrush}">
+						<TextBlock Text="{Binding OpenError}" TextWrapping="Wrap" FontSize="13" Foreground="{DynamicResource AppDangerTextBrush}"/>
+					</Border>
 					<TextBlock Text="{DynamicResource LblRecentProjects}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
 					<TextBlock Text="{DynamicResource LblNoRecentProjects}" IsVisible="{Binding !HasRecent}" FontSize="13"
 							   Foreground="{DynamicResource AppTextMutedBrush}"/>

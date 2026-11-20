@@ -464,6 +464,7 @@ internal sealed partial class MainWindow : Window
         }
 
         SettingsManager.Instance.Save();
+        _projectLock?.Dispose();
 
         base.OnClosed(e);
         ShowScan(null);

@@ -75,6 +75,7 @@
 	<sys:String x:Key="MsgProjectNameInvalid">El nombre de un proyecto no puede contener \ / : * ? " &lt; &gt; |</sys:String>
 	<sys:String x:Key="MsgProjectExists">Ya hay una carpeta llamada '{0}' en esa ubicación. Elige otro nombre o usa Abrir proyecto.</sys:String>
 	<sys:String x:Key="MsgProjectCreateFailed">No se ha podido crear la carpeta del proyecto: {0}</sys:String>
+	<sys:String x:Key="MsgProjectInUse">'{0}' ya está abierto en otra ventana de PhotoCropper. Ve a esa ventana o ciérrala antes: dos ventanas guardando el mismo proyecto perderían el trabajo de la otra.</sys:String>
 	<sys:String x:Key="BtnScanStage">🖨  Escanear</sys:String>
 	<sys:String x:Key="BtnImportScans">Importar escaneos…</sys:String>
 	<sys:String x:Key="ScanStageEmpty">Aún no hay escaneos. Escanea con tu escáner o importa archivos para empezar.&#x0a;Haz doble clic en un escaneo para ajustar sus recortes.</sys:String>

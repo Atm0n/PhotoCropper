@@ -72,6 +72,9 @@ internal static class ProjectProcessor
         ArgumentNullException.ThrowIfNull(console);
 
         ProjectWorkspaceService.InitializeWorkspace(workDir);
+        // The app (or another run) saving the same project at the same time would lose one side's records.
+        using var projectLock = ProjectLock.TryAcquire(workDir)
+            ?? throw new IOException($"The project is open in PhotoCropper (or another command). Close it there first: {workDir}");
         var session = ProjectWorkspaceService.LoadSession(workDir) ?? ProjectWorkspaceService.ReconstructSessionFromRawFiles(workDir);
         session = ProjectWorkspaceService.SyncSessionWithRawFiles(workDir, session);
 

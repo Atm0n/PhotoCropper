@@ -24,7 +24,8 @@ internal interface IStartHost
 
     /// <summary>Opens a project (creating its folders if needed) and closes the start screen.</summary>
     /// <param name="restoreOnly">Go straight to importing photos to restore, in the Finish stage.</param>
-    Task OpenProjectAsync(string folder, bool restoreOnly);
+    /// <returns>False if the project could not be opened because another window has it open.</returns>
+    Task<bool> OpenProjectAsync(string folder, bool restoreOnly);
 
     void ForgetRecentProject(string folder);
 }
@@ -79,6 +80,10 @@ internal sealed partial class StartViewModel(IStartHost host) : ObservableObject
     [ObservableProperty]
     public partial string CreateError { get; set; } = string.Empty;
 
+    /// <summary>Why the last project chosen did not open (it is open in another window).</summary>
+    [ObservableProperty]
+    public partial string OpenError { get; set; } = string.Empty;
+
     /// <summary>A project is open, so the screen can be left without choosing one.</summary>
     public bool CanGoBack => host.OpenProjectFolder != null;
 
@@ -92,6 +97,7 @@ internal sealed partial class StartViewModel(IStartHost host) : ObservableObject
     {
         IsCreating = false;
         CreateError = string.Empty;
+        OpenError = string.Empty;
         OnPropertyChanged(nameof(CanGoBack));
         OnPropertyChanged(nameof(BackText));
         LoadRecent();
@@ -264,6 +270,15 @@ internal sealed partial class StartViewModel(IStartHost host) : ObservableObject
     {
         IsOpen = false;
         IsCreating = false;
-        await host.OpenProjectAsync(folder, restoreOnly);
+        OpenError = string.Empty;
+        if (!await host.OpenProjectAsync(folder, restoreOnly))
+        {
+            OpenError = LocalizationService.Format(ResourceKeys.MsgProjectInUse,
+                "'{0}' is already open in another PhotoCropper window. Switch to that window, or close it first: two windows saving the same project would lose each other's work.",
+                Path.GetFileName(Path.TrimEndingDirectorySeparator(folder)));
+            OnPropertyChanged(nameof(CanGoBack));
+            OnPropertyChanged(nameof(BackText));
+            IsOpen = true;
+        }
     }
 }

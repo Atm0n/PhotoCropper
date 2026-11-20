@@ -281,20 +281,35 @@ public static class PhotoPipelineService
             : options.OutputDirectory;
         Directory.CreateDirectory(finalDir);
 
-        // Replace this photo's previous final file, but only if it is still exactly what we wrote.
-        DeleteIfUnchanged(workDirectory, photo.Final);
-
-        string target = PhotoExporter.ResolveUniqueExportPath(Path.Combine(finalDir, fileName));
-        try
+        lock (FinalNamesLock)
         {
-            File.WriteAllBytes(target, bytes);
-        }
-        finally
-        {
-            PhotoExporter.ReleaseExportPath(target);
-        }
+            if (IsProjectFinalDirectory(workDirectory, finalDir))
+            {
+                // The project's Final/ holds what the last export made: the new file replaces this photo's
+                // previous one and anything else under its name that no other photo owns (left by an older
+                // version, or by an export whose record was lost), along with its "name (n)" copies.
+                DeleteFile(workDirectory, photo.Final);
+                RemoveReplacedFinals(workDirectory, session, photo, finalDir, fileName);
+            }
+            else
+            {
+                // Another folder may hold the user's own files: replace this photo's previous file only if it is
+                // still exactly what we wrote, and never overwrite anything else.
+                DeleteIfUnchanged(workDirectory, photo.Final);
+            }
 
-        photo.Final = ProjectFile.FromDisk(workDirectory, target);
+            string target = PhotoExporter.ResolveUniqueExportPath(Path.Combine(finalDir, fileName));
+            try
+            {
+                File.WriteAllBytes(target, bytes);
+            }
+            finally
+            {
+                PhotoExporter.ReleaseExportPath(target);
+            }
+
+            photo.Final = ProjectFile.FromDisk(workDirectory, target);
+        }
         photo.FinalRenderedFrom = renderedFrom;
         photo.FinalRenderedWith = restoration;
         photo.FinalRenderedRepairs = repairsFingerprint;
@@ -402,6 +417,89 @@ public static class PhotoPipelineService
 
         File.WriteAllBytes(path, bytes);
         return ProjectFile.FromDisk(workDirectory, path);
+    }
+
+    /// <summary>Held while a final photo's name is chosen and its file written and recorded.</summary>
+    private static readonly Lock FinalNamesLock = new();
+
+    private static bool IsProjectFinalDirectory(string workDirectory, string directory) =>
+        string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(ProjectWorkspaceService.GetFinalDirectory(workDirectory))),
+            StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Deletes <paramref name="fileName"/> and its "name (n)" copies from <paramref name="finalDir"/>, except the
+    /// final files of the session's other photos. Returns how many were deleted.
+    /// </summary>
+    internal static int RemoveReplacedFinals(string workDirectory, WorkspaceSessionState session, ProjectPhoto photo, string finalDir, string fileName)
+    {
+        string stem = Path.GetFileNameWithoutExtension(fileName);
+        string extension = Path.GetExtension(fileName);
+        List<string> candidates;
+        try
+        {
+            candidates = [.. Directory.EnumerateFiles(finalDir).Where(f => IsNameOrNumberedCopy(Path.GetFileName(f), stem, extension))];
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return 0;
+        }
+        if (candidates.Count == 0) return 0;
+
+        HashSet<string> others;
+        lock (session)
+        {
+            others = new HashSet<string>(
+                session.Photos.Where(p => p != photo && p.Final != null).Select(p => Path.GetFullPath(p.Final!.GetFullPath(workDirectory))),
+                StringComparer.OrdinalIgnoreCase);
+        }
+
+        int deleted = 0;
+        foreach (string file in candidates)
+        {
+            if (others.Contains(Path.GetFullPath(file))) continue;
+            try
+            {
+                File.Delete(file);
+                deleted++;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not replace '{file}': {ex.Message}");
+            }
+        }
+        return deleted;
+    }
+
+    /// <summary>True for "stem.ext" and its copies "stem (n).ext", ignoring case.</summary>
+    internal static bool IsNameOrNumberedCopy(string name, string stem, string extension)
+    {
+        if (!name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) return false;
+        var baseName = name.AsSpan(0, name.Length - extension.Length);
+        if (!baseName.StartsWith(stem, StringComparison.OrdinalIgnoreCase)) return false;
+
+        var suffix = baseName[stem.Length..];
+        if (suffix.IsEmpty) return true;
+        if (suffix.Length < 4 || !suffix.StartsWith(" (", StringComparison.Ordinal) || suffix[^1] != ')') return false;
+        foreach (char c in suffix[2..^1])
+        {
+            if (!char.IsAsciiDigit(c)) return false;
+        }
+        return true;
+    }
+
+    private static void DeleteFile(string workDirectory, ProjectFile? file)
+    {
+        if (file == null) return;
+        try
+        {
+            File.Delete(file.GetFullPath(workDirectory));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not remove '{file.RelativePath}': {ex.Message}");
+        }
     }
 
     private static void DeleteIfUnchanged(string workDirectory, ProjectFile? file)
