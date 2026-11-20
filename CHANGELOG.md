@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-11-20
+
 ### Added
 - **Trim white border** (Finish stage, per photo; off by default): the final photo leaves out the print's white or cream border and keeps only the picture; the preview shades what will be cut, and the cropped photo always keeps the whole print. It's cautious: a border must frame the picture on every side and end at a clean edge, so photos without one (light skies, sheets, vignettes fading to white) are never cut into, though some worn or scalloped borders are left in place. Presets keep each photo's choice.
 - **Several photos at once in Finish**: Ctrl+click or Shift+click photos in the grid (or tick them), then one click applies a preset, turns border trimming on or off, or exports just those photos. With a photo open, "Copy settings to selected" gives the selection its settings.
