@@ -61,6 +61,15 @@ internal sealed partial class FinishPhotoViewModel : ObservableObject
         set => Update(s => s with { TrimWhiteBorders = value });
     }
 
+    /// <summary>The part to keep, set by hand in the editor; null when the border is found automatically.</summary>
+    public TrimArea? ManualTrim
+    {
+        get => Photo.Restoration.ManualTrim;
+        set => Update(s => s with { ManualTrim = value });
+    }
+
+    public bool HasManualTrim => ManualTrim != null;
+
     /// <summary>Chosen in the grid (Ctrl+click, Shift+click or its tick) for the bulk actions.</summary>
     [ObservableProperty]
     public partial bool IsMarked { get; set; }
@@ -142,7 +151,7 @@ internal sealed partial class FinishPhotoViewModel : ObservableObject
     public void ApplyPreset(string? name)
     {
         var preset = RestorationSettings.FromPresetName(name);
-        if (preset != null) Update(s => preset with { TrimWhiteBorders = s.TrimWhiteBorders });
+        if (preset != null) Update(s => preset with { TrimWhiteBorders = s.TrimWhiteBorders, ManualTrim = s.ManualTrim });
     }
 
     /// <summary>Applies the preset that suits this kind of print (see <see cref="PhotoStyleClassifier.SuggestedPreset"/>).</summary>
@@ -154,7 +163,12 @@ internal sealed partial class FinishPhotoViewModel : ObservableObject
         Update(s => s with { Brightness = 0, Contrast = 0, Warmth = 0, Tint = 0, Saturation = 0 });
 
     /// <summary>Replaces this photo's settings (e.g. copied from another photo).</summary>
-    public void ApplySettings(RestorationSettings settings) => Update(_ => settings);
+    /// <remarks>A trim set by hand belongs to this photo's own picture: it stays, whatever the other photo had.</remarks>
+    public void ApplySettings(RestorationSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        Update(s => settings with { ManualTrim = s.ManualTrim });
+    }
 
     // ---- Repair brush ----
 

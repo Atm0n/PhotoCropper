@@ -65,8 +65,10 @@ public static class RestoreStage
         Mat repaired = repairs is { Count: > 0 } ? PhotoRepairService.ApplyRepairs(image, repairs) : image;
         bool ownsRepaired = !ReferenceEquals(repaired, image);
 
-        // Measured before colour restoration, which can tint the border.
-        picture = restoration.TrimWhiteBorders ? EdgeRefinementService.GetWhiteBorderRect(repaired) : null;
+        // Set by hand, or measured before colour restoration (which can tint the border).
+        picture = !restoration.TrimWhiteBorders ? null
+            : restoration.ManualTrim is { } manual ? manual.ToRect(repaired.Width, repaired.Height)
+            : EdgeRefinementService.GetWhiteBorderRect(repaired);
 
         Mat restored;
         try

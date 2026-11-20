@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:controls="using:PhotoCropper.Gui.Controls"
 			 x:Class="PhotoCropper.Gui.Views.Stages.CompareImageViewer">
 	<!-- A zoomable, pannable image with a before/after split. All interaction is in the code-behind. -->
 	<Grid x:Name="pnlViewport" Background="Transparent" ClipToBounds="True" Focusable="True"
@@ -17,6 +18,19 @@
 			</Panel>
 		</Canvas>
 
+		<!-- The trim: what the final photo leaves out is shaded; in adjust mode its edges can be dragged (screen space) -->
+		<Canvas x:Name="cnvTrim" IsHitTestVisible="False" IsVisible="False">
+			<Rectangle x:Name="rectShadeTop" Fill="#A6000000"/>
+			<Rectangle x:Name="rectShadeBottom" Fill="#A6000000"/>
+			<Rectangle x:Name="rectShadeLeft" Fill="#A6000000"/>
+			<Rectangle x:Name="rectShadeRight" Fill="#A6000000"/>
+			<Rectangle x:Name="rectTrim" Stroke="White" StrokeThickness="1.5" StrokeDashArray="4,3"/>
+			<Border x:Name="bdrTrimLeft" Width="8" Height="34" CornerRadius="3" Background="White" BorderBrush="#333" BorderThickness="1"/>
+			<Border x:Name="bdrTrimRight" Width="8" Height="34" CornerRadius="3" Background="White" BorderBrush="#333" BorderThickness="1"/>
+			<Border x:Name="bdrTrimTop" Width="34" Height="8" CornerRadius="3" Background="White" BorderBrush="#333" BorderThickness="1"/>
+			<Border x:Name="bdrTrimBottom" Width="34" Height="8" CornerRadius="3" Background="White" BorderBrush="#333" BorderThickness="1"/>
+		</Canvas>
+
 		<!-- Split divider, drawn in screen space so it stays thin at any zoom -->
 		<Canvas IsHitTestVisible="False">
 			<Rectangle x:Name="rectDivider" Width="2" Fill="White" Opacity="0.95" IsVisible="False"/>
@@ -25,6 +39,10 @@
 				<TextBlock Text="◀▶" FontSize="10" Foreground="#333" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 			</Border>
 		</Canvas>
+
+		<!-- Zoomed view while a trim edge is dragged; moves aside when the pointer comes near -->
+		<controls:Magnifier x:Name="magnifier" Width="200" Height="200" Margin="10"
+							HorizontalAlignment="Left" VerticalAlignment="Bottom" IsVisible="False"/>
 
 		<Border x:Name="bdrBeforeLabel" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Padding="8,3"
 				CornerRadius="4" Background="#99000000" IsHitTestVisible="False" IsVisible="False">
