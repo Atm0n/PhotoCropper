@@ -92,6 +92,10 @@ internal sealed partial class FinishStageView : UserControl
                 vm.ClosePreviewCommand.Execute(null);
                 e.Handled = true;
                 break;
+            case Key.R when !vm.IsRepairMode:
+                vm.RotateClockwiseCommand.Execute(null);
+                e.Handled = true;
+                break;
         }
     }
 

@@ -132,6 +132,70 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         foreach (var row in VisiblePhotos) row.IsMarked = true;
     }
 
+    // ---- Rotating (for photos whose orientation the Crops stage missed) ----
+
+    [RelayCommand]
+    private Task RotateClockwise() => SelectedPhoto is { } row ? RotateRowsAsync([row], clockwise: true) : Task.CompletedTask;
+
+    [RelayCommand]
+    private Task RotateCounterClockwise() => SelectedPhoto is { } row ? RotateRowsAsync([row], clockwise: false) : Task.CompletedTask;
+
+    /// <summary>Turns every marked photo a quarter turn clockwise.</summary>
+    [RelayCommand]
+    private Task RotateMarked() => RotateRowsAsync(Marked, clockwise: true);
+
+    /// <summary>
+    /// Turns photos a quarter turn: their cropped files, their boxes on the scans (so the Crops stage agrees), and
+    /// their repair strokes and hand-set trim. Their final photos become out of date.
+    /// </summary>
+    internal async Task RotateRowsAsync(IReadOnlyList<FinishPhotoViewModel> rows, bool clockwise)
+    {
+        var workspace = _host.Workspace;
+        string? workDir = _host.WorkDirectory;
+        if (workspace == null || workDir == null || rows.Count == 0) return;
+
+        var rotated = new List<FinishPhotoViewModel>();
+        await Task.Run(() =>
+        {
+            foreach (var row in rows)
+            {
+                try
+                {
+                    PhotoPipelineService.RotatePhoto(workDir, workspace, row.Photo, clockwise);
+                    rotated.Add(row);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+                {
+                    System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not rotate '{row.Title}': {ex.Message}");
+                }
+            }
+        }, CancellationToken.None);
+
+        foreach (string scan in rotated.Select(r => r.Photo.ScanRelativePath).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            _host.ScanCropsChanged(scan);
+        }
+        _host.SaveWorkspace();
+
+        foreach (var row in rotated)
+        {
+            row.NotifyRecordChanged();
+            var old = row.Thumbnail;
+            await LoadThumbnailAsync(row, row.Photo.Cropped!.GetFullPath(workDir));
+            if (!ReferenceEquals(old, row.Thumbnail)) old?.Dispose();
+        }
+        UpdateSummary();
+        _host.ShowStatus(rotated.Count == 1
+            ? LocalizationService.GetString(ResourceKeys.MsgPhotoRotated, "Photo rotated.")
+            : LocalizationService.Format(ResourceKeys.MsgBatchRotated, "{0} photos rotated.", rotated.Count));
+
+        if (SelectedPhoto is { } open && rotated.Contains(open))
+        {
+            TrimPreview = null;
+            await UpdatePreviewAsync();
+        }
+    }
+
     /// <summary>Gives each marked photo the preset that suits its kind of print (black and white, sepia, faded, colour).</summary>
     [RelayCommand]
     private void ApplySuggestedToMarked()
