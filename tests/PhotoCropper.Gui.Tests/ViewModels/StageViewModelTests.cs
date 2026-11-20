@@ -195,6 +195,35 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
+    public void FinishStage_ManualTrim_ShouldBelongToItsPhoto()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        AddCroppedPhoto("scan_0002.png");
+        using var vm = Finish();
+        vm.Refresh();
+        vm.SelectedPhoto = vm.Photos[0];
+
+        vm.IsTrimMode = true;                                           // Adjust turns trimming on
+        vm.Photos[0].TrimWhiteBorders.ShouldBeTrue();
+        vm.TrimPreview.ShouldNotBeNull();
+        vm.SetManualTrim(new System.Drawing.RectangleF(0.1f, 0.2f, 0.5f, 0.6f));
+        var manual = vm.Photos[0].ManualTrim.ShouldNotBeNull();
+        manual.Left.ShouldBe(0.1, 1e-6);
+        manual.Bottom.ShouldBe(0.8, 1e-6);
+
+        vm.Photos[0].ApplyPreset("bw");                                  // a preset keeps it
+        vm.Photos[0].ManualTrim.ShouldBe(manual);
+        vm.CopySettingsToAllCommand.Execute(null);                       // other photos get the settings, not the frame
+        vm.Photos[1].TrimWhiteBorders.ShouldBeTrue();
+        vm.Photos[1].ManualTrim.ShouldBeNull();
+
+        vm.ResetTrimCommand.Execute(null);                               // back to automatic
+        vm.Photos[0].ManualTrim.ShouldBeNull();
+        vm.Photos[0].TrimWhiteBorders = false;                           // no trim: nothing to adjust
+        vm.IsTrimMode.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task FinishStage_PhotoTypes_ShouldFilterTheGridAndSuggestPresets()
     {
         AddCroppedPhoto("scan_0001.png");                                        // sepia

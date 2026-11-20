@@ -227,7 +227,8 @@
 					<Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource AppWorkspaceBrush}" CornerRadius="6"
 							BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ClipToBounds="True">
 						<local:CompareImageViewer x:Name="viewer" Before="{Binding BeforePreview}" After="{Binding AfterPreview}"
-												  IsPainting="{Binding IsRepairMode}" BrushSize="{Binding BrushSize}"/>
+												  IsPainting="{Binding IsRepairMode}" BrushSize="{Binding BrushSize}"
+												  IsTrimming="{Binding IsTrimMode}" Trim="{Binding TrimPreview}"/>
 					</Border>
 
 					<!-- Sidebar: repair brush and the photo's settings; every change updates the photo -->
@@ -306,6 +307,13 @@
 													<!-- The print's border -->
 													<TextBlock Classes="sectionTitle" Text="{DynamicResource LblBorder}"/>
 													<CheckBox IsChecked="{Binding TrimWhiteBorders}" Content="{DynamicResource LblTrimBorders}" ToolTip.Tip="{DynamicResource TipTrimBorders}"/>
+													<StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,4">
+														<ToggleButton Padding="10,4" CornerRadius="5" Content="{DynamicResource BtnAdjustTrim}" ToolTip.Tip="{DynamicResource TipAdjustTrim}"
+																	  IsChecked="{Binding $parent[UserControl].((vm:FinishStageViewModel)DataContext).IsTrimMode}"/>
+														<Button Padding="10,4" CornerRadius="5" Content="{DynamicResource BtnAutoTrim}" ToolTip.Tip="{DynamicResource TipAutoTrim}"
+																IsVisible="{Binding HasManualTrim}"
+																Command="{Binding $parent[UserControl].((vm:FinishStageViewModel)DataContext).ResetTrimCommand}"/>
+													</StackPanel>
 
 													<!-- Automatic restoration -->
 													<TextBlock Classes="sectionTitle" Text="{DynamicResource LblAutomatic}"/>

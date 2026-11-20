@@ -340,6 +340,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
     {
         UpdateSummary();
         if (row.IsMarked) RaiseMarkedToggles();
+        if (ReferenceEquals(row, SelectedPhoto) && !row.TrimWhiteBorders) IsTrimMode = false;
         CopySettingsToAllCommand.NotifyCanExecuteChanged();
 
         _changeCts?.Cancel();
@@ -404,6 +405,8 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     partial void OnSelectedPhotoChanged(FinishPhotoViewModel? value)
     {
+        IsTrimMode = false;
+        TrimPreview = null;
         OnPropertyChanged(nameof(HasSelection));
         CopySettingsToAllCommand.NotifyCanExecuteChanged();
         _ = UpdatePreviewAsync();
@@ -480,6 +483,54 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     [RelayCommand]
     private void ToggleRepairMode() => IsRepairMode = !IsRepairMode;
+
+    // ---- Trim adjusted by hand (the edges are dragged in the view; the result arrives here) ----
+
+    /// <summary>The part of the shown photo that the final photo keeps, as fractions of its size; null when nothing is trimmed.</summary>
+    [ObservableProperty]
+    public partial System.Drawing.RectangleF? TrimPreview { get; set; }
+
+    /// <summary>Adjust mode: the trim's edges can be dragged on the photo.</summary>
+    [ObservableProperty]
+    public partial bool IsTrimMode { get; set; }
+
+    /// <summary>The whole photo: where adjusting starts when no border was found.</summary>
+    private static readonly System.Drawing.RectangleF WholePhoto = new(0, 0, 1, 1);
+
+    partial void OnIsTrimModeChanged(bool value)
+    {
+        if (!value)
+        {
+            if (SelectedPhoto is not { TrimWhiteBorders: true }) TrimPreview = null;
+            return;
+        }
+        IsRepairMode = false;
+        if (SelectedPhoto is { TrimWhiteBorders: false } row) row.TrimWhiteBorders = true;
+        TrimPreview ??= WholePhoto;
+    }
+
+    partial void OnIsRepairModeChanged(bool value)
+    {
+        if (value) IsTrimMode = false;
+    }
+
+    [RelayCommand]
+    private void ToggleTrimMode() => IsTrimMode = !IsTrimMode;
+
+    /// <summary>Keeps <paramref name="area"/> (fractions of the photo's width and height) of the open photo, set by hand.</summary>
+    internal void SetManualTrim(System.Drawing.RectangleF area)
+    {
+        if (SelectedPhoto is not { } row) return;
+        TrimPreview = area; // at once, so the frame doesn't jump back until the preview is rendered again
+        row.ManualTrim = new TrimArea { Left = area.Left, Top = area.Top, Right = area.Right, Bottom = area.Bottom };
+    }
+
+    /// <summary>Goes back to finding the border automatically.</summary>
+    [RelayCommand]
+    private void ResetTrim()
+    {
+        if (SelectedPhoto is { } row) row.ManualTrim = null;
+    }
 
     // ---- AI fill (LaMa): optional model, downloaded once on request ----
 
@@ -591,6 +642,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         if (row?.Photo.Cropped == null || workDir == null)
         {
             SetPreview(null, null);
+            TrimPreview = null;
             IsPreviewBusy = false;
             RepairsOutdated = false;
             return;
@@ -617,6 +669,7 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
             RepairsOutdated = row.Photo.AreRepairsOutdated(result.SourceSize.Width, result.SourceSize.Height);
         }
         SetPreview(result?.Before, result?.After);
+        if (result != null) TrimPreview = result.Trim ?? (IsTrimMode ? WholePhoto : null);
         IsPreviewBusy = false;
 
         // Dust removal and repairs fill in pixels, which looks slightly different at preview size than in the
@@ -636,11 +689,13 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
             return;
         }
         SetPreview(exact.Before, exact.After);
+        TrimPreview = exact.Trim ?? (IsTrimMode ? WholePhoto : null);
     }
 
     private sealed record PreviewRequest(string Path, RestorationSettings Restoration, List<RepairStroke> Repairs, System.Drawing.Size RepairImageSize);
 
-    private sealed record PreviewResult(Bitmap Before, Bitmap? After, System.Drawing.Size SourceSize) : IDisposable
+    /// <param name="Trim">The part the final photo keeps, as fractions of the photo's size; null when nothing is trimmed.</param>
+    private sealed record PreviewResult(Bitmap Before, Bitmap? After, System.Drawing.Size SourceSize, System.Drawing.RectangleF? Trim = null) : IDisposable
     {
         public void Dispose()
         {
@@ -683,31 +738,23 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
         try
         {
+            // The whole photo is shown, so it lines up with the original and repair strokes land where they are
+            // painted; the viewer shades what the trim leaves out.
             using Mat rendered = Core.Export.RestoreStage.RenderKeepingBorder(fullQuality ? full : small, request.Restoration, repairs, out var picture);
-            if (picture is { } keep) ShadeOutside(rendered, keep);
-            if (!fullQuality) return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(rendered), sourceSize);
+            System.Drawing.RectangleF? trim = picture is { } keep
+                ? new System.Drawing.RectangleF((float)keep.X / rendered.Width, (float)keep.Y / rendered.Height,
+                    (float)keep.Width / rendered.Width, (float)keep.Height / rendered.Height)
+                : null;
+            if (!fullQuality) return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(rendered), sourceSize, trim);
 
             using Mat shrunk = Shrink(rendered);
-            return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(shrunk), sourceSize);
+            return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(shrunk), sourceSize, trim);
         }
         catch
         {
             before.Dispose();
             throw;
         }
-    }
-
-    /// <summary>
-    /// Darkens everything outside <paramref name="keep"/>: the border the final photo leaves out. The preview keeps
-    /// the whole photo so it lines up with the original and repair strokes land where they are painted.
-    /// </summary>
-    private static void ShadeOutside(Mat image, OpenCvSharp.Rect keep)
-    {
-        using Mat shade = new(image.Size(), OpenCvSharp.MatType.CV_8UC1, OpenCvSharp.Scalar.All(255));
-        OpenCvSharp.Cv2.Rectangle(shade, keep, OpenCvSharp.Scalar.All(0), -1);
-        using Mat darker = new();
-        image.ConvertTo(darker, -1, 0.35, 0);
-        darker.CopyTo(image, shade);
     }
 
     /// <summary>A copy no larger than <see cref="PreviewMaxSize"/> on its longest side.</summary>

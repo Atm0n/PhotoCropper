@@ -229,6 +229,29 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
+    public void Render_ManualTrim_ShouldKeepExactlyThatArea()
+    {
+        using var picture = Picture(400, 300, 10);
+        using var print = Print(picture, 24, 24, 24, 24); // 448 x 348
+        var manual = new TrimArea { Left = 0.25, Top = 0.1, Right = 0.75, Bottom = 0.6 };
+
+        using var rendered = RestoreStage.Render(print, RestorationSettings.None with { TrimWhiteBorders = true, ManualTrim = manual });
+        using var ignored = RestoreStage.Render(print, RestorationSettings.None with { ManualTrim = manual });
+
+        rendered.Width.ShouldBe(224);
+        rendered.Height.ShouldBe(174);
+        ignored.Size().ShouldBe(print.Size()); // set by hand, but trimming is off
+    }
+
+    [Fact]
+    public void TrimArea_ShouldStayOnThePhotoAndConvertBothWays()
+    {
+        new TrimArea { Left = -0.2, Top = 0.5, Right = 1.4, Bottom = 0.5 }.ToRect(200, 100).ShouldBe(new Rect(0, 50, 200, 10));
+        var area = TrimArea.FromRect(new Rect(20, 10, 100, 50), 200, 100);
+        area.ToRect(200, 100).ShouldBe(new Rect(20, 10, 100, 50));
+    }
+
+    [Fact]
     public void Presets_ShouldNotTurnTrimmingOn()
     {
         foreach (var name in new[] { "faded", "bw", "sepia", "dust", "none" })

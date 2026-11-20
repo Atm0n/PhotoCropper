@@ -21,6 +21,10 @@ internal static class ResourceKeys
     public const string BtnRotateCount = nameof(BtnRotateCount);
     public const string BtnSelectAll = nameof(BtnSelectAll);
     public const string LblMarkedCount = nameof(LblMarkedCount);
+    public const string BtnAdjustTrim = nameof(BtnAdjustTrim);
+    public const string TipAdjustTrim = nameof(TipAdjustTrim);
+    public const string BtnAutoTrim = nameof(BtnAutoTrim);
+    public const string TipAutoTrim = nameof(TipAutoTrim);
     public const string LblStyleAll = nameof(LblStyleAll);
     public const string StyleBlackAndWhite = nameof(StyleBlackAndWhite);
     public const string StyleSepia = nameof(StyleSepia);

@@ -105,6 +105,40 @@ public enum PhotoColorMode
 }
 
 /// <summary>
+/// The part of a photo to keep, set by hand: each edge as a fraction (0..1) of the photo's width or height.
+/// </summary>
+public sealed record TrimArea
+{
+    public double Left { get; init; }
+    public double Top { get; init; }
+    public double Right { get; init; } = 1;
+    public double Bottom { get; init; } = 1;
+
+    /// <summary>The area in pixels of a <paramref name="width"/> × <paramref name="height"/> photo, at least 10 px a side.</summary>
+    public OpenCvSharp.Rect ToRect(int width, int height)
+    {
+        int x0 = (int)Math.Round(Math.Clamp(Left, 0, 1) * width);
+        int y0 = (int)Math.Round(Math.Clamp(Top, 0, 1) * height);
+        int x1 = (int)Math.Round(Math.Clamp(Right, 0, 1) * width);
+        int y1 = (int)Math.Round(Math.Clamp(Bottom, 0, 1) * height);
+        x1 = Math.Clamp(Math.Max(x1, x0 + 10), 0, width);
+        y1 = Math.Clamp(Math.Max(y1, y0 + 10), 0, height);
+        x0 = Math.Min(x0, Math.Max(0, x1 - 10));
+        y0 = Math.Min(y0, Math.Max(0, y1 - 10));
+        return new OpenCvSharp.Rect(x0, y0, x1 - x0, y1 - y0);
+    }
+
+    /// <summary>A pixel rectangle of a <paramref name="width"/> × <paramref name="height"/> photo as fractions.</summary>
+    public static TrimArea FromRect(OpenCvSharp.Rect rect, int width, int height) => new()
+    {
+        Left = (double)rect.X / width,
+        Top = (double)rect.Y / height,
+        Right = (double)rect.Right / width,
+        Bottom = (double)rect.Bottom / height,
+    };
+}
+
+/// <summary>
 /// Appearance fixes applied when a cropped photo is turned into its final version. Every new setting defaults to
 /// "no change", so settings saved before they existed (only RestoreColors/RemoveDust) keep their meaning.
 /// </summary>
@@ -141,6 +175,12 @@ public sealed record RestorationSettings
     /// <see cref="Extraction.EdgeRefinementService.GetWhiteBorderRect"/>). The cropped photo keeps the whole print.
     /// </summary>
     public bool TrimWhiteBorders { get; init; }
+
+    /// <summary>
+    /// The part of the photo to keep when <see cref="TrimWhiteBorders"/> is on, set by hand in the editor; null to
+    /// find the border automatically. Kept as fractions of the photo's size, like the repair strokes.
+    /// </summary>
+    public TrimArea? ManualTrim { get; init; }
 
     /// <summary>True when any manual adjustment is set.</summary>
     public bool HasManualAdjustments => Brightness != 0 || Contrast != 0 || Warmth != 0 || Tint != 0 || Saturation != 0;

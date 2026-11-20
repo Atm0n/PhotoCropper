@@ -112,6 +112,10 @@
 	<sys:String x:Key="LblBorder">Border</sys:String>
 	<sys:String x:Key="LblTrimBorders">Trim white border</sys:String>
 	<sys:String x:Key="TipTrimBorders">Leaves out the print's white or cream border in the final photo, keeping only the picture. The preview shades what will be cut. Photos without a clear border are left as they are; the cropped photo always keeps the whole print.</sys:String>
+	<sys:String x:Key="BtnAdjustTrim">Adjust</sys:String>
+	<sys:String x:Key="TipAdjustTrim">Drag the edges of the frame on the photo (a corner moves two at once) to set exactly what the final photo keeps. Zoom in for precision; a magnifier shows the edge while you drag.</sys:String>
+	<sys:String x:Key="BtnAutoTrim">Automatic</sys:String>
+	<sys:String x:Key="TipAutoTrim">Forget the frame set by hand and find the border automatically again.</sys:String>
 	<sys:String x:Key="TipBulkToggle">Ticked: every selected photo has it. Dash: only some do. Click to turn it on for all of them, or off when all have it.</sys:String>
 	<sys:String x:Key="LblStyleAll">All</sys:String>
 	<sys:String x:Key="StyleBlackAndWhite">Black &amp; white</sys:String>
@@ -290,7 +294,7 @@
 	<sys:String x:Key="HelpReviewDesc">Go through every photo of every scan full-size to rotate (R) or delete (Delete) them quickly; the wheel or arrow keys move between them. An end slide shows what was done. Esc or a double click goes back to the editor.</sys:String>
 	<sys:String x:Key="HelpZoom">Use the zoom slider or Ctrl + mouse wheel to zoom into the scan around the pointer, for precise box edits.</sys:String>
 	<sys:String x:Key="HelpFinishEditorTitle">Photo editor</sys:String>
-	<sys:String x:Key="HelpFinishEditorDesc">Click a photo to open it full-window: zoom and pan, drag the before/after split, or hold Space to see the original. The filmstrip and ← / → switch photos; Esc goes back to the grid. Ctrl+click or Shift+click photos in the grid (or tick them) to select several: the bar above the grid applies a preset, turns automatic restoration, dust removal or white-border trimming on or off for all of them (a dash means only some have it), or exports them all in one click. "Trim white border" leaves out a print's white border in the final photo; the preview shades what will be cut. The chips above the grid show one type of photo at a time (black &amp; white, sepia, faded colour, colour); "Suggested by type" gives each selected photo the preset that suits its kind of print.</sys:String>
+	<sys:String x:Key="HelpFinishEditorDesc">Click a photo to open it full-window: zoom and pan, drag the before/after split, or hold Space to see the original. The filmstrip and ← / → switch photos; Esc goes back to the grid. Ctrl+click or Shift+click photos in the grid (or tick them) to select several: the bar above the grid applies a preset, turns automatic restoration, dust removal or white-border trimming on or off for all of them (a dash means only some have it), or exports them all in one click. "Trim white border" leaves out a print's white border in the final photo; the preview shades what will be cut. The chips above the grid show one type of photo at a time (black &amp; white, sepia, faded colour, colour); "Suggested by type" gives each selected photo the preset that suits its kind of print. "Adjust" (under Border) lets you drag the trim's edges on the photo; "Automatic" goes back to the border found automatically.</sys:String>
 	<sys:String x:Key="HelpRepairTitle">Repair brush &amp; AI fill</sys:String>
 	<sys:String x:Key="HelpRepairDesc">Paint over scratches, creases, tears or stains with the repair brush and they are filled in with grain matched to the photo. For large damage, choose Fill: AI to use the LaMa model (a one-time 208 MB download that runs on your computer). Strokes are kept per photo and can be undone or cleared.</sys:String>
 	<sys:String x:Key="HelpSaveTitle">Saving</sys:String>
