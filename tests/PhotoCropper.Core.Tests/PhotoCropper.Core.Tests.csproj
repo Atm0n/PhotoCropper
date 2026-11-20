@@ -22,6 +22,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Include="Extraction\OrientationPhotos\*.jpg" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\..\src\PhotoCropper.Core\PhotoCropper.Core.csproj" />
 		<ProjectReference Include="..\PhotoCropper.TestHelpers\PhotoCropper.TestHelpers.csproj" />
 	</ItemGroup>

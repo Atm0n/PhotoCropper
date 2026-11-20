@@ -71,19 +71,31 @@ public static class AutoOrientationService
             small.CopyTo(bgrSmall);
         }
 
-        int[] rotations = [0, 90, 180, 270];
+        double[] scores = [.. Rotations.Select(rot => ScoreLandscapeRotation(bgrSmall, rot))];
+        return ChooseLandscapeRotation(scores);
+    }
+
+    private static readonly int[] Rotations = [0, 90, 180, 270];
+
+    /// <summary>
+    /// Picks the clockwise turn from the scene scores of turning the photo by 0, 90, 180 and 270 degrees, or 0 when
+    /// none is convincing.
+    /// </summary>
+    internal static int ChooseLandscapeRotation(IReadOnlyList<double> scores)
+    {
+        ArgumentNullException.ThrowIfNull(scores);
         double bestScore = double.MinValue;
         double secondBestScore = double.MinValue;
         int bestRot = 0;
 
-        foreach (int rot in rotations)
+        for (int i = 0; i < Rotations.Length; i++)
         {
-            double score = ScoreLandscapeRotation(bgrSmall, rot);
+            double score = scores[i];
             if (score > bestScore)
             {
                 secondBestScore = bestScore;
                 bestScore = score;
-                bestRot = rot;
+                bestRot = Rotations[i];
             }
             else if (score > secondBestScore)
             {
@@ -91,14 +103,23 @@ public static class AutoOrientationService
             }
         }
 
-        // Only rotate if the top candidate has a clear positive score and outscores alternatives
-        if (bestScore >= 8.0 && (bestScore - secondBestScore) >= 4.0)
+        // Photos are usually stuck in upright, and turning an upright photo the wrong way is worse than leaving a
+        // sideways one alone, so only a strong, clear-cut score turns it: real skies over land score 60-270 here,
+        // while the wrong turns these features suggest for upright photos (city streets, crowds, interiors) stay
+        // below about 30 or barely beat the upright score.
+        if (bestScore >= MinimumLandscapeScore && (bestScore - secondBestScore) >= bestScore * MinimumLandscapeLead)
         {
             return bestRot;
         }
 
         return 0; // Ambiguous scene -> preserve natural scanner bed placement
     }
+
+    /// <summary>The lowest landscape score that turns a photo.</summary>
+    internal const double MinimumLandscapeScore = 40.0;
+
+    /// <summary>How far ahead of the runner-up the best turn must be, as a share of its score.</summary>
+    internal const double MinimumLandscapeLead = 1.0 / 3.0;
 
     private static double ScoreLandscapeRotation(Mat bgrSmall, int rot)
     {
