@@ -2,8 +2,13 @@
 
 An intelligent, cross-platform .NET 11 desktop application designed to automatically detect, straighten, and extract multiple photos from a single scanner bed image. Built with Avalonia UI and OpenCvSharp (OpenCV).
 
+![An album page as scanned, and the four restored photos PhotoCropper made from it](docs/images/hero-before-after.webp)
+
+<sub>Sample photos: public domain, see [image credits](docs/images/CREDITS.md).</sub>
+
 ## Documentation
 
+- **[Tutorial](docs/TUTORIAL.md)**: A step-by-step walkthrough with screenshots, from scanning album pages to exporting restored photos.
 - **[Architecture & Design Details](docs/ARCHITECTURE.md)**: Explore high-level system components, auto-tuning pipelines, AI auto-orientation heuristics, and memory management strategies via Mermaid diagrams.
 - **[Changelog](CHANGELOG.md)**: Detailed history of releases and changes (Semantic Versioning).
 
@@ -14,6 +19,12 @@ A project goes through three stages, shown in the stage bar at the top of the wi
 1. **Scan → `RawScans/`**: scan pages with your flatbed scanner (`F5`) or import scan files (drag and drop works too). Each new scan is shown large with the photos found on it outlined, so a crooked or overlapping page can be rescanned in place (or discarded) straight away. Scans are kept exactly as acquired.
 2. **Crops → `Cropped/`**: photos are detected on each scan automatically. Fix the boxes (drag corners, rotate, delete), draw missed photos by hand, rotate, refine edges, or go through every photo full-size in **Review mode**. Each photo is saved as a lossless PNG with geometry fixes only.
 3. **Finish → `Final/`**: restore each photo (colour, dust, repair brush, optional AI fill) in a full-window editor with a before/after split, add metadata, and export as JPEG or PNG with EXIF. Only photos that changed are exported again, and photos cropped elsewhere can be imported straight into this stage.
+
+| 1 Scan | 2 Crops | 3 Finish |
+|---|---|---|
+| [![Scan stage](docs/images/02-scan-stage.webp)](docs/TUTORIAL.md#2-scan-the-pages) | [![Crops stage](docs/images/03-crops-stage.webp)](docs/TUTORIAL.md#3-check-the-crops) | [![Finish photo editor](docs/images/11-finish-editor.webp)](docs/TUTORIAL.md#4-restore-and-finish) |
+
+New to PhotoCropper? The **[tutorial](docs/TUTORIAL.md)** goes through a whole album step by step.
 
 The CLI can run the same stages unattended (`--stage crop|restore`), on loose files or on a project with `--project`, so the app and the CLI can share work. Press `F1` in the app for the full help and shortcuts.
 
