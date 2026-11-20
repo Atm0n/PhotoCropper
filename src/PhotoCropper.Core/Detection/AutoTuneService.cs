@@ -60,7 +60,7 @@ public sealed class AutoTuneService : IDisposable
             _source.CopyTo(rawDetMat);
         }
 
-        _detMat = PhotoCropperEngine.NormalizeToBgr(rawDetMat);
+        _detMat = ImageIo.NormalizeToBgr(rawDetMat);
         _detHsv = new Mat();
         Cv2.CvtColor(_detMat, _detHsv, ColorConversionCodes.BGR2HSV);
 
@@ -102,13 +102,10 @@ public sealed class AutoTuneService : IDisposable
 
     private void NeutralizeBezels()
     {
-        var (Top, Bottom, Left, Right) = BackgroundAnalyzer.DetectBezelMargins(_detMat!, _avgBgColorHsv, _currentOptions.BackgroundTolerance);
-        if (Top > 0 || Bottom > 0 || Left > 0 || Right > 0)
+        var margins = BackgroundAnalyzer.DetectBezelMargins(_detMat!, _avgBgColorHsv, _currentOptions.BackgroundTolerance);
+        if (margins.Top > 0 || margins.Bottom > 0 || margins.Left > 0 || margins.Right > 0)
         {
-            if (Top > 0) Cv2.Rectangle(_detMat!, new Rect(0, 0, _detMat!.Width, Top), _bgBgr, -1);
-            if (Bottom > 0) Cv2.Rectangle(_detMat!, new Rect(0, _detMat!.Height - Bottom, _detMat!.Width, Bottom), _bgBgr, -1);
-            if (Left > 0) Cv2.Rectangle(_detMat!, new Rect(0, 0, Left, _detMat!.Height), _bgBgr, -1);
-            if (Right > 0) Cv2.Rectangle(_detMat!, new Rect(_detMat!.Width - Right, 0, Right, _detMat!.Height), _bgBgr, -1);
+            BackgroundAnalyzer.PaintBezels(_detMat!, margins, pad: 0, _bgBgr);
             Cv2.CvtColor(_detMat!, _detHsv!, ColorConversionCodes.BGR2HSV);
         }
     }

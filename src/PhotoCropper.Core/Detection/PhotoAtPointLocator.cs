@@ -434,7 +434,7 @@ public static class PhotoAtPointLocator
 
         public static WorkingImage Create(Mat scan, DetectionOptions options, IReadOnlyList<RotatedBox> otherBoxes, bool neutralizeBezels, RotatedRect? onPage)
         {
-            using Mat original = PhotoCropperEngine.NormalizeToBgr(scan);
+            using Mat original = ImageIo.NormalizeToBgr(scan);
             Scalar backgroundHsv;
             using (Mat fullHsv = new())
             {
@@ -463,11 +463,8 @@ public static class PhotoAtPointLocator
 
             if (neutralizeBezels)
             {
-                var (top, bottom, left, right) = BackgroundAnalyzer.DetectBezelMargins(original, backgroundHsv, options.BackgroundTolerance);
-                if (top > 0) Cv2.Rectangle(padded, new Rect(0, 0, padded.Width, pad + top), backgroundBgr, -1);
-                if (bottom > 0) Cv2.Rectangle(padded, new Rect(0, padded.Height - pad - bottom, padded.Width, pad + bottom), backgroundBgr, -1);
-                if (left > 0) Cv2.Rectangle(padded, new Rect(0, 0, pad + left, padded.Height), backgroundBgr, -1);
-                if (right > 0) Cv2.Rectangle(padded, new Rect(padded.Width - pad - right, 0, pad + right, padded.Height), backgroundBgr, -1);
+                var margins = BackgroundAnalyzer.DetectBezelMargins(original, backgroundHsv, options.BackgroundTolerance);
+                BackgroundAnalyzer.PaintBezels(padded, margins, pad, backgroundBgr);
             }
 
             // The other photos are painted over, so the clicked one can't merge with them.
