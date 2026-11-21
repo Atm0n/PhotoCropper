@@ -886,23 +886,14 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
         var options = _host.GetRenderOptions();
         int done = 0;
         var failures = new List<string>();
+        var titles = stale.ToDictionary(row => row.Photo, row => row.Title);
 
         await _host.RunBusyAsync(
             LocalizationService.Format(ResourceKeys.MsgExportingFinal, "Exporting {0} photos...", stale.Count),
             () => Task.Run(() =>
             {
-                foreach (var row in stale)
-                {
-                    try
-                    {
-                        PhotoPipelineService.RenderFinal(workDir, workspace, row.Photo, options);
-                        done++;
-                    }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
-                    {
-                        failures.Add($"{row.Title}: {ex.Message}");
-                    }
-                }
+                done = PhotoPipelineService.RenderFinals(workDir, workspace, [.. stale.Select(row => row.Photo)], options,
+                    (photo, ex) => failures.Add($"{titles[photo]}: {ex.Message}"));
             }, CancellationToken.None));
 
         _host.SaveWorkspace();

@@ -2,6 +2,7 @@ using OpenCvSharp;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
+using System.Runtime.ExceptionServices;
 using RectangleF = System.Drawing.RectangleF;
 
 namespace PhotoCropper.Core.Workspace;
@@ -244,6 +245,83 @@ public static class PhotoPipelineService
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(photo);
         ArgumentNullException.ThrowIfNull(options);
+        WriteFinal(workDirectory, session, photo, options, Render(workDirectory, photo, options));
+    }
+
+    /// <summary>Renders the final version of every photo whose final file is missing or out of date.</summary>
+    /// <returns>The number of final photos written.</returns>
+    public static int RenderStaleFinals(string workDirectory, WorkspaceSessionState session, IEnumerable<ProjectPhoto> photos, FinalRenderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(photos);
+        return RenderFinals(workDirectory, session, [.. photos.Where(p => p.IsFinalStale)], options, onFailure: null);
+    }
+
+    /// <summary>
+    /// Renders the final versions of <paramref name="photos"/>, as <see cref="RenderFinal"/> does for each. Several
+    /// photos are restored and encoded side by side; their files are then named and written in the list's order,
+    /// so each photo gets the same file name as when they were rendered one after another.
+    /// </summary>
+    /// <param name="workDirectory">The project folder.</param>
+    /// <param name="session">The project's session.</param>
+    /// <param name="photos">The photos to render, in the order their files are written.</param>
+    /// <param name="options">The export format, naming pattern and folder.</param>
+    /// <param name="onFailure">Called, in the list's order, for a photo that could not be rendered or written, and
+    /// the others go on. When <see langword="null"/>, the first failure is thrown once the photos before it are written.</param>
+    /// <returns>The number of final photos written.</returns>
+    public static int RenderFinals(string workDirectory, WorkspaceSessionState session, IReadOnlyList<ProjectPhoto> photos, FinalRenderOptions options, Action<ProjectPhoto, Exception>? onFailure)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workDirectory);
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(photos);
+        ArgumentNullException.ThrowIfNull(options);
+
+        // A batch at a time, so only a few encoded photos wait in memory to be written.
+        int batchSize = Math.Max(1, Environment.ProcessorCount);
+        int written = 0;
+        for (int first = 0; first < photos.Count; first += batchSize)
+        {
+            int count = Math.Min(batchSize, photos.Count - first);
+            var rendered = new RenderedFinal?[count];
+            var failures = new Exception?[count];
+            int start = first;
+            Parallel.For(0, count, i =>
+            {
+                try
+                {
+                    rendered[i] = Render(workDirectory, photos[start + i], options);
+                }
+                catch (Exception ex) when (IsRenderFailure(ex))
+                {
+                    failures[i] = ex;
+                }
+            });
+
+            for (int i = 0; i < count; i++)
+            {
+                var photo = photos[first + i];
+                try
+                {
+                    if (failures[i] is { } failure) ExceptionDispatchInfo.Throw(failure);
+                    WriteFinal(workDirectory, session, photo, options, rendered[i]!);
+                    written++;
+                }
+                catch (Exception ex) when (onFailure != null && IsRenderFailure(ex))
+                {
+                    onFailure(photo, ex);
+                }
+            }
+        }
+        return written;
+    }
+
+    private static bool IsRenderFailure(Exception ex) => ex is IOException or UnauthorizedAccessException or InvalidOperationException;
+
+    /// <summary>A photo's final version, encoded and waiting to be written, with what it was made from.</summary>
+    private sealed record RenderedFinal(byte[] Bytes, ProjectFile RenderedFrom, RestorationSettings Restoration, string RepairsFingerprint, PhotoExportMetadata? Metadata);
+
+    /// <summary>Reads the photo's cropped file, then restores and encodes it. Names and records nothing.</summary>
+    private static RenderedFinal Render(string workDirectory, ProjectPhoto photo, FinalRenderOptions options)
+    {
         if (photo.Cropped == null) throw new InvalidOperationException($"Photo '{photo.Id}' has no cropped file to render from.");
 
         string croppedPath = photo.Cropped.GetFullPath(workDirectory);
@@ -258,15 +336,18 @@ public static class PhotoPipelineService
         string repairsFingerprint = photo.RepairsFingerprint;
 
         var metadata = photo.Metadata ?? options.DefaultMetadata;
-        byte[] bytes;
-        using (Mat cropped = RestoreStage.ReadImage(croppedPath))
-        {
-            var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(croppedPath);
-            // Repair-brush strokes apply only if they were painted on a cropped photo of this size.
-            var repairs = Extraction.PhotoRepairService.ApplicableRepairs(photo, cropped);
-            bytes = RestoreStage.RestoreAndEncode(cropped, restoration, options.Format, options.JpegQuality, metadata, xDpi, yDpi, repairs);
-        }
+        using Mat cropped = RestoreStage.ReadImage(croppedPath);
+        var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(croppedPath);
+        // Repair-brush strokes apply only if they were painted on a cropped photo of this size.
+        var repairs = Extraction.PhotoRepairService.ApplicableRepairs(photo, cropped);
+        byte[] bytes = RestoreStage.RestoreAndEncode(cropped, restoration, options.Format, options.JpegQuality, metadata, xDpi, yDpi, repairs);
+        return new RenderedFinal(bytes, renderedFrom, restoration, repairsFingerprint, metadata);
+    }
 
+    /// <summary>Names and writes a rendered final file, replacing the photo's previous one, and records it.</summary>
+    private static void WriteFinal(string workDirectory, WorkspaceSessionState session, ProjectPhoto photo, FinalRenderOptions options, RenderedFinal rendered)
+    {
+        var metadata = rendered.Metadata;
         string extension = string.Equals(options.Format, AppConstants.FormatPng, StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
         string fileName = FileNameTemplateHelper.FormatFileName(
             options.FileNamePattern,
@@ -301,7 +382,7 @@ public static class PhotoPipelineService
             string target = PhotoExporter.ResolveUniqueExportPath(Path.Combine(finalDir, fileName));
             try
             {
-                File.WriteAllBytes(target, bytes);
+                File.WriteAllBytes(target, rendered.Bytes);
             }
             finally
             {
@@ -310,23 +391,9 @@ public static class PhotoPipelineService
 
             photo.Final = ProjectFile.FromDisk(workDirectory, target);
         }
-        photo.FinalRenderedFrom = renderedFrom;
-        photo.FinalRenderedWith = restoration;
-        photo.FinalRenderedRepairs = repairsFingerprint;
-    }
-
-    /// <summary>Renders the final version of every photo whose final file is missing or out of date.</summary>
-    /// <returns>The number of final photos written.</returns>
-    public static int RenderStaleFinals(string workDirectory, WorkspaceSessionState session, IEnumerable<ProjectPhoto> photos, FinalRenderOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(photos);
-        int rendered = 0;
-        foreach (var photo in photos.Where(p => p.IsFinalStale))
-        {
-            RenderFinal(workDirectory, session, photo, options);
-            rendered++;
-        }
-        return rendered;
+        photo.FinalRenderedFrom = rendered.RenderedFrom;
+        photo.FinalRenderedWith = rendered.Restoration;
+        photo.FinalRenderedRepairs = rendered.RepairsFingerprint;
     }
 
     /// <summary>
