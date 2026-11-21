@@ -119,6 +119,33 @@ public sealed class ScanSessionItem : IDisposable
         TryDeactivateIfUnmodified();
     }
 
+    /// <summary>
+    /// The scan's saved boxes were changed outside its editor (Finish turned a photo), so they now hold everything:
+    /// the loaded copy is dropped, edited or not, and the scan is restored from <paramref name="crops"/> when next
+    /// shown. Keeping an edited copy loaded would bring back its older boxes the next time they are saved.
+    /// </summary>
+    /// <returns>False if the scan is busy and keeps its loaded copy.</returns>
+    public bool ReloadFromSavedCrops(IEnumerable<PhotoCropper.Core.Workspace.WorkspaceCropData> crops)
+    {
+        ArgumentNullException.ThrowIfNull(crops);
+        lock (_lock)
+        {
+            if (IsProcessing) return false;
+            SavedCrops = crops.ToList();
+            IsSaved = true;
+            _isModified = false;
+            if (Engine != null)
+            {
+                Options = Engine.CurrentOptions with { };
+                CachedPhotoCount = Engine.DetectedPhotos.Count;
+                Engine.Dispose();
+                Engine = null;
+                IsAutoTuned = false;
+            }
+            return true;
+        }
+    }
+
     public void Dispose()
     {
         Deactivate();
