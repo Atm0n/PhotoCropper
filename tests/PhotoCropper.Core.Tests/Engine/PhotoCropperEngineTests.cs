@@ -220,6 +220,29 @@ public sealed class PhotoCropperEngineTests : IDisposable
         }
     }
 
+    [Theory]
+    [InlineData(4, 0.05)]
+    [InlineData(30, 0.01)]
+    public void DetectPhotos_PrintReachingTheEdgeWithALightPart_ShouldKeepItsWholeBox(double tolerance, double minArea)
+    {
+        // Prints on the bed, not a page: the white floor where one runs off the scan's edge isn't bed to paint out.
+        string path = Path.Combine(_tempDir, "prints_to_edge.png");
+        TestImageFactory.CreatePrintsReachingTheEdgeScan(path);
+
+        using var cropper = new PhotoCropperEngine(path);
+        cropper.ApplyOptions(new PhotoCropper.Core.Models.DetectionOptions { BackgroundTolerance = tolerance, MinAreaFactor = minArea });
+        cropper.DetectPhotos();
+
+        cropper.AcceptedCandidates.Count.ShouldBe(TestImageFactory.PrintsReachingTheEdge.Length);
+        foreach (var print in TestImageFactory.PrintsReachingTheEdge)
+        {
+            cropper.AcceptedCandidates.ShouldContain(c =>
+                Math.Abs(c.Rotated.Center.X - (print.X + print.Width / 2f)) < 25 && Math.Abs(c.Rotated.Center.Y - (print.Y + print.Height / 2f)) < 25 &&
+                Math.Abs(Math.Max(c.Rotated.Size.Width, c.Rotated.Size.Height) - Math.Max(print.Width, print.Height)) < 40 &&
+                Math.Abs(Math.Min(c.Rotated.Size.Width, c.Rotated.Size.Height) - Math.Min(print.Width, print.Height)) < 40);
+        }
+    }
+
     [Fact]
     public void DetectPhotos_FlushScanEdge_ShouldDetectSuccessfully()
     {
