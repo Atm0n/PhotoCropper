@@ -452,13 +452,15 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
         string fullPath = Path.GetFullPath(Path.Combine(workDir, scanRelativePath));
         var item = ScanSessions.FirstOrDefault(s => string.Equals(Path.GetFullPath(s.FilePath), fullPath, StringComparison.OrdinalIgnoreCase));
         if (item == null) return;
+        List<WorkspaceCropData>? saved = null;
         lock (workspace)
         {
             var entry = workspace.Scans.FirstOrDefault(s => string.Equals(s.RelativePath, scanRelativePath, StringComparison.OrdinalIgnoreCase));
-            if (entry != null) item.SavedCrops = [.. entry.FinalCrops];
+            if (entry != null) saved = [.. entry.FinalCrops];
         }
-        // Drop the scan's loaded copy: Crops restores it from the saved boxes next time it is shown.
-        item.TryDeactivateIfUnmodified();
+        // Drop the scan's loaded copy, even one edited in Crops (its edits were saved on the way to Finish): Crops
+        // restores it from the saved boxes next time it is shown, instead of saving its older boxes over them.
+        if (saved != null) item.ReloadFromSavedCrops(saved);
     }
 
     public void NotifyExportCompleted(string message, bool succeeded) => _notificationService.NotifyExportCompleted(message, succeeded);

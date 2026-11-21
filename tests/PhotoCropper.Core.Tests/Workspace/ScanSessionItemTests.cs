@@ -219,6 +219,39 @@ public sealed class ScanSessionItemTests : IDisposable
         rot.ShouldBe(90);
     }
 
+    [Fact]
+    public void ScanSessionItem_ReloadFromSavedCrops_ShouldDropAnEditedCopyForTheNewBoxes()
+    {
+        var box = new PhotoCropper.Core.Workspace.WorkspaceCropData { CenterX = 100, CenterY = 100, Width = 80, Height = 60, Angle = 0 };
+        using var item = new ScanSessionItem(_scanPath, new DetectionOptions(), isSaved: true, isModified: false, savedCrops: [box]);
+        item.Activate();
+        item.IsModified = true; // edited in Crops: kept loaded from here on
+
+        // Finish turns the photo in the saved boxes.
+        var turned = new PhotoCropper.Core.Workspace.WorkspaceCropData { CenterX = 100, CenterY = 100, Width = 80, Height = 60, Angle = 0, RotationDegrees = 180 };
+        item.ReloadFromSavedCrops([turned]).ShouldBeTrue();
+
+        item.IsActive.ShouldBeFalse();
+        item.IsModified.ShouldBeFalse();
+        var engine = item.Activate();
+        engine.DetectedPhotos.Count.ShouldBe(1);
+        engine.PhotoRotations.TryGetValue(0, out int rot).ShouldBeTrue();
+        rot.ShouldBe(180);
+    }
+
+    [Fact]
+    public void ScanSessionItem_ReloadFromSavedCrops_ShouldLeaveABusyScanLoaded()
+    {
+        using var item = new ScanSessionItem(_scanPath, new DetectionOptions());
+        item.Activate();
+        item.IsProcessing = true;
+
+        item.ReloadFromSavedCrops([]).ShouldBeFalse();
+
+        item.IsActive.ShouldBeTrue();
+        item.IsProcessing = false;
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
