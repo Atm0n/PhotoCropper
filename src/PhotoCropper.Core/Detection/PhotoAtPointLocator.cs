@@ -40,6 +40,10 @@ public static class PhotoAtPointLocator
     private const double MaxPhotoOnPage = 0.6;
     /// <summary>Searched against the paper around it, a photo's box may grow at most this much (its border).</summary>
     private const double MaxPrintGrowth = 1.8;
+    /// <summary>A print's white border is at most this fraction of its picture's shorter side.</summary>
+    private const double MaxBorderShare = 0.2;
+    /// <summary>Two strips' mean colours (BGR) this close or closer count as the same colour.</summary>
+    private const double PaperDistance = 25;
 
     /// <param name="scan">The scan, as loaded.</param>
     /// <param name="point">The clicked point, in scan pixels.</param>
@@ -80,9 +84,16 @@ public static class PhotoAtPointLocator
         {
             var onPaper = options with { CustomBackgroundColorHsv = CvInterop.ToColor(paperAround) };
             var print = Find(scan, point, onPaper, otherBoxes, neutralizeBezels: false, onPage: null, out _, out _, out _);
-            if (print is { } whole && Area(whole) >= 0.95 * Area(picture) && Area(whole) <= MaxPrintGrowth * Area(picture))
+            if (print is { } whole && Area(whole) >= 1.02 * Area(picture) && Area(whole) <= MaxPrintGrowth * Area(picture))
             {
                 found = whole;
+            }
+            else
+            {
+                // That search can stop at the picture again (its border and the bed beyond the paper look alike).
+                // The border is then the smooth band between the picture and the paper: grow over it to the paper.
+                using var image = WorkingImage.Create(scan, options, otherBoxes, neutralizeBezels: false, onPage: null);
+                if (GrowOverBorder(image, Scale(picture, image.Scale), paperAround) is { } bordered) found = Scale(bordered, 1.0 / image.Scale);
             }
         }
         return found is { } box ? CvInterop.ToBox(PhotoExtractionEngine.RegularizeNearRightAngles(box)) : null;
@@ -374,6 +385,84 @@ public static class PhotoAtPointLocator
         if (colours.Count < 3) return null;
         return MainColour(colours) is { } around && !IsBackgroundColour(around, image.BackgroundHsv) ? around : null;
     }
+
+    /// <summary>
+    /// A print's border around the picture found: on every side, a smooth band of one colour (not the paper's) that
+    /// ends at the paper around it. Each side moves out to where the paper starts; when a side doesn't end at paper
+    /// within <see cref="MaxBorderShare"/> of the picture's shorter side, there is no border and nothing changes.
+    /// Working-size scan coordinates in and out.
+    /// </summary>
+    private static RotatedRect? GrowOverBorder(WorkingImage image, RotatedRect picture, Scalar paperHsv)
+    {
+        int w = (int)Math.Round(picture.Size.Width), h = (int)Math.Round(picture.Size.Height);
+        if (w < 20 || h < 20) return null;
+        int limit = (int)Math.Ceiling(Math.Min(w, h) * MaxBorderShare) + 2;
+        int pw = w + 2 * limit, ph = h + 2 * limit;
+        var centre = new Point2f(picture.Center.X + image.Pad, picture.Center.Y + image.Pad);
+        using Mat rotation = Cv2.GetRotationMatrix2D(centre, picture.Angle, 1.0);
+        rotation.Set<double>(0, 2, rotation.Get<double>(0, 2) - centre.X + pw / 2.0);
+        rotation.Set<double>(1, 2, rotation.Get<double>(1, 2) - centre.Y + ph / 2.0);
+        using Mat patch = new();
+        Cv2.WarpAffine(image.Bgr, patch, rotation, new Size(pw, ph), InterpolationFlags.Linear, BorderTypes.Replicate);
+
+        Scalar paper = BackgroundAnalyzer.HsvToBgr(paperHsv);
+        int step = Math.Max(2, Math.Min(w, h) / 100);
+        var grown = new int[4];
+        for (int side = 0; side < 4; side++)
+        {
+            int? width = BorderWidth(patch, side, w, h, limit, step, paper);
+            if (width is not { } border || border == 0) return null;
+            grown[side] = border;
+        }
+
+        // Back to scan coordinates: the straightened box was at [limit, limit + w] x [limit, limit + h].
+        double left = limit - grown[2], right = limit + w + grown[3], top = limit - grown[0], bottom = limit + h + grown[1];
+        double rad = picture.Angle * Math.PI / 180, cos = Math.Cos(rad), sin = Math.Sin(rad);
+        double dx = (left + right) / 2 - pw / 2.0, dy = (top + bottom) / 2 - ph / 2.0;
+        var c = new Point2f((float)(picture.Center.X + dx * cos - dy * sin), (float)(picture.Center.Y + dx * sin + dy * cos));
+        return new RotatedRect(c, new Size2f((float)(right - left), (float)(bottom - top)), picture.Angle);
+    }
+
+    /// <summary>
+    /// How wide one side's border is: strips of width <paramref name="step"/> outward from the picture's side
+    /// (0 top, 1 bottom, 2 left, 3 right) are the border while smooth and of the first strip's colour; the border
+    /// ends where a strip is the paper's colour (one strip across the border's own edge may be neither).
+    /// <see langword="null"/> when the paper isn't reached within <paramref name="limit"/>.
+    /// </summary>
+    private static int? BorderWidth(Mat patch, int side, int w, int h, int limit, int step, Scalar paper)
+    {
+        Scalar? border = null;
+        bool crossing = false;
+        // Skip the picture's own edge, then look along the side's middle, away from the corners.
+        for (int depth = 2; depth + step <= limit; depth += step)
+        {
+            Rect strip = side switch
+            {
+                0 => new Rect(limit + w / 10, limit - depth - step, w - w / 5, step),
+                1 => new Rect(limit + w / 10, limit + h + depth, w - w / 5, step),
+                2 => new Rect(limit - depth - step, limit + h / 10, step, h - h / 5),
+                _ => new Rect(limit + w + depth, limit + h / 10, step, h - h / 5),
+            };
+            using Mat s = new(patch, strip);
+            Cv2.MeanStdDev(s, out Scalar mean, out Scalar spread);
+            if (Distance(mean, paper) <= PaperDistance) return border == null ? 0 : depth;
+            bool smooth = Math.Max(spread.Val0, Math.Max(spread.Val1, spread.Val2)) <= BackgroundStdDev;
+            if (border == null)
+            {
+                if (!smooth) return 0; // the picture goes on, or no border: nothing to grow over
+                border = mean;
+            }
+            else if (!smooth || Distance(mean, border.Value) > PaperDistance)
+            {
+                if (crossing) return null; // something other than a border, then paper
+                crossing = true;
+            }
+        }
+        return null;
+    }
+
+    private static double Distance(Scalar a, Scalar b) =>
+        Math.Sqrt((a.Val0 - b.Val0) * (a.Val0 - b.Val0) + (a.Val1 - b.Val1) * (a.Val1 - b.Val1) + (a.Val2 - b.Val2) * (a.Val2 - b.Val2));
 
     private static bool IsBackgroundColour(Scalar hsv, Scalar background) =>
         Math.Abs(hsv.Val1 - background.Val1) <= 15 && Math.Abs(hsv.Val2 - background.Val2) <= 20;

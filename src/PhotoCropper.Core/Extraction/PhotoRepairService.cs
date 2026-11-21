@@ -260,7 +260,6 @@ public static class PhotoRepairService
     /// slightly blurred like real grain, then normalised within that area. Uses a fixed seed so the same repair
     /// always gets the same grain.
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Visual film grain, not security: a fixed, reproducible seed is the point")]
     private static Mat CreateNoise(Size size, Mat mask)
     {
         Mat noise = new Mat(size.Height, size.Width, MatType.CV_32FC1, Scalar.All(0));
@@ -271,18 +270,10 @@ public static class PhotoRepairService
         Rect area = Rect.Inflate(Cv2.BoundingRect(points), 4, 4);
         area = area.Intersect(new Rect(0, 0, size.Width, size.Height));
 
-        var random = new Random(20241117); // NOSONAR: visual film grain with a fixed seed, not security
-        var values = new float[area.Width * area.Height];
-        for (int i = 0; i < values.Length; i++)
-        {
-            // Box-Muller transform: two uniform samples → one standard normal sample.
-            double u1 = 1.0 - random.NextDouble();
-            double u2 = random.NextDouble();
-            values[i] = (float)(Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2));
-        }
-
+        // OpenCV's own generator from a fixed state (not its shared global one), so a repair always gets the same grain.
+        var grain = new RNG(20241117);
         using Mat raw = new(area.Height, area.Width, MatType.CV_32FC1);
-        raw.SetData(values);
+        grain.Fill(raw, DistributionType.Normal, Scalar.All(0), Scalar.All(1));
         using Mat shaped = new();
         Cv2.GaussianBlur(raw, shaped, new Size(0, 0), 0.6);
 

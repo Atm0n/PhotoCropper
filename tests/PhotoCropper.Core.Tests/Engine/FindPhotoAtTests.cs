@@ -95,11 +95,20 @@ public sealed class FindPhotoAtTests : IDisposable
     }
 
     // A print whose white border is the bed's colour, stuck on torn album paper: against the bed only the picture
-    // stands out; against the paper the whole print does, border included.
-    [Fact]
-    public void ClickOnAWhiteBorderedPrintOnPaper_IncludesItsBorder()
+    // stands out; against the paper the whole print does, border included. Several generated prints: one alone
+    // passed by luck while most of them lost their border.
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(6)]
+    [InlineData(7)]
+    [InlineData(8)]
+    public void ClickOnAWhiteBorderedPrintOnPaper_IncludesItsBorder(int seed)
     {
-        var scan = SampleScanFactory.CreatePrintOnPaper(Path.Combine(_tempDir, "print.png"), seed: 25);
+        var scan = SampleScanFactory.CreatePrintOnPaper(Path.Combine(_tempDir, $"print{seed}.png"), seed: seed);
         using var engine = new PhotoCropperEngine(scan.Path) { AutoOrientPhotos = false };
         engine.RestoreFromSavedCrops([]);
         var print = scan.Photos[0];

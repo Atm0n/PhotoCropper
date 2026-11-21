@@ -14,7 +14,6 @@ public sealed record AlbumScan(string Path, IReadOnlyList<Rect> Photos);
 /// an off-white bed with sensor noise, a slight lid shadow and dust, and one to four photos with gradients, shapes
 /// and noise, each slightly tilted. The same seed always gives the same scan.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Test images: a seeded, repeatable generator is the point")]
 public static class SampleScanFactory
 {
     /// <summary>A4 at 150 dpi: big enough to look like a scan, small enough to process quickly.</summary>
@@ -27,7 +26,7 @@ public static class SampleScanFactory
     {
         ArgumentOutOfRangeException.ThrowIfNegative(photoCount);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(photoCount, 4);
-        var random = new Random(seed); // NOSONAR: reproducible test images from a fixed seed, not security
+        var random = new SeededRandom(seed);
         if (photoCount == 0) photoCount = random.Next(1, 5);
 
         using var scan = CreateBed(random, width, height);
@@ -47,7 +46,7 @@ public static class SampleScanFactory
         return new SampleScan(path, photoCount);
     }
 
-    private static Mat CreateBed(Random random, int width, int height)
+    private static Mat CreateBed(SeededRandom random, int width, int height)
     {
         var bed = new Mat(height, width, MatType.CV_8UC3);
         double level = 238 + random.Next(0, 10);
@@ -67,7 +66,7 @@ public static class SampleScanFactory
         return bed;
     }
 
-    private static void PlacePhoto(Mat scan, Rect cell, Random random)
+    private static void PlacePhoto(Mat scan, Rect cell, SeededRandom random)
     {
         int photoWidth = (int)(cell.Width * (0.62 + random.NextDouble() * 0.16));
         int photoHeight = (int)(cell.Height * (0.55 + random.NextDouble() * 0.15));
@@ -106,7 +105,7 @@ public static class SampleScanFactory
     /// <returns>The scan and each photo's rectangle.</returns>
     public static AlbumScan CreateAlbumPage(string path, int seed, int width = DefaultWidth, int height = DefaultHeight)
     {
-        var random = new Random(seed); // NOSONAR: reproducible test images from a fixed seed, not security
+        var random = new SeededRandom(seed);
         using var scan = CreateBed(random, width, height);
 
         var page = new Rect(width * 6 / 100, height * 5 / 100, width * 88 / 100, height * 85 / 100);
@@ -157,7 +156,7 @@ public static class SampleScanFactory
     /// <returns>The scan and the whole print's rectangle, border included.</returns>
     public static AlbumScan CreatePrintOnPaper(string path, int seed, int width = DefaultWidth, int height = DefaultHeight)
     {
-        var random = new Random(seed); // NOSONAR: reproducible test images from a fixed seed, not security
+        var random = new SeededRandom(seed);
         using var scan = CreateBed(random, width, height);
         // The print's white border: the bed's own colour (sampled away from the lid shadow).
         Scalar bedColour;
@@ -202,7 +201,7 @@ public static class SampleScanFactory
     /// <returns>The scan and the picture's rectangle (inside the border).</returns>
     public static AlbumScan CreateBorderedPrintScan(string path, int seed, int pictureWidth = 540, int pictureHeight = 390, int border = 30, int x = 400, int y = 300)
     {
-        var random = new Random(seed); // NOSONAR: reproducible test images from a fixed seed, not security
+        var random = new SeededRandom(seed);
         int printWidth = pictureWidth + 2 * border, printHeight = pictureHeight + 2 * border;
         using var scan = new Mat(Math.Max(1200, y + printHeight + 200), Math.Max(1600, x + printWidth + 200), MatType.CV_8UC3, new Scalar(60, 60, 60));
         using (var print = new Mat(scan, new Rect(x, y, printWidth, printHeight))) print.SetTo(new Scalar(238, 240, 242));
@@ -217,7 +216,7 @@ public static class SampleScanFactory
     }
 
     /// <summary>A photo-like image: a two-colour gradient, a few soft shapes, and grain.</summary>
-    private static Mat CreatePhoto(Random random, int width, int height)
+    private static Mat CreatePhoto(SeededRandom random, int width, int height)
     {
         var photo = new Mat(height, width, MatType.CV_8UC3);
         Scalar top = RandomColour(random), bottom = RandomColour(random);
@@ -245,10 +244,10 @@ public static class SampleScanFactory
     }
 
     /// <summary>Mid-tone colours: clearly darker than the bed, so a photo's edge is always visible.</summary>
-    private static Scalar RandomColour(Random random) =>
+    private static Scalar RandomColour(SeededRandom random) =>
         new(random.Next(30, 190), random.Next(30, 190), random.Next(30, 190));
 
-    private static void AddDust(Mat scan, Random random)
+    private static void AddDust(Mat scan, SeededRandom random)
     {
         int specks = random.Next(4, 12);
         for (int i = 0; i < specks; i++)
@@ -260,12 +259,10 @@ public static class SampleScanFactory
     }
 
     /// <summary>Sensor-like grain, drawn from <paramref name="random"/> (not OpenCV's global generator) so a seed always gives the same image.</summary>
-    private static void AddNoise(Mat image, Random random, int strength)
+    private static void AddNoise(Mat image, SeededRandom random, int strength)
     {
-        short[] values = new short[image.Rows * image.Cols * image.Channels()];
-        for (int i = 0; i < values.Length; i++) values[i] = (short)random.Next(-strength, strength + 1);
         using var noise = new Mat(image.Size(), MatType.CV_16SC(image.Channels()));
-        noise.SetData(values);
+        random.FillUniform(noise, Scalar.All(-strength), Scalar.All(strength + 1));
         using var wide = new Mat();
         image.ConvertTo(wide, MatType.CV_16S);
         Cv2.Add(wide, noise, wide);
