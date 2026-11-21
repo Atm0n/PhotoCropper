@@ -21,7 +21,7 @@ public sealed class WhiteBorderTests : IDisposable
     private static Mat Picture(int width, int height, int seed)
     {
         var picture = new Mat(height, width, MatType.CV_8UC3);
-        new SeededRandom(seed).FillUniform(picture, Scalar.All(0), Scalar.All(256));
+        new SeededRandom(seed).FillUniform(picture, 0, 256);
         Cv2.GaussianBlur(picture, picture, new Size(0, 0), 6);
         Cv2.Normalize(picture, picture, 30, 190, NormTypes.MinMax);
         return picture;

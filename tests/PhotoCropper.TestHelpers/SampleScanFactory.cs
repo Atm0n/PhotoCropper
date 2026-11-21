@@ -262,7 +262,7 @@ public static class SampleScanFactory
     private static void AddNoise(Mat image, SeededRandom random, int strength)
     {
         using var noise = new Mat(image.Size(), MatType.CV_16SC(image.Channels()));
-        random.FillUniform(noise, Scalar.All(-strength), Scalar.All(strength + 1));
+        random.FillUniform(noise, -strength, strength + 1);
         using var wide = new Mat();
         image.ConvertTo(wide, MatType.CV_16S);
         Cv2.Add(wide, noise, wide);
