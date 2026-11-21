@@ -37,6 +37,11 @@ internal static class PhotoDetector
             backgroundHsv = options.CustomBackgroundColorHsv is { } picked ? CvInterop.ToCv(picked) : BackgroundAnalyzer.SampleBackgroundColor(hsv);
         }
 
+        // An album page on a light bed: the bed around it is background too, and the page's colour (unless one was
+        // picked) is the one inside its edge.
+        using Mat? aroundPage = BackgroundAnalyzer.FindBedAroundPage(original, backgroundHsv, out Scalar background);
+        if (options.CustomBackgroundColorHsv == null) backgroundHsv = background;
+
         // Convert HSV background color to BGR for border padding
         Scalar backgroundBgr = BackgroundAnalyzer.HsvToBgr(backgroundHsv);
 
@@ -48,6 +53,12 @@ internal static class PhotoDetector
         // Neutralize scanner bezel / platen border margins in padded detection image
         var margins = BackgroundAnalyzer.DetectBezelMargins(original, backgroundHsv, options.BackgroundTolerance);
         BackgroundAnalyzer.PaintBezels(padded, margins, pad, backgroundBgr);
+
+        if (aroundPage != null)
+        {
+            using Mat scanArea = new(padded, new Rect(pad, pad, original.Width, original.Height));
+            scanArea.SetTo(backgroundBgr, aroundPage);
+        }
 
         return new DetectionImage { Padded = padded, BackgroundHsv = backgroundHsv, BackgroundBgr = backgroundBgr, Pad = pad };
     }
