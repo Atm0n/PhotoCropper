@@ -30,15 +30,12 @@ public sealed class CropsStageViewModelTests : IDisposable
         try { Directory.Delete(_dir, recursive: true); } catch (IOException) { }
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The session manager owns and disposes its sessions")]
     private CropsStageViewModel CreateViewModel(int scanCount, int scanSize = 800)
     {
-        for (int i = 0; i < scanCount; i++)
-        {
-            string path = Path.Combine(_dir, $"scan_{i + 1:0000}.png");
-            TestImageFactory.CreateStandardTwoPhotoScan(path, scanSize, scanSize);
-            _sessions.Add(new ScanSessionItem(path, new DetectionOptions()));
-        }
+        var paths = Enumerable.Range(1, scanCount).Select(i => Path.Combine(_dir, $"scan_{i:0000}.png")).ToList();
+        foreach (string path in paths) TestImageFactory.CreateStandardTwoPhotoScan(path, scanSize, scanSize);
+        // The session manager owns (and disposes) the sessions.
+        _sessions.AddRange([.. paths.Select(path => new ScanSessionItem(path, new DetectionOptions()))]);
         return new CropsStageViewModel(_host, _sessions, _undo, () => _settings, () => _settingsSaves++)
         {
             OptionsDebounce = TimeSpan.FromMilliseconds(30),

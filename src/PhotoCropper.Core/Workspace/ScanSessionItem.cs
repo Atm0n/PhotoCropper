@@ -1,9 +1,7 @@
 using PhotoCropper.Core.Models;
-using System.Diagnostics.CodeAnalysis;
 
 namespace PhotoCropper.Core.Workspace;
 
-[SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Engine lifecycle is managed explicitly via Activate/Deactivate/Dispose methods")]
 public sealed class ScanSessionItem : IDisposable
 {
     public string FilePath { get; }

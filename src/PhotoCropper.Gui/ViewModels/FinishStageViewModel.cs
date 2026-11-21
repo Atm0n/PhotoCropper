@@ -758,9 +758,23 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
 
     private sealed record PreviewRequest(string Path, RestorationSettings Restoration, List<RepairStroke> Repairs, System.Drawing.Size RepairImageSize);
 
-    /// <param name="Trim">The part the final photo keeps, as fractions of the photo's size; null when nothing is trimmed.</param>
-    private sealed record PreviewResult(Bitmap Before, Bitmap? After, System.Drawing.Size SourceSize, System.Drawing.RectangleF? Trim = null) : IDisposable
+    /// <summary>A rendered preview. Owns its bitmaps.</summary>
+    private sealed class PreviewResult : IDisposable
     {
+        /// <param name="trim">The part the final photo keeps, as fractions of the photo's size; null when nothing is trimmed.</param>
+        public PreviewResult(Bitmap before, Bitmap? after, System.Drawing.Size sourceSize, System.Drawing.RectangleF? trim = null)
+        {
+            Before = before;
+            After = after;
+            SourceSize = sourceSize;
+            Trim = trim;
+        }
+
+        public Bitmap Before { get; }
+        public Bitmap? After { get; }
+        public System.Drawing.Size SourceSize { get; }
+        public System.Drawing.RectangleF? Trim { get; }
+
         public void Dispose()
         {
             if (After != null && !ReferenceEquals(After, Before)) After.Dispose();
@@ -785,7 +799,6 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
     /// Repair and restore the full-size photo and shrink the result (exactly what Export writes), instead of working
     /// on a shrunken copy (fast, but filled-in areas can differ slightly).
     /// </param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The bitmaps are returned to the caller, which owns and disposes them; 'before' is disposed if rendering fails")]
     private static PreviewResult RenderPreview(PreviewRequest request, bool fullQuality)
     {
         using Mat full = Core.Export.RestoreStage.ReadImage(request.Path);
@@ -797,28 +810,38 @@ internal sealed partial class FinishStageViewModel : ObservableObject, IDisposab
             ? request.Repairs
             : [];
 
-        Bitmap before = MatBitmapConverter.ToAvaloniaBitmap(small);
-        if (!request.Restoration.ChangesPhoto && repairs.Count == 0) return new PreviewResult(before, null, sourceSize);
+        if (!request.Restoration.ChangesPhoto && repairs.Count == 0) return new PreviewResult(MatBitmapConverter.ToAvaloniaBitmap(small), null, sourceSize);
 
+        Bitmap? after = RenderAfter(fullQuality ? full : small, request.Restoration, repairs, shrink: fullQuality, out var trim);
         try
         {
-            // The whole photo is shown, so it lines up with the original and repair strokes land where they are
-            // painted; the viewer shades what the trim leaves out.
-            using Mat rendered = Core.Export.RestoreStage.RenderKeepingBorder(fullQuality ? full : small, request.Restoration, repairs, out var picture);
-            System.Drawing.RectangleF? trim = picture is { } keep
-                ? new System.Drawing.RectangleF((float)keep.X / rendered.Width, (float)keep.Y / rendered.Height,
-                    (float)keep.Width / rendered.Width, (float)keep.Height / rendered.Height)
-                : null;
-            if (!fullQuality) return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(rendered), sourceSize, trim);
-
-            using Mat shrunk = Shrink(rendered);
-            return new PreviewResult(before, MatBitmapConverter.ToAvaloniaBitmap(shrunk), sourceSize, trim);
+            var result = new PreviewResult(MatBitmapConverter.ToAvaloniaBitmap(small), after, sourceSize, trim);
+            after = null; // The result owns it now.
+            return result;
         }
-        catch
+        finally
         {
-            before.Dispose();
-            throw;
+            after?.Dispose();
         }
+    }
+
+    /// <summary>
+    /// The restored photo for the preview. The whole photo is shown, so it lines up with the original and repair
+    /// strokes land where they are painted; the viewer shades what the trim leaves out.
+    /// </summary>
+    /// <param name="shrink">Shrink the result to the preview's size (it was rendered from the full-size photo).</param>
+    /// <param name="trim">The part the final photo keeps, as fractions of the photo's size; null when nothing is trimmed.</param>
+    private static Bitmap RenderAfter(Mat source, RestorationSettings restoration, List<RepairStroke> repairs, bool shrink, out System.Drawing.RectangleF? trim)
+    {
+        using Mat rendered = Core.Export.RestoreStage.RenderKeepingBorder(source, restoration, repairs, out var picture);
+        trim = picture is { } keep
+            ? new System.Drawing.RectangleF((float)keep.X / rendered.Width, (float)keep.Y / rendered.Height,
+                (float)keep.Width / rendered.Width, (float)keep.Height / rendered.Height)
+            : null;
+        if (!shrink) return MatBitmapConverter.ToAvaloniaBitmap(rendered);
+
+        using Mat shrunk = Shrink(rendered);
+        return MatBitmapConverter.ToAvaloniaBitmap(shrunk);
     }
 
     /// <summary>A copy no larger than <see cref="PreviewMaxSize"/> on its longest side.</summary>

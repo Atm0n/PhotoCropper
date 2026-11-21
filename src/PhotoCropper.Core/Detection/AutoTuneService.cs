@@ -263,10 +263,10 @@ public sealed class AutoTuneService : IDisposable
             var rect = new Rect(x, y, w, h);
 
             Point[]? fullShape = null;
-            if (cand.ShapePoints != null && cand.ShapePoints.Length > 0)
+            if (cand.ShapePoints != null && cand.ShapePoints.Count > 0)
             {
-                fullShape = new Point[cand.ShapePoints.Length];
-                for (int i = 0; i < cand.ShapePoints.Length; i++)
+                fullShape = new Point[cand.ShapePoints.Count];
+                for (int i = 0; i < cand.ShapePoints.Count; i++)
                 {
                     fullShape[i] = new Point(
                         (int)Math.Round(cand.ShapePoints[i].X * invScale),

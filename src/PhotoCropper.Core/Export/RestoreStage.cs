@@ -38,7 +38,6 @@ public static class RestoreStage
     /// Repairs, restores and (when <see cref="RestorationSettings.TrimWhiteBorders"/> is set) trims the white border
     /// of <paramref name="image"/>, always returning a new Mat the caller owns.
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The result is returned to the caller")]
     public static Mat Render(Mat image, RestorationSettings restoration, IReadOnlyCollection<RepairStroke>? repairs = null)
     {
         Mat rendered = RenderKeepingBorder(image, restoration, repairs, out Rect? picture);
@@ -55,7 +54,6 @@ public static class RestoreStage
     /// part that will be cut marked.
     /// </summary>
     /// <param name="picture">The picture inside the border, when the border is to be trimmed; otherwise null.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The result is returned to the caller; intermediate images are disposed on every path")]
     public static Mat RenderKeepingBorder(Mat image, RestorationSettings restoration, IReadOnlyCollection<RepairStroke>? repairs, out Rect? picture)
     {
         ArgumentNullException.ThrowIfNull(image);
@@ -63,32 +61,16 @@ public static class RestoreStage
 
         // Each step returns its input when it has nothing to do.
         Mat repaired = repairs is { Count: > 0 } ? PhotoRepairService.ApplyRepairs(image, repairs) : image;
-        bool ownsRepaired = !ReferenceEquals(repaired, image);
+        // The repaired image is only an intermediate step, freed here when it is a new one.
+        using Mat? ownedRepair = ReferenceEquals(repaired, image) ? null : repaired;
 
         // Set by hand, or measured before colour restoration (which can tint the border).
         picture = !restoration.TrimWhiteBorders ? null
             : restoration.ManualTrim is { } manual ? manual.ToRect(repaired.Width, repaired.Height)
             : EdgeRefinementService.GetWhiteBorderRect(repaired);
 
-        Mat restored;
-        try
-        {
-            restored = PhotoRestorationService.Restore(repaired, restoration);
-        }
-        catch
-        {
-            if (ownsRepaired) repaired.Dispose();
-            throw;
-        }
-
-        if (!ReferenceEquals(restored, repaired))
-        {
-            // Restoration made a new image; the repaired one was only an intermediate step.
-            if (ownsRepaired) repaired.Dispose();
-            return restored;
-        }
-
-        return ownsRepaired ? repaired : image.Clone();
+        Mat restored = PhotoRestorationService.Restore(repaired, restoration);
+        return ReferenceEquals(restored, repaired) ? repaired.Clone() : restored;
     }
 
     /// <summary>
