@@ -389,6 +389,7 @@
 	<sys:String x:Key="ColorMagenta">Magenta</sys:String>
 	<sys:String x:Key="ColorLime">Verde Lima</sys:String>
 	<sys:String x:Key="ColorCustom">Color Personalizado...</sys:String>
+	<sys:String x:Key="MenuDimOutsideBoxes">Oscurecer fuera de las cajas</sys:String>
 	<sys:String x:Key="TitleCustomColor">Color de Caja Personalizado</sys:String>
 	<sys:String x:Key="DescCustomColor">Selecciona o ajusta un color de alto contraste para las cajas de detección de fotos.</sys:String>
 	<sys:String x:Key="BtnApply">Aplicar</sys:String>

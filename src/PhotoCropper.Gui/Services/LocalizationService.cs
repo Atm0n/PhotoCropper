@@ -180,6 +180,7 @@ internal static class ResourceKeys
     public const string LblQualityMax = nameof(LblQualityMax);
 
     public const string ColorCustom = nameof(ColorCustom);
+    public const string MenuDimOutsideBoxes = nameof(MenuDimOutsideBoxes);
     public const string AppButtonActionBrush = nameof(AppButtonActionBrush);
     public const string AppSubtleCardBrush = nameof(AppSubtleCardBrush);
     public const string AppAccentBrush = nameof(AppAccentBrush);
