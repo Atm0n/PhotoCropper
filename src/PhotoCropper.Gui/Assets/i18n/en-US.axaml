@@ -389,6 +389,7 @@
 	<sys:String x:Key="ColorMagenta">Magenta</sys:String>
 	<sys:String x:Key="ColorLime">Lime Green</sys:String>
 	<sys:String x:Key="ColorCustom">Custom Color...</sys:String>
+	<sys:String x:Key="MenuDimOutsideBoxes">Dim outside the boxes</sys:String>
 	<sys:String x:Key="TitleCustomColor">Custom Bounding Box Color</sys:String>
 	<sys:String x:Key="DescCustomColor">Select or fine-tune a high-contrast color for photo detection bounding boxes.</sys:String>
 	<sys:String x:Key="BtnApply">Apply</sys:String>

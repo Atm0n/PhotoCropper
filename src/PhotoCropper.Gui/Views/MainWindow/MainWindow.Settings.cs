@@ -16,6 +16,7 @@ internal sealed partial class MainWindow
 
         UpdateWorkspaceUi(_openProject);
         UpdateCropStrokeColor(settings.DetectionBoxColor);
+        viewCrops.SetDimOutsideBoxes(settings.DimOutsideBoxes);
         PopulateThemeMenu();
         PopulateDetectionColorMenu();
     }
@@ -178,7 +179,26 @@ internal sealed partial class MainWindow
             };
 
             menu.Items.Add(customItem);
+
+            menu.Items.Add(new Separator());
+            bool dim = SettingsManager.Instance.Settings.DimOutsideBoxes;
+            var dimItem = new MenuItem
+            {
+                Header = CreateColorMenuItemHeader(dim, Color.FromArgb(150, 0, 0, 0), LocalizationService.GetString(ResourceKeys.MenuDimOutsideBoxes, "Dim outside the boxes")),
+                Focusable = false,
+                IsTabStop = false
+            };
+            dimItem.Click += (_, _) => SetDimOutsideBoxes(!SettingsManager.Instance.Settings.DimOutsideBoxes);
+            menu.Items.Add(dimItem);
         }
+    }
+
+    private void SetDimOutsideBoxes(bool dim)
+    {
+        SettingsManager.Instance.Settings.DimOutsideBoxes = dim;
+        SettingsManager.Instance.Save();
+        viewCrops.SetDimOutsideBoxes(dim);
+        PopulateDetectionColorMenu();
     }
 
     private static StackPanel CreateColorMenuItemHeader(bool isSelected, Color swatchColor, string text)

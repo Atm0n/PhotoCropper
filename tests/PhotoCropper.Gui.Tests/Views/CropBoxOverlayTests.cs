@@ -35,7 +35,7 @@ public sealed class CropBoxOverlayTests
         CropBoxGeometry.For(Box(), size, overlayScale: 2.0).RotationHandle.ShouldBe(new System.Drawing.PointF(500, 230));
     }
 
-    private static RenderTargetBitmap Render(int selected)
+    private static RenderTargetBitmap Render(int selected, bool dim = false)
     {
         TestAppBuilder.EnsureInitialized();
 
@@ -47,6 +47,7 @@ public sealed class CropBoxOverlayTests
             OverlayScale = 0.5,
             BoxColor = Colors.Lime,
             SelectedIndex = selected,
+            DimOutside = dim,
         };
         overlay.Measure(new Size(500, 400));
         overlay.Arrange(new Rect(0, 0, 500, 400));
@@ -76,6 +77,24 @@ public sealed class CropBoxOverlayTests
         Pixel(bitmap, 305, 170).A.ShouldBe((byte)0, "no delete badge");
         Pixel(bitmap, 250, 160).A.ShouldBe((byte)0, "no rotation handle");
         Pixel(bitmap, 198, 200).A.ShouldBeGreaterThan((byte)0, "the line is still there");
+    }
+
+    [Fact]
+    public void Render_DimmingOutside_DarkensTheScanButNotTheBox()
+    {
+        using var bitmap = Render(selected: -1, dim: true);
+
+        Pixel(bitmap, 50, 50).A.ShouldBeGreaterThan((byte)100, "the scan outside the box is darkened");
+        Pixel(bitmap, 250, 200).A.ShouldBe((byte)0, "inside the box stays clear");
+        Pixel(bitmap, 200, 200).A.ShouldBe((byte)0, "the photo's own edge too");
+    }
+
+    [Fact]
+    public void Render_WithoutDimming_LeavesTheScanClear()
+    {
+        using var bitmap = Render(selected: -1);
+
+        Pixel(bitmap, 50, 50).A.ShouldBe((byte)0);
     }
 
     private static Color Pixel(Bitmap bitmap, int x, int y)

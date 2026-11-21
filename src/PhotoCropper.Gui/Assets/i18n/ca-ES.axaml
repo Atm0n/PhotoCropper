@@ -389,6 +389,7 @@
 	<sys:String x:Key="ColorMagenta">Magenta</sys:String>
 	<sys:String x:Key="ColorLime">Verd Llima</sys:String>
 	<sys:String x:Key="ColorCustom">Color Personalitzat...</sys:String>
+	<sys:String x:Key="MenuDimOutsideBoxes">Enfosqueix fora de les caixes</sys:String>
 	<sys:String x:Key="TitleCustomColor">Color de Marc Personalitzat</sys:String>
 	<sys:String x:Key="DescCustomColor">Selecciona o ajusta un color d'alt contrast per als marcs de detecció de fotos.</sys:String>
 	<sys:String x:Key="BtnApply">Aplicar</sys:String>

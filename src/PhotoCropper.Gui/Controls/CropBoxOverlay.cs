@@ -55,14 +55,18 @@ internal sealed class CropBoxOverlay : Control
     public static readonly StyledProperty<int> SelectedIndexProperty =
         AvaloniaProperty.Register<CropBoxOverlay, int>(nameof(SelectedIndex), -1);
 
+    public static readonly StyledProperty<bool> DimOutsideProperty =
+        AvaloniaProperty.Register<CropBoxOverlay, bool>(nameof(DimOutside));
+
     private static readonly ImmutableSolidColorBrush White = new(Colors.White);
     private static readonly IBrush DeleteBadgeBrush = new ImmutableSolidColorBrush(Color.FromRgb(255, 0, 0));
     private static readonly IBrush RotationBadgeBrush = new ImmutableSolidColorBrush(Color.FromRgb(0, 0, 255));
     private static readonly ImmutableSolidColorBrush OutlineBrush = new(Color.FromArgb(200, 20, 20, 20));
+    private static readonly ImmutableSolidColorBrush DimBrush = new(Color.FromArgb(150, 0, 0, 0));
 
     static CropBoxOverlay()
     {
-        AffectsRender<CropBoxOverlay>(CandidatesProperty, ScanSizeProperty, OverlayScaleProperty, BoxColorProperty, SelectedIndexProperty);
+        AffectsRender<CropBoxOverlay>(CandidatesProperty, ScanSizeProperty, OverlayScaleProperty, BoxColorProperty, SelectedIndexProperty, DimOutsideProperty);
         ClipToBoundsProperty.OverrideDefaultValue<CropBoxOverlay>(true);
         IsHitTestVisibleProperty.OverrideDefaultValue<CropBoxOverlay>(false);
     }
@@ -101,6 +105,13 @@ internal sealed class CropBoxOverlay : Control
         set => SetValue(SelectedIndexProperty, value);
     }
 
+    /// <summary>Darkens the scan outside the boxes, so what will be cropped stands out.</summary>
+    public bool DimOutside
+    {
+        get => GetValue(DimOutsideProperty);
+        set => SetValue(DimOutsideProperty, value);
+    }
+
     public override void Render(DrawingContext context)
     {
         var candidates = Candidates;
@@ -131,6 +142,8 @@ internal sealed class CropBoxOverlay : Control
         double arrowRadius = Scaled(22);
         var scanRect = new Rect(scan);
         var scanSize = new System.Drawing.Size((int)scan.Width, (int)scan.Height);
+
+        if (DimOutside) context.DrawGeometry(DimBrush, null, OutsideBoxes(candidates, scanRect, outside));
 
         for (int index = 0; index < candidates.Count; index++)
         {
@@ -196,6 +209,21 @@ internal sealed class CropBoxOverlay : Control
     }
 
     private static Point ToPoint(System.Drawing.PointF p) => new(p.X, p.Y);
+
+    /// <summary>The scan minus every box (each out to its line, so the line isn't dimmed), overlapping boxes included.</summary>
+    private static Geometry OutsideBoxes(IReadOnlyList<CropCandidate> candidates, Rect scanRect, double outside)
+    {
+        Geometry? boxes = null;
+        foreach (var candidate in candidates)
+        {
+            var box = candidate.Rotated;
+            var line = new PhotoCropper.Core.Models.RotatedBox(box.Center, new System.Drawing.SizeF((float)(box.Size.Width + 2 * outside), (float)(box.Size.Height + 2 * outside)), box.Angle);
+            Geometry shape = Polygon([.. line.GetVertices().Select(ToPoint)]);
+            boxes = boxes == null ? shape : new CombinedGeometry(GeometryCombineMode.Union, boxes, shape);
+        }
+        Geometry scanArea = new RectangleGeometry(scanRect);
+        return boxes == null ? scanArea : new CombinedGeometry(GeometryCombineMode.Exclude, scanArea, boxes);
+    }
 
     private static StreamGeometry Polygon(Point[] points)
     {
