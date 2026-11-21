@@ -32,7 +32,7 @@ internal sealed class UserSettings
     public string ScannerPageSize { get; set; } = AppConstants.DefaultScannerPageSize;
     public bool IncludeNetworkScanners { get; set; }
     public string Theme { get; set; } = AppConstants.DefaultTheme; // "Dark", "Light", "System"
-    public string DetectionBoxColor { get; set; } = AppConstants.DefaultBoundingBoxColor; // "Red", "Amber", "Cyan", "Lime", "Magenta"
+    public string DetectionBoxColor { get; set; } = AppConstants.DefaultBoundingBoxColor; // "SoftWhite", "Red", "Amber", "Cyan", "Lime", "Magenta"
     public string FileNamePattern { get; set; } = AppConstants.DefaultNamingPattern;
     public int? DefaultYear { get; set; }
     public string? DefaultDescription { get; set; }

@@ -21,7 +21,7 @@
 	<sys:String x:Key="LblFlashTaskbar">Parpellejar Barra de Tasques</sys:String>
 	<sys:String x:Key="TipFlashTaskbar">Fa parpellejar la icona de la barra de tasques a Windows en finalitzar l'exportació en segon pla.</sys:String>
 	<sys:String x:Key="TxtNoFiles">Sense fitxers</sys:String>
-	<sys:String x:Key="HeaderOriginal">ESCANEIG ORIGINAL (CLIC I ARROSSEGAR PER RETALLAR)</sys:String>
+	<sys:String x:Key="HeaderOriginal">ESCANEIG ORIGINAL (CLIC EN UNA FOTO PER TROBAR-LA, ARROSSEGA PER DIBUIXAR UN REQUADRE)</sys:String>
 	<sys:String x:Key="HeaderDetected">FOTOS DETECTADES</sys:String>
 	<sys:String x:Key="BtnDelete">Eliminar</sys:String>
 	<sys:String x:Key="BtnRotate">Girar 90°</sys:String>
@@ -195,8 +195,6 @@
 	<sys:String x:Key="MsgNoPhotoFound">No s'ha trobat cap foto aquí. Fes clic més a prop del seu centre, o dibuixa-hi un requadre.</sys:String>
 	<sys:String x:Key="MsgPhotoFound">Foto trobada i afegida.</sys:String>
 	<sys:String x:Key="MsgPhotoRefitted">Requadre ajustat a la foto.</sys:String>
-	<sys:String x:Key="BtnFindPhoto">Troba la foto</sys:String>
-	<sys:String x:Key="TipFindPhoto">Fes clic en una foto per trobar-la i afegir-ne el requadre; fes clic dins d'un requadre per ajustar-lo a la foto. Torna a prémer el botó o Esc per acabar.</sys:String>
 	<sys:String x:Key="MsgRefineModeHelp">Mode d'ajust: dibuixa per retallar a mà, Enter per acceptar, Esc per cancel·lar.</sys:String>
 	<sys:String x:Key="MsgApplyingRefine">Aplicant ajust...</sys:String>
 	<sys:String x:Key="MsgRefineSuccess">Retall ajustat correctament.</sys:String>
@@ -384,6 +382,7 @@
 	<sys:String x:Key="ThemeDark">Fosc</sys:String>
 	<sys:String x:Key="ThemeLight">Clar</sys:String>
 	<sys:String x:Key="ThemeSystem">Per defecte del Sistema</sys:String>
+	<sys:String x:Key="ColorSoftWhite">Blanc suau</sys:String>
 	<sys:String x:Key="ColorRed">Vermell Clàssic</sys:String>
 	<sys:String x:Key="ColorAmber">Àmbre / Taronja (Accessible)</sys:String>
 	<sys:String x:Key="ColorCyan">Cian / Turquesa (Accessible)</sys:String>

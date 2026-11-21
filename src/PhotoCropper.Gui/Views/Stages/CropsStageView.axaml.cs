@@ -87,6 +87,7 @@ internal sealed partial class CropsStageView : UserControl
         var bgr = engine.CurrentOptions.GetBoundingBoxColorBgr();
         cropOverlay.BoxColor = Color.FromRgb((byte)bgr.V2, (byte)bgr.V1, (byte)bgr.V0);
         cropOverlay.Candidates = engine.AcceptedCandidates;
+        cropOverlay.SelectedIndex = ViewModel?.SelectedBoxIndex ?? -1;
         // The engine may have edited the same list instance in place; repaint either way.
         cropOverlay.InvalidateVisual();
     }
@@ -190,15 +191,6 @@ internal sealed partial class CropsStageView : UserControl
             return;
         }
 
-        if (tglFindPhoto.IsChecked == true)
-        {
-            // Stays on, so several photos can be found in a row; the button or Esc turns it off.
-            e.Handled = true;
-            var pixel = ToScanPixel(e.GetPosition(pnlOriginal), engine);
-            _ = vm.FindPhotoAtAsync(new System.Drawing.PointF(pixel.X, pixel.Y)).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
-            return;
-        }
-
         UpdateCanvasSize();
         _pressPoint = e.GetPosition(pnlOriginal);
         _gesture = vm.PressAt(ToScanPixel(_pressPoint, engine));
@@ -261,9 +253,15 @@ internal sealed partial class CropsStageView : UserControl
         if (vm.ActivateCurrentScan() is not { } engine) return;
 
         var scanRect = CoordinateMapper.MapUiRectToImageRect(rect, ImageRectInPanel(), ScanSize(engine));
-        if (rect.Width < 5 || rect.Height < 5)
+        // A click (a hand may move a little while clicking): on a box's red × it deletes the box, inside a box it
+        // selects its photo, and anywhere else it finds the photo there and adds its box.
+        const double clickSlop = 8;
+        if (rect.Width < clickSlop || rect.Height < clickSlop)
         {
-            vm.ClickAt(new System.Drawing.PointF(scanRect.X, scanRect.Y));
+            var pixel = ToScanPixel(_pressPoint, engine);
+            var point = new System.Drawing.PointF(pixel.X, pixel.Y);
+            if (vm.ClickAt(point)) return;
+            _ = vm.FindPhotoAtAsync(point).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
             return;
         }
 
@@ -304,23 +302,13 @@ internal sealed partial class CropsStageView : UserControl
 
     private void TglColorPicker_Click(object? sender, RoutedEventArgs e)
     {
-        if (tglColorPicker.IsChecked == true) tglFindPhoto.IsChecked = false;
         pnlOriginal.Cursor = tglColorPicker.IsChecked == true ? new Cursor(StandardCursorType.Cross) : Cursor.Default;
     }
 
-    // ---- find photo ----
-
-    private void TglFindPhoto_Click(object? sender, RoutedEventArgs e)
-    {
-        if (tglFindPhoto.IsChecked == true) tglColorPicker.IsChecked = false;
-        pnlOriginal.Cursor = tglFindPhoto.IsChecked == true ? new Cursor(StandardCursorType.Hand) : Cursor.Default;
-    }
-
-    /// <summary>Turns off a click tool (find photo, background picker) if one is on; true if it did (Esc).</summary>
+    /// <summary>Turns off the background picker if it is on; true if it did (Esc).</summary>
     public bool CancelClickTool()
     {
-        if (tglFindPhoto.IsChecked != true && tglColorPicker.IsChecked != true) return false;
-        tglFindPhoto.IsChecked = false;
+        if (tglColorPicker.IsChecked != true) return false;
         tglColorPicker.IsChecked = false;
         pnlOriginal.Cursor = Cursor.Default;
         return true;

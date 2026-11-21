@@ -195,6 +195,34 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ClickAt_SaysWhetherItWasOnABox()
+    {
+        // A click that isn't on a box finds the photo there (the view does that when ClickAt says so).
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+
+        vm.ClickAt(new System.Drawing.PointF(2, 2)).ShouldBeFalse();
+        engine.AcceptedCandidates.Count.ShouldBe(2);
+
+        vm.ClickAt(engine.AcceptedCandidates[1].Rotated.Center).ShouldBeTrue();
+        vm.SelectedPhotoIndex.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task DeleteBoxAt_OnlyOnADeleteBadge()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+
+        vm.DeleteBoxAt(engine.AcceptedCandidates[1].Rotated.Center).ShouldBeFalse();
+        engine.AcceptedCandidates.Count.ShouldBe(2);
+
+        vm.DeleteBoxAt(Geometry(engine, 0).DeleteBadge).ShouldBeTrue();
+        engine.AcceptedCandidates.Count.ShouldBe(1);
+        _undo.CanUndo.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task ClickInsideBox_SelectsItsPhoto()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
@@ -227,6 +255,18 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task PressOnACornerOfABoxNotSelected_DrawsInstead()
+    {
+        // Its handles aren't shown, so its corners don't grab: select the box to resize it.
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+        vm.SelectPhoto(0);
+
+        vm.PressAt(Geometry(engine, 1).Vertices[2]).ShouldBe(BoxGesture.Draw);
+        vm.SelectedBoxIndex.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task DraggingACorner_ResizesTheBoxAndReExtractsThePhoto()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
@@ -239,6 +279,8 @@ public sealed class CropsStageViewModelTests : IDisposable
         var opposite = geometry.Vertices[(corner + 2) % 4];
         int before = engine.DetectedPhotos[index].Width * engine.DetectedPhotos[index].Height;
 
+        // Only the selected box has handles.
+        vm.SelectPhoto(index);
         vm.PressAt(start).ShouldBe(BoxGesture.Resize);
         // Pull the corner 20 % towards the opposite one: the box shrinks.
         vm.DragTo(new System.Drawing.PointF(start.X + (opposite.X - start.X) * 0.2f, start.Y + (opposite.Y - start.Y) * 0.2f));

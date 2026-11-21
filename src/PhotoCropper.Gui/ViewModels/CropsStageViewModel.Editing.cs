@@ -60,9 +60,11 @@ internal sealed partial class CropsStageViewModel
         var scanSize = new Size(engine.Original.Width, engine.Original.Height);
         var boxes = engine.AcceptedCandidates;
 
-        // Topmost (last drawn) box first.
-        for (int i = boxes.Count - 1; i >= 0; i--)
+        // Only the selected box has handles (the others are drawn as a plain line): select a box to edit it.
+        int selected = SelectedBoxIndex;
+        if (selected >= 0 && selected < boxes.Count)
         {
+            int i = selected;
             var box = boxes[i];
             var geometry = CropBoxGeometry.For(box, scanSize, engine.OverlayScale);
 
@@ -144,29 +146,40 @@ internal sealed partial class CropsStageViewModel
     }
 
     /// <summary>A click that wasn't on a handle: on a delete badge it deletes that box, inside a box it selects its photo.</summary>
-    public void ClickAt(PointF point)
+    /// <returns>Whether the click was on a box (its badge or inside it); a click elsewhere is for finding a photo there.</returns>
+    public bool ClickAt(PointF point)
     {
         _gesture = BoxGesture.None;
         var engine = OpenEngine ?? Current?.Activate();
-        if (engine == null) return;
+        if (engine == null) return true;
 
-        var scanSize = new Size(engine.Original.Width, engine.Original.Height);
+        if (DeleteBoxAt(point)) return true;
         for (int i = engine.AcceptedCandidates.Count - 1; i >= 0; i--)
         {
-            var box = engine.AcceptedCandidates[i];
-            var badge = CropBoxGeometry.For(box, scanSize, engine.OverlayScale).DeleteBadge;
-            if (Distance(badge, point) <= engine.ScaleOverlay(DeleteBadgeHitRadius))
-            {
-                DeleteBox(engine, i);
-                return;
-            }
-
-            if (Cv2.PointPolygonTest(CvInterop.ToCv(box.Rotated.GetVertices()), CvInterop.ToCv(point), false) >= 0)
+            if (Cv2.PointPolygonTest(CvInterop.ToCv(engine.AcceptedCandidates[i].Rotated.GetVertices()), CvInterop.ToCv(point), false) >= 0)
             {
                 SelectPhoto(i);
-                return;
+                return true;
             }
         }
+        return false;
+    }
+
+    /// <summary>Deletes the selected box if its delete badge (the red ×) is at <paramref name="point"/>.</summary>
+    /// <returns>Whether a box was deleted.</returns>
+    public bool DeleteBoxAt(PointF point)
+    {
+        var engine = OpenEngine ?? Current?.Activate();
+        if (engine == null) return false;
+
+        // Only the selected box shows its badge.
+        int i = SelectedBoxIndex;
+        if (i < 0 || i >= engine.AcceptedCandidates.Count) return false;
+        var scanSize = new Size(engine.Original.Width, engine.Original.Height);
+        var badge = CropBoxGeometry.For(engine.AcceptedCandidates[i], scanSize, engine.OverlayScale).DeleteBadge;
+        if (Distance(badge, point) > engine.ScaleOverlay(DeleteBadgeHitRadius)) return false;
+        DeleteBox(engine, i);
+        return true;
     }
 
     /// <summary>Adds a photo from a rectangle drawn on the scan (scan pixels) and selects it.</summary>

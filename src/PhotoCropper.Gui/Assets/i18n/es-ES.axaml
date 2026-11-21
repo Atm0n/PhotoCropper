@@ -21,7 +21,7 @@
 	<sys:String x:Key="LblFlashTaskbar">Parpadear Barra de Tareas</sys:String>
 	<sys:String x:Key="TipFlashTaskbar">Hace parpadear el icono de la barra de tareas en Windows al finalizar la exportación en segundo plano.</sys:String>
 	<sys:String x:Key="TxtNoFiles">Sin archivos</sys:String>
-	<sys:String x:Key="HeaderOriginal">ESCANEO ORIGINAL (CLIC Y ARRASTRAR PARA RECORTAR)</sys:String>
+	<sys:String x:Key="HeaderOriginal">ESCANEO ORIGINAL (CLIC EN UNA FOTO PARA ENCONTRARLA, ARRASTRA PARA DIBUJAR UN RECUADRO)</sys:String>
 	<sys:String x:Key="HeaderDetected">FOTOS DETECTADAS</sys:String>
 	<sys:String x:Key="BtnDelete">Eliminar</sys:String>
 	<sys:String x:Key="BtnRotate">Rotar 90°</sys:String>
@@ -195,8 +195,6 @@
 	<sys:String x:Key="MsgNoPhotoFound">No se ha encontrado ninguna foto aquí. Haz clic más cerca de su centro, o dibuja un recuadro.</sys:String>
 	<sys:String x:Key="MsgPhotoFound">Foto encontrada y añadida.</sys:String>
 	<sys:String x:Key="MsgPhotoRefitted">Recuadro ajustado a la foto.</sys:String>
-	<sys:String x:Key="BtnFindPhoto">Buscar foto</sys:String>
-	<sys:String x:Key="TipFindPhoto">Haz clic en una foto para encontrarla y añadir su recuadro; haz clic dentro de un recuadro para ajustarlo a la foto. Vuelve a pulsar el botón o Esc para terminar.</sys:String>
 	<sys:String x:Key="MsgRefineModeHelp">Modo de ajuste: dibuja para recortar a mano, Enter para aceptar, Esc para cancelar.</sys:String>
 	<sys:String x:Key="MsgApplyingRefine">Aplicando ajuste...</sys:String>
 	<sys:String x:Key="MsgRefineSuccess">Recorte ajustado con éxito.</sys:String>
@@ -384,6 +382,7 @@
 	<sys:String x:Key="ThemeDark">Oscuro</sys:String>
 	<sys:String x:Key="ThemeLight">Claro</sys:String>
 	<sys:String x:Key="ThemeSystem">Predeterminado del Sistema</sys:String>
+	<sys:String x:Key="ColorSoftWhite">Blanco suave</sys:String>
 	<sys:String x:Key="ColorRed">Rojo Clásico</sys:String>
 	<sys:String x:Key="ColorAmber">Ámbar / Naranja (Accesible)</sys:String>
 	<sys:String x:Key="ColorCyan">Cian / Turquesa (Accesible)</sys:String>

@@ -35,8 +35,7 @@ public sealed class CropBoxOverlayTests
         CropBoxGeometry.For(Box(), size, overlayScale: 2.0).RotationHandle.ShouldBe(new System.Drawing.PointF(500, 230));
     }
 
-    [Fact]
-    public void Render_DrawsBadgesAndOutlineOverTheScan()
+    private static RenderTargetBitmap Render(int selected)
     {
         TestAppBuilder.EnsureInitialized();
 
@@ -47,17 +46,36 @@ public sealed class CropBoxOverlayTests
             ScanSize = new Size(1000, 800),
             OverlayScale = 0.5,
             BoxColor = Colors.Lime,
+            SelectedIndex = selected,
         };
         overlay.Measure(new Size(500, 400));
         overlay.Arrange(new Rect(0, 0, 500, 400));
 
-        using var bitmap = new RenderTargetBitmap(new PixelSize(500, 400));
+        var bitmap = new RenderTargetBitmap(new PixelSize(500, 400));
         bitmap.Render(overlay);
+        return bitmap;
+    }
 
-        Pixel(bitmap, 300, 183).ShouldBe(Colors.Red, "delete badge on the top-right corner");
+    [Fact]
+    public void Render_TheSelectedBox_HasItsBadgesAndALineJustOutsideIt()
+    {
+        using var bitmap = Render(selected: 0);
+
+        Pixel(bitmap, 305, 170).ShouldBe(Colors.Red, "delete badge on the top-right corner");
         Pixel(bitmap, 250, 160).ShouldBe(Colors.Blue, "rotation handle above the top edge");
-        Pixel(bitmap, 200, 200).ShouldBe(Colors.Lime, "outline on the left edge");
+        Pixel(bitmap, 198, 200).A.ShouldBeGreaterThan((byte)0, "the line, just outside the left edge");
+        Pixel(bitmap, 200, 200).A.ShouldBe((byte)0, "the photo's own edge is left uncovered");
         Pixel(bitmap, 250, 200).A.ShouldBe((byte)0, "inside the box stays transparent");
+    }
+
+    [Fact]
+    public void Render_ABoxNotSelected_IsOnlyALine()
+    {
+        using var bitmap = Render(selected: -1);
+
+        Pixel(bitmap, 305, 170).A.ShouldBe((byte)0, "no delete badge");
+        Pixel(bitmap, 250, 160).A.ShouldBe((byte)0, "no rotation handle");
+        Pixel(bitmap, 198, 200).A.ShouldBeGreaterThan((byte)0, "the line is still there");
     }
 
     private static Color Pixel(Bitmap bitmap, int x, int y)

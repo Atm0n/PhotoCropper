@@ -57,7 +57,12 @@ internal sealed partial class CropsStageViewModel
     {
         if (!_syncingSelection && value >= 0) SelectOnly(value);
         RefreshPhotoTexts();
+        // Only the selected box has handles: repaint the boxes.
+        if (OpenEngine is { } engine) _host.ShowBoxes(engine);
     }
+
+    /// <summary>The selected photo's box (its index among the scan's boxes), or -1: the box that shows its handles.</summary>
+    public int SelectedBoxIndex => SelectedPhotoIndex >= 0 && SelectedPhotoIndex < Photos.Count ? Photos[SelectedPhotoIndex].Index : -1;
 
     /// <summary>Rebuilds the photo list from the open scan and selects <paramref name="select"/> (clamped).</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Each bitmap is owned by its CropPhotoItem and disposed (via DisposeLater) when the list is rebuilt or cleared")]
