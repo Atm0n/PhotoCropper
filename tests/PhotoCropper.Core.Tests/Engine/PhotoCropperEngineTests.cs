@@ -198,6 +198,28 @@ public sealed class PhotoCropperEngineTests : IDisposable
         cropper.DetectedPhotos[0].Height.ShouldBeInRange(380, 420);
     }
 
+    [Theory]
+    [InlineData(4, 0.05)] // a tight tolerance and large minimum, as a user may have set
+    [InlineData(30, 0.01)] // the defaults
+    public void DetectPhotos_DarkAlbumPageOnLightBed_ShouldFindEveryPhoto(double tolerance, double minArea)
+    {
+        string path = Path.Combine(_tempDir, "album_page.png");
+        TestImageFactory.CreateAlbumPageOnBedScan(path);
+
+        using var cropper = new PhotoCropperEngine(path);
+        cropper.ApplyOptions(new PhotoCropper.Core.Models.DetectionOptions { BackgroundTolerance = tolerance, MinAreaFactor = minArea });
+        cropper.DetectPhotos();
+
+        cropper.AcceptedCandidates.Count.ShouldBe(TestImageFactory.AlbumPagePhotos.Length);
+        foreach (var photo in TestImageFactory.AlbumPagePhotos)
+        {
+            // Each photo is found whole, its light border included, and not merged with the page.
+            cropper.AcceptedCandidates.ShouldContain(c =>
+                Math.Abs(c.Rotated.Center.X - (photo.X + photo.Width / 2f)) < 15 && Math.Abs(c.Rotated.Center.Y - (photo.Y + photo.Height / 2f)) < 15 &&
+                Math.Abs(Math.Max(c.Rotated.Size.Width, c.Rotated.Size.Height) - Math.Max(photo.Width, photo.Height)) < 30);
+        }
+    }
+
     [Fact]
     public void DetectPhotos_FlushScanEdge_ShouldDetectSuccessfully()
     {

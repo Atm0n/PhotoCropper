@@ -116,6 +116,54 @@ public static class TestImageFactory
         Cv2.ImWrite(path, scan);
     }
 
+    /// <summary>
+    /// An album page lying on a light scanner bed, with a 60 px ring of bed around it: grey paper (<paramref name="paperGrey"/>)
+    /// that darkens by <paramref name="edgeDarken"/> towards its edge, with four textured photos on it and some noise.
+    /// </summary>
+    public static readonly Rect[] AlbumPagePhotos = [new(160, 160, 600, 800), new(900, 200, 640, 460), new(160, 1200, 700, 500), new(1000, 1300, 480, 700)];
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Test images: a seeded, repeatable generator is the point")]
+    public static void CreateAlbumPageOnBedScan(string path, int paperGrey = 94, int edgeDarken = 14)
+    {
+        const int w = 1700, h = 2340, margin = 60;
+        var random = new Random(42);
+        var pixels = new byte[w * h * 3];
+        int x0 = margin, y0 = margin, x1 = w - margin, y1 = h - margin - 40;
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                double v;
+                if (x >= x0 && x < x1 && y >= y0 && y < y1)
+                {
+                    int d = Math.Min(Math.Min(x - x0, x1 - 1 - x), Math.Min(y - y0, y1 - 1 - y));
+                    v = paperGrey - edgeDarken * Math.Clamp(1 - d / 70.0, 0, 1);
+                    foreach (var r in AlbumPagePhotos)
+                    {
+                        // A photo: a light border round a picture with some structure.
+                        if (!r.Contains(x, y)) continue;
+                        bool border = x < r.X + 25 || x >= r.Right - 25 || y < r.Y + 25 || y >= r.Bottom - 25;
+                        v = border ? 225 : 120 + 70 * Math.Sin(x / 37.0) * Math.Cos(y / 53.0);
+                    }
+                }
+                else
+                {
+                    v = 246 - 10.0 * y / h; // the bed, with the lid's gradient
+                }
+                for (int c = 0; c < 3; c++)
+                {
+                    // Box-Muller noise, sd 2.2, as a scanner gives.
+                    double noise = Math.Sqrt(-2 * Math.Log(1 - random.NextDouble())) * Math.Cos(2 * Math.PI * random.NextDouble()) * 2.2;
+                    pixels[(y * w + x) * 3 + c] = (byte)Math.Clamp(Math.Round(v + noise + (c == 0 ? 2 : 0)), 0, 255);
+                }
+            }
+        }
+        using Mat flat = new(h, w * 3, MatType.CV_8UC1);
+        flat.SetArray(pixels);
+        using Mat scan = flat.Reshape(3, h);
+        Cv2.ImWrite(path, scan);
+    }
+
     public static void CreateHighResScan(string path)
     {
         using Mat scan = new(5000, 5000, MatType.CV_8UC3);
