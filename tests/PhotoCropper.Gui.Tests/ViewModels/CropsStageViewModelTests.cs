@@ -195,9 +195,22 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ClickAt_SaysWhetherItWasOnABox()
+    {
+        // A click that isn't on a box finds the photo there (the view does that when ClickAt says so).
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+
+        vm.ClickAt(new System.Drawing.PointF(2, 2)).ShouldBeFalse();
+        engine.AcceptedCandidates.Count.ShouldBe(2);
+
+        vm.ClickAt(engine.AcceptedCandidates[1].Rotated.Center).ShouldBeTrue();
+        vm.SelectedPhotoIndex.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task DeleteBoxAt_OnlyOnADeleteBadge()
     {
-        // Used by Find Photo mode, where a click elsewhere finds a photo instead of selecting one.
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
 

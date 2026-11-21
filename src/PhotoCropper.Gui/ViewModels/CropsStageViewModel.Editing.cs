@@ -144,21 +144,23 @@ internal sealed partial class CropsStageViewModel
     }
 
     /// <summary>A click that wasn't on a handle: on a delete badge it deletes that box, inside a box it selects its photo.</summary>
-    public void ClickAt(PointF point)
+    /// <returns>Whether the click was on a box (its badge or inside it); a click elsewhere is for finding a photo there.</returns>
+    public bool ClickAt(PointF point)
     {
         _gesture = BoxGesture.None;
         var engine = OpenEngine ?? Current?.Activate();
-        if (engine == null) return;
+        if (engine == null) return true;
 
-        if (DeleteBoxAt(point)) return;
+        if (DeleteBoxAt(point)) return true;
         for (int i = engine.AcceptedCandidates.Count - 1; i >= 0; i--)
         {
             if (Cv2.PointPolygonTest(CvInterop.ToCv(engine.AcceptedCandidates[i].Rotated.GetVertices()), CvInterop.ToCv(point), false) >= 0)
             {
                 SelectPhoto(i);
-                return;
+                return true;
             }
         }
+        return false;
     }
 
     /// <summary>Deletes the box whose delete badge (the red ×) is at <paramref name="point"/>, if there is one.</summary>

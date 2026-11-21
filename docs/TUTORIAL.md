@@ -72,18 +72,16 @@ Look at the thumbnails on the right. In this page, two things are wrong:
 
 ### Fix a box that's wrong
 
-Turn on **Find Photo** (🎯) and click **inside the box**: the box is fitted to the photo again. Clicking inside a
-photo that has **no box** adds one.
+Click the box's **red ×** to delete it, then **click the photo**: the app finds the photo under your click and gives
+it a new box. Clicking any photo that has **no box** adds one the same way.
 
-![After Find Photo: the church's box now includes the sky](images/07-crops-find-photo.webp)
+![After clicking the photo again: the church's box now includes the sky](images/07-crops-find-photo.webp)
 
 You can also fix a box by hand:
 
 - drag a **corner** to resize it (a magnifier shows the edge while you drag),
 - drag the **blue circle** above it to turn it,
 - click the **red ×** to delete it (for example a box around something that isn't a photo).
-
-All of this also works while **Find Photo** is on, so you can fix boxes and find photos without switching it off.
 
 `Ctrl+Z` undoes any change.
 
