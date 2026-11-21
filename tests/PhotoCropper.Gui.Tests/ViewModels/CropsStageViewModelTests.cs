@@ -62,6 +62,21 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task LoadCurrentScan_WhileTheScanStagePreparesTheSameScan_ListsEachPhotoOnce()
+    {
+        // Opening a project: the Scan stage's preview and Crops both prepare the first scan, auto-tuning it.
+        _settings.AutoTuneOnScanChange = true;
+        using var vm = CreateViewModel(1);
+        var session = _sessions.Sessions[0];
+
+        await Task.WhenAll(vm.PrepareScanAsync(session, CancellationToken.None), vm.LoadCurrentScanAsync());
+
+        var engine = session.Engine.ShouldNotBeNull();
+        engine.DetectedPhotos.Count.ShouldBe(engine.AcceptedCandidates.Count);
+        vm.Photos.Count.ShouldBe(engine.AcceptedCandidates.Count);
+    }
+
+    [Fact]
     public async Task Navigation_MovesBetweenScansAndStopsAtTheEnds()
     {
         using var vm = CreateViewModel(2);
