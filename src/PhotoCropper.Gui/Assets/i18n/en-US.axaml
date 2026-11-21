@@ -196,7 +196,7 @@
 	<sys:String x:Key="MsgPhotoFound">Photo found and added.</sys:String>
 	<sys:String x:Key="MsgPhotoRefitted">Box fitted to the photo.</sys:String>
 	<sys:String x:Key="BtnFindPhoto">Find Photo</sys:String>
-	<sys:String x:Key="TipFindPhoto">Click a photo to find it and add its box; click inside a box to fit it to the photo. Click the button again or press Esc to stop.</sys:String>
+	<sys:String x:Key="TipFindPhoto">Click a photo to find it and add its box; click inside a box to fit it to the photo. Boxes can still be resized, rotated or drawn meanwhile. Click the button again or press Esc to stop.</sys:String>
 	<sys:String x:Key="MsgRefineModeHelp">Refinement mode: draw to crop by hand, Enter to accept, Esc to cancel.</sys:String>
 	<sys:String x:Key="MsgApplyingRefine">Applying refinement...</sys:String>
 	<sys:String x:Key="MsgRefineSuccess">Crop refined successfully.</sys:String>

@@ -150,23 +150,35 @@ internal sealed partial class CropsStageViewModel
         var engine = OpenEngine ?? Current?.Activate();
         if (engine == null) return;
 
-        var scanSize = new Size(engine.Original.Width, engine.Original.Height);
+        if (DeleteBoxAt(point)) return;
         for (int i = engine.AcceptedCandidates.Count - 1; i >= 0; i--)
         {
-            var box = engine.AcceptedCandidates[i];
-            var badge = CropBoxGeometry.For(box, scanSize, engine.OverlayScale).DeleteBadge;
-            if (Distance(badge, point) <= engine.ScaleOverlay(DeleteBadgeHitRadius))
-            {
-                DeleteBox(engine, i);
-                return;
-            }
-
-            if (Cv2.PointPolygonTest(CvInterop.ToCv(box.Rotated.GetVertices()), CvInterop.ToCv(point), false) >= 0)
+            if (Cv2.PointPolygonTest(CvInterop.ToCv(engine.AcceptedCandidates[i].Rotated.GetVertices()), CvInterop.ToCv(point), false) >= 0)
             {
                 SelectPhoto(i);
                 return;
             }
         }
+    }
+
+    /// <summary>Deletes the box whose delete badge (the red ×) is at <paramref name="point"/>, if there is one.</summary>
+    /// <returns>Whether a box was deleted.</returns>
+    public bool DeleteBoxAt(PointF point)
+    {
+        var engine = OpenEngine ?? Current?.Activate();
+        if (engine == null) return false;
+
+        var scanSize = new Size(engine.Original.Width, engine.Original.Height);
+        for (int i = engine.AcceptedCandidates.Count - 1; i >= 0; i--)
+        {
+            var badge = CropBoxGeometry.For(engine.AcceptedCandidates[i], scanSize, engine.OverlayScale).DeleteBadge;
+            if (Distance(badge, point) <= engine.ScaleOverlay(DeleteBadgeHitRadius))
+            {
+                DeleteBox(engine, i);
+                return true;
+            }
+        }
+        return false;
     }
 
     /// <summary>Adds a photo from a rectangle drawn on the scan (scan pixels) and selects it.</summary>

@@ -195,6 +195,21 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteBoxAt_OnlyOnADeleteBadge()
+    {
+        // Used by Find Photo mode, where a click elsewhere finds a photo instead of selecting one.
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+
+        vm.DeleteBoxAt(engine.AcceptedCandidates[1].Rotated.Center).ShouldBeFalse();
+        engine.AcceptedCandidates.Count.ShouldBe(2);
+
+        vm.DeleteBoxAt(Geometry(engine, 0).DeleteBadge).ShouldBeTrue();
+        engine.AcceptedCandidates.Count.ShouldBe(1);
+        _undo.CanUndo.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task ClickInsideBox_SelectsItsPhoto()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();

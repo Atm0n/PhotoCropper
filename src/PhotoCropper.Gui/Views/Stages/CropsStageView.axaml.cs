@@ -190,14 +190,10 @@ internal sealed partial class CropsStageView : UserControl
             return;
         }
 
-        if (tglFindPhoto.IsChecked == true)
-        {
-            // Stays on, so several photos can be found in a row; the button or Esc turns it off.
-            e.Handled = true;
-            var pixel = ToScanPixel(e.GetPosition(pnlOriginal), engine);
-            _ = vm.FindPhotoAtAsync(new System.Drawing.PointF(pixel.X, pixel.Y)).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
-            return;
-        }
+        // Find Photo stays on, so several photos can be found in a row (the button or Esc turns it off). Boxes can
+        // still be edited meanwhile: a corner or the rotation handle drags as usual, and a drag draws a box; only a
+        // click (released without moving) finds the photo under it, on release.
+        if (tglFindPhoto.IsChecked == true) e.Handled = true;
 
         UpdateCanvasSize();
         _pressPoint = e.GetPosition(pnlOriginal);
@@ -261,8 +257,19 @@ internal sealed partial class CropsStageView : UserControl
         if (vm.ActivateCurrentScan() is not { } engine) return;
 
         var scanRect = CoordinateMapper.MapUiRectToImageRect(rect, ImageRectInPanel(), ScanSize(engine));
-        if (rect.Width < 5 || rect.Height < 5)
+        // With Find Photo on, clicks are the point: a hand that moves a little while clicking still clicks.
+        bool findPhoto = tglFindPhoto.IsChecked == true;
+        double clickSlop = findPhoto ? 12 : 5;
+        if (rect.Width < clickSlop || rect.Height < clickSlop)
         {
+            if (findPhoto)
+            {
+                var pixel = ToScanPixel(_pressPoint, engine);
+                // The red × still deletes its box; anywhere else, the photo there is found.
+                if (vm.DeleteBoxAt(new System.Drawing.PointF(pixel.X, pixel.Y))) return;
+                _ = vm.FindPhotoAtAsync(new System.Drawing.PointF(pixel.X, pixel.Y)).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+                return;
+            }
             vm.ClickAt(new System.Drawing.PointF(scanRect.X, scanRect.Y));
             return;
         }

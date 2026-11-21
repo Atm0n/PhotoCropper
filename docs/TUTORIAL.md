@@ -83,6 +83,8 @@ You can also fix a box by hand:
 - drag the **blue circle** above it to turn it,
 - click the **red ×** to delete it (for example a box around something that isn't a photo).
 
+All of this also works while **Find Photo** is on, so you can fix boxes and find photos without switching it off.
+
 `Ctrl+Z` undoes any change.
 
 ### When no photos are found: draw the boxes yourself
