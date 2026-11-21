@@ -165,6 +165,103 @@ public sealed class WhiteBorderTests : IDisposable
         EdgeRefinementService.GetWhiteBorderRect(result).ShouldBeNull();
     }
 
+    /// <summary>
+    /// A box drawn loosely around a print on a dark grey album page: page on every side, turned by
+    /// <paramref name="angle"/> degrees, with a corner of the next photo (black) in the crop's top left.
+    /// </summary>
+    private static Mat OnDarkPage(Mat print, int margin, double angle = 0)
+    {
+        var crop = new Mat(print.Height + 2 * margin, print.Width + 2 * margin, MatType.CV_8UC3, new Scalar(96, 92, 92));
+        using var mask = new Mat(print.Size(), MatType.CV_8UC1, Scalar.All(255));
+        using var placed = new Mat(crop.Size(), MatType.CV_8UC3, Scalar.All(0));
+        using var placedMask = new Mat(crop.Size(), MatType.CV_8UC1, Scalar.All(0));
+        using var rotation = Cv2.GetRotationMatrix2D(new Point2f(print.Width / 2f, print.Height / 2f), angle, 1);
+        rotation.Set(0, 2, rotation.At<double>(0, 2) + margin);
+        rotation.Set(1, 2, rotation.At<double>(1, 2) + margin);
+        Cv2.WarpAffine(print, placed, rotation, crop.Size(), InterpolationFlags.Linear);
+        Cv2.WarpAffine(mask, placedMask, rotation, crop.Size(), InterpolationFlags.Nearest);
+        placed.CopyTo(crop, placedMask);
+        Cv2.Rectangle(crop, new Rect(0, 0, margin / 2, crop.Height / 2), new Scalar(20, 20, 20), -1);
+        return crop;
+    }
+
+    [Fact]
+    public void GetWhiteBorderRect_PrintOnADarkPageInALooseBox_ShouldBeThePictureInside()
+    {
+        using var picture = Picture(400, 300, 10);
+        using var print = Print(picture, 24, 24, 24, 24);
+        using var crop = OnDarkPage(print, 40);
+
+        var rect = EdgeRefinementService.GetWhiteBorderRect(crop);
+
+        rect.ShouldNotBeNull();
+        ShouldBeNear(rect.Value, new Rect(40 + 24, 40 + 24, 400, 300));
+    }
+
+    [Fact]
+    public void GetWhiteBorderRect_TiltedPrintOnADarkPage_ShouldStayInsideTheBorder()
+    {
+        using var picture = Picture(400, 300, 11);
+        using var print = Print(picture, 24, 24, 24, 24);
+        using var crop = OnDarkPage(print, 40, angle: 1.5);
+
+        var rect = EdgeRefinementService.GetWhiteBorderRect(crop);
+
+        // The border is a wedge on a tilted print: what's left of it is at most a few pixels at one end.
+        rect.ShouldNotBeNull();
+        ShouldBeNear(rect.Value, new Rect(40 + 24, 40 + 24, 400, 300), tolerance: 12);
+    }
+
+    [Fact]
+    public void GetWhiteBorderRect_PhotoWithoutABorderOnADarkPage_ShouldBeNull()
+    {
+        using var picture = Picture(400, 300, 12);
+        using var crop = OnDarkPage(picture, 40);
+
+        EdgeRefinementService.GetWhiteBorderRect(crop).ShouldBeNull();
+    }
+
+    [Fact]
+    public void GetWhiteBorderRect_TiltedPrintInATightBox_ShouldFindThePictureDespiteDarkCorners()
+    {
+        // Boxed tightly, a tilted print's border reaches the crop's edges, with wedges of dark page in its corners.
+        using var picture = Picture(400, 300, 14);
+        using var print = Print(picture, 24, 24, 24, 24);
+        using var loose = OnDarkPage(print, 40, angle: 2);
+        using var crop = new Mat(loose, new Rect(48, 48, loose.Width - 96, loose.Height - 96));
+
+        var rect = EdgeRefinementService.GetWhiteBorderRect(crop);
+
+        rect.ShouldNotBeNull();
+        ShouldBeNear(rect.Value, new Rect(40 + 24 - 48, 40 + 24 - 48, 400, 300), tolerance: 14);
+    }
+
+    [Fact]
+    public void GetWhiteBorderRect_DarkVignetteCorners_ShouldNotBeTakenForABorder()
+    {
+        // An old portrait: light all over, darkening into each corner. The dark corners touch the edges like page
+        // wedges, but there is no border to find.
+        using var photo = new Mat(400, 300, MatType.CV_8UC3, new Scalar(225, 228, 230));
+        using var face = Picture(120, 160, 15);
+        using (var target = new Mat(photo, new Rect(90, 110, 120, 160))) face.CopyTo(target);
+        foreach (var corner in new[] { new Point(0, 0), new Point(300, 0), new Point(0, 400), new Point(300, 400) })
+            Cv2.Circle(photo, corner, 80, new Scalar(60, 62, 64), -1);
+        Cv2.GaussianBlur(photo, photo, new Size(0, 0), 25);
+        using (var target = new Mat(photo, new Rect(90, 110, 120, 160))) face.CopyTo(target);
+
+        EdgeRefinementService.GetWhiteBorderRect(photo).ShouldBeNull();
+    }
+
+    [Fact]
+    public void GetWhiteBorderRect_DarkPhotoAroundALightSubject_ShouldBeNull()
+    {
+        // Dark all round its edges, with a white wall in the middle: no border, though nothing light touches the edges.
+        using var photo = Picture(400, 300, 13);
+        Cv2.Rectangle(photo, new Rect(110, 80, 180, 140), new Scalar(236, 238, 240), -1);
+
+        EdgeRefinementService.GetWhiteBorderRect(photo).ShouldBeNull();
+    }
+
     // A dark bed with one bordered print: the print's 600x450 outside, its 540x390 picture 30 px in.
     private string BorderedPrintScan()
     {

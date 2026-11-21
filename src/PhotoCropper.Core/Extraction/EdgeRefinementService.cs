@@ -74,9 +74,81 @@ public static class EdgeRefinementService
         if (photo.Channels() == 1) Cv2.CvtColor(photo, bgr, ColorConversionCodes.GRAY2BGR);
         else if (photo.Channels() == 4) Cv2.CvtColor(photo, bgr, ColorConversionCodes.BGRA2BGR);
         else photo.CopyTo(bgr);
+
+        if (FindBorder(bgr) is { } rect) return rect;
+
+        // A box drawn loosely around a print on a dark (or coloured) album page holds a ring of that page all round the
+        // print, and the print's border no longer reaches the crop's edges. Painting the ring in the border's colour
+        // turns it into the case above: a print on a light bed.
+        using Mat filled = FillPageSurround(bgr);
+        return filled.Empty() ? null : FindBorder(filled);
+    }
+
+    /// <summary>
+    /// A copy of <paramref name="bgr"/> with the album page around the print painted in the print's border colour, or
+    /// an empty Mat when there is none. The page is everything that isn't light, connected to the crop's edges: around
+    /// a bordered print the light border keeps it to a thin ring along every side, while in a photo without a border
+    /// dark parts of the picture reach the edges and run on into its middle.
+    /// </summary>
+    private static Mat FillPageSurround(Mat bgr)
+    {
+        int w = bgr.Width, h = bgr.Height;
+
         using Mat hsv = new();
         Cv2.CvtColor(bgr, hsv, ColorConversionCodes.BGR2HSV);
-        int w = photo.Width, h = photo.Height;
+        using Mat lightFrame = new();
+        Cv2.InRange(hsv, new Scalar(0, 0, MinFrameBrightness), new Scalar(180, MaxFrameSaturation, 255), lightFrame);
+        using Mat notLight = new();
+        Cv2.BitwiseNot(lightFrame, notLight);
+        using Mat labels = new();
+        Cv2.ConnectedComponents(notLight, labels, PixelConnectivity.Connectivity8);
+        var touching = new HashSet<int>();
+        for (int x = 0; x < w; x++) { touching.Add(labels.At<int>(0, x)); touching.Add(labels.At<int>(h - 1, x)); }
+        for (int y = 0; y < h; y++) { touching.Add(labels.At<int>(y, 0)); touching.Add(labels.At<int>(y, w - 1)); }
+        touching.Remove(0);
+        using Mat surround = new(h, w, MatType.CV_8UC1, Scalar.All(0));
+        foreach (int label in touching)
+        {
+            using Mat part = new();
+            Cv2.InRange(labels, new Scalar(label), new Scalar(label), part);
+            Cv2.BitwiseOr(surround, part, surround);
+        }
+
+        // It is only a thin ring (all round a loosely boxed print, or wedges at the corners of a tilted one in a tight
+        // box): it never reaches the middle of the photo.
+        static double Covered(Mat area) => Cv2.CountNonZero(area) / (double)area.Total();
+        if (Cv2.CountNonZero(surround) == 0) return new Mat();
+        Rect inner = new((int)(w * MaxPageDepthShare), (int)(h * MaxPageDepthShare), w - 2 * (int)(w * MaxPageDepthShare), h - 2 * (int)(h * MaxPageDepthShare));
+        using (Mat center = new(surround, inner))
+        {
+            if (Covered(center) > MaxPageInsideShare) return new Mat();
+        }
+
+        // The print's border colour: light, little coloured pixels just inside the page.
+        using Mat ring = new();
+        Cv2.Dilate(surround, ring, Cv2.GetStructuringElement(MorphShapes.Rect, new Size(9, 9)));
+        Cv2.Subtract(ring, surround, ring);
+        using Mat frameRing = new();
+        Cv2.BitwiseAnd(lightFrame, ring, frameRing);
+        if (Cv2.CountNonZero(frameRing) < Cv2.CountNonZero(ring) * MinLightFrameShare) return new Mat();
+        Scalar frameColor = Cv2.Mean(bgr, frameRing);
+
+        var filled = bgr.Clone();
+        filled.SetTo(frameColor, surround);
+        return filled;
+    }
+
+    // An album page around a print: at most this deep (as a share of the photo's size), with at most this share of the
+    // inside covered, and a light frame (border) along at least this share of its inner edge.
+    private const double MaxPageDepthShare = 0.15;
+    private const double MaxPageInsideShare = 0.02;
+    private const double MinLightFrameShare = 0.4;
+
+    private static Rect? FindBorder(Mat bgr)
+    {
+        using Mat hsv = new();
+        Cv2.CvtColor(bgr, hsv, ColorConversionCodes.BGR2HSV);
+        int w = bgr.Width, h = bgr.Height;
 
         // The frame's brightness, from patches at the corners and the middle of each side. A rounded or worn corner
         // (or a torn side) can show the bed or the picture: two of the eight may be off, the rest must be light and
