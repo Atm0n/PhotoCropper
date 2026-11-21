@@ -61,11 +61,73 @@ internal static class PageSplitter
         double minArea = options.MinAreaFactor * original.Width * original.Height;
         double maxArea = MaxPhotoShareOfPage * w * h;
         var photos = found.Where(c => c.Area >= minArea && c.Area <= maxArea).ToList();
+
+        // Still the page as one shape (its outline won again): the photos as the holes in its paper instead.
+        if (photos.Count < MinPhotosInside) photos = HolesInPaper(patch, paper, minArea, maxArea);
         if (photos.Count < MinPhotosInside) return null;
 
         using Mat toScan = new();
         Cv2.InvertAffineTransform(toPage, toScan);
         return [.. photos.Select(c => ToScan(c, toScan, original))];
+    }
+
+    /// <summary>
+    /// The photos on a page as rectangular holes in its paper: what isn't paper-coloured inside the page, cleaned up,
+    /// and kept where it is large and roughly rectangular. Doesn't look at edges or at the page's outline at all, so
+    /// it works where the page's outline wins over its photos. Worked at half size; boxes in <paramref name="patch"/>'s
+    /// pixels.
+    /// </summary>
+    private static List<CropCandidate> HolesInPaper(Mat patch, Scalar paper, double minArea, double maxArea)
+    {
+        const double k = 0.5;
+        using Mat small = new();
+        Cv2.Resize(patch, small, new Size(), k, k, InterpolationFlags.Area);
+        using Mat hsv = new();
+        Cv2.CvtColor(small, hsv, ColorConversionCodes.BGR2HSV);
+        // Smoothed first, so the paper's grain and stains count as paper.
+        Cv2.MedianBlur(hsv, hsv, 7);
+
+        using Mat paperMask = new();
+        Cv2.InRange(hsv,
+            new Scalar(Math.Max(0, paper.Val0 - 12), Math.Max(0, paper.Val1 - 22), Math.Max(0, paper.Val2 - 28)),
+            new Scalar(Math.Min(180, paper.Val0 + 12), Math.Min(255, paper.Val1 + 22), Math.Min(255, paper.Val2 + 20)),
+            paperMask);
+        using (Mat kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(5, 5)))
+        {
+            Cv2.MorphologyEx(paperMask, paperMask, MorphTypes.Open, kernel);
+        }
+
+        // The page: the outline round its largest piece of paper, so photos reaching its edge are inside it.
+        Cv2.FindContours(paperMask, out Point[][] paperAreas, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        if (paperAreas.Length == 0) return [];
+        using Mat page = new(paperMask.Size(), MatType.CV_8UC1, Scalar.All(0));
+        Cv2.FillConvexPoly(page, Cv2.ConvexHull(paperAreas.MaxBy(a => Cv2.ContourArea(a))!), Scalar.All(255));
+
+        // The holes: inside the page and not paper, opened so the thin strips of paper between photos part them.
+        using Mat holes = new();
+        Cv2.BitwiseNot(paperMask, holes);
+        Cv2.BitwiseAnd(holes, page, holes);
+        using (Mat kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(9, 9)))
+        {
+            Cv2.MorphologyEx(holes, holes, MorphTypes.Open, kernel);
+        }
+        Cv2.FindContours(holes, out Point[][] holeAreas, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+
+        var found = new List<CropCandidate>();
+        foreach (var hole in holeAreas)
+        {
+            double area = Cv2.ContourArea(hole) / (k * k);
+            var r = Cv2.MinAreaRect(hole);
+            double boxArea = r.Size.Width * r.Size.Height / (k * k);
+            if (area < minArea || boxArea > maxArea || boxArea <= 0) continue;
+            double rectangularity = area / boxArea;
+            if (rectangularity < 0.70) continue; // roughly rectangular, as a photo is
+
+            var box = new RotatedRect(new Point2f((float)(r.Center.X / k), (float)(r.Center.Y / k)), new Size2f((float)(r.Size.Width / k), (float)(r.Size.Height / k)), r.Angle);
+            var corners = box.Points().Select(p => new Point((int)Math.Round(p.X), (int)Math.Round(p.Y))).ToArray();
+            found.Add(new CropCandidate(CvInterop.ToPoints(corners), CvInterop.ToRectangle(Cv2.BoundingRect(corners)), boxArea * rectangularity, CvInterop.ToBox(box), boxArea, rectangularity, 1));
+        }
+        return found;
     }
 
     /// <summary>

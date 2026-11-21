@@ -431,6 +431,61 @@ public static class BackgroundAnalyzer
         return kept;
     }
 
+    /// <summary>
+    /// The paper of a light album page (cream, salmon, pink) lying on the scanner bed, when the background was
+    /// sampled on the bed: the page then stands out from the bed far more than its faded photos stand out from the
+    /// page, and detection takes the whole page for one photo. Its paper is the most common smooth colour that isn't
+    /// the bed's, light and soft, and forms one large area: the outline round it covers at least 40% of the scan,
+    /// which a sky or a wall in a photo lying on the bed doesn't. Use it as the background, as Pick Color would.
+    /// </summary>
+    /// <param name="hsv">The scan, in HSV.</param>
+    /// <param name="bedHsv">The background sampled on the scan (the bed, when this applies).</param>
+    /// <returns>The paper's colour, or <see langword="null"/> when the scan isn't a light page on the bed.</returns>
+    public static Scalar? LightPageColour(Mat hsv, Scalar bedHsv)
+    {
+        ArgumentNullException.ThrowIfNull(hsv);
+        int width = hsv.Width, height = hsv.Height;
+        if (width < 100 || height < 100) return null;
+        // Only when the background is the bed (light and neutral): otherwise it was sampled on a page already.
+        if (bedHsv.Val1 >= 30 || bedHsv.Val2 <= 150) return null;
+
+        // The most common smooth colour that isn't the bed's.
+        int tile = Math.Max(16, Math.Min(width, height) / 70);
+        var smooth = new List<Scalar>();
+        for (int y = 0; y + tile <= height; y += tile)
+        {
+            for (int x = 0; x + tile <= width; x += tile)
+            {
+                using Mat m = new(hsv, new Rect(x, y, tile, tile));
+                Cv2.MeanStdDev(m, out Scalar mean, out Scalar spread);
+                if (spread.Val2 <= 8 && mean.Val1 > bedHsv.Val1 + 15) smooth.Add(mean);
+            }
+        }
+        if (smooth.Count == 0) return null;
+        var paper = new Scalar(Median([.. smooth.Select(c => c.Val0)]), Median([.. smooth.Select(c => c.Val1)]), Median([.. smooth.Select(c => c.Val2)]));
+        if (paper.Val2 < 170 || paper.Val1 > 90) return null; // light and soft-coloured, as album paper is
+
+        // One large area of that paper. Measured at a quarter of the size: its outline, not its detail, matters.
+        using Mat small = new();
+        Cv2.Resize(hsv, small, new Size(width / 4, height / 4), 0, 0, InterpolationFlags.Area);
+        using Mat paperMask = new();
+        Cv2.InRange(small,
+            new Scalar(Math.Max(0, paper.Val0 - 12), Math.Max(0, paper.Val1 - 22), Math.Max(0, paper.Val2 - 28)),
+            new Scalar(Math.Min(180, paper.Val0 + 12), Math.Min(255, paper.Val1 + 22), Math.Min(255, paper.Val2 + 20)),
+            paperMask);
+        using (Mat kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3)))
+        {
+            Cv2.MorphologyEx(paperMask, paperMask, MorphTypes.Open, kernel);
+        }
+        // The largest piece only: taking the outline round several pieces also took scans of loose prints for pages
+        // (4 of 38 on a real set), while gaining no page.
+        Cv2.FindContours(paperMask, out Point[][] areas, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        if (areas.Length == 0) return null;
+        var largest = areas.MaxBy(a => Cv2.ContourArea(a))!;
+        double outline = Cv2.ContourArea(Cv2.ConvexHull(largest));
+        return outline >= 0.4 * small.Width * small.Height ? paper : null;
+    }
+
     private static int MeasureBezelDepth(Mat bgMask, int maxDepth, int length, bool isHorizontal, bool fromStart)
     {
         int bezel = 0;
