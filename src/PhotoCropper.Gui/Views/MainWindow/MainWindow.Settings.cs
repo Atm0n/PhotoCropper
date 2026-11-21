@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;
@@ -111,10 +112,11 @@ internal sealed partial class MainWindow
     private void PopulateDetectionColorMenu()
     {
         var menus = new[] { viewCrops.DetectionColorMenu };
-        var currentColor = SettingsManager.Instance.Settings.DetectionBoxColor ?? "Red";
+        var currentColor = SettingsManager.Instance.Settings.DetectionBoxColor ?? AppConstants.DefaultBoundingBoxColor;
 
         var colorItems = new (string Key, string Value, string Hex)[]
         {
+            ("ColorSoftWhite", "SoftWhite", "#f4f1ea"),
             ("ColorRed", "Red", "#ff3333"),
             ("ColorAmber", "Amber", "#ffaa00"),
             ("ColorCyan", "Cyan", "#00d4ff"),
@@ -257,6 +259,7 @@ internal sealed partial class MainWindow
                 "CYAN" or "BLUE" => Color.Parse("#00d4ff"),
                 "MAGENTA" => Color.Parse("#ff00cc"),
                 "LIME" => Color.Parse("#00e676"),
+                "SOFTWHITE" => Color.Parse("#f4f1ea"),
                 _ => Color.Parse("#ff3333")
             };
         }

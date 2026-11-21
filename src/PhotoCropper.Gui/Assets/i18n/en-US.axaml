@@ -382,6 +382,7 @@
 	<sys:String x:Key="ThemeDark">Dark</sys:String>
 	<sys:String x:Key="ThemeLight">Light</sys:String>
 	<sys:String x:Key="ThemeSystem">System Default</sys:String>
+	<sys:String x:Key="ColorSoftWhite">Soft White</sys:String>
 	<sys:String x:Key="ColorRed">Classic Red</sys:String>
 	<sys:String x:Key="ColorAmber">Amber / Orange (Colorblind)</sys:String>
 	<sys:String x:Key="ColorCyan">Cyan / Turquoise (Colorblind)</sys:String>

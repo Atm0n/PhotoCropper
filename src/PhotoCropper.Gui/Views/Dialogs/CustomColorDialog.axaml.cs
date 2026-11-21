@@ -49,6 +49,7 @@ internal sealed partial class CustomColorDialog : Window
                 "CYAN" or "BLUE" => Color.Parse("#00D4FF"),
                 "MAGENTA" => Color.Parse("#FF00CC"),
                 "LIME" => Color.Parse("#00E676"),
+                "SOFTWHITE" => Color.Parse("#F4F1EA"),
                 _ => Color.Parse("#FF3333")
             };
         }

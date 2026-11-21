@@ -34,7 +34,7 @@ public sealed class SettingsManagerTests : IDisposable
         manager.Settings.AutoTuneOnScanChange.ShouldBeFalse();
         manager.Settings.AutoAdjustOnLowCoverage.ShouldBeTrue();
         manager.Settings.Theme.ShouldBe("Dark");
-        manager.Settings.DetectionBoxColor.ShouldBe("Red");
+        manager.Settings.DetectionBoxColor.ShouldBe("SoftWhite");
         manager.Settings.FileNamePattern.ShouldBe("{original}_{index}");
         manager.Settings.JpegQuality.ShouldBe(100);
         manager.Settings.DefaultYear.ShouldBeNull();

@@ -72,12 +72,13 @@ Look at the thumbnails on the right. In this page, two things are wrong:
 
 ### Fix a box that's wrong
 
-Click the box's **red ×** to delete it, then **click the photo**: the app finds the photo under your click and gives
+Click inside the box to select it, click its **red ×** to delete it, then **click the photo**: the app finds the photo under your click and gives
 it a new box. Clicking any photo that has **no box** adds one the same way.
 
 ![After clicking the photo again: the church's box now includes the sky](images/07-crops-find-photo.webp)
 
-You can also fix a box by hand:
+You can also fix a box by hand. **Click inside it** to select it: the selected box shows its handles (the other
+boxes are just a thin line around their photo, so their edges stay easy to see). Then:
 
 - drag a **corner** to resize it (a magnifier shows the edge while you drag),
 - drag the **blue circle** above it to turn it,

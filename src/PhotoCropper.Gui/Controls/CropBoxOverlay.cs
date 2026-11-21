@@ -52,13 +52,17 @@ internal sealed class CropBoxOverlay : Control
     public static readonly StyledProperty<Color> BoxColorProperty =
         AvaloniaProperty.Register<CropBoxOverlay, Color>(nameof(BoxColor), Colors.Red);
 
+    public static readonly StyledProperty<int> SelectedIndexProperty =
+        AvaloniaProperty.Register<CropBoxOverlay, int>(nameof(SelectedIndex), -1);
+
     private static readonly ImmutableSolidColorBrush White = new(Colors.White);
     private static readonly IBrush DeleteBadgeBrush = new ImmutableSolidColorBrush(Color.FromRgb(255, 0, 0));
     private static readonly IBrush RotationBadgeBrush = new ImmutableSolidColorBrush(Color.FromRgb(0, 0, 255));
+    private static readonly ImmutableSolidColorBrush OutlineBrush = new(Color.FromArgb(200, 20, 20, 20));
 
     static CropBoxOverlay()
     {
-        AffectsRender<CropBoxOverlay>(CandidatesProperty, ScanSizeProperty, OverlayScaleProperty, BoxColorProperty);
+        AffectsRender<CropBoxOverlay>(CandidatesProperty, ScanSizeProperty, OverlayScaleProperty, BoxColorProperty, SelectedIndexProperty);
         ClipToBoundsProperty.OverrideDefaultValue<CropBoxOverlay>(true);
         IsHitTestVisibleProperty.OverrideDefaultValue<CropBoxOverlay>(false);
     }
@@ -90,6 +94,13 @@ internal sealed class CropBoxOverlay : Control
         set => SetValue(BoxColorProperty, value);
     }
 
+    /// <summary>The selected box (index into <see cref="Candidates"/>), the only one drawn with its handles; -1 for none.</summary>
+    public int SelectedIndex
+    {
+        get => GetValue(SelectedIndexProperty);
+        set => SetValue(SelectedIndexProperty, value);
+    }
+
     public override void Render(DrawingContext context)
     {
         var candidates = Candidates;
@@ -103,7 +114,11 @@ internal sealed class CropBoxOverlay : Control
         double Scaled(double basePixels) => Math.Max(1, Math.Round(basePixels * s));
 
         var boxBrush = new ImmutableSolidColorBrush(BoxColor);
-        var boxPen = new ImmutablePen(boxBrush, Scaled(12), lineJoin: PenLineJoin.Miter);
+        // Each box is a thin line in the box colour over a slightly wider dark one (visible on light and dark scans
+        // alike), drawn just outside the box so it never covers the photo's own edge, which is what is being matched.
+        var outlinePen = new ImmutablePen(OutlineBrush, Scaled(7), lineJoin: PenLineJoin.Miter);
+        var boxPen = new ImmutablePen(boxBrush, Scaled(3), lineJoin: PenLineJoin.Miter);
+        double outside = Scaled(7) / 2 + Scaled(2);
         var handleBorderPen = new ImmutablePen(boxBrush, Scaled(4));
         var stemPen = new ImmutablePen(boxBrush, Scaled(6));
         var crossPen = new ImmutablePen(White, Scaled(8));
@@ -117,12 +132,20 @@ internal sealed class CropBoxOverlay : Control
         var scanRect = new Rect(scan);
         var scanSize = new System.Drawing.Size((int)scan.Width, (int)scan.Height);
 
-        foreach (var candidate in candidates)
+        for (int index = 0; index < candidates.Count; index++)
         {
+            var candidate = candidates[index];
             var geometry = CropBoxGeometry.For(candidate, scanSize, s);
             Point[] corners = [.. geometry.Vertices.Select(ToPoint)];
 
-            context.DrawGeometry(null, boxPen, Polygon(corners));
+            var box = candidate.Rotated;
+            var line = new PhotoCropper.Core.Models.RotatedBox(box.Center, new System.Drawing.SizeF((float)(box.Size.Width + 2 * outside), (float)(box.Size.Height + 2 * outside)), box.Angle);
+            var lineGeometry = Polygon([.. line.GetVertices().Select(ToPoint)]);
+            context.DrawGeometry(null, outlinePen, lineGeometry);
+            context.DrawGeometry(null, boxPen, lineGeometry);
+
+            // Handles, the delete badge and the rotation handle only on the selected box.
+            if (index != SelectedIndex) continue;
 
             foreach (Point corner in corners)
             {

@@ -63,6 +63,7 @@ public record DetectionOptions
             "CYAN" or "BLUE" => new ColorScalar(255, 255, 0),
             "MAGENTA" => new ColorScalar(255, 0, 255),
             "LIME" => new ColorScalar(0, 255, 0),
+            "SOFTWHITE" => new ColorScalar(234, 241, 244),
             _ => new ColorScalar(0, 0, 255)
         };
     }

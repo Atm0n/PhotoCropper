@@ -87,6 +87,7 @@ internal sealed partial class CropsStageView : UserControl
         var bgr = engine.CurrentOptions.GetBoundingBoxColorBgr();
         cropOverlay.BoxColor = Color.FromRgb((byte)bgr.V2, (byte)bgr.V1, (byte)bgr.V0);
         cropOverlay.Candidates = engine.AcceptedCandidates;
+        cropOverlay.SelectedIndex = ViewModel?.SelectedBoxIndex ?? -1;
         // The engine may have edited the same list instance in place; repaint either way.
         cropOverlay.InvalidateVisual();
     }

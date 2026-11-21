@@ -14,11 +14,13 @@ public static class AppConstants
     public const string ColorCyan = "Cyan";
     public const string ColorMagenta = "Magenta";
     public const string ColorLime = "Lime";
+    public const string ColorSoftWhite = "SoftWhite";
 
     public const string DefaultImageFormat = FormatJpeg;
     public const string PngImageFormat = FormatPng;
     public const string DefaultNamingPattern = "{original}_{index}";
-    public const string DefaultBoundingBoxColor = ColorRed;
+    // A calm colour for the thin box lines; red was loud. Existing settings keep the colour they chose.
+    public const string DefaultBoundingBoxColor = ColorSoftWhite;
     public const string DefaultLanguage = "en-US";
     public const string DefaultTheme = "Dark";
     public const double DefaultSensitivity = 50.0;

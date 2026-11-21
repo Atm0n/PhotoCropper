@@ -382,6 +382,7 @@
 	<sys:String x:Key="ThemeDark">Fosc</sys:String>
 	<sys:String x:Key="ThemeLight">Clar</sys:String>
 	<sys:String x:Key="ThemeSystem">Per defecte del Sistema</sys:String>
+	<sys:String x:Key="ColorSoftWhite">Blanc suau</sys:String>
 	<sys:String x:Key="ColorRed">Vermell Clàssic</sys:String>
 	<sys:String x:Key="ColorAmber">Àmbre / Taronja (Accessible)</sys:String>
 	<sys:String x:Key="ColorCyan">Cian / Turquesa (Accessible)</sys:String>
