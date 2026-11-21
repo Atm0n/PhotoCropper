@@ -175,8 +175,13 @@ public static class BackgroundAnalyzer
             double sTol = tolerance;
             double vTol = avgColor.Val2 > 128 ? tolerance * 1.5 : tolerance;
 
-            lower = new Scalar(Math.Max(0, avgColor.Val0 - hTol), Math.Max(0, avgColor.Val1 - sTol), Math.Max(0, avgColor.Val2 - vTol));
-            upper = new Scalar(Math.Min(180, avgColor.Val0 + hTol), Math.Min(255, avgColor.Val1 + sTol), Math.Min(255, avgColor.Val2 + vTol));
+            // A dark grey or black background (an album page): its hue is the scanner's noise, and so is much of its
+            // (small) saturation, which noise inflates on dark pixels. Any hue matches, and a little more saturation.
+            bool neutralDark = avgColor.Val1 < 30;
+            double sUp = neutralDark ? sTol + 15 : sTol;
+
+            lower = new Scalar(neutralDark ? 0 : Math.Max(0, avgColor.Val0 - hTol), Math.Max(0, avgColor.Val1 - sTol), Math.Max(0, avgColor.Val2 - vTol));
+            upper = new Scalar(neutralDark ? 180 : Math.Min(180, avgColor.Val0 + hTol), Math.Min(255, avgColor.Val1 + sUp), Math.Min(255, avgColor.Val2 + vTol));
         }
 
         Mat mask = new();
@@ -244,6 +249,121 @@ public static class BackgroundAnalyzer
         if (bottom > 0) Cv2.Rectangle(image, new Rect(0, image.Height - pad - bottom, image.Width, pad + bottom), backgroundBgr, -1);
         if (left > 0) Cv2.Rectangle(image, new Rect(0, 0, pad + left, image.Height), backgroundBgr, -1);
         if (right > 0) Cv2.Rectangle(image, new Rect(image.Width - pad - right, 0, pad + right, image.Height), backgroundBgr, -1);
+    }
+
+    /// <summary>
+    /// An album page lying on a light scanner bed, with the background sampled on the page: the ring of bed around
+    /// the page (often too wide for <see cref="DetectBezelMargins"/>) would count as foreground and, as a closed
+    /// outline around the whole page, get filled in together with every photo on it. And the sample, taken a little
+    /// way in, lands on the page's edge, often darker than the rest of it (shadow, age), so a tight tolerance takes
+    /// the whole page for foreground.
+    /// </summary>
+    /// <param name="image">The scan (BGR, without padding).</param>
+    /// <param name="backgroundHsv">The background sampled on the scan.</param>
+    /// <param name="pageHsv">The page's colour, sampled inside its edge.</param>
+    /// <returns>
+    /// The area around the page, to paint as background: the bed-coloured area reaching the scan's edge and the
+    /// page's edge next to it; or <see langword="null"/> when the scan isn't a page on a light bed.
+    /// </returns>
+    public static Mat? FindBedAroundPage(Mat image, Scalar backgroundHsv, out Scalar pageHsv)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        pageHsv = backgroundHsv;
+        const int s = 9;
+        int w = image.Width, h = image.Height;
+        if (w < 100 || h < 100) return null;
+
+        using Mat hsv = new();
+        Cv2.CvtColor(image, hsv, ColorConversionCodes.BGR2HSV);
+
+        // The bed's colour: the outermost few pixels all round, sampled in spots along each side.
+        const int inset = 3;
+        var hVals = new List<double>();
+        var sVals = new List<double>();
+        var vVals = new List<double>();
+        for (int i = 0; i <= 6; i++)
+        {
+            int x = inset + (w - s - 2 * inset) * i / 6, y = inset + (h - s - 2 * inset) * i / 6;
+            foreach (var r in new[] { new Rect(x, inset, s, s), new Rect(x, h - s - inset, s, s), new Rect(inset, y, s, s), new Rect(w - s - inset, y, s, s) })
+            {
+                using Mat m = new(hsv, r);
+                var mean = Cv2.Mean(m);
+                hVals.Add(mean.Val0);
+                sVals.Add(mean.Val1);
+                vVals.Add(mean.Val2);
+            }
+        }
+        var bed = new Scalar(Median(hVals), Median(sVals), Median(vVals));
+
+        // Only a light, neutral bed clearly unlike the background (which was then sampled on something else: the page).
+        bool bedIsLight = bed.Val1 < 65 && bed.Val2 > 150;
+        bool unlikeBackground = backgroundHsv.Val2 < bed.Val2 - 35 || backgroundHsv.Val1 > bed.Val1 + 30;
+        if (!bedIsLight || !unlikeBackground) return null;
+
+        // The bed-coloured pixels connected to the scan's edge.
+        using Mat bedLike = CreateBackgroundMask(hsv, bed, 25);
+        using Mat bedMask = KeepConnectedToEdge(bedLike);
+        int bedArea = Cv2.CountNonZero(bedMask);
+
+        // A ring around a page, not most of the scan (a bed the background sample missed for some other reason).
+        if (bedArea == 0 || bedArea > 0.35 * w * h) return null;
+
+        // The page: what the bed leaves. Its colour is sampled as the scan's background is, well inside its edge.
+        int reach = Math.Max(5, (int)(Math.Min(w, h) * 0.05)) | 1;
+        using (Mat inside = new())
+        {
+            Cv2.BitwiseNot(bedMask, inside);
+            Rect page = Cv2.BoundingRect(inside);
+            var core = new Rect(page.X + reach, page.Y + reach, page.Width - 2 * reach, page.Height - 2 * reach);
+            if (core.Width < w / 3 || core.Height < h / 3) return null;
+            using Mat pageArea = new(hsv, core);
+            pageHsv = SampleBackgroundColor(pageArea);
+        }
+
+        // The page's edge, often darker (shadow, age), would still outline the page: near the bed, paper of the page's
+        // colour or darker goes too. Not lighter: a print's light border close to the page's edge stays.
+        using Mat near = new();
+        using (Mat reachKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(reach, reach)))
+        {
+            Cv2.Dilate(bedMask, near, reachKernel);
+        }
+        bool neutral = pageHsv.Val1 < 40; // hue means little on grey paper
+        double hTol = neutral ? 180 : 15;
+        using Mat pageLike = new();
+        Cv2.InRange(hsv,
+            new Scalar(neutral ? 0 : Math.Max(0, pageHsv.Val0 - hTol), Math.Max(0, pageHsv.Val1 - 40), Math.Max(0, pageHsv.Val2 - 50)),
+            new Scalar(neutral ? 180 : Math.Min(180, pageHsv.Val0 + hTol), Math.Min(255, pageHsv.Val1 + 40), Math.Min(255, pageHsv.Val2 + 8)),
+            pageLike);
+        Cv2.BitwiseAnd(pageLike, near, pageLike);
+        Cv2.BitwiseOr(pageLike, bedMask, pageLike);
+        Mat surround = KeepConnectedToEdge(pageLike);
+
+        // What is left of the page's edge (a shadow line, a cut that isn't straight): a thin band more.
+        int band = Math.Max(3, (int)(Math.Min(w, h) * 0.004)) | 1;
+        using (Mat kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(band, band)))
+        {
+            Cv2.MorphologyEx(surround, surround, MorphTypes.Close, kernel);
+            Cv2.Dilate(surround, surround, kernel);
+        }
+        return surround;
+    }
+
+    /// <summary>The parts of <paramref name="mask"/> that reach the image's edge.</summary>
+    private static Mat KeepConnectedToEdge(Mat mask)
+    {
+        int w = mask.Width, h = mask.Height;
+        // Flood each part reaching the edge with 128, then keep only those pixels.
+        using Mat marked = mask.Clone();
+        void Fill(int x, int y)
+        {
+            if (marked.At<byte>(y, x) == 255) Cv2.FloodFill(marked, new Point(x, y), Scalar.All(128), out _, Scalar.All(0), Scalar.All(0), FloodFillFlags.Link8);
+        }
+        for (int x = 0; x < w; x++) { Fill(x, 0); Fill(x, h - 1); }
+        for (int y = 0; y < h; y++) { Fill(0, y); Fill(w - 1, y); }
+
+        Mat kept = new();
+        Cv2.Compare(marked, 128, kept, CmpTypes.EQ);
+        return kept;
     }
 
     private static int MeasureBezelDepth(Mat bgMask, int maxDepth, int length, bool isHorizontal, bool fromStart)

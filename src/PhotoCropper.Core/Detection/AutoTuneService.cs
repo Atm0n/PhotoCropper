@@ -23,6 +23,7 @@ public sealed class AutoTuneService : IDisposable
     private int _scaledPad;
 
     private Mat? _detMat;
+    private Mat? _aroundPage;
     private Mat? _detHsv;
     private Scalar _avgBgColorHsv;
     private Scalar _bgBgr;
@@ -97,17 +98,31 @@ public sealed class AutoTuneService : IDisposable
     private void PrepareBackground()
     {
         _avgBgColorHsv = _currentOptions.CustomBackgroundColorHsv is { } picked ? CvInterop.ToCv(picked) : BackgroundAnalyzer.SampleBackgroundColor(_detHsv!);
+
+        // An album page on a light bed: the page's colour (unless one was picked) is the one inside its edge.
+        _aroundPage = BackgroundAnalyzer.FindBedAroundPage(_detMat!, _avgBgColorHsv, out Scalar pageHsv);
+        if (_aroundPage != null && _currentOptions.CustomBackgroundColorHsv == null) _avgBgColorHsv = pageHsv;
         _bgBgr = BackgroundAnalyzer.HsvToBgr(_avgBgColorHsv);
     }
 
     private void NeutralizeBezels()
     {
+        bool painted = false;
         var margins = BackgroundAnalyzer.DetectBezelMargins(_detMat!, _avgBgColorHsv, _currentOptions.BackgroundTolerance);
         if (margins.Top > 0 || margins.Bottom > 0 || margins.Left > 0 || margins.Right > 0)
         {
             BackgroundAnalyzer.PaintBezels(_detMat!, margins, pad: 0, _bgBgr);
-            Cv2.CvtColor(_detMat!, _detHsv!, ColorConversionCodes.BGR2HSV);
+            painted = true;
         }
+        // ...and the bed around it is background too.
+        if (_aroundPage != null)
+        {
+            _detMat!.SetTo(_bgBgr, _aroundPage);
+            _aroundPage.Dispose();
+            _aroundPage = null;
+            painted = true;
+        }
+        if (painted) Cv2.CvtColor(_detMat!, _detHsv!, ColorConversionCodes.BGR2HSV);
     }
 
     private void PerformSweeps()
@@ -308,5 +323,6 @@ public sealed class AutoTuneService : IDisposable
     {
         _detMat?.Dispose();
         _detHsv?.Dispose();
+        _aroundPage?.Dispose();
     }
 }

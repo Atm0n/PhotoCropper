@@ -30,6 +30,47 @@ public sealed class BackgroundAnalyzerTests
     }
 
     [Fact]
+    public void FindBedAroundPage_PageOnLightBed_ShouldTakeTheBedAndThePagesEdge()
+    {
+        string dir = PhotoCropper.TestHelpers.TestImageFactory.CreateTempDirectory("BedAroundPage");
+        try
+        {
+            string path = Path.Combine(dir, "page.png");
+            PhotoCropper.TestHelpers.TestImageFactory.CreateAlbumPageOnBedScan(path, paperGrey: 94, edgeDarken: 14);
+            using Mat scan = Cv2.ImRead(path);
+            using Mat hsv = new();
+            Cv2.CvtColor(scan, hsv, ColorConversionCodes.BGR2HSV);
+            Scalar sampled = BackgroundAnalyzer.SampleBackgroundColor(hsv);
+
+            using Mat? around = BackgroundAnalyzer.FindBedAroundPage(scan, sampled, out Scalar page);
+
+            around.ShouldNotBeNull();
+            around.At<byte>(10, 10).ShouldBe((byte)255);   // the bed
+            around.At<byte>(70, 800).ShouldBe((byte)255);  // the page's darker edge
+            around.At<byte>(1000, 880).ShouldBe((byte)0);  // the page between photos
+            around.At<byte>(170, 400).ShouldBe((byte)0);   // a photo's light border, 100 px from the page's edge
+            page.Val2.ShouldBeInRange(90, 98);               // the paper inside its darker edge
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
+    public void FindBedAroundPage_PhotosOnTheBed_ShouldFindNothing()
+    {
+        using Mat scan = new(1000, 800, MatType.CV_8UC3, new Scalar(240, 240, 240));
+        Cv2.Rectangle(scan, new Rect(100, 100, 300, 200), new Scalar(60, 90, 120), -1);
+        using Mat hsv = new();
+        Cv2.CvtColor(scan, hsv, ColorConversionCodes.BGR2HSV);
+
+        using Mat? around = BackgroundAnalyzer.FindBedAroundPage(scan, BackgroundAnalyzer.SampleBackgroundColor(hsv), out _);
+
+        around.ShouldBeNull();
+    }
+
+    [Fact]
     public void SamplePixelBackgroundColor_ShouldSampleLocalNeighborhood()
     {
         using Mat bgr = new(100, 100, MatType.CV_8UC3);
