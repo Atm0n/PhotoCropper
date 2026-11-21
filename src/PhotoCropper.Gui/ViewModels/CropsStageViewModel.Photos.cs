@@ -7,20 +7,39 @@ using System.Collections.ObjectModel;
 
 namespace PhotoCropper.Gui.ViewModels;
 
-/// <summary>One photo of the open scan, in the single-photo carousel and the grid.</summary>
-internal sealed partial class CropPhotoItem(int index, Bitmap image, string label, string dimensions, Action<CropPhotoItem> selectionChanged) : ObservableObject
+/// <summary>One photo of the open scan, in the single-photo carousel and the grid. Owns the bitmap it shows.</summary>
+internal sealed partial class CropPhotoItem : ObservableObject, IDisposable
 {
-    public int Index { get; } = index;
-    public string Label { get; } = label;
-    public string Dimensions { get; } = dimensions;
+    private readonly Action<CropPhotoItem> _selectionChanged;
+
+    public CropPhotoItem(int index, Bitmap image, string label, string dimensions, Action<CropPhotoItem> selectionChanged)
+    {
+        Index = index;
+        _image = image;
+        Label = label;
+        Dimensions = dimensions;
+        _selectionChanged = selectionChanged;
+    }
+
+    public int Index { get; }
+    public string Label { get; }
+    public string Dimensions { get; }
+
+    private Bitmap _image;
 
     /// <summary>The photo, or its unrestored original while "hold to compare" is held.</summary>
-    [ObservableProperty] private Bitmap _image = image;
+    public Bitmap Image
+    {
+        get => _image;
+        set => SetProperty(ref _image, value);
+    }
 
     /// <summary>Selected in the grid (several photos can be).</summary>
     [ObservableProperty] private bool _isSelected;
 
-    partial void OnIsSelectedChanged(bool value) => selectionChanged(this);
+    partial void OnIsSelectedChanged(bool value) => _selectionChanged(this);
+
+    public void Dispose() => _image.Dispose();
 }
 
 /// <summary>
@@ -65,11 +84,10 @@ internal sealed partial class CropsStageViewModel
     public int SelectedBoxIndex => SelectedPhotoIndex >= 0 && SelectedPhotoIndex < Photos.Count ? Photos[SelectedPhotoIndex].Index : -1;
 
     /// <summary>Rebuilds the photo list from the open scan and selects <paramref name="select"/> (clamped).</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Each bitmap is owned by its CropPhotoItem and disposed (via DisposeLater) when the list is rebuilt or cleared")]
     public void ShowPhotos(int select = 0)
     {
         _showingOriginal = false;
-        var old = Photos.Select(p => (IDisposable)p.Image).ToList();
+        var old = Photos.ToList<IDisposable>();
         _syncingSelection = true;
         try
         {
@@ -100,7 +118,7 @@ internal sealed partial class CropsStageViewModel
     /// <summary>Empties the photo list (no scan open).</summary>
     public void ClearPhotos()
     {
-        var old = Photos.Select(p => (IDisposable)p.Image).ToList();
+        var old = Photos.ToList<IDisposable>();
         _syncingSelection = true;
         try
         {

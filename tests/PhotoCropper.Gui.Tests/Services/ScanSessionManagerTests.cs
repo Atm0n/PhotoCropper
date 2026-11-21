@@ -2,17 +2,19 @@ using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
 using PhotoCropper.TestHelpers;
-using System.Diagnostics.CodeAnalysis;
 
 namespace PhotoCropper.Gui.Tests.Services;
 
-[SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Session items are transferred to ScanSessionManager which manages lifecycle and disposes them on Clear/Dispose")]
 public sealed class ScanSessionManagerTests : IDisposable
 {
     private readonly string _tempDir;
     private readonly string _scan1;
     private readonly string _scan2;
     private readonly string _scan3;
+
+    /// <summary>New sessions for the scans, for a manager to own.</summary>
+    private static List<ScanSessionItem> Sessions(DetectionOptions options, params string[] paths) =>
+        [.. paths.Select(path => new ScanSessionItem(path, options))];
 
     public ScanSessionManagerTests()
     {
@@ -30,10 +32,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     public void Move_ShouldReorderAndKeepTheSameScanSelected()
     {
         using var manager = new ScanSessionManager();
-        manager.AddRange([
-            new ScanSessionItem(_scan1, new DetectionOptions()),
-            new ScanSessionItem(_scan2, new DetectionOptions()),
-            new ScanSessionItem(_scan3, new DetectionOptions())]);
+        manager.AddRange(Sessions(new DetectionOptions(), _scan1, _scan2, _scan3));
         manager.MoveTo(2);
 
         manager.Move(2, 0);
@@ -60,8 +59,9 @@ public sealed class ScanSessionManagerTests : IDisposable
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
 
-        var item1 = new ScanSessionItem(_scan1, options);
-        var item2 = new ScanSessionItem(_scan2, options);
+        // The manager owns the sessions once they are added.
+        var sessions = new[] { new ScanSessionItem(_scan1, options), new ScanSessionItem(_scan2, options) };
+        var (item1, item2) = (sessions[0], sessions[1]);
 
         manager.Add(item1);
         manager.Count.ShouldBe(1);
@@ -80,11 +80,7 @@ public sealed class ScanSessionManagerTests : IDisposable
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
 
-        manager.AddRange([
-            new ScanSessionItem(_scan1, options),
-            new ScanSessionItem(_scan2, options),
-            new ScanSessionItem(_scan3, options)
-        ]);
+        manager.AddRange(Sessions(options, _scan1, _scan2, _scan3));
 
         manager.CurrentIndex.ShouldBe(0);
 
@@ -113,10 +109,7 @@ public sealed class ScanSessionManagerTests : IDisposable
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
 
-        manager.AddRange([
-            new ScanSessionItem(_scan1, options),
-            new ScanSessionItem(_scan2, options)
-        ]);
+        manager.AddRange(Sessions(options, _scan1, _scan2));
 
         manager.MoveTo(1).ShouldBeTrue();
         manager.CurrentIndex.ShouldBe(1);
@@ -134,8 +127,9 @@ public sealed class ScanSessionManagerTests : IDisposable
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
 
-        var item1 = new ScanSessionItem(_scan1, options, isSaved: true, isModified: false);
-        var item2 = new ScanSessionItem(_scan2, options);
+        // The manager owns the sessions once they are added.
+        var sessions = new[] { new ScanSessionItem(_scan1, options, isSaved: true, isModified: false), new ScanSessionItem(_scan2, options) };
+        var (item1, item2) = (sessions[0], sessions[1]);
 
         manager.AddRange([item1, item2]);
 
@@ -157,8 +151,9 @@ public sealed class ScanSessionManagerTests : IDisposable
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
 
-        var item1 = new ScanSessionItem(_scan1, options, isSaved: true, isModified: false);
-        var item2 = new ScanSessionItem(_scan2, options);
+        // The manager owns the sessions once they are added.
+        var sessions = new[] { new ScanSessionItem(_scan1, options, isSaved: true, isModified: false), new ScanSessionItem(_scan2, options) };
+        var (item1, item2) = (sessions[0], sessions[1]);
 
         manager.AddRange([item1, item2]);
         item1.Activate();
@@ -180,8 +175,9 @@ public sealed class ScanSessionManagerTests : IDisposable
         var options = new DetectionOptions();
 
         // item1 is modified — TryDeactivateIfUnmodified will skip it
-        var item1 = new ScanSessionItem(_scan1, options, isSaved: false, isModified: true);
-        var item2 = new ScanSessionItem(_scan2, options);
+        // The manager owns the sessions once they are added.
+        var sessions = new[] { new ScanSessionItem(_scan1, options, isSaved: false, isModified: true), new ScanSessionItem(_scan2, options) };
+        var (item1, item2) = (sessions[0], sessions[1]);
 
         manager.AddRange([item1, item2]);
         item1.Activate();
@@ -202,11 +198,7 @@ public sealed class ScanSessionManagerTests : IDisposable
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
 
-        manager.AddRange([
-            new ScanSessionItem(_scan1, options),
-            new ScanSessionItem(_scan2, options),
-            new ScanSessionItem(_scan3, options)
-        ]);
+        manager.AddRange(Sessions(options, _scan1, _scan2, _scan3));
 
         // Move to middle item (index 1)
         manager.MoveTo(1);
@@ -237,10 +229,7 @@ public sealed class ScanSessionManagerTests : IDisposable
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
 
-        manager.AddRange([
-            new ScanSessionItem(_scan1, options),
-            new ScanSessionItem(_scan2, options)
-        ]);
+        manager.AddRange(Sessions(options, _scan1, _scan2));
         manager.MoveTo(1);
 
         var newSessions = new[] { new ScanSessionItem(_scan3, options) };
@@ -256,8 +245,9 @@ public sealed class ScanSessionManagerTests : IDisposable
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
-        var item1 = new ScanSessionItem(_scan1, options, isSaved: true, isModified: false);
-        var item2 = new ScanSessionItem(_scan2, options, isSaved: false, isModified: true);
+        // The manager owns the sessions once they are added.
+        var sessions = new[] { new ScanSessionItem(_scan1, options, isSaved: true, isModified: false), new ScanSessionItem(_scan2, options, isSaved: false, isModified: true) };
+        var (item1, item2) = (sessions[0], sessions[1]);
         var reported = new List<ScanSessionItem>();
         manager.SessionModified += reported.Add;
 
@@ -276,12 +266,14 @@ public sealed class ScanSessionManagerTests : IDisposable
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
-        var item = new ScanSessionItem(_scan1, options);
+        // The manager owns the sessions once they are added.
+        var sessions = new[] { new ScanSessionItem(_scan1, options) };
+        var item = sessions[0];
         var reported = new List<ScanSessionItem>();
         manager.SessionModified += reported.Add;
         manager.Add(item);
 
-        manager.RemoveAt(0);
+        using var removed = manager.RemoveAt(0);
         item.IsModified = true;
 
         reported.ShouldBeEmpty();
@@ -293,10 +285,7 @@ public sealed class ScanSessionManagerTests : IDisposable
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
 
-        manager.AddRange([
-            new ScanSessionItem(_scan1, options),
-            new ScanSessionItem(_scan2, options)
-        ]);
+        manager.AddRange(Sessions(options, _scan1, _scan2));
 
         var found = manager.FindByPath(_scan1.ToUpperInvariant());
         found.ShouldNotBeNull();
@@ -312,10 +301,7 @@ public sealed class ScanSessionManagerTests : IDisposable
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
 
-        manager.AddRange([
-            new ScanSessionItem(_scan1, options),
-            new ScanSessionItem(_scan2, options)
-        ]);
+        manager.AddRange(Sessions(options, _scan1, _scan2));
 
         manager.Clear();
         manager.Count.ShouldBe(0);

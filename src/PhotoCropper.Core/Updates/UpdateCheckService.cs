@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace PhotoCropper.Core.Updates;
@@ -138,7 +137,6 @@ public static class UpdateCheckService
             : message;
     }
 
-    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "HttpClient owns and disposes the handler")]
     private static HttpClient CreateDefaultHttpClient()
     {
         var handler = new HttpClientHandler

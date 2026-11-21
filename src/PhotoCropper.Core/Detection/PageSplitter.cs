@@ -183,7 +183,7 @@ internal static class PageSplitter
 
         var corners = CvInterop.ToCv(c.Rotated).Points().Select(Map).ToArray();
         var rotated = Cv2.MinAreaRect(corners);
-        var shape = c.ShapePoints.Length > 0
+        var shape = c.ShapePoints.Count > 0
             ? c.ShapePoints.Select(p => Map(new Point2f(p.X, p.Y))).Select(p => new Point((int)Math.Round(p.X), (int)Math.Round(p.Y))).ToArray()
             : corners.Select(p => new Point((int)Math.Round(p.X), (int)Math.Round(p.Y))).ToArray();
         var clamped = shape.Select(p => new Point(Math.Clamp(p.X, 0, original.Width - 1), Math.Clamp(p.Y, 0, original.Height - 1))).ToArray();

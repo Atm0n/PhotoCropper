@@ -1,4 +1,4 @@
-using OpenCvSharp;
+﻿using OpenCvSharp;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Detection;
 using PhotoCropper.Core.Extraction;
@@ -187,7 +187,7 @@ public class PhotoCropperEngine : IDisposable
 
     /// <summary>
     /// Runs the per-photo pipeline on a freshly extracted crop: auto-orientation, the user's manual rotation,
-    /// the raw compare copy, then colour restoration. Takes ownership of <paramref name="extracted"/>.
+    /// the raw compare copy, then colour restoration. <paramref name="extracted"/> stays the caller's.
     /// </summary>
     /// <param name="knownOrientation">Orientation to reuse instead of detecting it (e.g. from a saved session).</param>
     /// <returns>The processed photo, its raw (pre-restoration) copy, and the auto-orientation applied.</returns>
@@ -200,28 +200,27 @@ public class PhotoCropperEngine : IDisposable
         }
 
         int totalRotation = NormalizeRightAngle(orientation + userRotation);
+        using Mat rotated = new();
+        Mat source = extracted;
         if (totalRotation != 0)
         {
-            Mat rotated = new();
             Cv2.Rotate(extracted, rotated, ToRotateFlags(totalRotation));
-            extracted.Dispose();
-            extracted = rotated;
+            source = rotated;
         }
 
         // The raw copy (used by hold-to-compare) must be taken before colour restoration.
-        Mat raw = extracted.Clone();
-
-        if (RestoreVintageColors)
+        Mat raw = source.Clone();
+        try
         {
-            Mat restored = PhotoRestorationService.RestoreColors(extracted, removeDust: RemoveDustAndScratches);
-            if (!ReferenceEquals(restored, extracted))
-            {
-                extracted.Dispose();
-                extracted = restored;
-            }
+            // Restoration returns its input when it has nothing to do; the photo is always a Mat of its own.
+            Mat photo = RestoreVintageColors ? PhotoRestorationService.RestoreColors(source, removeDust: RemoveDustAndScratches) : source;
+            return (ReferenceEquals(photo, source) ? source.Clone() : photo, raw, orientation);
         }
-
-        return (extracted, raw, orientation);
+        catch
+        {
+            raw.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -251,15 +250,10 @@ public class PhotoCropperEngine : IDisposable
                 // The padded image is only needed for a box that reaches past the scan's edge. Inside it, extracting
                 // from the original gives the same pixels as restoring the saved box later, so a reopened project
                 // doesn't rewrite its cropped photos (and re-render their finals) for sub-pixel differences.
-                Mat extracted = (padded != null && !padded.Empty() && pad > 0 && !IsInside(candidates[i].Rotated, Original))
+                using Mat extracted = (padded != null && !padded.Empty() && pad > 0 && !IsInside(candidates[i].Rotated, Original))
                     ? PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(candidates[i].Rotated), Original, padded, pad)
                     : PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(candidates[i].Rotated), Original);
-
-                if (extracted.Empty())
-                {
-                    extracted.Dispose();
-                    return;
-                }
+                if (extracted.Empty()) return;
 
                 int? known = knownOrientations != null && i < knownOrientations.Count ? knownOrientations[i] : null;
                 (results[i], rawResults[i], orientations[i]) = ProcessExtractedPhoto(extracted, known);
@@ -405,20 +399,15 @@ public class PhotoCropperEngine : IDisposable
     /// False when nothing could be extracted (index out of range, or the box was dragged too small). The photo is
     /// then left unchanged, so the caller must restore the box it edited or the two will no longer match.
     /// </returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "ProcessExtractedPhoto takes ownership of the extracted Mat")]
     public bool ApplyGrabHandleResize(int candIndex)
     {
         if (candIndex < 0 || candIndex >= AcceptedCandidates.Count || candIndex >= DetectedPhotos.Count) return false;
 
         var cand = AcceptedCandidates[candIndex];
 
-        Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(cand.Rotated), Original);
-        if (extracted.Empty())
-        {
-            // Box dragged too small to extract: keep the previous photo rather than storing an empty one.
-            extracted.Dispose();
-            return false;
-        }
+        using Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(cand.Rotated), Original);
+        // Box dragged too small to extract: keep the previous photo rather than storing an empty one.
+        if (extracted.Empty()) return false;
 
         // Re-apply the user's manual 90° rotations so resizing a box doesn't silently undo them.
         int userRotation = PhotoRotations.TryGetValue(candIndex, out int rot) ? rot : 0;
@@ -552,7 +541,7 @@ public class PhotoCropperEngine : IDisposable
 
     public void AddManualCrop(DrawingRectangle area)
     {
-        var (extracted, candidate) = PhotoExtractionEngine.ExtractManualCrop(
+        var (extractedCrop, candidate) = PhotoExtractionEngine.ExtractManualCrop(
             Original,
             CvInterop.ToCv(area),
             CustomBackgroundColorHsv is { } picked ? CvInterop.ToCv(picked) : null,
@@ -560,11 +549,8 @@ public class PhotoCropperEngine : IDisposable
             CannyLowThreshold,
             CannyHighThreshold);
 
-        if (extracted.Empty() || !candidate.HasValue)
-        {
-            extracted.Dispose();
-            return;
-        }
+        using Mat extracted = extractedCrop;
+        if (extracted.Empty() || !candidate.HasValue) return;
 
         // Same pipeline as detected photos, so a manual crop looks the same now as after a restart.
         var (photo, raw, orientation) = ProcessExtractedPhoto(extracted);
@@ -578,7 +564,6 @@ public class PhotoCropperEngine : IDisposable
     /// elsewhere it adds the photo found, processed like a detected one.
     /// </summary>
     /// <returns>The photo's index and whether it was added; index -1 when no photo was found there.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "ProcessExtractedPhoto takes ownership of the extracted Mat")]
     public (int Index, bool Added) FindPhotoAt(System.Drawing.PointF point)
     {
         var boxes = AcceptedCandidates ?? [];
@@ -613,12 +598,8 @@ public class PhotoCropperEngine : IDisposable
             return (-1, false);
         }
 
-        Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(found), Original);
-        if (extracted.Empty())
-        {
-            extracted.Dispose();
-            return (-1, false);
-        }
+        using Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(found), Original);
+        if (extracted.Empty()) return (-1, false);
         var (photo, raw, orientation) = ProcessExtractedPhoto(extracted);
         DetectedPhotos.Add(photo);
         RawDetectedPhotos.Add(raw);

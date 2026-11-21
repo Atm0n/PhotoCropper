@@ -42,7 +42,6 @@ public static class PhotoRepairService
     /// model is downloaded (otherwise they are filled like quick strokes). Both get grain matched to the area around
     /// them. Returns <paramref name="image"/> itself when there is nothing to repair. Transparency (alpha) is kept.
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The repaired colour image is disposed in finally unless it is the input itself")]
     public static Mat ApplyRepairs(Mat image, IReadOnlyCollection<RepairStroke> strokes)
     {
         ArgumentNullException.ThrowIfNull(image);
@@ -74,7 +73,6 @@ public static class PhotoRepairService
     }
 
     /// <summary>Repairs a 1- or 3-channel image; returns it unchanged (same instance) when no stroke covers anything.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Ownership of each intermediate passes to the caller or is disposed when replaced")]
     private static Mat RepairColour(Mat image, IReadOnlyCollection<RepairStroke> strokes)
     {
         bool aiAvailable = AiInpainting.IsAvailable;
