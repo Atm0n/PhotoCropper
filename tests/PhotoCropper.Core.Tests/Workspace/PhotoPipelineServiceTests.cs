@@ -116,6 +116,60 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
+    public void RenderFinals_ShouldWriteEveryPhotoUnderTheNameARenderOneByOneGives()
+    {
+        var images = Enumerable.Range(0, 2 * Environment.ProcessorCount + 1).Select(i => Photo(40 + i)).ToList();
+        try
+        {
+            var photos = Save([.. images.Select((m, i) => (m, Box(20 + i * 3, 20 + i * 3, 10, 10)))]);
+
+            int written = PhotoPipelineService.RenderFinals(_workDir, _session, photos, new FinalRenderOptions(), onFailure: null);
+
+            written.ShouldBe(photos.Count);
+            photos.Select(p => Path.GetFileName(Full(p.Final!))).ShouldBe(photos.Select(p => $"scan_0001_{p.Number}.jpg"));
+            photos.ShouldAllBe(p => !p.IsFinalStale);
+        }
+        finally
+        {
+            foreach (var image in images) image.Dispose();
+        }
+    }
+
+    [Fact]
+    public void RenderFinals_WithAMissingCroppedFile_ShouldReportItAndWriteTheOthers()
+    {
+        using var a = Photo(100);
+        using var b = Photo(150);
+        using var c = Photo(200);
+        var photos = Save((a, Box(100, 100)), (b, Box(300, 300)), (c, Box(200, 50)));
+        File.Delete(Full(photos[1].Cropped!));
+        var failed = new List<ProjectPhoto>();
+
+        int written = PhotoPipelineService.RenderFinals(_workDir, _session, photos, new FinalRenderOptions(), (photo, _) => failed.Add(photo));
+
+        written.ShouldBe(2);
+        failed.ShouldBe([photos[1]]);
+        photos[0].Final.ShouldNotBeNull();
+        photos[1].Final.ShouldBeNull();
+        photos[2].Final.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void RenderFinals_WithoutAFailureHandler_ShouldThrowAfterWritingThePhotosBeforeIt()
+    {
+        using var a = Photo(100);
+        using var b = Photo(150);
+        using var c = Photo(200);
+        var photos = Save((a, Box(100, 100)), (b, Box(300, 300)), (c, Box(200, 50)));
+        File.Delete(Full(photos[1].Cropped!));
+
+        Should.Throw<FileNotFoundException>(() => PhotoPipelineService.RenderFinals(_workDir, _session, photos, new FinalRenderOptions(), onFailure: null));
+
+        photos[0].Final.ShouldNotBeNull();
+        photos[2].Final.ShouldBeNull();
+    }
+
+    [Fact]
     public void IsFinalStale_ShouldTurnTrueWhenRestorationOrCroppedPhotoChanges()
     {
         using var a = Photo(100);
