@@ -130,54 +130,59 @@ public sealed class AutoTuneService : IDisposable
         if (painted) Cv2.CvtColor(_detMat!, _detHsv!, ColorConversionCodes.BGR2HSV);
     }
 
+    /// <summary>
+    /// Tries every combination of the sweep's settings. Each combination's mask and score are independent, so they
+    /// are worked out side by side; the best is then picked in the sweep's own order with the same rule as one by
+    /// one (a later one only wins with a higher score), so the result is the same as before.
+    /// </summary>
     private void PerformSweeps()
     {
-        var edgeMaps = new List<Mat>();
+        var edgeMaps = new Mat[SweepCannyLows.Length];
         try
         {
-            var edgeMapDict = new Dictionary<double, Mat>();
-            foreach (double cannyLow in SweepCannyLows)
+            Parallel.For(0, SweepCannyLows.Length, c =>
+                edgeMaps[c] = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(_detMat!, SweepCannyLows[c], SweepCannyLows[c] * AppConstants.DefaultCannyHighRatio));
+
+            // 1. HSV background subtraction: one mask per edge threshold and tolerance, scored at each minimum size.
+            int tolerances = SweepTolerances.Length;
+            var hsvResults = new (double Score, int Count)[SweepCannyLows.Length * tolerances][];
+            Parallel.For(0, hsvResults.Length, i =>
             {
-                var map = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(_detMat!, cannyLow, cannyLow * AppConstants.DefaultCannyHighRatio);
-                edgeMaps.Add(map);
-                edgeMapDict[cannyLow] = map;
-            }
-
-            using Mat foreground = new();
-
-            // 1. HSV Background Subtraction Sweep
-            foreach (double cannyLow in SweepCannyLows)
+                int c = i / tolerances;
+                double cannyLow = SweepCannyLows[c];
+                using Mat foreground = new();
+                ForegroundMaskGenerator.PopulateForegroundMask(
+                    _detMat!, foreground, _avgBgColorHsv, SweepTolerances[i % tolerances], cannyLow, cannyLow * AppConstants.DefaultCannyHighRatio, edgeMaps[c], _detHsv!);
+                hsvResults[i] = ScoreEachMinArea(foreground);
+            });
+            for (int i = 0; i < hsvResults.Length; i++)
             {
-                Mat edgeMap = edgeMapDict[cannyLow];
-                double cannyHigh = cannyLow * AppConstants.DefaultCannyHighRatio;
-
-                foreach (double tol in SweepTolerances)
+                double cannyLow = SweepCannyLows[i / tolerances];
+                for (int m = 0; m < SweepMinAreaFactors.Length; m++)
                 {
-                    ForegroundMaskGenerator.PopulateForegroundMask(
-                        _detMat!, foreground, _avgBgColorHsv, tol, cannyLow, cannyHigh, edgeMap, _detHsv!);
-
-                    foreach (double minArea in SweepMinAreaFactors)
-                    {
-                        EvaluateCandidates(foreground, cannyLow, cannyHigh, minArea, tol);
-                    }
+                    Consider(hsvResults[i][m], cannyLow, SweepMinAreaFactors[m], SweepTolerances[i % tolerances]);
                 }
             }
 
-            // 2. Otsu Fallback Sweep
+            // 2. Otsu fallback, when too few photos were found.
             if (_bestCount < _minExpected)
             {
                 bool isLightBg = _avgBgColorHsv.Val2 > 120;
-                foreach (double cannyLow in SweepCannyLows)
+                var otsuResults = new (double Score, int Count)[SweepCannyLows.Length][];
+                Parallel.For(0, otsuResults.Length, c =>
                 {
-                    Mat edgeMap = edgeMapDict[cannyLow];
-                    double cannyHigh = cannyLow * AppConstants.DefaultCannyHighRatio;
-
+                    double cannyLow = SweepCannyLows[c];
+                    using Mat foreground = new();
                     ForegroundMaskGenerator.PopulateOtsuForegroundMask(
-                        _detMat!, foreground, cannyLow, cannyHigh, isLightBg, edgeMap);
-
-                    foreach (double minArea in SweepMinAreaFactors)
+                        _detMat!, foreground, cannyLow, cannyLow * AppConstants.DefaultCannyHighRatio, isLightBg, edgeMaps[c]);
+                    otsuResults[c] = ScoreEachMinArea(foreground);
+                });
+                double tolerance = _bestOptions.BackgroundTolerance;
+                for (int c = 0; c < otsuResults.Length; c++)
+                {
+                    for (int m = 0; m < SweepMinAreaFactors.Length; m++)
                     {
-                        EvaluateCandidates(foreground, cannyLow, cannyHigh, minArea, _bestOptions.BackgroundTolerance);
+                        Consider(otsuResults[c][m], SweepCannyLows[c], SweepMinAreaFactors[m], tolerance);
                     }
                 }
             }
@@ -186,32 +191,38 @@ public sealed class AutoTuneService : IDisposable
         {
             foreach (var mat in edgeMaps)
             {
-                mat.Dispose();
+                mat?.Dispose();
             }
         }
     }
 
-    private void EvaluateCandidates(Mat foreground, double cannyLow, double cannyHigh, double minArea, double tol)
+    /// <summary>The photos found in <paramref name="foreground"/> scored at each of the sweep's minimum sizes.</summary>
+    private (double Score, int Count)[] ScoreEachMinArea(Mat foreground)
     {
-        var passCandidates = CandidateExtractor.ExtractCandidates(
-            foreground, _scaledPad, _scaledW, _scaledH, minArea, _currentOptions.MaxAreaFactor, _detMat!, _bgBgr);
-
-        var fullCandidates = MapCandidatesToFullRes(passCandidates, _scale, _originalW, _originalH);
-        var accepted = CandidateResolutionFilter.FilterCandidates(fullCandidates);
-
-        double score = CalculateScore(accepted);
-        if (score > _bestScore)
+        var results = new (double Score, int Count)[SweepMinAreaFactors.Length];
+        for (int m = 0; m < results.Length; m++)
         {
-            _bestScore = score;
-            _bestCount = accepted.Count;
-            _bestOptions = _currentOptions with
-            {
-                BackgroundTolerance = tol,
-                CannyLowThreshold = cannyLow,
-                CannyHighThreshold = cannyHigh,
-                MinAreaFactor = minArea
-            };
+            var passCandidates = CandidateExtractor.ExtractCandidates(
+                foreground, _scaledPad, _scaledW, _scaledH, SweepMinAreaFactors[m], _currentOptions.MaxAreaFactor, _detMat!, _bgBgr);
+            var accepted = CandidateResolutionFilter.FilterCandidates(MapCandidatesToFullRes(passCandidates, _scale, _originalW, _originalH));
+            results[m] = (CalculateScore(accepted), accepted.Count);
         }
+        return results;
+    }
+
+    /// <summary>Keeps these settings when they score higher than the best so far.</summary>
+    private void Consider((double Score, int Count) result, double cannyLow, double minArea, double tol)
+    {
+        if (result.Score <= _bestScore) return;
+        _bestScore = result.Score;
+        _bestCount = result.Count;
+        _bestOptions = _currentOptions with
+        {
+            BackgroundTolerance = tol,
+            CannyLowThreshold = cannyLow,
+            CannyHighThreshold = cannyLow * AppConstants.DefaultCannyHighRatio,
+            MinAreaFactor = minArea
+        };
     }
 
     private double EvaluateConfiguration(
