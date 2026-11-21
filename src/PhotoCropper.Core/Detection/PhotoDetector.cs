@@ -67,7 +67,7 @@ internal static class PhotoDetector
     /// The photos' boxes on <paramref name="original"/>, in scan pixels: shapes found at several background
     /// tolerances around the chosen one (or by brightness alone when none is found), with composites and overlaps resolved.
     /// </summary>
-    public static IReadOnlyList<CropCandidate> FindCandidates(Mat original, DetectionImage image, DetectionOptions options)
+    public static IReadOnlyList<CropCandidate> FindCandidates(Mat original, DetectionImage image, DetectionOptions options, bool lookInsidePages = true)
     {
         Mat padded = image.Padded;
 
@@ -172,7 +172,10 @@ internal static class PhotoDetector
         }
 
         // Composite resolution and overlap filtering
-        return CandidateResolutionFilter.FilterCandidates(candidateDetections);
+        var filtered = CandidateResolutionFilter.FilterCandidates(candidateDetections);
+
+        // An album page taken whole (its photos too close to its colour): its photos instead.
+        return lookInsidePages ? PageSplitter.Split(original, filtered, options) : filtered;
     }
 
     private static void MapCandidatesToOriginalSpace(

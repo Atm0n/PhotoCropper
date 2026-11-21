@@ -163,6 +163,82 @@ public static class TestImageFactory
         Cv2.ImWrite(path, scan);
     }
 
+    /// <summary>The photos on <see cref="CreateLightAlbumPageScan"/>'s page, in scan pixels.</summary>
+    public static readonly Rect[] LightAlbumPagePhotos = [new(170, 170, 640, 820), new(930, 220, 620, 480), new(170, 1250, 700, 520), new(980, 1250, 560, 760)];
+
+    /// <summary>The page on <see cref="CreateLightAlbumPageScan"/>, in scan pixels.</summary>
+    public static readonly Rect LightAlbumPage = new(60, 60, 1580, 2180);
+
+    /// <summary>
+    /// A cream album page on a light scanner bed (a 60 px ring of bed round it), with four warm, faded photos on it
+    /// (pictures with some structure) and a little noise.
+    /// </summary>
+    public static void CreateLightAlbumPageScan(string path)
+    {
+        const int w = 1700, h = 2340;
+        double[] paper = [196, 214, 236]; // cream (BGR)
+        var pixels = new byte[w * h * 3];
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                double bed = 246 - 10.0 * y / h; // the lid's gradient
+                double[] v = LightAlbumPage.Contains(x, y) ? [.. paper] : [bed, bed, bed];
+                foreach (var r in LightAlbumPagePhotos)
+                {
+                    if (!r.Contains(x, y)) continue;
+                    double shade = 150 + 45 * Math.Sin(x / 33.0) * Math.Cos(y / 47.0);
+                    v = [shade * 0.80, shade * 0.88, shade];
+                }
+                for (int c = 0; c < 3; c++)
+                {
+                    pixels[(y * w + x) * 3 + c] = (byte)Math.Clamp(Math.Round(v[c] + PixelNoise(x, y, c) * 2.2), 0, 255);
+                }
+            }
+        }
+        using Mat flat = new(h, w * 3, MatType.CV_8UC1);
+        flat.SetArray(pixels);
+        using Mat scan = flat.Reshape(3, h);
+        Cv2.ImWrite(path, scan);
+    }
+
+    /// <summary>The prints on <see cref="CreatePrintsReachingTheEdgeScan"/>, in scan pixels.</summary>
+    public static readonly Rect[] PrintsReachingTheEdge = [new(30, 120, 1640, 980), new(30, 1140, 1640, 1200)];
+
+    /// <summary>
+    /// Two large prints lying on a light scanner bed, nearly as wide as it; the lower one runs off the scan's bottom
+    /// edge, where the middle of its picture is a white floor. Of the spots the background is usually sampled at,
+    /// the top ones fall on the bed and the bottom middle one on the floor; the others on the lower print.
+    /// </summary>
+    public static void CreatePrintsReachingTheEdgeScan(string path)
+    {
+        const int w = 1700, h = 2340;
+        var pixels = new byte[w * h * 3];
+        var lower = PrintsReachingTheEdge[1];
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                double v = 240; // the bed
+                if (PrintsReachingTheEdge[0].Contains(x, y)) v = 150 + 60 * Math.Sin(x / 41.0) * Math.Cos(y / 57.0);
+                if (lower.Contains(x, y))
+                {
+                    v = 100 + 60 * Math.Sin(x / 41.0) * Math.Cos(y / 57.0); // a picture with some structure
+                    // The white floor at the bottom of the lower print, reaching the scan's edge.
+                    if (y >= h - 260 && x >= 450 && x < 1250) v = 238;
+                }
+                for (int c = 0; c < 3; c++)
+                {
+                    pixels[(y * w + x) * 3 + c] = (byte)Math.Clamp(Math.Round(v + PixelNoise(x, y, c) * 2.2), 0, 255);
+                }
+            }
+        }
+        using Mat flat = new(h, w * 3, MatType.CV_8UC1);
+        flat.SetArray(pixels);
+        using Mat scan = flat.Reshape(3, h);
+        Cv2.ImWrite(path, scan);
+    }
+
     /// <summary>
     /// Noise for one pixel's channel, roughly normal with mean 0 and spread 1, worked out from its position alone: the
     /// same image every run, and no shared generator between tests running in parallel.
