@@ -68,6 +68,39 @@ public sealed class PageSplitterTests : IDisposable
     }
 
     [Fact]
+    public void LightPageColour_ACreamPageOnTheBed_ShouldGiveItsPaper()
+    {
+        string path = Path.Combine(_dir, "light_page_colour.png");
+        TestImageFactory.CreateLightAlbumPageScan(path);
+        using Mat scan = Cv2.ImRead(path);
+        using Mat hsv = new();
+        Cv2.CvtColor(scan, hsv, ColorConversionCodes.BGR2HSV);
+
+        var paper = BackgroundAnalyzer.LightPageColour(hsv, BackgroundAnalyzer.SampleBackgroundColor(hsv));
+
+        // The cream paper (BGR 196, 214, 236): light, and clearly more saturated than the white bed.
+        var p = paper.ShouldNotBeNull();
+        p.Val2.ShouldBeInRange(225, 245);
+        p.Val1.ShouldBeInRange(30, 60);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void LightPageColour_NotALightPage_ShouldGiveNothing(bool loosePrints)
+    {
+        // Loose prints on the bed, and a dark grey page: neither is a light page to use as the background.
+        string path = Path.Combine(_dir, loosePrints ? "not_light_prints.png" : "not_light_dark_page.png");
+        if (loosePrints) TestImageFactory.CreatePrintsReachingTheEdgeScan(path);
+        else TestImageFactory.CreateAlbumPageOnBedScan(path);
+        using Mat scan = Cv2.ImRead(path);
+        using Mat hsv = new();
+        Cv2.CvtColor(scan, hsv, ColorConversionCodes.BGR2HSV);
+
+        BackgroundAnalyzer.LightPageColour(hsv, BackgroundAnalyzer.SampleBackgroundColor(hsv)).ShouldBeNull();
+    }
+
+    [Fact]
     public void Split_ABoxSmallerThanAPage_ShouldBeLeftAsItIs()
     {
         string path = Path.Combine(_dir, "light_page_small.png");

@@ -31,16 +31,20 @@ internal static class PhotoDetector
     {
         // Sample background color before padding
         Scalar backgroundHsv;
+        Scalar? lightPaper = null;
         using (Mat hsv = new())
         {
             Cv2.CvtColor(original, hsv, ColorConversionCodes.BGR2HSV);
             backgroundHsv = options.CustomBackgroundColorHsv is { } picked ? CvInterop.ToCv(picked) : BackgroundAnalyzer.SampleBackgroundColor(hsv);
+            // A light album page on the bed: its paper is the background, as if picked with Pick Color.
+            if (options.CustomBackgroundColorHsv == null) lightPaper = BackgroundAnalyzer.LightPageColour(hsv, backgroundHsv);
+            if (lightPaper is { } paper) backgroundHsv = paper;
         }
 
         // An album page on a light bed: the bed around it is background too, and the page's colour (unless one was
-        // picked) is the one inside its edge.
+        // picked, or is a light page's paper) is the one inside its edge.
         using Mat? aroundPage = BackgroundAnalyzer.FindBedAroundPage(original, backgroundHsv, out Scalar background);
-        if (options.CustomBackgroundColorHsv == null) backgroundHsv = background;
+        if (options.CustomBackgroundColorHsv == null && lightPaper == null) backgroundHsv = background;
 
         // Convert HSV background color to BGR for border padding
         Scalar backgroundBgr = BackgroundAnalyzer.HsvToBgr(backgroundHsv);

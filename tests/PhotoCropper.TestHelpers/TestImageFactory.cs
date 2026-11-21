@@ -167,10 +167,11 @@ public static class TestImageFactory
     public static readonly Rect[] LightAlbumPagePhotos = [new(170, 170, 640, 820), new(930, 220, 620, 480), new(170, 1250, 700, 520), new(980, 1250, 560, 760)];
 
     /// <summary>The page on <see cref="CreateLightAlbumPageScan"/>, in scan pixels.</summary>
-    public static readonly Rect LightAlbumPage = new(60, 60, 1580, 2180);
+    public static readonly Rect LightAlbumPage = new(150, 150, 1400, 2000);
 
     /// <summary>
-    /// A cream album page on a light scanner bed (a 60 px ring of bed round it), with four warm, faded photos on it
+    /// A cream album page on a light scanner bed (a 150 px band of bed round it, wide enough for the usual background
+    /// sample to fall on the bed, as on real scans of album pages), with four warm, faded photos on it
     /// (pictures with some structure) and a little noise.
     /// </summary>
     public static void CreateLightAlbumPageScan(string path)
@@ -187,7 +188,7 @@ public static class TestImageFactory
                 foreach (var r in LightAlbumPagePhotos)
                 {
                     if (!r.Contains(x, y)) continue;
-                    double shade = 150 + 45 * Math.Sin(x / 33.0) * Math.Cos(y / 47.0);
+                    double shade = 150 + 45 * Math.Sin(x / 7.0) * Math.Cos(y / 11.0); // fine detail, as a picture has
                     v = [shade * 0.80, shade * 0.88, shade];
                 }
                 for (int c = 0; c < 3; c++)
