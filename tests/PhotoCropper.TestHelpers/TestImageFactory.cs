@@ -126,7 +126,7 @@ public static class TestImageFactory
     public static void CreateAlbumPageOnBedScan(string path, int paperGrey = 94, int edgeDarken = 14)
     {
         const int w = 1700, h = 2340, margin = 60;
-        var random = new Random(42);
+        var random = new Random(42); // NOSONAR: reproducible test images from a fixed seed, not security
         var pixels = new byte[w * h * 3];
         int x0 = margin, y0 = margin, x1 = w - margin, y1 = h - margin - 40;
         for (int y = 0; y < h; y++)
