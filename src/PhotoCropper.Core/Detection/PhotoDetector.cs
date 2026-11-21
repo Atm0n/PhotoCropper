@@ -39,8 +39,8 @@ internal static class PhotoDetector
 
         // An album page on a light bed: the bed around it is background too, and the page's colour (unless one was
         // picked) is the one inside its edge.
-        using Mat? aroundPage = BackgroundAnalyzer.FindBedAroundPage(original, backgroundHsv, out Scalar pageHsv);
-        if (aroundPage != null && options.CustomBackgroundColorHsv == null) backgroundHsv = pageHsv;
+        using Mat? aroundPage = BackgroundAnalyzer.FindBedAroundPage(original, backgroundHsv, out Scalar background);
+        if (options.CustomBackgroundColorHsv == null) backgroundHsv = background;
 
         // Convert HSV background color to BGR for border padding
         Scalar backgroundBgr = BackgroundAnalyzer.HsvToBgr(backgroundHsv);

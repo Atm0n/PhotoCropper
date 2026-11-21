@@ -100,8 +100,8 @@ public sealed class AutoTuneService : IDisposable
         _avgBgColorHsv = _currentOptions.CustomBackgroundColorHsv is { } picked ? CvInterop.ToCv(picked) : BackgroundAnalyzer.SampleBackgroundColor(_detHsv!);
 
         // An album page on a light bed: the page's colour (unless one was picked) is the one inside its edge.
-        _aroundPage = BackgroundAnalyzer.FindBedAroundPage(_detMat!, _avgBgColorHsv, out Scalar pageHsv);
-        if (_aroundPage != null && _currentOptions.CustomBackgroundColorHsv == null) _avgBgColorHsv = pageHsv;
+        _aroundPage = BackgroundAnalyzer.FindBedAroundPage(_detMat!, _avgBgColorHsv, out Scalar background);
+        if (_currentOptions.CustomBackgroundColorHsv == null) _avgBgColorHsv = background;
         _bgBgr = BackgroundAnalyzer.HsvToBgr(_avgBgColorHsv);
     }
 

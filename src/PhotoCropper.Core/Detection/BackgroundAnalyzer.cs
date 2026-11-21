@@ -5,24 +5,27 @@ namespace PhotoCropper.Core.Detection;
 
 public static class BackgroundAnalyzer
 {
-    public static Scalar SampleBackgroundColor(Mat hsv)
+    /// <summary>Size of the spots <see cref="SampleBackgroundColor(Mat)"/> samples.</summary>
+    private const int SpotSize = 15;
+
+    /// <summary>
+    /// The eight spots <see cref="SampleBackgroundColor(Mat)"/> samples: corners and side middles, a little way in
+    /// (about 3.5%) to step over the scanner's bezel and edge shadows. None on an image too small for them.
+    /// </summary>
+    private static Rect[] SampleSpots(Mat hsv)
     {
-        ArgumentNullException.ThrowIfNull(hsv);
-        int s = 15; // sample box size
-        if (hsv.Width < s * 3 + 20 || hsv.Height < s * 3 + 20) return new Scalar();
+        const int s = SpotSize;
+        if (hsv.Width < s * 3 + 20 || hsv.Height < s * 3 + 20) return [];
 
         int halfW = hsv.Width / 2;
         int halfH = hsv.Height / 2;
-
-        // Use adaptive inset (approx 3.5% of dimension, bounded between 5px and 80px)
-        // to safely step over flatbed scanner bezels and edge shadow artifacts
         int insetX = Math.Clamp((int)(hsv.Width * 0.035), 5, Math.Max(5, halfW - s - 10));
         int insetY = Math.Clamp((int)(hsv.Height * 0.035), 5, Math.Max(5, halfH - s - 10));
         if (hsv.Width >= 400 && insetX < 25) insetX = 25;
         if (hsv.Height >= 400 && insetY < 25) insetY = 25;
 
-        var rects = new Rect[]
-        {
+        return
+        [
             new(insetX, insetY, s, s),                               // Top-Left
             new(halfW - s / 2, insetY, s, s),                        // Top-Center
             new(hsv.Width - s - insetX, insetY, s, s),               // Top-Right
@@ -31,7 +34,36 @@ public static class BackgroundAnalyzer
             new(insetX, hsv.Height - s - insetY, s, s),              // Bottom-Left
             new(halfW - s / 2, hsv.Height - s - insetY, s, s),       // Bottom-Center
             new(hsv.Width - s - insetX, hsv.Height - s - insetY, s, s) // Bottom-Right
-        };
+        ];
+    }
+
+    /// <summary>
+    /// Whether, among <see cref="SampleBackgroundColor(Mat)"/>'s spots, those of <paramref name="bed"/>'s colour are
+    /// at least as many as any other group of spots that agree with each other. Spots on photos are each a different
+    /// colour; a page under them gives a group of its own, larger than the bed's when it covers most of the scan.
+    /// </summary>
+    private static bool BedHasTheLargestSpotGroup(Mat hsv, Scalar bed)
+    {
+        var colours = new List<Scalar>();
+        foreach (var r in SampleSpots(hsv))
+        {
+            using Mat m = new(hsv, r);
+            colours.Add(Cv2.Mean(m));
+        }
+        if (colours.Count == 0) return false;
+
+        // Saturation and brightness only: hue is noise on the light, neutral colours this compares.
+        static bool Agree(Scalar a, Scalar b) => Math.Abs(a.Val1 - b.Val1) <= 20 && Math.Abs(a.Val2 - b.Val2) <= 20;
+        int bedGroup = colours.Count(c => Agree(c, bed));
+        int largestOther = colours.Where(c => !Agree(c, bed)).Select(c => colours.Count(o => !Agree(o, bed) && Agree(o, c))).DefaultIfEmpty(0).Max();
+        return bedGroup > 0 && bedGroup >= largestOther;
+    }
+
+    public static Scalar SampleBackgroundColor(Mat hsv)
+    {
+        ArgumentNullException.ThrowIfNull(hsv);
+        var rects = SampleSpots(hsv);
+        if (rects.Length == 0) return new Scalar();
 
         var hVals = new List<double>();
         var sVals = new List<double>();
@@ -257,18 +289,25 @@ public static class BackgroundAnalyzer
     /// outline around the whole page, get filled in together with every photo on it. And the sample, taken a little
     /// way in, lands on the page's edge, often darker than the rest of it (shadow, age), so a tight tolerance takes
     /// the whole page for foreground.
+    /// <para>
+    /// Prints lying on a light bed are the other case where the scan's outermost pixels are bed but the background
+    /// sample isn't: photos close to the edge cover the spots it is taken at. Then the bed's colour is the background.
+    /// </para>
     /// </summary>
     /// <param name="image">The scan (BGR, without padding).</param>
     /// <param name="backgroundHsv">The background sampled on the scan.</param>
-    /// <param name="pageHsv">The page's colour, sampled inside its edge.</param>
+    /// <param name="background">The colour to use as background: the page's, sampled inside its edge, for a page with
+    /// bed all round it; the bed's when prints near the edge hid it from the sample; otherwise
+    /// <paramref name="backgroundHsv"/>.</param>
     /// <returns>
     /// The area around the page, to paint as background: the bed-coloured area reaching the scan's edge and the
-    /// page's edge next to it; or <see langword="null"/> when the scan isn't a page on a light bed.
+    /// page's edge next to it; or <see langword="null"/> when the scan isn't a page with bed all round it.
     /// </returns>
-    public static Mat? FindBedAroundPage(Mat image, Scalar backgroundHsv, out Scalar pageHsv)
+    public static Mat? FindBedAroundPage(Mat image, Scalar backgroundHsv, out Scalar background)
     {
         ArgumentNullException.ThrowIfNull(image);
-        pageHsv = backgroundHsv;
+        background = backgroundHsv;
+        Scalar pageHsv;
         const int s = 9;
         int w = image.Width, h = image.Height;
         if (w < 100 || h < 100) return null;
@@ -308,6 +347,17 @@ public static class BackgroundAnalyzer
         // A ring around a page, not most of the scan (a bed the background sample missed for some other reason).
         if (bedArea == 0 || bedArea > 0.35 * w * h) return null;
 
+        // ...and bed on every side: a photo reaching the scan's edge breaks the ring, and its light parts there (a
+        // white floor or sky) would be taken for bed and painted out. Nothing is painted then. When the sample's spots
+        // are mostly bed and the rest photos (each its own colour, their median one found nowhere on the scan), these
+        // are prints on the bed and the bed's colour is the background. When most agree on another colour (a page
+        // reaching the scan's edge), the sample stands.
+        if (!BedAlongEverySide(bedMask))
+        {
+            if (BedHasTheLargestSpotGroup(hsv, bed)) background = bed;
+            return null;
+        }
+
         // The page: what the bed leaves. Its colour is sampled as the scan's background is, well inside its edge.
         int reach = Math.Max(5, (int)(Math.Min(w, h) * 0.05)) | 1;
         using (Mat inside = new())
@@ -319,6 +369,7 @@ public static class BackgroundAnalyzer
             using Mat pageArea = new(hsv, core);
             pageHsv = SampleBackgroundColor(pageArea);
         }
+        background = pageHsv;
 
         // The page's edge, often darker (shadow, age), would still outline the page: near the bed, paper of the page's
         // colour or darker goes too. Not lighter: a print's light border close to the page's edge stays.
@@ -346,6 +397,20 @@ public static class BackgroundAnalyzer
             Cv2.Dilate(surround, surround, kernel);
         }
         return surround;
+    }
+
+    /// <summary>Whether <paramref name="bedMask"/> covers most of each side of the image (its outermost few pixels).</summary>
+    private static bool BedAlongEverySide(Mat bedMask)
+    {
+        const double minShare = 0.8;
+        int w = bedMask.Width, h = bedMask.Height, depth = 3;
+        Rect[] sides = [new(0, 0, w, depth), new(0, h - depth, w, depth), new(0, 0, depth, h), new(w - depth, 0, depth, h)];
+        foreach (var side in sides)
+        {
+            using Mat strip = new(bedMask, side);
+            if (Cv2.CountNonZero(strip) < minShare * side.Width * side.Height) return false;
+        }
+        return true;
     }
 
     /// <summary>The parts of <paramref name="mask"/> that reach the image's edge.</summary>
