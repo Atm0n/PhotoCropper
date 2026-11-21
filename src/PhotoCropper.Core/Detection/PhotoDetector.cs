@@ -121,20 +121,23 @@ internal static class PhotoDetector
             Math.Max(2, baseTol - 12)
         ];
 
-        using Mat foreground = new();
-        foreach (double tol in searchTolerances)
+        // The passes are independent, so they run side by side; their candidates are then gathered in the passes'
+        // order, so what follows sees exactly the same list as when they ran one after another.
+        var passes = new IReadOnlyList<CropCandidate>[searchTolerances.Length];
+        Parallel.For(0, searchTolerances.Length, i =>
         {
+            using Mat foreground = new();
             ForegroundMaskGenerator.PopulateForegroundMask(
                 detectionMat,
                 foreground,
                 image.BackgroundHsv,
-                tol,
+                searchTolerances[i],
                 options.CannyLowThreshold,
                 options.CannyHighThreshold,
                 precomputedEdges,
                 detHsv);
 
-            var passCandidates = CandidateExtractor.ExtractCandidates(
+            passes[i] = CandidateExtractor.ExtractCandidates(
                 foreground,
                 scaledPad,
                 (int)Math.Round(originalW * scale),
@@ -143,7 +146,9 @@ internal static class PhotoDetector
                 options.MaxAreaFactor,
                 detectionMat,
                 image.BackgroundBgr);
-
+        });
+        foreach (var passCandidates in passes)
+        {
             MapCandidatesToOriginalSpace(candidateDetections, passCandidates, scale, originalW, originalH);
         }
 

@@ -77,11 +77,19 @@ public class PhotoCropperEngine : IDisposable
         BoundingBoxColor = BoundingBoxColor
     };
 
+    /// <summary>
+    /// The settings and box list of the last <see cref="DetectPhotos"/>, while its photos are untouched (no box
+    /// added, deleted, moved or turned since): detecting again with the same settings would give the same photos.
+    /// </summary>
+    private (DetectionOptions Options, IReadOnlyList<CropCandidate> Candidates)? _freshDetection;
+
     public AutoTuneResult AutoTune(int minExpected = 1, int maxExpected = int.MaxValue)
     {
         var tuneResult = AutoTuneService.Tune(Original, CurrentOptions, minExpected, maxExpected);
         ApplyOptions(tuneResult.BestOptions);
-        DetectPhotos();
+        // Auto-Tune often keeps the settings the scan was just detected with: its photos are then already there.
+        bool alreadyDetected = _freshDetection is { } fresh && ReferenceEquals(fresh.Candidates, AcceptedCandidates) && fresh.Options == CurrentOptions;
+        if (!alreadyDetected) DetectPhotos();
         return tuneResult;
     }
 
@@ -102,6 +110,7 @@ public class PhotoCropperEngine : IDisposable
 
     private void ResetState()
     {
+        _freshDetection = null;
         foreach (var photo in DetectedPhotos) photo.Dispose();
         DetectedPhotos.Clear();
 
@@ -326,6 +335,7 @@ public class PhotoCropperEngine : IDisposable
         // Only keep candidates that produced a photo, so AcceptedCandidates[i] always matches DetectedPhotos[i].
         var kept = ExtractAndProcessCandidates(acceptedCandidates, prepared.Padded, prepared.Pad);
         AcceptedCandidates = [.. kept.Select(k => k.Candidate)];
+        _freshDetection = (options, AcceptedCandidates);
     }
 
     /// <summary>
@@ -359,6 +369,7 @@ public class PhotoCropperEngine : IDisposable
     private void RotatePhotoInternal(int index, RotateFlags flags)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return;
+        _freshDetection = null; // a photo turned by hand: detecting again would turn it back
 
         Mat rotated = new();
         Cv2.Rotate(DetectedPhotos[index], rotated, flags);

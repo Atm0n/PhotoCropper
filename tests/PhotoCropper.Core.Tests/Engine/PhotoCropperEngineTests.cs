@@ -36,6 +36,36 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
+    public void AutoTune_AfterDetecting_GivesTheSameBoxesAsDetectingWithItsSettings()
+    {
+        using var tuned = new PhotoCropperEngine(_standardScanPath);
+        tuned.DetectPhotos();
+        tuned.AutoTune();
+
+        using var fresh = new PhotoCropperEngine(_standardScanPath);
+        fresh.ApplyOptions(tuned.CurrentOptions);
+        fresh.DetectPhotos();
+
+        tuned.AcceptedCandidates.Select(c => c.Rotated).ShouldBe(fresh.AcceptedCandidates.Select(c => c.Rotated));
+        tuned.DetectedPhotos.Count.ShouldBe(fresh.DetectedPhotos.Count);
+    }
+
+    [Fact]
+    public void AutoTune_AfterABoxWasDeleted_DetectsAgain()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        cropper.DetectPhotos();
+        int found = cropper.AcceptedCandidates.Count;
+        found.ShouldBeGreaterThan(1);
+
+        cropper.DeletePhoto(0);
+        cropper.AutoTune();
+
+        cropper.AcceptedCandidates.Count.ShouldBe(found);
+        cropper.DetectedPhotos.Count.ShouldBe(found);
+    }
+
+    [Fact]
     public void Constructor_ShouldLoadImage()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
