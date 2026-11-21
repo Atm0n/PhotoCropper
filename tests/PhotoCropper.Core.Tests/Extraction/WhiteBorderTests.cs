@@ -8,7 +8,6 @@ using PhotoCropper.TestHelpers;
 namespace PhotoCropper.Core.Tests.Extraction;
 
 /// <summary>"Trim white borders": finding the picture inside a print's white border, and only when there is one.</summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Test images: a seeded, repeatable generator is the point")]
 public sealed class WhiteBorderTests : IDisposable
 {
     private readonly string _tempDir = TestImageFactory.CreateTempDirectory("WhiteBorderTests");
@@ -21,11 +20,8 @@ public sealed class WhiteBorderTests : IDisposable
     /// <summary>Photo-like content: colourful, mid-tone, never white at its corners.</summary>
     private static Mat Picture(int width, int height, int seed)
     {
-        var random = new Random(seed); // NOSONAR: reproducible test images from a fixed seed, not security
-        byte[] noise = new byte[width * height * 3];
-        random.NextBytes(noise);
         var picture = new Mat(height, width, MatType.CV_8UC3);
-        picture.SetData(noise);
+        new SeededRandom(seed).FillUniform(picture, 0, 256);
         Cv2.GaussianBlur(picture, picture, new Size(0, 0), 6);
         Cv2.Normalize(picture, picture, 30, 190, NormTypes.MinMax);
         return picture;

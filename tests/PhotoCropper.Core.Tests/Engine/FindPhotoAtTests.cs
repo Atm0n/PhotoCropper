@@ -99,7 +99,7 @@ public sealed class FindPhotoAtTests : IDisposable
     [Fact]
     public void ClickOnAWhiteBorderedPrintOnPaper_IncludesItsBorder()
     {
-        var scan = SampleScanFactory.CreatePrintOnPaper(Path.Combine(_tempDir, "print.png"), seed: 25);
+        var scan = SampleScanFactory.CreatePrintOnPaper(Path.Combine(_tempDir, "print.png"), seed: 1);
         using var engine = new PhotoCropperEngine(scan.Path) { AutoOrientPhotos = false };
         engine.RestoreFromSavedCrops([]);
         var print = scan.Photos[0];

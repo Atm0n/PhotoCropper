@@ -93,6 +93,9 @@ internal sealed partial class CropsStageView : UserControl
     }
 
     /// <summary>Colours of the rectangle drawn for a manual crop and of the box-colour swatch.</summary>
+    /// <summary>Darkens the scan outside the boxes (or stops doing so).</summary>
+    public void SetDimOutsideBoxes(bool dim) => cropOverlay.DimOutside = dim;
+
     public void SetSelectionColor(Color stroke, Color fill)
     {
         rectCrop.Stroke = new SolidColorBrush(stroke);
