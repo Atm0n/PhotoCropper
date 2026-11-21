@@ -116,9 +116,9 @@ internal sealed class CropBoxOverlay : Control
         var boxBrush = new ImmutableSolidColorBrush(BoxColor);
         // Each box is a thin line in the box colour over a slightly wider dark one (visible on light and dark scans
         // alike), drawn just outside the box so it never covers the photo's own edge, which is what is being matched.
-        var outlinePen = new ImmutablePen(OutlineBrush, Scaled(7), lineJoin: PenLineJoin.Miter);
-        var boxPen = new ImmutablePen(boxBrush, Scaled(3), lineJoin: PenLineJoin.Miter);
-        double outside = Scaled(7) / 2 + Scaled(2);
+        var outlinePen = new ImmutablePen(OutlineBrush, Scaled(10), lineJoin: PenLineJoin.Miter);
+        var boxPen = new ImmutablePen(boxBrush, Scaled(6), lineJoin: PenLineJoin.Miter);
+        double outside = Scaled(10) / 2 + Scaled(2);
         var handleBorderPen = new ImmutablePen(boxBrush, Scaled(4));
         var stemPen = new ImmutablePen(boxBrush, Scaled(6));
         var crossPen = new ImmutablePen(White, Scaled(8));

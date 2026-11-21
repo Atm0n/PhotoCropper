@@ -230,17 +230,14 @@ internal sealed partial class MainWindow
         UpdateCropStrokeColor(colorName);
         PopulateDetectionColorMenu();
 
-        if (ScanSessions.Count > 0)
+        // The colour is the app's, not a scan's: every scan takes it, loaded or not (it only affects the overlay, so
+        // there is nothing to re-detect). Only the current scan was updated before, so the others kept the old colour.
+        foreach (var session in ScanSessions)
         {
-            var session = ScanSessions[CurrentIndex];
             session.Options.BoundingBoxColor = colorName;
-            if (session.IsActive && session.Engine != null)
-            {
-                session.Engine.BoundingBoxColor = colorName;
-                // The colour only affects the overlay, so there is nothing to re-detect.
-                ShowScan(session.Engine);
-            }
+            if (session.IsActive && session.Engine != null) session.Engine.BoundingBoxColor = colorName;
         }
+        if (ScanSessions.Count > 0 && ScanSessions[CurrentIndex] is { IsActive: true, Engine: { } engine }) ShowScan(engine);
         return Task.CompletedTask;
     }
 
