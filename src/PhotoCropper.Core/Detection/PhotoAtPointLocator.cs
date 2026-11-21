@@ -117,18 +117,39 @@ public static class PhotoAtPointLocator
         var search = new Search(image, new Point2f((float)(point.X * image.Scale), (float)(point.Y * image.Scale)), otherBoxes, maxArea);
 
         bool lightBackground = image.BackgroundHsv.Val2 > 120;
-        using Mat foreground = new();
-        foreach (double cannyLow in CannyLows)
+        // Every Canny setting's colour masks then its Otsu mask. The masks are independent, so they are made and
+        // outlined side by side; their shapes are then added in this order, so the choice is the same as when
+        // they ran one after another.
+        var edges = new Mat[CannyLows.Length];
+        try
         {
-            double cannyHigh = cannyLow * AppConstants.DefaultCannyHighRatio;
-            using Mat edges = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(image.Bgr, cannyLow, cannyHigh);
-            foreach (double tolerance in Tolerances)
+            Parallel.For(0, CannyLows.Length, c =>
+                edges[c] = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(image.Bgr, CannyLows[c], CannyLows[c] * AppConstants.DefaultCannyHighRatio));
+            int masksPerCanny = Tolerances.Length + 1;
+            var shapes = new List<(RotatedRect Box, double Fill)>[CannyLows.Length * masksPerCanny];
+            Parallel.For(0, shapes.Length, m =>
             {
-                ForegroundMaskGenerator.PopulateForegroundMask(image.Bgr, foreground, image.BackgroundHsv, tolerance, cannyLow, cannyHigh, edges, image.Hsv);
-                search.Consider(foreground);
+                int c = m / masksPerCanny, t = m % masksPerCanny;
+                double cannyLow = CannyLows[c], cannyHigh = cannyLow * AppConstants.DefaultCannyHighRatio;
+                using Mat foreground = new();
+                if (t < Tolerances.Length)
+                {
+                    ForegroundMaskGenerator.PopulateForegroundMask(image.Bgr, foreground, image.BackgroundHsv, Tolerances[t], cannyLow, cannyHigh, edges[c], image.Hsv);
+                }
+                else
+                {
+                    ForegroundMaskGenerator.PopulateOtsuForegroundMask(image.Bgr, foreground, cannyLow, cannyHigh, lightBackground, edges[c]);
+                }
+                shapes[m] = search.ShapesAroundClick(foreground);
+            });
+            foreach (var mask in shapes)
+            {
+                foreach (var (box, fill) in mask) search.Add(box, fill);
             }
-            ForegroundMaskGenerator.PopulateOtsuForegroundMask(image.Bgr, foreground, cannyLow, cannyHigh, lightBackground, edges);
-            search.Consider(foreground);
+        }
+        finally
+        {
+            foreach (var map in edges) map?.Dispose();
         }
 
         var chosen = search.Choose();
@@ -525,13 +546,16 @@ public static class PhotoAtPointLocator
         {
             using Mat original = ImageIo.NormalizeToBgr(scan);
             Scalar backgroundHsv;
-            using (Mat fullHsv = new())
+            if (options.CustomBackgroundColorHsv is { } picked)
             {
+                backgroundHsv = CvInterop.ToCv(picked);
+            }
+            else
+            {
+                using Mat fullHsv = new();
                 Cv2.CvtColor(original, fullHsv, ColorConversionCodes.BGR2HSV);
                 // The scan's other photos are known: keep them out of the background sample.
-                backgroundHsv = options.CustomBackgroundColorHsv is { } picked
-                    ? CvInterop.ToCv(picked)
-                    : BackgroundAnalyzer.SampleBackgroundColor(fullHsv, [.. otherBoxes.Select(b => CvInterop.ToCv(b).Points())]);
+                backgroundHsv = BackgroundAnalyzer.SampleBackgroundColor(fullHsv, [.. otherBoxes.Select(b => CvInterop.ToCv(b).Points())]);
             }
             Scalar backgroundBgr = BackgroundAnalyzer.HsvToBgr(backgroundHsv);
 
@@ -621,8 +645,14 @@ public static class PhotoAtPointLocator
         /// <summary>The other photos' outlines, in working-size scan coordinates.</summary>
         public Point2f[][] Others => _others;
 
-        public void Consider(Mat foreground)
+        /// <summary>
+        /// The shapes containing the click in one foreground mask, with how much of its box each fills, in the
+        /// order <see cref="Add"/> takes them. Reads nothing that <see cref="Add"/> changes, so masks can be
+        /// outlined side by side.
+        /// </summary>
+        public List<(RotatedRect Box, double Fill)> ShapesAroundClick(Mat foreground)
         {
+            var shapes = new List<(RotatedRect Box, double Fill)>();
             // Detection's own candidates for this mask, with composites (several photos as one) resolved.
             var candidates = CandidateExtractor.ExtractCandidates(
                 foreground, _image.Pad, _image.ScanSize.Width, _image.ScanSize.Height, MinAreaFraction, MaxAreaFraction, _image.Bgr, _image.BackgroundBgr);
@@ -630,7 +660,7 @@ public static class PhotoAtPointLocator
             {
                 var box = CvInterop.ToCv(candidate.Rotated);
                 if (Cv2.PointPolygonTest(box.Points(), _click, false) < 0) continue;
-                Add(box, candidate.Rectangularity);
+                shapes.Add((box, candidate.Rectangularity));
             }
 
             // And the mask's raw outlines around the click (the mask is padded: shift by the padding).
@@ -646,11 +676,12 @@ public static class PhotoAtPointLocator
                 var box = new RotatedRect(new Point2f(boxInPadded.Center.X - _image.Pad, boxInPadded.Center.Y - _image.Pad), boxInPadded.Size, boxInPadded.Angle);
                 double boxArea = (double)box.Size.Width * box.Size.Height;
                 // How much of its box the shape fills: a photo fills it, merged neighbours or a ragged blob don't.
-                Add(box, boxArea > 0 ? Cv2.ContourArea(contour) / boxArea : 0);
+                shapes.Add((box, boxArea > 0 ? Cv2.ContourArea(contour) / boxArea : 0));
             }
+            return shapes;
         }
 
-        private void Add(RotatedRect box, double fill)
+        public void Add(RotatedRect box, double fill)
         {
             double area = (double)box.Size.Width * box.Size.Height;
             double fraction = area / _imageArea;
