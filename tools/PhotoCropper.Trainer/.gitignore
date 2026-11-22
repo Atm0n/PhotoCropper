@@ -4,3 +4,4 @@ albums/
 models/
 *.jpg
 *.onnx
+usb/

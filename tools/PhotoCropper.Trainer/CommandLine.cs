@@ -25,6 +25,13 @@ internal static class CommandLine
                     Get(options, "units", string.Join(',', SmithsonianPhotos.DefaultUnits)).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     ULong(options, "seed", 1)), CancellationToken.None).GetAwaiter().GetResult(),
                 "GENERATE" => Generate(console, options),
+                "TRAIN" => TrainCommand.Run(console, new TrainOptions(
+                    Get(options, "data", "albums"),
+                    Get(options, "out", "models"),
+                    OptionalInt(options, "epochs"),
+                    OptionalInt(options, "batch"),
+                    OptionalInt(options, "size"),
+                    options.ContainsKey("cpu"))),
                 _ => Help(console),
             };
         }
@@ -61,6 +68,8 @@ internal static class CommandLine
                                            Makes album pages with their photo masks and boxes. Run it again to carry on.
               generate --preview [sheet.jpg] [--photos <folder>] [--count 16]
                                            Draws a few pages with their masks outlined, to see what the set looks like.
+              train    [--data albums] [--out models] [--epochs N] [--batch N] [--size N] [--cpu]
+                                           Trains the network (GPU when it can). Stop any time; run again to carry on.
 
             """));
         return 0;
@@ -97,6 +106,9 @@ internal static class CommandLine
         options.TryGetValue(name, out string? value) && value.Length > 0
             ? int.TryParse(value, CultureInfo.InvariantCulture, out int number) && number > 0 ? number : throw new FormatException($"--{name} expects a positive whole number, not '{value}'.")
             : fallback;
+
+    private static int? OptionalInt(Dictionary<string, string> options, string name) =>
+        options.ContainsKey(name) ? Int(options, name, 0) : null;
 
     private static ulong ULong(Dictionary<string, string> options, string name, ulong fallback) =>
         options.TryGetValue(name, out string? value) && value.Length > 0

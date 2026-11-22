@@ -19,7 +19,7 @@ internal static class CheckCommand
         var platform = PlatformInfo.Detect();
         ShowPlatform(console, platform);
 
-        var (device, plan, reason) = ChooseDevice(platform);
+        var (device, plan, reason) = DeviceChoice.Choose(platform);
         console.WriteLine();
         console.MarkupLine(device.type == DeviceType.CUDA
             ? $"[green]Training will run on the GPU[/] ({Markup.Escape(platform.Nvidia!.Name)})."
@@ -66,27 +66,6 @@ internal static class CheckCommand
         return 0;
     }
 
-    private static (Device Device, TrainingPlan Plan, string? Reason) ChooseDevice(PlatformInfo platform)
-    {
-        if (platform.Nvidia is not { } gpu)
-        {
-            return (CPU, TrainingPlan.Cpu, "No NVIDIA graphics card found. Integrated graphics (AMD, Intel) can't be used for training.");
-        }
-        if (!gpu.DriverIsRecentEnough)
-        {
-            return (CPU, TrainingPlan.Cpu, $"The NVIDIA driver is {gpu.DriverVersion}; training needs {NvidiaGpu.MinimumDriverMajor} or newer (CUDA 12.8). Update the driver from nvidia.com and run check again.");
-        }
-#if TORCH_CUDA
-        if (!cuda.is_available())
-        {
-            return (CPU, TrainingPlan.Cpu, "The NVIDIA card was found, but CUDA could not be started. Updating the NVIDIA driver usually fixes this.");
-        }
-        return (CUDA, TrainingPlan.Gpu, null);
-#else
-        return (CPU, TrainingPlan.Cpu, "This copy was built without GPU support. Rebuild it on this computer (dotnet build picks the GPU build when an NVIDIA driver is installed).");
-#endif
-    }
-
     private static void ShowPlatform(IAnsiConsole console, PlatformInfo platform)
     {
         var table = new Table().Border(TableBorder.Rounded).AddColumn("This computer").AddColumn(string.Empty);
@@ -97,7 +76,7 @@ internal static class CheckCommand
         table.AddRow("NVIDIA", platform.Nvidia is { } gpu
             ? Markup.Escape($"{gpu.Name}, {gpu.MemoryMiB / 1024.0:F0} GB, driver {gpu.DriverVersion}")
             : "none");
-        table.AddRow("Training library", Markup.Escape($"TorchSharp ({BuildBackend} build)"));
+        table.AddRow("Training library", Markup.Escape($"TorchSharp ({DeviceChoice.BuildBackend} build)"));
         console.Write(table);
     }
 
@@ -123,10 +102,4 @@ internal static class CheckCommand
     };
 
     private static string FirstLine(string text) => text.Split('\n')[0].Trim();
-
-#if TORCH_CUDA
-    private const string BuildBackend = "GPU";
-#else
-    private const string BuildBackend = "CPU";
-#endif
 }
