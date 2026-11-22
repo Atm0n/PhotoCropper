@@ -25,6 +25,13 @@ internal static class CommandLine
                     Get(options, "units", string.Join(',', SmithsonianPhotos.DefaultUnits)).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     ULong(options, "seed", 1)), CancellationToken.None).GetAwaiter().GetResult(),
                 "GENERATE" => Generate(console, options),
+                "EXPORT" => ExportCommand.Run(console, Get(options, "model", Path.Combine("models", "best.dat")), Get(options, "out", Path.Combine("models", "photo-mask.onnx"))),
+                "SCORE" => ScoreCommand.Run(console, new ScoreOptions(
+                    Get(options, "model", Path.Combine("models", "photo-mask.onnx")),
+                    Get(options, "scans", "."),
+                    options.TryGetValue("key", out string? key) && key.Length > 0 ? key : throw new FormatException("score needs --key: a session.json or answer key with the correct boxes."),
+                    Int(options, "size", 512),
+                    options.TryGetValue("overlays", out string? overlays) && overlays.Length > 0 ? overlays : null)),
                 "TRAIN" => TrainCommand.Run(console, new TrainOptions(
                     Get(options, "data", "albums"),
                     Get(options, "out", "models"),
@@ -70,6 +77,10 @@ internal static class CommandLine
                                            Draws a few pages with their masks outlined, to see what the set looks like.
               train    [--data albums] [--out models] [--epochs N] [--batch N] [--size N] [--cpu]
                                            Trains the network (GPU when it can). Stop any time; run again to carry on.
+              export   [--model models/best.dat] [--out models/photo-mask.onnx]
+                                           Writes the trained network as an ONNX model, and checks it gives the same answers.
+              score    --key <session.json> --scans <folder> [--model models/photo-mask.onnx] [--overlays <folder>]
+                                           Finds the photos on real scans with the model and compares them with the correct boxes.
 
             """));
         return 0;

@@ -64,6 +64,9 @@ internal sealed class UNet : nn.Module<Tensor, Tensor>
         return _head.forward(d1).MoveToOuterDisposeScope();
     }
 
+    /// <summary>The network's layers, for exporting it.</summary>
+    internal UNetParts Parts() => new(_enc1, _enc2, _enc3, _enc4, _bottleneck, _up4, _dec4, _up3, _dec3, _up2, _dec2, _up1, _dec1, _head);
+
     /// <summary>The number of trained weights.</summary>
     public long WeightCount() => parameters().Sum(p => p.numel());
 
@@ -90,3 +93,9 @@ internal sealed class UNet : nn.Module<Tensor, Tensor>
         base.Dispose(disposing);
     }
 }
+
+/// <summary>The layers of a <see cref="UNet"/>, in the order data flows through them.</summary>
+internal sealed record UNetParts(
+    Sequential Enc1, Sequential Enc2, Sequential Enc3, Sequential Enc4, Sequential Bottleneck,
+    ConvTranspose2d Up4, Sequential Dec4, ConvTranspose2d Up3, Sequential Dec3,
+    ConvTranspose2d Up2, Sequential Dec2, ConvTranspose2d Up1, Sequential Dec1, Conv2d Head);
