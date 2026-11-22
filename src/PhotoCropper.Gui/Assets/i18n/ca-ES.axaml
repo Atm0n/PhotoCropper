@@ -12,6 +12,8 @@
 	<sys:String x:Key="LblRemoveDust">Eliminar Pols i Ratllades</sys:String>
 	<sys:String x:Key="LblAutoTuneOnPass">Auto-Ajustar en canviar d'imatge</sys:String>
 	<sys:String x:Key="TipAutoTuneOnPass">Executa automàticament l'Auto-Ajust de detecció cada vegada que canvia o carrega una imatge.</sys:String>
+	<sys:String x:Key="LblAiDetection">Detecció amb IA (experimental)</sys:String>
+	<sys:String x:Key="TipAiDetection">Cerca les fotos amb una xarxa entrenada en lloc de per color. Prem F5 per tornar a detectar una imatge amb ella; les imatges amb requadres desats els conserven fins aleshores.</sys:String>
 	<sys:String x:Key="LblAutoAdjustOnLowCoverage">Auto-Ajustar si la detecció és &lt; 50%</sys:String>
 	<sys:String x:Key="TipAutoAdjustOnLowCoverage">Executa automàticament l'Auto-Ajust si l'àrea de foto detectada cobreix menys del 50% del límit de l'escaneig.</sys:String>
 	<sys:String x:Key="LblCoveragePercent">Cobertura: {0}%</sys:String>

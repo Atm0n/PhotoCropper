@@ -49,6 +49,7 @@ internal static class ResourceKeys
 
     public const string LblDetectionSensitivity = nameof(LblDetectionSensitivity);
     public const string LblAutoTuneOnPass = nameof(LblAutoTuneOnPass);
+    public const string LblAiDetection = nameof(LblAiDetection);
     public const string LblAutoAdjustOnLowCoverage = nameof(LblAutoAdjustOnLowCoverage);
     public const string LblCoveragePercent = nameof(LblCoveragePercent);
     public const string LblLookaheadPreloaded = nameof(LblLookaheadPreloaded);
@@ -69,6 +70,7 @@ internal static class ResourceKeys
     public const string TipWorkDir = nameof(TipWorkDir);
     public const string TipAutoTune = nameof(TipAutoTune);
     public const string TipAutoTuneOnPass = nameof(TipAutoTuneOnPass);
+    public const string TipAiDetection = nameof(TipAiDetection);
     public const string TipAutoAdjustOnLowCoverage = nameof(TipAutoAdjustOnLowCoverage);
 
     public const string MsgUndo = nameof(MsgUndo);

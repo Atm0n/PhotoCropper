@@ -75,6 +75,12 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private bool _autoTuneOnScanChange;
     [ObservableProperty] private bool _autoAdjustOnLowCoverage = true;
 
+    /// <summary>Find photos with the trained network instead of by colour (experimental).</summary>
+    [ObservableProperty] private bool _useAiDetection;
+
+    /// <summary>A trained network is installed, so AI detection can be offered.</summary>
+    public bool IsAiDetectionAvailable { get; } = PhotoCropper.Core.Detection.AiPhotoDetector.IsAvailable;
+
     [ObservableProperty] private string _scanCounterText = string.Empty;
 
     /// <summary>At least one scan is loaded (otherwise the view shows its empty state).</summary>
@@ -116,6 +122,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
             AutoOrient = s.AutoOrientPhotos;
             AutoTuneOnScanChange = s.AutoTuneOnScanChange;
             AutoAdjustOnLowCoverage = s.AutoAdjustOnLowCoverage;
+            UseAiDetection = s.UseAiDetection;
             _restoreColors = s.RestoreVintageColors;
             _removeDust = s.RemoveDustAndScratches;
         }
@@ -142,6 +149,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
             _removeDust = options.RemoveDustAndScratches;
             AutoTuneOnScanChange = s.AutoTuneOnScanChange;
             AutoAdjustOnLowCoverage = s.AutoAdjustOnLowCoverage;
+            UseAiDetection = s.UseAiDetection;
         }
         finally
         {
@@ -161,6 +169,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
         RestoreVintageColors = _restoreColors,
         RemoveDustAndScratches = _removeDust,
         BoundingBoxColor = _settings().DetectionBoxColor,
+        UseAiDetection = UseAiDetection,
     };
 
     partial void OnSensitivityChanged(double value) => OnDetectionSliderChanged();
@@ -175,6 +184,19 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
         _saveSettings();
         Current!.Options.AutoOrientPhotos = value;
         _ = ReprocessAsync();
+    }
+
+    /// <summary>
+    /// The choice applies to every scan from now on (scans opened next detect with it); the open scan is detected
+    /// again at once so the difference shows. Scans with saved boxes keep them until re-detected (F5).
+    /// </summary>
+    partial void OnUseAiDetectionChanged(bool value)
+    {
+        if (_isShowingOptions) return;
+        _settings().UseAiDetection = value;
+        _saveSettings();
+        foreach (var scan in Scans) scan.Options.UseAiDetection = value;
+        if (CanStartWork) _ = ReprocessAsync();
     }
 
     partial void OnAutoTuneOnScanChangeChanged(bool value)

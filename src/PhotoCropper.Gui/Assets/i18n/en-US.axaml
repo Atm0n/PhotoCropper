@@ -12,6 +12,8 @@
 	<sys:String x:Key="LblRemoveDust">Remove Dust &amp; Scratches</sys:String>
 	<sys:String x:Key="LblAutoTuneOnPass">Auto-Tune on Scan Switch</sys:String>
 	<sys:String x:Key="TipAutoTuneOnPass">Automatically runs detection Auto-Tune every time you switch or load a scan image.</sys:String>
+	<sys:String x:Key="LblAiDetection">AI detection (experimental)</sys:String>
+	<sys:String x:Key="TipAiDetection">Finds the photos with a trained network instead of by colour. Press F5 to detect a scan again with it; scans with saved boxes keep them until then.</sys:String>
 	<sys:String x:Key="LblAutoAdjustOnLowCoverage">Auto-Tune if Detection &lt; 50%</sys:String>
 	<sys:String x:Key="TipAutoAdjustOnLowCoverage">Automatically executes Auto-Tune if detected photo area covers less than 50% of expected scan boundaries.</sys:String>
 	<sys:String x:Key="LblCoveragePercent">Coverage: {0}%</sys:String>

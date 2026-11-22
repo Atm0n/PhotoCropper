@@ -30,7 +30,8 @@ internal static class CommandLine
                     Get(options, "model", Path.Combine("models", "photo-mask.onnx")),
                     Get(options, "scans", "."),
                     options.TryGetValue("key", out string? key) && key.Length > 0 ? key : throw new FormatException("score needs --key: a session.json or answer key with the correct boxes."),
-                    options.TryGetValue("overlays", out string? overlays) && overlays.Length > 0 ? overlays : null)),
+                    options.TryGetValue("overlays", out string? overlays) && overlays.Length > 0 ? overlays : null,
+                    options.TryGetValue("boxes", out string? boxes) && boxes.Length > 0 ? boxes : null)),
                 "TEST-MODEL" => WriteTestModel(console, Get(options, "out", "bright-is-photo.onnx")),
                 "TRAIN" => TrainCommand.Run(console, new TrainOptions(
                     Get(options, "data", "albums"),

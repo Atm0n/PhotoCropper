@@ -215,6 +215,7 @@
 						
 						<StackPanel Orientation="Vertical" Spacing="4" VerticalAlignment="Center" Margin="4,0">
 							<CheckBox x:Name="chkAutoTuneOnPass" Content="{DynamicResource LblAutoTuneOnPass}" ToolTip.Tip="{DynamicResource TipAutoTuneOnPass}" IsChecked="{Binding AutoTuneOnScanChange}" FontSize="9" Focusable="False" Margin="0,-3,0,-3"/>
+							<CheckBox x:Name="chkAiDetection" Content="{DynamicResource LblAiDetection}" ToolTip.Tip="{DynamicResource TipAiDetection}" IsChecked="{Binding UseAiDetection}" IsVisible="{Binding IsAiDetectionAvailable}" FontSize="9" Focusable="False" Margin="0,-3,0,-3"/>
 							<CheckBox x:Name="chkAutoAdjustOnLowCoverage" Content="{DynamicResource LblAutoAdjustOnLowCoverage}" ToolTip.Tip="{DynamicResource TipAutoAdjustOnLowCoverage}" IsChecked="{Binding AutoAdjustOnLowCoverage}" FontSize="9" Focusable="False" Margin="0,-3,0,-3"/>
 						</StackPanel>
 								</StackPanel>

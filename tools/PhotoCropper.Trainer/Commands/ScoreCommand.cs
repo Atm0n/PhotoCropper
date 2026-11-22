@@ -9,7 +9,8 @@ namespace PhotoCropper.Trainer.Commands;
 /// <summary>Options for <c>score</c>.</summary>
 /// <param name="Key">A project session (session.json, or a saved answer key) whose scans have the correct boxes.</param>
 /// <param name="Overlays">When set, each scan is drawn there with the correct boxes (green) and the model's (red).</param>
-internal sealed record ScoreOptions(string Model, string Scans, string Key, string? Overlays);
+/// <param name="Boxes">When set, the model's boxes for every scan are written there (JSON), for further analysis.</param>
+internal sealed record ScoreOptions(string Model, string Scans, string Key, string? Overlays, string? Boxes = null);
 
 /// <summary>
 /// Scores a model on real scans against their correct boxes, running it through the app's own detection
@@ -29,6 +30,7 @@ internal static class ScoreCommand
 
         int total = 0, found = 0, close = 0, extras = 0, missing = 0;
         var worst = new List<(string Scan, int Found, int Photos, int Extras)>();
+        var allBoxes = new Dictionary<string, List<float[]>>();
         var watch = System.Diagnostics.Stopwatch.StartNew();
         console.Progress().AutoClear(true).Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn())
             .Start(context =>
@@ -45,6 +47,7 @@ internal static class ScoreCommand
                     }
                     using Mat scan = Cv2.ImRead(path, ImreadModes.Color);
                     var predicted = AiPhotoDetector.FindPhotos(scan).Select(ToCv).ToList();
+                    allBoxes[name] = [.. predicted.Select(b => new[] { b.Center.X, b.Center.Y, b.Size.Width, b.Size.Height, b.Angle })];
 
                     var ious = Pair(truth, predicted, out int unmatched);
                     int scanFound = ious.Count(i => i >= Found);
@@ -59,6 +62,7 @@ internal static class ScoreCommand
                 }
             });
 
+        if (options.Boxes != null) File.WriteAllText(options.Boxes, JsonSerializer.Serialize(allBoxes));
         var table = new Table().Border(TableBorder.Rounded).AddColumn("Scans").AddColumn(new TableColumn("Result").RightAligned());
         table.AddRow("Photos found (overlap ≥ 90 %)", $"[bold]{found} of {total}[/] ({(double)found / Math.Max(1, total):P0})");
         table.AddRow("Photos roughly found (≥ 70 %)", $"{close} of {total}");

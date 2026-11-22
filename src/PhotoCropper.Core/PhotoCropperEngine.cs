@@ -67,6 +67,7 @@ public class PhotoCropperEngine : IDisposable
         CannyHighThreshold = options.CannyHighThreshold;
         CustomBackgroundColorHsv = options.CustomBackgroundColorHsv;
         AutoOrientPhotos = options.AutoOrientPhotos;
+        UseAiDetection = options.UseAiDetection;
         RestoreVintageColors = options.RestoreVintageColors;
         RemoveDustAndScratches = options.RemoveDustAndScratches;
         BoundingBoxColor = options.BoundingBoxColor;
@@ -83,7 +84,8 @@ public class PhotoCropperEngine : IDisposable
         AutoOrientPhotos = AutoOrientPhotos,
         RestoreVintageColors = RestoreVintageColors,
         RemoveDustAndScratches = RemoveDustAndScratches,
-        BoundingBoxColor = BoundingBoxColor
+        BoundingBoxColor = BoundingBoxColor,
+        UseAiDetection = UseAiDetection,
     };
 
     /// <summary>

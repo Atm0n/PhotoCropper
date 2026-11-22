@@ -12,6 +12,8 @@
 	<sys:String x:Key="LblRemoveDust">Eliminar Polvo y Arañazos</sys:String>
 	<sys:String x:Key="LblAutoTuneOnPass">Auto-Ajustar al cambiar de imagen</sys:String>
 	<sys:String x:Key="TipAutoTuneOnPass">Ejecuta automáticamente el Auto-Ajuste de detección cada vez que cambia o carga una imagen.</sys:String>
+	<sys:String x:Key="LblAiDetection">Detección con IA (experimental)</sys:String>
+	<sys:String x:Key="TipAiDetection">Busca las fotos con una red entrenada en lugar de por color. Pulsa F5 para volver a detectar una imagen con ella; las imágenes con recuadros guardados los conservan hasta entonces.</sys:String>
 	<sys:String x:Key="LblAutoAdjustOnLowCoverage">Auto-Ajustar si la detección es &lt; 50%</sys:String>
 	<sys:String x:Key="TipAutoAdjustOnLowCoverage">Ejecuta automáticamente el Auto-Ajuste si el área de foto detectada cubre menos del 50% del límite del escaneo.</sys:String>
 	<sys:String x:Key="LblCoveragePercent">Cobertura: {0}%</sys:String>

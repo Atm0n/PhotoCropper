@@ -22,6 +22,9 @@ internal sealed class UserSettings
     public bool RestoreVintageColors { get; set; }
     public bool RemoveDustAndScratches { get; set; }
     public bool AutoTuneOnScanChange { get; set; }
+
+    /// <summary>Find photos with the trained network (experimental; only offered when a model is installed).</summary>
+    public bool UseAiDetection { get; set; }
     public bool AutoAdjustOnLowCoverage { get; set; } = true;
     public string? WorkDirectory { get; set; }
 
@@ -139,6 +142,7 @@ internal sealed class SettingsManager
         Settings.RestoreVintageColors = defaults.RestoreVintageColors;
         Settings.RemoveDustAndScratches = defaults.RemoveDustAndScratches;
         Settings.AutoTuneOnScanChange = defaults.AutoTuneOnScanChange;
+        Settings.UseAiDetection = defaults.UseAiDetection;
         Settings.AutoAdjustOnLowCoverage = defaults.AutoAdjustOnLowCoverage;
         Save();
     }

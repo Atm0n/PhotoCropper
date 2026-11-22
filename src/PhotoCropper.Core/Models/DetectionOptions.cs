@@ -15,6 +15,9 @@ public record DetectionOptions
     public bool RemoveDustAndScratches { get; set; }
     public string BoundingBoxColor { get; set; } = AppConstants.DefaultBoundingBoxColor;
 
+    /// <summary>Find the photos with the trained network when one is installed (see <see cref="Detection.AiPhotoDetector"/>).</summary>
+    public bool UseAiDetection { get; set; }
+
     /// <summary>
     /// Converts a user-facing sensitivity percentage (0% to 100%) to internal background match tolerance.
     /// Higher sensitivity means higher eagerness to detect photos (tighter background subtraction, retaining light regions).
