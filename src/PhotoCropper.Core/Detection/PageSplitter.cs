@@ -18,6 +18,12 @@ internal static class PageSplitter
     /// <summary>A box found inside the page larger than this share of it is the page again, not a photo.</summary>
     private const double MaxPhotoShareOfPage = 0.6;
 
+    /// <summary>
+    /// Photos are looked for by texture and seams only in a box at least this share of the scan: on the real scans the
+    /// pages taken whole are 75-79 % of the scan, while large single photos taken with some margin are 27-34 %.
+    /// </summary>
+    private const double MinPageShareForTexture = 0.5;
+
     /// <summary>How many photos must be found inside for the page box to be replaced by them.</summary>
     private const int MinPhotosInside = 2;
 
@@ -31,14 +37,16 @@ internal static class PageSplitter
         var result = new List<CropCandidate>(candidates.Count);
         foreach (var candidate in candidates)
         {
-            var inside = candidate.Area >= MinPageShare * scanArea ? PhotosInside(original, candidate, options) : null;
+            var inside = candidate.Area >= MinPageShare * scanArea
+                ? PhotosInside(original, candidate, options, byTexture: candidate.Area >= MinPageShareForTexture * scanArea)
+                : null;
             if (inside is { Count: >= MinPhotosInside }) result.AddRange(inside);
             else result.Add(candidate);
         }
         return result;
     }
 
-    private static List<CropCandidate>? PhotosInside(Mat original, CropCandidate page, DetectionOptions options)
+    private static List<CropCandidate>? PhotosInside(Mat original, CropCandidate page, DetectionOptions options, bool byTexture)
     {
         var box = CvInterop.ToCv(page.Rotated);
         int w = (int)Math.Round(box.Size.Width), h = (int)Math.Round(box.Size.Height);
@@ -51,19 +59,28 @@ internal static class PageSplitter
         using Mat patch = new();
         Cv2.WarpAffine(original, patch, toPage, new Size(w, h), InterpolationFlags.Linear, BorderTypes.Replicate);
 
-        if (PaperColour(patch) is not { } paper) return null;
-
-        // Detected again with the paper as the background. The minimum size stays a share of the whole scan.
-        var onPaper = options with { CustomBackgroundColorHsv = CvInterop.ToColor(paper) };
-        using var prepared = PhotoDetector.Prepare(patch, onPaper);
-        var found = PhotoDetector.FindCandidates(patch, prepared, onPaper, lookInsidePages: false);
-
         double minArea = options.MinAreaFactor * original.Width * original.Height;
         double maxArea = MaxPhotoShareOfPage * w * h;
-        var photos = found.Where(c => c.Area >= minArea && c.Area <= maxArea).ToList();
+        var photos = new List<CropCandidate>();
+        Scalar? paper = PaperColour(patch);
+        if (paper is { } colour)
+        {
+            // Detected again with the paper as the background. The minimum size stays a share of the whole scan.
+            var onPaper = options with { CustomBackgroundColorHsv = CvInterop.ToColor(colour) };
+            using var prepared = PhotoDetector.Prepare(patch, onPaper);
+            var found = PhotoDetector.FindCandidates(patch, prepared, onPaper, lookInsidePages: false);
+            photos = [.. found.Where(c => c.Area >= minArea && c.Area <= maxArea)];
 
-        // Still the page as one shape (its outline won again): the photos as the holes in its paper instead.
-        if (photos.Count < MinPhotosInside) photos = HolesInPaper(patch, paper, minArea, maxArea);
+            // Still the page as one shape (its outline won again): the photos as the holes in its paper instead.
+            if (photos.Count < MinPhotosInside) photos = HolesInPaper(patch, colour, minArea, maxArea);
+        }
+
+        // Their colour too close to the paper's, or stuck edge to edge: by texture and straight seams. When photos
+        // cover most of the page, its paper shows only along its edges: it is measured there.
+        if (photos.Count < MinPhotosInside && byTexture && (paper ?? EdgePaperColour(patch)) is { } texturePaper)
+        {
+            photos = ByTextureAndSeams(patch, texturePaper, minArea, maxArea);
+        }
         if (photos.Count < MinPhotosInside) return null;
 
         using Mat toScan = new();
@@ -128,6 +145,55 @@ internal static class PageSplitter
             found.Add(new CropCandidate(CvInterop.ToPoints(corners), CvInterop.ToRectangle(Cv2.BoundingRect(corners)), boxArea * rectangularity, CvInterop.ToBox(box), boxArea, rectangularity, 1));
         }
         return found;
+    }
+
+    /// <summary>The photos on a page found by texture and seams (<see cref="TextureSeamSplitter"/>), as candidates.</summary>
+    private static List<CropCandidate> ByTextureAndSeams(Mat patch, Scalar paper, double minArea, double maxArea) =>
+        [.. TextureSeamSplitter.FindPieces(patch, paper, minArea)
+            .Where(b => (double)b.Size.Width * b.Size.Height >= minArea && (double)b.Size.Width * b.Size.Height <= maxArea)
+            .Select(b =>
+            {
+                var corners = b.Points().Select(p => new Point((int)Math.Round(p.X), (int)Math.Round(p.Y))).ToArray();
+                double area = (double)b.Size.Width * b.Size.Height;
+                return new CropCandidate(CvInterop.ToPoints(corners), CvInterop.ToRectangle(Cv2.BoundingRect(corners)), area, CvInterop.ToBox(b), area, 1, 1);
+            })];
+
+    /// <summary>
+    /// The paper's colour measured along the page's edges, where there is paper even when photos cover most of the
+    /// page: the median of the smooth tiles there that look like album paper (light, soft-coloured), when enough of
+    /// them agree. On the 4 real light pages taken whole, 20-45 % of the edge tiles are that paper.
+    /// </summary>
+    private static Scalar? EdgePaperColour(Mat patch)
+    {
+        using Mat hsv = new();
+        Cv2.CvtColor(patch, hsv, ColorConversionCodes.BGR2HSV);
+        int width = hsv.Width, height = hsv.Height, side = Math.Min(width, height);
+        int tile = Math.Max(16, side / 70), outer = side / 100, inner = side * 7 / 100;
+
+        var paperLike = new List<Scalar>();
+        int total = 0;
+        for (int y = 0; y + tile <= height; y += tile)
+        {
+            for (int x = 0; x + tile <= width; x += tile)
+            {
+                int fromEdge = Math.Min(Math.Min(x, y), Math.Min(width - x - tile, height - y - tile));
+                if (fromEdge < outer || fromEdge > inner) continue;
+                total++;
+                using Mat m = new(hsv, new Rect(x, y, tile, tile));
+                Cv2.MeanStdDev(m, out Scalar mean, out Scalar spread);
+                if (spread.Val2 <= 8 && mean.Val1 > 15 && mean.Val1 <= 90 && mean.Val2 >= 170) paperLike.Add(mean);
+            }
+        }
+        if (total == 0 || paperLike.Count == 0) return null;
+
+        static double Median(IEnumerable<double> values)
+        {
+            var sorted = values.Order().ToList();
+            return sorted[sorted.Count / 2];
+        }
+        var paper = new Scalar(Median(paperLike.Select(c => c.Val0)), Median(paperLike.Select(c => c.Val1)), Median(paperLike.Select(c => c.Val2)));
+        int agreeing = paperLike.Count(c => Math.Abs(c.Val0 - paper.Val0) <= 10 && Math.Abs(c.Val1 - paper.Val1) <= 15 && Math.Abs(c.Val2 - paper.Val2) <= 15);
+        return agreeing >= 0.15 * total ? paper : null;
     }
 
     /// <summary>
