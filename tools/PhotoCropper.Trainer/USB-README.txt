@@ -27,5 +27,5 @@ Photos: public-domain (CC0) photographs from Smithsonian Open Access; see photos
 No family photos are on this stick or used for training.
 
 Windows may warn that the program is from an unknown publisher (it isn't signed): choose "More info", then
-"Run anyway". If it says a DLL such as VCRUNTIME140.dll or MSVCP140.dll is missing, install the Microsoft Visual C++
-Redistributable (x64): https://aka.ms/vs/17/release/vc_redist.x64.exe
+"Run anyway". The Visual C++ runtime is included; if Windows still says a DLL such as VCRUNTIME140.dll is
+missing, install the Microsoft Visual C++ Redistributable (x64): https://aka.ms/vs/17/release/vc_redist.x64.exe

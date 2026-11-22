@@ -43,6 +43,13 @@ foreach ($name in $scripts.Keys) {
 }
 Copy-Item (Join-Path $PSScriptRoot 'USB-README.txt') (Join-Path $Output 'README.txt') -Force
 
+# LibTorch and OpenCV need the Visual C++ runtime. Most PCs have it, but not all: ship it next to the program
+# (Microsoft allows these DLLs to be copied with an application), so the PC needs no installer.
+foreach ($dll in 'vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll', 'msvcp140_1.dll', 'msvcp140_2.dll', 'concrt140.dll', 'vcomp140.dll') {
+    $source = Join-Path $env:SystemRoot "System32\$dll"
+    if (Test-Path $source) { Copy-Item $source $Output -Force }
+}
+
 if ($Photos) {
     Write-Host "Copying the photos from $Photos ..."
     $target = Join-Path $Output 'photos'
