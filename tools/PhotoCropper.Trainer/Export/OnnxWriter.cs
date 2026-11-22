@@ -130,7 +130,7 @@ internal sealed class OnnxGraph
     /// The whole model, with an input of N × 3 × H × W and an output of N × 1 × H × W (N, H and W left free).
     /// Opset 17, read by ONNX Runtime and OpenCV alike.
     /// </summary>
-    public byte[] Model(string input, string output, string producer)
+    public byte[] Model(string input, string output, string producer, IReadOnlyDictionary<string, string>? metadata = null)
     {
         var model = new ProtoWriter();
         model.Int(1, 8);                                      // ir_version
@@ -145,6 +145,10 @@ internal sealed class OnnxGraph
             graph.Message(12, v => ValueInfo(v, output, ["N", "1", "H", "W"]));
         });
         model.Message(8, opset => opset.String(1, string.Empty).Int(2, 17));   // opset_import: the default domain
+        foreach (var (key, value) in metadata ?? new Dictionary<string, string>())
+        {
+            model.Message(14, entry => entry.String(1, key).String(2, value));  // metadata_props
+        }
         return model.ToArray();
     }
 

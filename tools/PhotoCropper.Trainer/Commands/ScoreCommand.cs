@@ -1,6 +1,7 @@
 using System.Text.Json;
 using OpenCvSharp;
-using PhotoCropper.Trainer.Export;
+using PhotoCropper.Core.Detection;
+using PhotoCropper.Core.Models;
 using Spectre.Console;
 
 namespace PhotoCropper.Trainer.Commands;
@@ -8,10 +9,11 @@ namespace PhotoCropper.Trainer.Commands;
 /// <summary>Options for <c>score</c>.</summary>
 /// <param name="Key">A project session (session.json, or a saved answer key) whose scans have the correct boxes.</param>
 /// <param name="Overlays">When set, each scan is drawn there with the correct boxes (green) and the model's (red).</param>
-internal sealed record ScoreOptions(string Model, string Scans, string Key, int Size, string? Overlays);
+internal sealed record ScoreOptions(string Model, string Scans, string Key, string? Overlays);
 
 /// <summary>
-/// Scores a model on real scans against their correct boxes: each correct box is paired with the model's box that
+/// Scores a model on real scans against their correct boxes, running it through the app's own detection
+/// (<see cref="AiPhotoDetector"/>), so the score is what the app would do. Each correct box is paired with the model's box that
 /// overlaps it most (each used once), and counts as found when they overlap by at least 90 % (IoU), the measure used
 /// for PhotoCropper's own detection. Boxes of the model that match no photo are counted as extras.
 /// </summary>
@@ -23,7 +25,7 @@ internal static class ScoreCommand
     {
         var scans = ReadKey(options.Key);
         if (options.Overlays != null) Directory.CreateDirectory(options.Overlays);
-        using var model = new PhotoMaskModel(options.Model, options.Size);
+        AiPhotoDetector.ModelOverride = Path.GetFullPath(options.Model);
 
         int total = 0, found = 0, close = 0, extras = 0, missing = 0;
         var worst = new List<(string Scan, int Found, int Photos, int Extras)>();
@@ -42,8 +44,7 @@ internal static class ScoreCommand
                         continue;
                     }
                     using Mat scan = Cv2.ImRead(path, ImreadModes.Color);
-                    var predicted = model.FindPhotos(scan, out Mat mask);
-                    mask.Dispose();
+                    var predicted = AiPhotoDetector.FindPhotos(scan).Select(ToCv).ToList();
 
                     var ious = Pair(truth, predicted, out int unmatched);
                     int scanFound = ious.Count(i => i >= Found);
@@ -76,6 +77,9 @@ internal static class ScoreCommand
         }
         return 0;
     }
+
+    private static RotatedRect ToCv(RotatedBox box) =>
+        new(new Point2f(box.Center.X, box.Center.Y), new Size2f(box.Size.Width, box.Size.Height), box.Angle);
 
     /// <summary>The scans and their correct boxes, from a session or answer key (Scans[].OriginalFileName, FinalCrops).</summary>
     internal static List<(string Name, List<RotatedRect> Boxes)> ReadKey(string path)

@@ -30,8 +30,8 @@ internal static class CommandLine
                     Get(options, "model", Path.Combine("models", "photo-mask.onnx")),
                     Get(options, "scans", "."),
                     options.TryGetValue("key", out string? key) && key.Length > 0 ? key : throw new FormatException("score needs --key: a session.json or answer key with the correct boxes."),
-                    Int(options, "size", 512),
                     options.TryGetValue("overlays", out string? overlays) && overlays.Length > 0 ? overlays : null)),
+                "TEST-MODEL" => WriteTestModel(console, Get(options, "out", "bright-is-photo.onnx")),
                 "TRAIN" => TrainCommand.Run(console, new TrainOptions(
                     Get(options, "data", "albums"),
                     Get(options, "out", "models"),
@@ -60,6 +60,14 @@ internal static class CommandLine
         return options.TryGetValue("preview", out string? sheet)
             ? GenerateCommand.Preview(console, generate with { Count = Math.Min(generate.Count, 16) }, sheet.Length == 0 ? "preview.jpg" : sheet)
             : GenerateCommand.Run(console, generate);
+    }
+
+    /// <summary>Not in the help: writes the tiny model the app's tests use.</summary>
+    private static int WriteTestModel(IAnsiConsole console, string path)
+    {
+        File.WriteAllBytes(path, Export.UNetExport.BrightIsPhoto());
+        console.MarkupLine($"Wrote the test model to {Markup.Escape(Path.GetFullPath(path))}.");
+        return 0;
     }
 
     private static int Help(IAnsiConsole console)

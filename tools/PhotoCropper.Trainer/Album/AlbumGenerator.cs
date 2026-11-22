@@ -35,7 +35,7 @@ internal sealed class AlbumGenerator(PhotoLibrary library, int size)
     private const int Supersample = 2;
 
     /// <summary>The gap kept between neighbouring photos in the mask, in final pixels (half on each photo).</summary>
-    public const float MaskGap = 1.5f;
+    public const float MaskGap = Core.Detection.AiPhotoDetector.MaskGap;
 
     public int Size { get; } = size;
 

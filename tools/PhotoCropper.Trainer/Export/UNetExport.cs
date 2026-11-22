@@ -14,7 +14,8 @@ internal static class UNetExport
 {
     public const string InputName = "image", OutputName = "logits";
 
-    public static byte[] ToOnnx(UNet model)
+    /// <param name="inputSize">The page size the network was trained on: the app scales scans to it.</param>
+    public static byte[] ToOnnx(UNet model, int inputSize)
     {
         ArgumentNullException.ThrowIfNull(model);
         model.eval();
@@ -32,7 +33,29 @@ internal static class UNetExport
         string d1 = Block(graph, "dec1", parts.Dec1, Concat(graph, Up(graph, "up1", parts.Up1, d2), e1));
         Conv(graph, "head", Values(parts.Head.weight!), Values(parts.Head.bias!), parts.Head.weight!.shape, d1, padding: 0, output: OutputName);
 
-        return graph.Model(InputName, OutputName, "PhotoCropper.Trainer");
+        return graph.Model(InputName, OutputName, "PhotoCropper.Trainer", new Dictionary<string, string>
+        {
+            ["input_size"] = inputSize.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        });
+    }
+
+    /// <summary>
+    /// A tiny stand-in model for tests: one 1×1 convolution, so a pixel is "photo" when its brightness (the mean
+    /// of B, G and R) is over one half. Same input and output as the real network; pages of 256 px.
+    /// </summary>
+    public static byte[] BrightIsPhoto()
+    {
+        var graph = new OnnxGraph();
+        const float steepness = 20;
+        string w = graph.Weight("bright.weight", [steepness / 3, steepness / 3, steepness / 3], 1, 3, 1, 1);
+        string b = graph.Weight("bright.bias", [-steepness / 2], 1);
+        graph.Node("Conv", [InputName, w, b], new Dictionary<string, long[]>
+        {
+            ["kernel_shape"] = [1, 1],
+            ["pads"] = [0, 0, 0, 0],
+            ["strides"] = [1, 1],
+        }, output: OutputName);
+        return graph.Model(InputName, OutputName, "PhotoCropper.Trainer (test model)", new Dictionary<string, string> { ["input_size"] = "256" });
     }
 
     /// <summary>Conv → BatchNorm → ReLU, twice (see <see cref="UNet"/>).</summary>

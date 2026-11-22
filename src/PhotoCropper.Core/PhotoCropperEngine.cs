@@ -35,6 +35,15 @@ public class PhotoCropperEngine : IDisposable
     public bool RemoveDustAndScratches { get; set; }
     public string BoundingBoxColor { get; set; } = Common.AppConstants.DefaultBoundingBoxColor;
 
+    /// <summary>
+    /// Find the photos with the trained network (<see cref="AiPhotoDetector"/>) instead of by colour. Has no effect
+    /// while no model is installed. Auto-Tune doesn't apply to it.
+    /// </summary>
+    public bool UseAiDetection { get; set; }
+
+    /// <summary>True when detection will use the trained network: it is asked for and a model is installed.</summary>
+    public bool UsesAiDetection => UseAiDetection && AiPhotoDetector.IsAvailable;
+
     public Mat Original { get; set; }
     public Collection<Mat> DetectedPhotos { get; } = [];
     public Collection<Mat> RawDetectedPhotos { get; } = [];
@@ -85,6 +94,14 @@ public class PhotoCropperEngine : IDisposable
 
     public AutoTuneResult AutoTune(int minExpected = 1, int maxExpected = int.MaxValue)
     {
+        if (UsesAiDetection)
+        {
+            // Nothing to tune: the network has no colour settings. Detect, unless that was just done.
+            bool detected = _freshDetection is { } last && ReferenceEquals(last.Candidates, AcceptedCandidates) && last.Options == CurrentOptions;
+            if (!detected) DetectPhotos();
+            return new AutoTuneResult(CurrentOptions, AcceptedCandidates.Count, 0, Improved: false);
+        }
+
         var tuneResult = AutoTuneService.Tune(Original, CurrentOptions, minExpected, maxExpected);
         ApplyOptions(tuneResult.BestOptions);
         // Auto-Tune often keeps the settings the scan was just detected with: its photos are then already there.
@@ -329,11 +346,19 @@ public class PhotoCropperEngine : IDisposable
         }
 
         var options = CurrentOptions;
-        using var prepared = PhotoDetector.Prepare(Original, options);
-        var acceptedCandidates = PhotoDetector.FindCandidates(Original, prepared, options);
-
-        // Only keep candidates that produced a photo, so AcceptedCandidates[i] always matches DetectedPhotos[i].
-        var kept = ExtractAndProcessCandidates(acceptedCandidates, prepared.Padded, prepared.Pad);
+        List<(int SourceIndex, CropCandidate Candidate)> kept;
+        if (UsesAiDetection)
+        {
+            // Boxes can run past the scan's edge; extraction fills what is off the scan.
+            kept = ExtractAndProcessCandidates([.. AiPhotoDetector.FindPhotos(Original).Select(ToCandidate)], null, 0);
+        }
+        else
+        {
+            using var prepared = PhotoDetector.Prepare(Original, options);
+            var acceptedCandidates = PhotoDetector.FindCandidates(Original, prepared, options);
+            // Only keep candidates that produced a photo, so AcceptedCandidates[i] always matches DetectedPhotos[i].
+            kept = ExtractAndProcessCandidates(acceptedCandidates, prepared.Padded, prepared.Pad);
+        }
         AcceptedCandidates = [.. kept.Select(k => k.Candidate)];
         _freshDetection = (options, AcceptedCandidates);
     }
@@ -573,6 +598,16 @@ public class PhotoCropperEngine : IDisposable
         AcceptedCandidates = [.. AcceptedCandidates ?? [], candidate.Value with { OrientationDegrees = orientation }];
     }
 
+    /// <summary>A candidate for a box found as a whole (by Find Photo or the trained network), not from a mask's outline.</summary>
+    private static CropCandidate ToCandidate(RotatedBox box)
+    {
+        var shape = box.GetVertices().Select(v => new DrawingPoint((int)Math.Round(v.X), (int)Math.Round(v.Y))).ToArray();
+        return new CropCandidate(
+            shape,
+            CvInterop.ToRectangle(Cv2.BoundingRect(CvInterop.ToCv(shape))),
+            9999.0, box, (double)box.Size.Width * box.Size.Height, 1.0, 1.0);
+    }
+
     /// <summary>
     /// Finds the photo at <paramref name="point"/> (scan pixels). Inside an existing box it re-fits that box;
     /// elsewhere it adds the photo found, processed like a detected one.
@@ -595,12 +630,7 @@ public class PhotoCropperEngine : IDisposable
         var others = boxes.Where((_, i) => i != inside).Select(b => b.Rotated).ToList();
         if (PhotoAtPointLocator.Locate(Original, point, CurrentOptions, others) is not { } found) return (-1, false);
 
-        var vertices = found.GetVertices();
-        var shape = vertices.Select(v => new DrawingPoint((int)Math.Round(v.X), (int)Math.Round(v.Y))).ToArray();
-        var candidate = new CropCandidate(
-            shape,
-            CvInterop.ToRectangle(Cv2.BoundingRect(CvInterop.ToCv(shape))),
-            9999.0, found, (double)found.Size.Width * found.Size.Height, 1.0, 1.0);
+        var candidate = ToCandidate(found);
 
         if (inside >= 0)
         {

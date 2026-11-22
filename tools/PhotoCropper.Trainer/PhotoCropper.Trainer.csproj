@@ -34,8 +34,8 @@
 		<PackageReference Include="OpenCvSharp5.runtime.win" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
 		<PackageReference Include="OpenCvSharp5.official.runtime.linux-x64.headless" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
 		<PackageReference Include="Spectre.Console" />
-		<!-- Runs exported models as the app will. -->
-		<PackageReference Include="Microsoft.ML.OnnxRuntime" />
+		<!-- The app's detection (AiPhotoDetector) scores exported models exactly as the app runs them. -->
+		<ProjectReference Include="..\..\src\PhotoCropper.Core\PhotoCropper.Core.csproj" />
 	</ItemGroup>
 
 </Project>

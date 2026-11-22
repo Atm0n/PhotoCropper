@@ -22,12 +22,13 @@ internal static class ExportCommand
             return 1;
         }
         string statePath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(modelPath))!, "state.json");
-        int width = File.Exists(statePath) ? JsonSerializer.Deserialize<TrainingState>(File.ReadAllText(statePath))!.Width : 16;
+        var state = File.Exists(statePath) ? JsonSerializer.Deserialize<TrainingState>(File.ReadAllText(statePath)) : null;
+        int width = state?.Width ?? 16, inputSize = state?.Size ?? Core.Detection.AiPhotoDetector.DefaultInputSize;
 
         using var model = new UNet(width);
         model.load(modelPath);
         model.eval();
-        byte[] onnx = UNetExport.ToOnnx(model);
+        byte[] onnx = UNetExport.ToOnnx(model, inputSize);
         File.WriteAllBytes(output, onnx);
 
         // The same page through both: TorchSharp's network and ONNX Runtime's reading of the file.
@@ -43,12 +44,12 @@ internal static class ExportCommand
             var input = tensor(pixels, [1, 3, size, size]);
             expected = model.forward(input).data<float>().ToArray();
         }
-        using var runner = new PhotoMaskModel(onnx, size);
+        using var runner = new PhotoMaskModel(onnx);
         float[] actual = runner.Run(new DenseTensor<float>(pixels, [1, 3, size, size]));
 
         double maxDifference = expected.Zip(actual, (a, b) => Math.Abs(a - b)).Max();
         int disagreements = expected.Zip(actual, (a, b) => (a > 0) != (b > 0)).Count(d => d);
-        console.MarkupLine($"Wrote {Markup.Escape(Path.GetFullPath(output))} ({onnx.Length / 1024.0 / 1024.0:F1} MB).");
+        console.MarkupLine($"Wrote {Markup.Escape(Path.GetFullPath(output))} ({onnx.Length / 1024.0 / 1024.0:F1} MB, pages of {inputSize} px).");
         console.MarkupLine($"Check against TorchSharp: largest difference {maxDifference:G3}; pixels classified differently: {disagreements} of {expected.Length:N0}.");
         if (maxDifference > 1e-2)
         {

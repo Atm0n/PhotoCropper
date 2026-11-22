@@ -23,6 +23,8 @@
 
 	<ItemGroup>
 		<None Include="Extraction\OrientationPhotos\*.jpg" CopyToOutputDirectory="PreserveNewest" />
+		<!-- A tiny stand-in for the trained detection network ("bright pixels are photo"); made by the trainer's test-model command. -->
+		<None Include="Detection/bright-is-photo.onnx" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 	<ItemGroup>
