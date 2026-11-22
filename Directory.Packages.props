@@ -24,5 +24,8 @@
     <!-- Pin SixLabors.ImageSharp to 4.1.3 to remediate transitive CVEs in 3.1.11 pulled by NAPS2.Images.ImageSharp. Remove this pin once NAPS2 releases an update with a patched ImageSharp dependency. -->
     <PackageVersion Include="SixLabors.ImageSharp" Version="4.1.3" />
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
+    <!-- Detection model trainer (tools/PhotoCropper.Trainer, not shipped): CPU build, or CUDA 12.8 when an NVIDIA driver is present. -->
+    <PackageVersion Include="TorchSharp-cpu" Version="0.107.0" />
+    <PackageVersion Include="TorchSharp-cuda-windows" Version="0.107.0" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,6 @@
+# Downloaded photos, generated album pages, previews and trained models stay on this computer.
+photos/
+albums/
+models/
+*.jpg
+*.onnx

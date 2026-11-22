@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+	  Trains the photo-detection model (a small U-Net that marks photo pixels) and makes the practice album pages it
+	  learns from. A developer tool, not shipped, and not in PhotoCropper.slnx: its native libraries are large.
+
+	  The native backend is chosen when building: CUDA when an NVIDIA driver is installed, else CPU.
+	  Force one with -p:TorchBackend=cuda or -p:TorchBackend=cpu.
+	-->
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net11.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+		<ServerGarbageCollection>true</ServerGarbageCollection>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<TorchBackend Condition="'$(TorchBackend)' == '' and Exists('$(windir)\System32\nvidia-smi.exe')">cuda</TorchBackend>
+		<TorchBackend Condition="'$(TorchBackend)' == ''">cpu</TorchBackend>
+		<DefineConstants Condition="'$(TorchBackend)' == 'cuda'">$(DefineConstants);TORCH_CUDA</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(TorchBackend)' == 'cuda'">
+		<PackageReference Include="TorchSharp-cuda-windows" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TorchBackend)' != 'cuda'">
+		<PackageReference Include="TorchSharp-cpu" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="OpenCvSharp5" />
+		<PackageReference Include="OpenCvSharp5.runtime.win" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+		<PackageReference Include="OpenCvSharp5.official.runtime.linux-x64.headless" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
+		<PackageReference Include="Spectre.Console" />
+	</ItemGroup>
+
+</Project>
