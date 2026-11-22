@@ -1,6 +1,6 @@
 using System.Globalization;
 using PhotoCropper.Trainer.Commands;
-using PhotoCropper.Trainer.Photos;
+using PhotoCropper.Trainer.Sources;
 using Spectre.Console;
 
 namespace PhotoCropper.Trainer;

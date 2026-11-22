@@ -1,7 +1,8 @@
-# Downloaded photos, generated album pages, previews and trained models stay on this computer.
-photos/
-albums/
-models/
+# Data this tool downloads or makes stays on this computer: downloaded photos, generated album pages,
+# trained models and the USB package. Anchored with "/" so only these top-level folders match (Windows ignores case).
+/photos/
+/albums/
+/models/
+/usb/
 *.jpg
 *.onnx
-usb/
