@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using PhotoCropper.Core.Common;
 using PhotoCropper.Gui.Services;
 
 namespace PhotoCropper.Gui;
@@ -15,6 +16,7 @@ internal sealed partial class MainWindow
 
         UpdateWorkspaceUi(_openProject);
         UpdateCropStrokeColor(settings.DetectionBoxColor);
+        viewCrops.SetDimOutsideBoxes(settings.DimOutsideBoxes);
         PopulateThemeMenu();
         PopulateDetectionColorMenu();
     }
@@ -111,10 +113,11 @@ internal sealed partial class MainWindow
     private void PopulateDetectionColorMenu()
     {
         var menus = new[] { viewCrops.DetectionColorMenu };
-        var currentColor = SettingsManager.Instance.Settings.DetectionBoxColor ?? "Red";
+        var currentColor = SettingsManager.Instance.Settings.DetectionBoxColor ?? AppConstants.DefaultBoundingBoxColor;
 
         var colorItems = new (string Key, string Value, string Hex)[]
         {
+            ("ColorSoftWhite", "SoftWhite", "#f4f1ea"),
             ("ColorRed", "Red", "#ff3333"),
             ("ColorAmber", "Amber", "#ffaa00"),
             ("ColorCyan", "Cyan", "#00d4ff"),
@@ -176,7 +179,26 @@ internal sealed partial class MainWindow
             };
 
             menu.Items.Add(customItem);
+
+            menu.Items.Add(new Separator());
+            bool dim = SettingsManager.Instance.Settings.DimOutsideBoxes;
+            var dimItem = new MenuItem
+            {
+                Header = CreateColorMenuItemHeader(dim, Color.FromArgb(150, 0, 0, 0), LocalizationService.GetString(ResourceKeys.MenuDimOutsideBoxes, "Dim outside the boxes")),
+                Focusable = false,
+                IsTabStop = false
+            };
+            dimItem.Click += (_, _) => SetDimOutsideBoxes(!SettingsManager.Instance.Settings.DimOutsideBoxes);
+            menu.Items.Add(dimItem);
         }
+    }
+
+    private void SetDimOutsideBoxes(bool dim)
+    {
+        SettingsManager.Instance.Settings.DimOutsideBoxes = dim;
+        SettingsManager.Instance.Save();
+        viewCrops.SetDimOutsideBoxes(dim);
+        PopulateDetectionColorMenu();
     }
 
     private static StackPanel CreateColorMenuItemHeader(bool isSelected, Color swatchColor, string text)
@@ -228,17 +250,14 @@ internal sealed partial class MainWindow
         UpdateCropStrokeColor(colorName);
         PopulateDetectionColorMenu();
 
-        if (ScanSessions.Count > 0)
+        // The colour is the app's, not a scan's: every scan takes it, loaded or not (it only affects the overlay, so
+        // there is nothing to re-detect). Only the current scan was updated before, so the others kept the old colour.
+        foreach (var session in ScanSessions)
         {
-            var session = ScanSessions[CurrentIndex];
             session.Options.BoundingBoxColor = colorName;
-            if (session.IsActive && session.Engine != null)
-            {
-                session.Engine.BoundingBoxColor = colorName;
-                // The colour only affects the overlay, so there is nothing to re-detect.
-                ShowScan(session.Engine);
-            }
+            if (session.IsActive && session.Engine != null) session.Engine.BoundingBoxColor = colorName;
         }
+        if (ScanSessions.Count > 0 && ScanSessions[CurrentIndex] is { IsActive: true, Engine: { } engine }) ShowScan(engine);
         return Task.CompletedTask;
     }
 
@@ -257,6 +276,7 @@ internal sealed partial class MainWindow
                 "CYAN" or "BLUE" => Color.Parse("#00d4ff"),
                 "MAGENTA" => Color.Parse("#ff00cc"),
                 "LIME" => Color.Parse("#00e676"),
+                "SOFTWHITE" => Color.Parse("#f4f1ea"),
                 _ => Color.Parse("#ff3333")
             };
         }

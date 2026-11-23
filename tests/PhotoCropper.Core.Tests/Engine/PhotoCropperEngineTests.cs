@@ -1,4 +1,5 @@
 using OpenCvSharp;
+using PhotoCropper.Core.Common;
 using PhotoCropper.TestHelpers;
 
 namespace PhotoCropper.Core.Tests.Engine;
@@ -32,6 +33,36 @@ public sealed class PhotoCropperEngineTests : IDisposable
         cropper.DetectedPhotos.Count.ShouldBe(1);
         cropper.AcceptedCandidates.Count.ShouldBe(1);
         cropper.AcceptedCandidates[0].Rotated.Size.Width.ShouldBe(50);
+    }
+
+    [Fact]
+    public void AutoTune_AfterDetecting_GivesTheSameBoxesAsDetectingWithItsSettings()
+    {
+        using var tuned = new PhotoCropperEngine(_standardScanPath);
+        tuned.DetectPhotos();
+        tuned.AutoTune();
+
+        using var fresh = new PhotoCropperEngine(_standardScanPath);
+        fresh.ApplyOptions(tuned.CurrentOptions);
+        fresh.DetectPhotos();
+
+        tuned.AcceptedCandidates.Select(c => c.Rotated).ShouldBe(fresh.AcceptedCandidates.Select(c => c.Rotated));
+        tuned.DetectedPhotos.Count.ShouldBe(fresh.DetectedPhotos.Count);
+    }
+
+    [Fact]
+    public void AutoTune_AfterABoxWasDeleted_DetectsAgain()
+    {
+        using var cropper = new PhotoCropperEngine(_standardScanPath);
+        cropper.DetectPhotos();
+        int found = cropper.AcceptedCandidates.Count;
+        found.ShouldBeGreaterThan(1);
+
+        cropper.DeletePhoto(0);
+        cropper.AutoTune();
+
+        cropper.AcceptedCandidates.Count.ShouldBe(found);
+        cropper.DetectedPhotos.Count.ShouldBe(found);
     }
 
     [Fact]
@@ -197,6 +228,51 @@ public sealed class PhotoCropperEngineTests : IDisposable
         cropper.DetectedPhotos[0].Height.ShouldBeInRange(380, 420);
     }
 
+    [Theory]
+    [InlineData(4, 0.05)] // a tight tolerance and large minimum, as a user may have set
+    [InlineData(30, 0.01)] // the defaults
+    public void DetectPhotos_DarkAlbumPageOnLightBed_ShouldFindEveryPhoto(double tolerance, double minArea)
+    {
+        string path = Path.Combine(_tempDir, "album_page.png");
+        TestImageFactory.CreateAlbumPageOnBedScan(path);
+
+        using var cropper = new PhotoCropperEngine(path);
+        cropper.ApplyOptions(new PhotoCropper.Core.Models.DetectionOptions { BackgroundTolerance = tolerance, MinAreaFactor = minArea });
+        cropper.DetectPhotos();
+
+        cropper.AcceptedCandidates.Count.ShouldBe(TestImageFactory.AlbumPagePhotos.Length);
+        foreach (var photo in TestImageFactory.AlbumPagePhotos)
+        {
+            // Each photo is found whole, its light border included, and not merged with the page.
+            cropper.AcceptedCandidates.ShouldContain(c =>
+                Math.Abs(c.Rotated.Center.X - (photo.X + photo.Width / 2f)) < 15 && Math.Abs(c.Rotated.Center.Y - (photo.Y + photo.Height / 2f)) < 15 &&
+                Math.Abs(Math.Max(c.Rotated.Size.Width, c.Rotated.Size.Height) - Math.Max(photo.Width, photo.Height)) < 30);
+        }
+    }
+
+    [Theory]
+    [InlineData(4, 0.05)]
+    [InlineData(30, 0.01)]
+    public void DetectPhotos_PrintReachingTheEdgeWithALightPart_ShouldKeepItsWholeBox(double tolerance, double minArea)
+    {
+        // Prints on the bed, not a page: the white floor where one runs off the scan's edge isn't bed to paint out.
+        string path = Path.Combine(_tempDir, "prints_to_edge.png");
+        TestImageFactory.CreatePrintsReachingTheEdgeScan(path);
+
+        using var cropper = new PhotoCropperEngine(path);
+        cropper.ApplyOptions(new PhotoCropper.Core.Models.DetectionOptions { BackgroundTolerance = tolerance, MinAreaFactor = minArea });
+        cropper.DetectPhotos();
+
+        cropper.AcceptedCandidates.Count.ShouldBe(TestImageFactory.PrintsReachingTheEdge.Length);
+        foreach (var print in TestImageFactory.PrintsReachingTheEdge)
+        {
+            cropper.AcceptedCandidates.ShouldContain(c =>
+                Math.Abs(c.Rotated.Center.X - (print.X + print.Width / 2f)) < 25 && Math.Abs(c.Rotated.Center.Y - (print.Y + print.Height / 2f)) < 25 &&
+                Math.Abs(Math.Max(c.Rotated.Size.Width, c.Rotated.Size.Height) - Math.Max(print.Width, print.Height)) < 40 &&
+                Math.Abs(Math.Min(c.Rotated.Size.Width, c.Rotated.Size.Height) - Math.Min(print.Width, print.Height)) < 40);
+        }
+    }
+
     [Fact]
     public void DetectPhotos_FlushScanEdge_ShouldDetectSuccessfully()
     {
@@ -332,20 +408,6 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void SaveDetectedPhotos_ShouldExportFiles()
-    {
-        using var cropper = new PhotoCropperEngine(_standardScanPath);
-        cropper.DetectPhotos();
-
-        string outDir = Path.Combine(_tempDir, "exported_photos");
-        cropper.SaveDetectedPhotos(outDir, "PNG");
-
-        Directory.Exists(outDir).ShouldBeTrue();
-        var files = Directory.GetFiles(outDir, "*.png");
-        files.Length.ShouldBe(cropper.DetectedPhotos.Count);
-    }
-
-    [Fact]
     public void DetectPhotos_ScannerWithBezel_ShouldDetectAllPhotos()
     {
         string bezelScanPath = Path.Combine(_tempDir, "bezel_scan.jpg");
@@ -389,19 +451,19 @@ public sealed class PhotoCropperEngineTests : IDisposable
     {
         using var grayMat = new Mat(50, 50, MatType.CV_8UC1);
         grayMat.SetTo(new Scalar(100));
-        using var bgrFromGray = PhotoCropperEngine.NormalizeToBgr(grayMat);
+        using var bgrFromGray = ImageIo.NormalizeToBgr(grayMat);
         bgrFromGray.Channels().ShouldBe(3);
         bgrFromGray.Width.ShouldBe(50);
         bgrFromGray.Height.ShouldBe(50);
 
         using var bgrMat = new Mat(50, 50, MatType.CV_8UC3);
         bgrMat.SetTo(new Scalar(10, 20, 30));
-        using var bgrFromBgr = PhotoCropperEngine.NormalizeToBgr(bgrMat);
+        using var bgrFromBgr = ImageIo.NormalizeToBgr(bgrMat);
         bgrFromBgr.Channels().ShouldBe(3);
 
         using var bgraMat = new Mat(50, 50, MatType.CV_8UC4);
         bgraMat.SetTo(new Scalar(10, 20, 30, 255));
-        using var bgrFromBgra = PhotoCropperEngine.NormalizeToBgr(bgraMat);
+        using var bgrFromBgra = ImageIo.NormalizeToBgr(bgraMat);
         bgrFromBgra.Channels().ShouldBe(3);
     }
 

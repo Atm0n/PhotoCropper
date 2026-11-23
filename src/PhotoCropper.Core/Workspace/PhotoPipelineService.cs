@@ -2,6 +2,7 @@ using OpenCvSharp;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Models;
+using System.Runtime.ExceptionServices;
 using RectangleF = System.Drawing.RectangleF;
 
 namespace PhotoCropper.Core.Workspace;
@@ -128,6 +129,73 @@ public static class PhotoPipelineService
     }
 
     /// <summary>
+    /// Turns a photo a quarter turn, after cropping (e.g. from the Finish stage): its file in Cropped/ is rotated
+    /// losslessly, its box on the scan records the turn (so the Crops stage and later saves agree), and its repair
+    /// strokes and hand-set trim, kept as fractions of the photo, turn with it. The final photo becomes out of date.
+    /// </summary>
+    public static void RotatePhoto(string workDirectory, WorkspaceSessionState session, ProjectPhoto photo, bool clockwise)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workDirectory);
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(photo);
+        if (photo.Cropped == null) return;
+
+        string path = photo.Cropped.GetFullPath(workDirectory);
+        var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(path);
+        byte[] png;
+        int width, height;
+        using (Mat image = RestoreStage.ReadImage(path))
+        using (Mat rotated = new())
+        {
+            width = image.Width;
+            height = image.Height;
+            Cv2.Rotate(image, rotated, clockwise ? RotateFlags.Rotate90Clockwise : RotateFlags.Rotate90Counterclockwise);
+            png = PhotoExporter.EncodePhoto(rotated, AppConstants.FormatPng, 100, null, xDpi, yDpi);
+        }
+
+        lock (session)
+        {
+            int turn = clockwise ? 90 : 270;
+            // The scan's saved box for this photo: the same record, or the box it was cropped from.
+            var entry = photo.ScanRelativePath == null ? null : session.Scans.FirstOrDefault(s =>
+                string.Equals(s.RelativePath, photo.ScanRelativePath, StringComparison.OrdinalIgnoreCase));
+            var saved = photo.Crop == null || entry == null ? null
+                : entry.FinalCrops.FirstOrDefault(c => ReferenceEquals(c, photo.Crop))
+                  ?? entry.FinalCrops.Where(c => BoxOverlap(c, photo.Crop) >= SamePhotoOverlap).OrderByDescending(c => BoxOverlap(c, photo.Crop)).FirstOrDefault();
+            if (saved != null) saved.RotationDegrees = (saved.RotationDegrees + turn) % 360;
+            if (photo.Crop != null && !ReferenceEquals(photo.Crop, saved)) photo.Crop.RotationDegrees = (photo.Crop.RotationDegrees + turn) % 360;
+
+            // Strokes and the trim are fractions of the photo: map each point to where it lands on the turned photo.
+            (float X, float Y) Turn(float x, float y) => clockwise ? (1 - y, x) : (y, 1 - x);
+            // A stroke's radius is a fraction of the photo's width, which is now its old height.
+            var turnedRepairs = photo.Repairs.Select(stroke =>
+            {
+                var turnedStroke = new RepairStroke { Radius = stroke.Radius * width / height, Method = stroke.Method };
+                for (int i = 0; i + 1 < stroke.Points.Count; i += 2)
+                {
+                    var (x, y) = Turn(stroke.Points[i], stroke.Points[i + 1]);
+                    turnedStroke.Points.Add(x);
+                    turnedStroke.Points.Add(y);
+                }
+                return turnedStroke;
+            }).ToList();
+            photo.Repairs.Clear();
+            foreach (var stroke in turnedRepairs) photo.Repairs.Add(stroke);
+            (photo.RepairImageWidth, photo.RepairImageHeight) = (photo.RepairImageHeight, photo.RepairImageWidth);
+
+            if (photo.Restoration.ManualTrim is { } trim)
+            {
+                var turned = clockwise
+                    ? new TrimArea { Left = 1 - trim.Bottom, Top = trim.Left, Right = 1 - trim.Top, Bottom = trim.Right }
+                    : new TrimArea { Left = trim.Top, Top = 1 - trim.Right, Right = trim.Bottom, Bottom = 1 - trim.Left };
+                photo.Restoration = photo.Restoration with { ManualTrim = turned };
+            }
+
+            photo.Cropped = WriteIfChanged(workDirectory, path, png, photo.Cropped);
+        }
+    }
+
+    /// <summary>
     /// Imports an existing photo (e.g. one already cropped elsewhere) into Cropped/ as a lossless PNG, so it can be
     /// restored without being scanned or cropped.
     /// </summary>
@@ -177,6 +245,83 @@ public static class PhotoPipelineService
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(photo);
         ArgumentNullException.ThrowIfNull(options);
+        WriteFinal(workDirectory, session, photo, options, Render(workDirectory, photo, options));
+    }
+
+    /// <summary>Renders the final version of every photo whose final file is missing or out of date.</summary>
+    /// <returns>The number of final photos written.</returns>
+    public static int RenderStaleFinals(string workDirectory, WorkspaceSessionState session, IEnumerable<ProjectPhoto> photos, FinalRenderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(photos);
+        return RenderFinals(workDirectory, session, [.. photos.Where(p => p.IsFinalStale)], options, onFailure: null);
+    }
+
+    /// <summary>
+    /// Renders the final versions of <paramref name="photos"/>, as <see cref="RenderFinal"/> does for each. Several
+    /// photos are restored and encoded side by side; their files are then named and written in the list's order,
+    /// so each photo gets the same file name as when they were rendered one after another.
+    /// </summary>
+    /// <param name="workDirectory">The project folder.</param>
+    /// <param name="session">The project's session.</param>
+    /// <param name="photos">The photos to render, in the order their files are written.</param>
+    /// <param name="options">The export format, naming pattern and folder.</param>
+    /// <param name="onFailure">Called, in the list's order, for a photo that could not be rendered or written, and
+    /// the others go on. When <see langword="null"/>, the first failure is thrown once the photos before it are written.</param>
+    /// <returns>The number of final photos written.</returns>
+    public static int RenderFinals(string workDirectory, WorkspaceSessionState session, IReadOnlyList<ProjectPhoto> photos, FinalRenderOptions options, Action<ProjectPhoto, Exception>? onFailure)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workDirectory);
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(photos);
+        ArgumentNullException.ThrowIfNull(options);
+
+        // A batch at a time, so only a few encoded photos wait in memory to be written.
+        int batchSize = Math.Max(1, Environment.ProcessorCount);
+        int written = 0;
+        for (int first = 0; first < photos.Count; first += batchSize)
+        {
+            int count = Math.Min(batchSize, photos.Count - first);
+            var rendered = new RenderedFinal?[count];
+            var failures = new Exception?[count];
+            int start = first;
+            Parallel.For(0, count, i =>
+            {
+                try
+                {
+                    rendered[i] = Render(workDirectory, photos[start + i], options);
+                }
+                catch (Exception ex) when (IsRenderFailure(ex))
+                {
+                    failures[i] = ex;
+                }
+            });
+
+            for (int i = 0; i < count; i++)
+            {
+                var photo = photos[first + i];
+                try
+                {
+                    if (failures[i] is { } failure) ExceptionDispatchInfo.Throw(failure);
+                    WriteFinal(workDirectory, session, photo, options, rendered[i]!);
+                    written++;
+                }
+                catch (Exception ex) when (onFailure != null && IsRenderFailure(ex))
+                {
+                    onFailure(photo, ex);
+                }
+            }
+        }
+        return written;
+    }
+
+    private static bool IsRenderFailure(Exception ex) => ex is IOException or UnauthorizedAccessException or InvalidOperationException;
+
+    /// <summary>A photo's final version, encoded and waiting to be written, with what it was made from.</summary>
+    private sealed record RenderedFinal(byte[] Bytes, ProjectFile RenderedFrom, RestorationSettings Restoration, string RepairsFingerprint, PhotoExportMetadata? Metadata);
+
+    /// <summary>Reads the photo's cropped file, then restores and encodes it. Names and records nothing.</summary>
+    private static RenderedFinal Render(string workDirectory, ProjectPhoto photo, FinalRenderOptions options)
+    {
         if (photo.Cropped == null) throw new InvalidOperationException($"Photo '{photo.Id}' has no cropped file to render from.");
 
         string croppedPath = photo.Cropped.GetFullPath(workDirectory);
@@ -191,15 +336,18 @@ public static class PhotoPipelineService
         string repairsFingerprint = photo.RepairsFingerprint;
 
         var metadata = photo.Metadata ?? options.DefaultMetadata;
-        byte[] bytes;
-        using (Mat cropped = RestoreStage.ReadImage(croppedPath))
-        {
-            var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(croppedPath);
-            // Repair-brush strokes apply only if they were painted on a cropped photo of this size.
-            var repairs = Extraction.PhotoRepairService.ApplicableRepairs(photo, cropped);
-            bytes = RestoreStage.RestoreAndEncode(cropped, restoration, options.Format, options.JpegQuality, metadata, xDpi, yDpi, repairs);
-        }
+        using Mat cropped = RestoreStage.ReadImage(croppedPath);
+        var (xDpi, yDpi) = PhotoExporter.GetDpiFromSource(croppedPath);
+        // Repair-brush strokes apply only if they were painted on a cropped photo of this size.
+        var repairs = Extraction.PhotoRepairService.ApplicableRepairs(photo, cropped);
+        byte[] bytes = RestoreStage.RestoreAndEncode(cropped, restoration, options.Format, options.JpegQuality, metadata, xDpi, yDpi, repairs);
+        return new RenderedFinal(bytes, renderedFrom, restoration, repairsFingerprint, metadata);
+    }
 
+    /// <summary>Names and writes a rendered final file, replacing the photo's previous one, and records it.</summary>
+    private static void WriteFinal(string workDirectory, WorkspaceSessionState session, ProjectPhoto photo, FinalRenderOptions options, RenderedFinal rendered)
+    {
+        var metadata = rendered.Metadata;
         string extension = string.Equals(options.Format, AppConstants.FormatPng, StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
         string fileName = FileNameTemplateHelper.FormatFileName(
             options.FileNamePattern,
@@ -214,37 +362,38 @@ public static class PhotoPipelineService
             : options.OutputDirectory;
         Directory.CreateDirectory(finalDir);
 
-        // Replace this photo's previous final file, but only if it is still exactly what we wrote.
-        DeleteIfUnchanged(workDirectory, photo.Final);
-
-        string target = PhotoExporter.ResolveUniqueExportPath(Path.Combine(finalDir, fileName));
-        try
+        lock (FinalNamesLock)
         {
-            File.WriteAllBytes(target, bytes);
-        }
-        finally
-        {
-            PhotoExporter.ReleaseExportPath(target);
-        }
+            if (IsProjectFinalDirectory(workDirectory, finalDir))
+            {
+                // The project's Final/ holds what the last export made: the new file replaces this photo's
+                // previous one and anything else under its name that no other photo owns (left by an older
+                // version, or by an export whose record was lost), along with its "name (n)" copies.
+                DeleteFile(workDirectory, photo.Final);
+                RemoveReplacedFinals(workDirectory, session, photo, finalDir, fileName);
+            }
+            else
+            {
+                // Another folder may hold the user's own files: replace this photo's previous file only if it is
+                // still exactly what we wrote, and never overwrite anything else.
+                DeleteIfUnchanged(workDirectory, photo.Final);
+            }
 
-        photo.Final = ProjectFile.FromDisk(workDirectory, target);
-        photo.FinalRenderedFrom = renderedFrom;
-        photo.FinalRenderedWith = restoration;
-        photo.FinalRenderedRepairs = repairsFingerprint;
-    }
+            string target = PhotoExporter.ResolveUniqueExportPath(Path.Combine(finalDir, fileName));
+            try
+            {
+                File.WriteAllBytes(target, rendered.Bytes);
+            }
+            finally
+            {
+                PhotoExporter.ReleaseExportPath(target);
+            }
 
-    /// <summary>Renders the final version of every photo whose final file is missing or out of date.</summary>
-    /// <returns>The number of final photos written.</returns>
-    public static int RenderStaleFinals(string workDirectory, WorkspaceSessionState session, IEnumerable<ProjectPhoto> photos, FinalRenderOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(photos);
-        int rendered = 0;
-        foreach (var photo in photos.Where(p => p.IsFinalStale))
-        {
-            RenderFinal(workDirectory, session, photo, options);
-            rendered++;
+            photo.Final = ProjectFile.FromDisk(workDirectory, target);
         }
-        return rendered;
+        photo.FinalRenderedFrom = rendered.RenderedFrom;
+        photo.FinalRenderedWith = rendered.Restoration;
+        photo.FinalRenderedRepairs = rendered.RepairsFingerprint;
     }
 
     /// <summary>
@@ -335,6 +484,89 @@ public static class PhotoPipelineService
 
         File.WriteAllBytes(path, bytes);
         return ProjectFile.FromDisk(workDirectory, path);
+    }
+
+    /// <summary>Held while a final photo's name is chosen and its file written and recorded.</summary>
+    private static readonly Lock FinalNamesLock = new();
+
+    private static bool IsProjectFinalDirectory(string workDirectory, string directory) =>
+        string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(ProjectWorkspaceService.GetFinalDirectory(workDirectory))),
+            StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Deletes <paramref name="fileName"/> and its "name (n)" copies from <paramref name="finalDir"/>, except the
+    /// final files of the session's other photos. Returns how many were deleted.
+    /// </summary>
+    internal static int RemoveReplacedFinals(string workDirectory, WorkspaceSessionState session, ProjectPhoto photo, string finalDir, string fileName)
+    {
+        string stem = Path.GetFileNameWithoutExtension(fileName);
+        string extension = Path.GetExtension(fileName);
+        List<string> candidates;
+        try
+        {
+            candidates = [.. Directory.EnumerateFiles(finalDir).Where(f => IsNameOrNumberedCopy(Path.GetFileName(f), stem, extension))];
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return 0;
+        }
+        if (candidates.Count == 0) return 0;
+
+        HashSet<string> others;
+        lock (session)
+        {
+            others = new HashSet<string>(
+                session.Photos.Where(p => p != photo && p.Final != null).Select(p => Path.GetFullPath(p.Final!.GetFullPath(workDirectory))),
+                StringComparer.OrdinalIgnoreCase);
+        }
+
+        int deleted = 0;
+        foreach (string file in candidates)
+        {
+            if (others.Contains(Path.GetFullPath(file))) continue;
+            try
+            {
+                File.Delete(file);
+                deleted++;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not replace '{file}': {ex.Message}");
+            }
+        }
+        return deleted;
+    }
+
+    /// <summary>True for "stem.ext" and its copies "stem (n).ext", ignoring case.</summary>
+    internal static bool IsNameOrNumberedCopy(string name, string stem, string extension)
+    {
+        if (!name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) return false;
+        var baseName = name.AsSpan(0, name.Length - extension.Length);
+        if (!baseName.StartsWith(stem, StringComparison.OrdinalIgnoreCase)) return false;
+
+        var suffix = baseName[stem.Length..];
+        if (suffix.IsEmpty) return true;
+        if (suffix.Length < 4 || !suffix.StartsWith(" (", StringComparison.Ordinal) || suffix[^1] != ')') return false;
+        foreach (char c in suffix[2..^1])
+        {
+            if (!char.IsAsciiDigit(c)) return false;
+        }
+        return true;
+    }
+
+    private static void DeleteFile(string workDirectory, ProjectFile? file)
+    {
+        if (file == null) return;
+        try
+        {
+            File.Delete(file.GetFullPath(workDirectory));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not remove '{file.RelativePath}': {ex.Message}");
+        }
     }
 
     private static void DeleteIfUnchanged(string workDirectory, ProjectFile? file)

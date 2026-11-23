@@ -10,7 +10,6 @@ namespace PhotoCropper.Gui.Tests;
 internal static class TestSettingsIsolation
 {
     [ModuleInitializer]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2255:The 'ModuleInitializer' attribute should not be used in libraries", Justification = "Test assembly: it must run before any test touches the settings singleton")]
     internal static void Initialize()
     {
         string path = Path.Combine(Path.GetTempPath(), "PhotoCropperTests", $"settings-{Environment.ProcessId}.json");

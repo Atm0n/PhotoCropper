@@ -1,0 +1,6 @@
+root = true
+
+[*.cs]
+# An object passed to the constructor of a disposable type (a handler to HttpClient, bitmaps to a result that
+# disposes them) is owned, and disposed, by what it was passed to.
+dotnet_code_quality.CA2000.dispose_ownership_transfer_at_constructor = true

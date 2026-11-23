@@ -32,7 +32,9 @@ internal sealed class UserSettings
     public string ScannerPageSize { get; set; } = AppConstants.DefaultScannerPageSize;
     public bool IncludeNetworkScanners { get; set; }
     public string Theme { get; set; } = AppConstants.DefaultTheme; // "Dark", "Light", "System"
-    public string DetectionBoxColor { get; set; } = AppConstants.DefaultBoundingBoxColor; // "Red", "Amber", "Cyan", "Lime", "Magenta"
+    public string DetectionBoxColor { get; set; } = AppConstants.DefaultBoundingBoxColor; // "SoftWhite", "Red", "Amber", "Cyan", "Lime", "Magenta"
+    /// <summary>Darken the scan outside the boxes in Crops, so what will be cropped stands out.</summary>
+    public bool DimOutsideBoxes { get; set; }
     public string FileNamePattern { get; set; } = AppConstants.DefaultNamingPattern;
     public int? DefaultYear { get; set; }
     public string? DefaultDescription { get; set; }
@@ -124,12 +126,6 @@ internal sealed class SettingsManager
         {
             // Fail silently or handle appropriately
         }
-    }
-
-    public void ResetToDefaults()
-    {
-        Settings = new UserSettings();
-        Save();
     }
 
     public void ResetDetectionDefaults()

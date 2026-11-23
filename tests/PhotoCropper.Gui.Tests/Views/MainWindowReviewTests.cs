@@ -2,11 +2,9 @@ using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.ViewModels;
 using PhotoCropper.TestHelpers;
-using System.Diagnostics.CodeAnalysis;
 
 namespace PhotoCropper.Gui.Tests.Views;
 
-[SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Test window disposal")]
 public sealed class MainWindowReviewTests : IDisposable
 {
     private readonly string _tempDir;

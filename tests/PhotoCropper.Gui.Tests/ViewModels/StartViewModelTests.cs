@@ -36,6 +36,27 @@ public sealed class StartViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Open_WhenTheProjectIsOpenInAnotherWindow_ShouldStayAndSaySo()
+    {
+        string folder = Path.Combine(_root, "Album");
+        Directory.CreateDirectory(folder);
+        _host.RecentProjectFolders = [folder];
+        _host.InUse = true;
+        var vm = new StartViewModel(_host);
+        vm.Open();
+
+        await vm.OpenRecentCommand.ExecuteAsync(vm.Recent[0]);
+
+        vm.IsOpen.ShouldBeTrue();
+        vm.OpenError.ShouldContain("Album");
+
+        _host.InUse = false;
+        await vm.OpenRecentCommand.ExecuteAsync(vm.Recent[0]);
+        vm.IsOpen.ShouldBeFalse();
+        vm.OpenError.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task RestoreOnly_ShouldOpenTheNewProjectForImporting()
     {
         var vm = new StartViewModel(_host);
@@ -177,10 +198,12 @@ public sealed class StartViewModelTests : IDisposable
 
         public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
 
-        public Task OpenProjectAsync(string folder, bool restoreOnly)
+        public bool InUse { get; set; }
+
+        public Task<bool> OpenProjectAsync(string folder, bool restoreOnly)
         {
             Opened.Add((folder, restoreOnly));
-            return Task.CompletedTask;
+            return Task.FromResult(!InUse);
         }
 
         public void ForgetRecentProject(string folder) => Forgotten.Add(folder);

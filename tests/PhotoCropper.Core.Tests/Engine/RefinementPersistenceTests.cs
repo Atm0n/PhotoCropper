@@ -39,7 +39,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     [Fact]
     public void MapPhotoCropToScan_Unrotated_ShouldOffsetFromBoxCorner()
     {
-        var mapped = PhotoCropperEngine.MapPhotoCropToScan(Box, 0, new Size(160, 80), new Rect(10, 10, 100, 50));
+        var mapped = PhotoCropper.Core.Detection.CropGeometry.MapPhotoCropToScan(Box, 0, new Size(160, 80), new Rect(10, 10, 100, 50));
 
         ShouldBeBox(mapped, 420 + 10 + 50, 460 + 10 + 25, 100, 50);
     }
@@ -54,7 +54,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     {
         var leftHalf = new Rect(0, 0, shownWidth / 2, shownHeight);
 
-        var mapped = PhotoCropperEngine.MapPhotoCropToScan(Box, rotation, new Size(shownWidth, shownHeight), leftHalf);
+        var mapped = PhotoCropper.Core.Detection.CropGeometry.MapPhotoCropToScan(Box, rotation, new Size(shownWidth, shownHeight), leftHalf);
 
         mapped.Center.X.ShouldBe(expectedCx, 0.6f);
         mapped.Center.Y.ShouldBe(expectedCy, 0.6f);
@@ -118,6 +118,27 @@ public sealed class RefinementPersistenceTests : IDisposable
         engine.AcceptedCandidates[0].OrientationDegrees.ShouldBe(90);
         engine.DetectedPhotos[0].Width.ShouldBeLessThan(engine.DetectedPhotos[0].Height);
         engine.PhotoRotations.ContainsKey(0).ShouldBeFalse("auto-orientation is not a user rotation");
+    }
+
+    [Theory]
+    [InlineData(null, 90)] // an old project's photo, its orientation forgotten when it was upgraded: detected again
+    [InlineData(0, 0)]     // a saved orientation is reused as it is
+    public void RestoreFromSavedCrops_WithoutSavedOrientation_ShouldDetectIt(int? saved, int expected)
+    {
+        // A landscape photo lying on its side on a white scan.
+        string scanPath = Path.Combine(_tempDir, "turned_landscape.png");
+        using (var scan = new OpenCvSharp.Mat(600, 600, OpenCvSharp.MatType.CV_8UC3, OpenCvSharp.Scalar.All(245)))
+        using (var photo = TestImageFactory.CreateSkyLandscapePhoto(240, 240, orientation: 90))
+        using (var target = new OpenCvSharp.Mat(scan, new OpenCvSharp.Rect(180, 180, 240, 240)))
+        {
+            photo.CopyTo(target);
+            OpenCvSharp.Cv2.ImWrite(scanPath, scan);
+        }
+        using var engine = new PhotoCropperEngine(scanPath) { AutoOrientPhotos = true };
+
+        engine.RestoreFromSavedCrops([new WorkspaceCropData { CenterX = 300, CenterY = 300, Width = 240, Height = 240, AutoRotationDegrees = saved }]);
+
+        engine.AcceptedCandidates[0].OrientationDegrees.ShouldBe(expected);
     }
 
     [Fact]

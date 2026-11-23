@@ -1,11 +1,11 @@
-using OpenCvSharp;
+﻿using OpenCvSharp;
 using PhotoCropper.Core.Common;
 using PhotoCropper.Core.Detection;
-using PhotoCropper.Core.Export;
 using PhotoCropper.Core.Extraction;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
 using System.Collections.ObjectModel;
+using static PhotoCropper.Core.Detection.CropGeometry;
 using DrawingPoint = System.Drawing.Point;
 using DrawingRectangle = System.Drawing.Rectangle;
 using DrawingSize = System.Drawing.Size;
@@ -44,61 +44,9 @@ public class PhotoCropperEngine : IDisposable
     public PhotoCropperEngine(string originalFilePath)
     {
         ArgumentNullException.ThrowIfNull(originalFilePath);
-        if (!File.Exists(originalFilePath))
-        {
-            throw new FileNotFoundException("Scan file not found.", originalFilePath);
-        }
-
-        var fileInfo = new FileInfo(originalFilePath);
-        if (fileInfo.Length == 0)
-        {
-            throw new InvalidOperationException($"The file '{originalFilePath}' is empty (0 bytes).");
-        }
-
         OriginalFilePath = originalFilePath;
-        using var stream = new FileStream(originalFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        using var ms = new MemoryStream((int)stream.Length);
-        stream.CopyTo(ms);
-        byte[] fileBytes = ms.ToArray();
-        using Mat rawMat = Cv2.ImDecode(fileBytes, ImreadModes.AnyColor);
-        if (rawMat.Empty() || rawMat.Width <= 0 || rawMat.Height <= 0)
-        {
-            throw new InvalidOperationException($"Failed to decode image from file '{originalFilePath}'. The image format may be invalid or corrupt.");
-        }
-        Original = NormalizeToBgr(rawMat);
+        Original = ImageIo.LoadBgr(originalFilePath);
     }
-
-    public static Mat NormalizeToBgr(Mat source)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        if (source.Empty() || source.Width <= 0 || source.Height <= 0)
-        {
-            return new Mat();
-        }
-
-        if (source.Channels() == 3)
-        {
-            return source.Clone();
-        }
-
-        Mat bgr = new();
-        if (source.Channels() == 1)
-        {
-            Cv2.CvtColor(source, bgr, ColorConversionCodes.GRAY2BGR);
-        }
-        else if (source.Channels() == 4)
-        {
-            Cv2.CvtColor(source, bgr, ColorConversionCodes.BGRA2BGR);
-        }
-        else
-        {
-            source.CopyTo(bgr);
-        }
-
-        return bgr;
-    }
-
-
 
     public void ApplyOptions(DetectionOptions options)
     {
@@ -129,11 +77,19 @@ public class PhotoCropperEngine : IDisposable
         BoundingBoxColor = BoundingBoxColor
     };
 
+    /// <summary>
+    /// The settings and box list of the last <see cref="DetectPhotos"/>, while its photos are untouched (no box
+    /// added, deleted, moved or turned since): detecting again with the same settings would give the same photos.
+    /// </summary>
+    private (DetectionOptions Options, IReadOnlyList<CropCandidate> Candidates)? _freshDetection;
+
     public AutoTuneResult AutoTune(int minExpected = 1, int maxExpected = int.MaxValue)
     {
         var tuneResult = AutoTuneService.Tune(Original, CurrentOptions, minExpected, maxExpected);
         ApplyOptions(tuneResult.BestOptions);
-        DetectPhotos();
+        // Auto-Tune often keeps the settings the scan was just detected with: its photos are then already there.
+        bool alreadyDetected = _freshDetection is { } fresh && ReferenceEquals(fresh.Candidates, AcceptedCandidates) && fresh.Options == CurrentOptions;
+        if (!alreadyDetected) DetectPhotos();
         return tuneResult;
     }
 
@@ -154,6 +110,7 @@ public class PhotoCropperEngine : IDisposable
 
     private void ResetState()
     {
+        _freshDetection = null;
         foreach (var photo in DetectedPhotos) photo.Dispose();
         DetectedPhotos.Clear();
 
@@ -212,24 +169,10 @@ public class PhotoCropperEngine : IDisposable
         // the saved crop it came from rather than assuming photo i == saved crop i.
         // A box reaching past the scan's edge was extracted from the padded detection image: do the same, so the
         // restored photo matches the detected one pixel for pixel.
-        Mat? padded = null;
-        int pad = 0;
-        if (Original.Channels() == 3 && candidates.Any(c => !IsInside(c.Rotated, Original)))
-        {
-            var preparation = PreparePaddedDetectionImage();
-            padded = preparation.Padded;
-            pad = preparation.Pad;
-        }
-
-        List<(int SourceIndex, CropCandidate Candidate)> kept;
-        try
-        {
-            kept = ExtractAndProcessCandidates(candidates, padded, pad, knownOrientations);
-        }
-        finally
-        {
-            padded?.Dispose();
-        }
+        using DetectionImage? prepared = Original.Channels() == 3 && candidates.Any(c => !IsInside(c.Rotated, Original))
+            ? PhotoDetector.Prepare(Original, CurrentOptions)
+            : null;
+        var kept = ExtractAndProcessCandidates(candidates, prepared?.Padded, prepared?.Pad ?? 0, knownOrientations);
         AcceptedCandidates = [.. kept.Select(k => k.Candidate)];
 
         for (int photoIdx = 0; photoIdx < kept.Count; photoIdx++)
@@ -242,21 +185,9 @@ public class PhotoCropperEngine : IDisposable
         }
     }
 
-    private static bool IsInside(RotatedBox rect, Mat image) =>
-        rect.GetVertices().All(p => p.X >= 0 && p.Y >= 0 && p.X <= image.Width - 1 && p.Y <= image.Height - 1);
-
-    private static int NormalizeRightAngle(int degrees) => ((degrees % 360) + 360) % 360 / 90 * 90;
-
-    private static RotateFlags ToRotateFlags(int clockwiseDegrees) => clockwiseDegrees switch
-    {
-        90 => RotateFlags.Rotate90Clockwise,
-        180 => RotateFlags.Rotate180,
-        _ => RotateFlags.Rotate90Counterclockwise
-    };
-
     /// <summary>
     /// Runs the per-photo pipeline on a freshly extracted crop: auto-orientation, the user's manual rotation,
-    /// the raw compare copy, then colour restoration. Takes ownership of <paramref name="extracted"/>.
+    /// the raw compare copy, then colour restoration. <paramref name="extracted"/> stays the caller's.
     /// </summary>
     /// <param name="knownOrientation">Orientation to reuse instead of detecting it (e.g. from a saved session).</param>
     /// <returns>The processed photo, its raw (pre-restoration) copy, and the auto-orientation applied.</returns>
@@ -269,28 +200,27 @@ public class PhotoCropperEngine : IDisposable
         }
 
         int totalRotation = NormalizeRightAngle(orientation + userRotation);
+        using Mat rotated = new();
+        Mat source = extracted;
         if (totalRotation != 0)
         {
-            Mat rotated = new();
             Cv2.Rotate(extracted, rotated, ToRotateFlags(totalRotation));
-            extracted.Dispose();
-            extracted = rotated;
+            source = rotated;
         }
 
         // The raw copy (used by hold-to-compare) must be taken before colour restoration.
-        Mat raw = extracted.Clone();
-
-        if (RestoreVintageColors)
+        Mat raw = source.Clone();
+        try
         {
-            Mat restored = PhotoRestorationService.RestoreColors(extracted, removeDust: RemoveDustAndScratches);
-            if (!ReferenceEquals(restored, extracted))
-            {
-                extracted.Dispose();
-                extracted = restored;
-            }
+            // Restoration returns its input when it has nothing to do; the photo is always a Mat of its own.
+            Mat photo = RestoreVintageColors ? PhotoRestorationService.RestoreColors(source, removeDust: RemoveDustAndScratches) : source;
+            return (ReferenceEquals(photo, source) ? source.Clone() : photo, raw, orientation);
         }
-
-        return (extracted, raw, orientation);
+        catch
+        {
+            raw.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -320,15 +250,10 @@ public class PhotoCropperEngine : IDisposable
                 // The padded image is only needed for a box that reaches past the scan's edge. Inside it, extracting
                 // from the original gives the same pixels as restoring the saved box later, so a reopened project
                 // doesn't rewrite its cropped photos (and re-render their finals) for sub-pixel differences.
-                Mat extracted = (padded != null && !padded.Empty() && pad > 0 && !IsInside(candidates[i].Rotated, Original))
+                using Mat extracted = (padded != null && !padded.Empty() && pad > 0 && !IsInside(candidates[i].Rotated, Original))
                     ? PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(candidates[i].Rotated), Original, padded, pad)
                     : PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(candidates[i].Rotated), Original);
-
-                if (extracted.Empty())
-                {
-                    extracted.Dispose();
-                    return;
-                }
+                if (extracted.Empty()) return;
 
                 int? known = knownOrientations != null && i < knownOrientations.Count ? knownOrientations[i] : null;
                 (results[i], rawResults[i], orientations[i]) = ProcessExtractedPhoto(extracted, known);
@@ -363,7 +288,6 @@ public class PhotoCropperEngine : IDisposable
         return kept;
     }
 
-
     /// <summary>Long side, in pixels, at which overlay elements are drawn at their base size (≈ A4 at 300 DPI).</summary>
     private const double OverlayReferenceLongSide = 3500.0;
 
@@ -394,123 +318,18 @@ public class PhotoCropperEngine : IDisposable
         if (Original.Channels() != 3)
         {
             var oldOriginal = Original;
-            Original = NormalizeToBgr(oldOriginal);
+            Original = ImageIo.NormalizeToBgr(oldOriginal);
             oldOriginal.Dispose();
         }
 
-        var preparation = PreparePaddedDetectionImage();
-        Scalar avgBackgroundColorHsv = preparation.AvgBackgroundColorHsv;
-        Scalar bgBgr = preparation.BgBgr;
-        int pad = preparation.Pad;
-        using Mat padded = preparation.Padded;
-
-        // Determine downscale factor for ultra-fast contour detection on high-DPI scans
-        int maxDim = Math.Max(padded.Width, padded.Height);
-        double scale = 1.0;
-        const int targetMaxDim = 1600;
-
-        using Mat scaledDetectionMat = new();
-        Mat detectionMat;
-
-        if (maxDim > targetMaxDim)
-        {
-            scale = (double)targetMaxDim / maxDim;
-            int scaledW = (int)Math.Round(padded.Width * scale);
-            int scaledH = (int)Math.Round(padded.Height * scale);
-            Cv2.Resize(padded, scaledDetectionMat, new Size(scaledW, scaledH), 0, 0, InterpolationFlags.Area);
-            detectionMat = scaledDetectionMat;
-        }
-        else
-        {
-            detectionMat = padded;
-        }
-
-        int scaledPad = (int)Math.Round(pad * scale);
-        int originalW = Original.Width;
-        int originalH = Original.Height;
-
-        // Precompute HSV and Edge maps once on the detection resolution
-        using Mat detHsv = new();
-        Cv2.CvtColor(detectionMat, detHsv, ColorConversionCodes.BGR2HSV);
-
-        using Mat precomputedEdges = ForegroundMaskGenerator.GeneratePrecomputedEdgeMap(
-            detectionMat,
-            CannyLowThreshold,
-            CannyHighThreshold);
-
-        // Multi-pass sensitivity detection:
-        // Evaluates balanced search tolerances around base tolerance (both tighter and wider)
-        var candidateDetections = new List<CropCandidate>();
-        double baseTol = BackgroundTolerance;
-        double[] searchTolerances = [
-            baseTol,
-            baseTol + 4,
-            baseTol + 8,
-            baseTol + 15,
-            Math.Max(5, baseTol - 6),
-            Math.Max(2, baseTol - 12)
-        ];
-
-        using Mat foreground = new();
-        foreach (double tol in searchTolerances)
-        {
-            ForegroundMaskGenerator.PopulateForegroundMask(
-                detectionMat,
-                foreground,
-                avgBackgroundColorHsv,
-                tol,
-                CannyLowThreshold,
-                CannyHighThreshold,
-                precomputedEdges,
-                detHsv);
-
-            var passCandidates = CandidateExtractor.ExtractCandidates(
-                foreground,
-                scaledPad,
-                (int)Math.Round(originalW * scale),
-                (int)Math.Round(originalH * scale),
-                MinAreaFactor,
-                MaxAreaFactor,
-                detectionMat,
-                bgBgr);
-
-            MapCandidatesToOriginalSpace(candidateDetections, passCandidates, scale, originalW, originalH);
-        }
-
-        // Automatic Otsu Fallback: If HSV background subtraction failed to find any photos
-        // (common with faint vintage prints, light skies, or low-contrast scan lids),
-        // run an automatic global luminance Otsu segmentation pass
-        if (candidateDetections.Count == 0)
-        {
-            bool isLightBg = avgBackgroundColorHsv.Val2 > 120;
-            using Mat otsuForeground = new();
-            ForegroundMaskGenerator.PopulateOtsuForegroundMask(
-                detectionMat,
-                otsuForeground,
-                CannyLowThreshold,
-                CannyHighThreshold,
-                isLightBg,
-                precomputedEdges);
-
-            var otsuCandidates = CandidateExtractor.ExtractCandidates(
-                otsuForeground,
-                scaledPad,
-                (int)Math.Round(originalW * scale),
-                (int)Math.Round(originalH * scale),
-                MinAreaFactor,
-                MaxAreaFactor,
-                detectionMat,
-                bgBgr);
-
-            MapCandidatesToOriginalSpace(candidateDetections, otsuCandidates, scale, originalW, originalH);
-        }
-
-        // Composite resolution and overlap filtering
-        var acceptedCandidates = CandidateResolutionFilter.FilterCandidates(candidateDetections);
+        var options = CurrentOptions;
+        using var prepared = PhotoDetector.Prepare(Original, options);
+        var acceptedCandidates = PhotoDetector.FindCandidates(Original, prepared, options);
 
         // Only keep candidates that produced a photo, so AcceptedCandidates[i] always matches DetectedPhotos[i].
-        var kept = ExtractAndProcessCandidates(acceptedCandidates, padded, pad);
+        var kept = ExtractAndProcessCandidates(acceptedCandidates, prepared.Padded, prepared.Pad);
         AcceptedCandidates = [.. kept.Select(k => k.Candidate)];
+        _freshDetection = (options, AcceptedCandidates);
     }
 
     /// <summary>
@@ -536,44 +355,6 @@ public class PhotoCropperEngine : IDisposable
         return trimmed;
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Mat is returned to caller")]
-    private (Mat Padded, Scalar AvgBackgroundColorHsv, Scalar BgBgr, int Pad) PreparePaddedDetectionImage()
-    {
-        // Sample background color before padding
-        using Mat hsv = new();
-        Cv2.CvtColor(Original, hsv, ColorConversionCodes.BGR2HSV);
-        Scalar avgBackgroundColorHsv = CustomBackgroundColorHsv is { } picked ? CvInterop.ToCv(picked) : BackgroundAnalyzer.SampleBackgroundColor(hsv);
-
-        // Convert HSV background color to BGR for border padding
-        Scalar bgBgr = BackgroundAnalyzer.HsvToBgr(avgBackgroundColorHsv);
-
-        // Pad the full image with a synthetic margin so photos touching or extending to the scan boundary form complete closed contours
-        int pad = Math.Max(20, Math.Min(Original.Width, Original.Height) / 50);
-        Mat padded = new();
-        Cv2.CopyMakeBorder(Original, padded, pad, pad, pad, pad, BorderTypes.Constant, bgBgr);
-
-        // Neutralize scanner bezel / platen border margins in padded detection image
-        var (Top, Bottom, Left, Right) = BackgroundAnalyzer.DetectBezelMargins(Original, avgBackgroundColorHsv, BackgroundTolerance);
-        if (Top > 0)
-        {
-            Cv2.Rectangle(padded, new Rect(0, 0, padded.Width, pad + Top), bgBgr, -1);
-        }
-        if (Bottom > 0)
-        {
-            Cv2.Rectangle(padded, new Rect(0, padded.Height - pad - Bottom, padded.Width, pad + Bottom), bgBgr, -1);
-        }
-        if (Left > 0)
-        {
-            Cv2.Rectangle(padded, new Rect(0, 0, pad + Left, padded.Height), bgBgr, -1);
-        }
-        if (Right > 0)
-        {
-            Cv2.Rectangle(padded, new Rect(padded.Width - pad - Right, 0, pad + Right, padded.Height), bgBgr, -1);
-        }
-
-        return (padded, avgBackgroundColorHsv, bgBgr, pad);
-    }
-
     public void SetCustomBackgroundFromPixel(int x, int y)
     {
         CustomBackgroundColorHsv = CvInterop.ToColor(BackgroundAnalyzer.SamplePixelBackgroundColor(Original, x, y));
@@ -582,6 +363,7 @@ public class PhotoCropperEngine : IDisposable
     private void RotatePhotoInternal(int index, RotateFlags flags)
     {
         if (index < 0 || index >= DetectedPhotos.Count) return;
+        _freshDetection = null; // a photo turned by hand: detecting again would turn it back
 
         Mat rotated = new();
         Cv2.Rotate(DetectedPhotos[index], rotated, flags);
@@ -605,12 +387,10 @@ public class PhotoCropperEngine : IDisposable
 
     public void RotatePhotoCounterClockwise(int index) => RotatePhotoInternal(index, RotateFlags.Rotate90Counterclockwise);
 
-
     public void UpdateCandidates(IEnumerable<CropCandidate> newCandidates)
     {
         AcceptedCandidates = [.. newCandidates];
     }
-
 
     /// <summary>
     /// Re-extracts the photo for the (already edited) box at <paramref name="candIndex"/>.
@@ -619,20 +399,15 @@ public class PhotoCropperEngine : IDisposable
     /// False when nothing could be extracted (index out of range, or the box was dragged too small). The photo is
     /// then left unchanged, so the caller must restore the box it edited or the two will no longer match.
     /// </returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "ProcessExtractedPhoto takes ownership of the extracted Mat")]
     public bool ApplyGrabHandleResize(int candIndex)
     {
         if (candIndex < 0 || candIndex >= AcceptedCandidates.Count || candIndex >= DetectedPhotos.Count) return false;
 
         var cand = AcceptedCandidates[candIndex];
 
-        Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(cand.Rotated), Original);
-        if (extracted.Empty())
-        {
-            // Box dragged too small to extract: keep the previous photo rather than storing an empty one.
-            extracted.Dispose();
-            return false;
-        }
+        using Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(cand.Rotated), Original);
+        // Box dragged too small to extract: keep the previous photo rather than storing an empty one.
+        if (extracted.Empty()) return false;
 
         // Re-apply the user's manual 90° rotations so resizing a box doesn't silently undo them.
         int userRotation = PhotoRotations.TryGetValue(candIndex, out int rot) ? rot : 0;
@@ -652,16 +427,7 @@ public class PhotoCropperEngine : IDisposable
             RawDetectedPhotos.Add(raw);
         }
 
-        var vertices = cand.Rotated.GetVertices();
-        var pts = new DrawingPoint[4];
-        for (int i = 0; i < 4; i++) pts[i] = DrawingPoint.Round(vertices[i]);
-
-        cand = cand with
-        {
-            ShapePoints = pts,
-            Rect = CvInterop.ToRectangle(Cv2.BoundingRect(CvInterop.ToCv(pts))),
-            Area = cand.Rotated.Size.Width * cand.Rotated.Size.Height
-        };
+        cand = cand.WithBox(cand.Rotated);
 
         var list = new List<CropCandidate>(AcceptedCandidates)
         {
@@ -683,18 +449,8 @@ public class PhotoCropperEngine : IDisposable
             RawDetectedPhotos.RemoveAt(index);
         }
 
-        // Shift photo rotations
         PhotoRotations.Remove(index);
-        var shiftedRotations = new Dictionary<int, int>();
-        foreach (var (k, v) in PhotoRotations)
-        {
-            shiftedRotations[k > index ? k - 1 : k] = v;
-        }
-        PhotoRotations.Clear();
-        foreach (var (k, v) in shiftedRotations)
-        {
-            PhotoRotations[k] = v;
-        }
+        ShiftRotations(from: index + 1, by: -1);
 
         // Always build a new list: AcceptedCandidates instances are handed out to callers (e.g. undo
         // history snapshots), so mutating one in place would silently change their recorded state.
@@ -719,16 +475,7 @@ public class PhotoCropperEngine : IDisposable
         int rawTargetIndex = Math.Clamp(index, 0, RawDetectedPhotos.Count);
         RawDetectedPhotos.Insert(rawTargetIndex, (raw ?? photo).Clone());
 
-        var shiftedRotations = new Dictionary<int, int>();
-        foreach (var (k, v) in PhotoRotations)
-        {
-            shiftedRotations[k >= targetIndex ? k + 1 : k] = v;
-        }
-        PhotoRotations.Clear();
-        foreach (var (k, v) in shiftedRotations)
-        {
-            PhotoRotations[k] = v;
-        }
+        ShiftRotations(from: targetIndex, by: 1);
 
         int normalizedRotation = NormalizeRightAngle(rotation);
         if (normalizedRotation != 0)
@@ -743,6 +490,14 @@ public class PhotoCropperEngine : IDisposable
             newList.Insert(candTargetIndex, candidate.Value);
             AcceptedCandidates = newList;
         }
+    }
+
+    /// <summary>Moves the manual rotations of photos from index <paramref name="from"/> on, after a photo is removed or inserted.</summary>
+    private void ShiftRotations(int from, int by)
+    {
+        var shifted = PhotoRotations.ToDictionary(r => r.Key >= from ? r.Key + by : r.Key, r => r.Value);
+        PhotoRotations.Clear();
+        foreach (var (k, v) in shifted) PhotoRotations[k] = v;
     }
 
     public DrawingRectangle GetRefinedCropRect(int index)
@@ -766,19 +521,7 @@ public class PhotoCropperEngine : IDisposable
             int userRotation = PhotoRotations.TryGetValue(index, out int rot) ? rot : 0;
             int totalRotation = NormalizeRightAngle(cand.OrientationDegrees + userRotation);
             RotatedBox refined = MapPhotoCropToScan(cand.Rotated, totalRotation, CvInterop.ToSize(DetectedPhotos[index].Size()), CvInterop.ToRectangle(rect));
-
-            var vertices = refined.GetVertices();
-            var pts = vertices.Select(DrawingPoint.Round).ToArray();
-            var newList = new List<CropCandidate>(AcceptedCandidates)
-            {
-                [index] = cand with
-                {
-                    Rotated = refined,
-                    ShapePoints = pts,
-                    Rect = CvInterop.ToRectangle(Cv2.BoundingRect(CvInterop.ToCv(pts))),
-                    Area = refined.Size.Width * refined.Size.Height
-                }
-            };
+            var newList = new List<CropCandidate>(AcceptedCandidates) { [index] = cand.WithBox(refined) };
             AcceptedCandidates = newList;
         }
 
@@ -796,46 +539,9 @@ public class PhotoCropperEngine : IDisposable
         DetectedPhotos[index] = cropped;
     }
 
-    /// <summary>
-    /// Maps a crop rectangle in an extracted photo back to a box on the scan.
-    /// </summary>
-    /// <param name="box">The box the photo was extracted from.</param>
-    /// <param name="clockwiseRotation">Total rotation (auto-orientation + user) applied to the extracted photo.</param>
-    /// <param name="photoSize">Size of the photo as currently shown, i.e. after that rotation.</param>
-    /// <param name="crop">The crop, in the coordinates of the photo as currently shown.</param>
-    internal static RotatedBox MapPhotoCropToScan(RotatedBox box, int clockwiseRotation, DrawingSize photoSize, DrawingRectangle crop)
-    {
-        // The extraction warps the box's TL/TR/BL corners to the photo's (0,0)/(W,0)/(0,H) before rotating.
-        Point2f[] p = PhotoExtractionEngine.OrderBoxPoints(CvInterop.ToCv(box).Points());
-        int rotation = NormalizeRightAngle(clockwiseRotation);
-        bool swapped = rotation is 90 or 270;
-        float w = swapped ? photoSize.Height : photoSize.Width;
-        float h = swapped ? photoSize.Width : photoSize.Height;
-
-        // Undo the rotation: shown-photo point (x, y) -> unrotated extraction point (u, v).
-        (float U, float V) Unrotate(float x, float y) => rotation switch
-        {
-            90 => (y, h - x),
-            180 => (w - x, h - y),
-            270 => (w - y, x),
-            _ => (x, y)
-        };
-
-        var (ua, va) = Unrotate(crop.Left, crop.Top);
-        var (ub, vb) = Unrotate(crop.Right, crop.Bottom);
-        float u0 = Math.Min(ua, ub), u1 = Math.Max(ua, ub);
-        float v0 = Math.Min(va, vb), v1 = Math.Max(va, vb);
-
-        Point2f ToScan(float u, float v) => new(
-            p[0].X + u / w * (p[1].X - p[0].X) + v / h * (p[3].X - p[0].X),
-            p[0].Y + u / w * (p[1].Y - p[0].Y) + v / h * (p[3].Y - p[0].Y));
-
-        return CvInterop.ToBox(Cv2.MinAreaRect([ToScan(u0, v0), ToScan(u1, v0), ToScan(u1, v1), ToScan(u0, v1)]));
-    }
-
     public void AddManualCrop(DrawingRectangle area)
     {
-        var (extracted, candidate) = PhotoExtractionEngine.ExtractManualCrop(
+        var (extractedCrop, candidate) = PhotoExtractionEngine.ExtractManualCrop(
             Original,
             CvInterop.ToCv(area),
             CustomBackgroundColorHsv is { } picked ? CvInterop.ToCv(picked) : null,
@@ -843,11 +549,8 @@ public class PhotoCropperEngine : IDisposable
             CannyLowThreshold,
             CannyHighThreshold);
 
-        if (extracted.Empty() || !candidate.HasValue)
-        {
-            extracted.Dispose();
-            return;
-        }
+        using Mat extracted = extractedCrop;
+        if (extracted.Empty() || !candidate.HasValue) return;
 
         // Same pipeline as detected photos, so a manual crop looks the same now as after a restart.
         var (photo, raw, orientation) = ProcessExtractedPhoto(extracted);
@@ -861,7 +564,6 @@ public class PhotoCropperEngine : IDisposable
     /// elsewhere it adds the photo found, processed like a detected one.
     /// </summary>
     /// <returns>The photo's index and whether it was added; index -1 when no photo was found there.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "ProcessExtractedPhoto takes ownership of the extracted Mat")]
     public (int Index, bool Added) FindPhotoAt(System.Drawing.PointF point)
     {
         var boxes = AcceptedCandidates ?? [];
@@ -896,76 +598,12 @@ public class PhotoCropperEngine : IDisposable
             return (-1, false);
         }
 
-        Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(found), Original);
-        if (extracted.Empty())
-        {
-            extracted.Dispose();
-            return (-1, false);
-        }
+        using Mat extracted = PhotoExtractionEngine.ExtractPhotoFromRotatedRect(CvInterop.ToCv(found), Original);
+        if (extracted.Empty()) return (-1, false);
         var (photo, raw, orientation) = ProcessExtractedPhoto(extracted);
         DetectedPhotos.Add(photo);
         RawDetectedPhotos.Add(raw);
         AcceptedCandidates = [.. boxes, candidate with { OrientationDegrees = orientation }];
         return (DetectedPhotos.Count - 1, true);
-    }
-
-    /// <returns>The files written; pass them back as <paramref name="previousExports"/> on the next export.</returns>
-    public IReadOnlyList<ExportedFile> SaveDetectedPhotos(
-        string? customOutputFolder = null,
-        string format = Common.AppConstants.DefaultImageFormat,
-        int jpegQuality = 100,
-        string fileNamePattern = FileNameTemplateHelper.DefaultPattern,
-        PhotoExportMetadata? metadata = null,
-        Action<int, int>? progressCallback = null,
-        bool cleanOldExports = false,
-        IEnumerable<ExportedFile>? previousExports = null,
-        bool matchPreviousExportsByName = true)
-    {
-        return PhotoExporter.SavePhotos(DetectedPhotos, OriginalFilePath, customOutputFolder, format, jpegQuality, fileNamePattern, metadata, progressCallback, cleanOldExports, previousExports, matchPreviousExportsByName);
-    }
-
-    private static void MapCandidatesToOriginalSpace(
-        List<CropCandidate> destination,
-        IReadOnlyList<CropCandidate> candidates,
-        double scale,
-        int originalW,
-        int originalH)
-    {
-        if (scale < 0.999)
-        {
-            double invScale = 1.0 / scale;
-            foreach (var cand in candidates)
-            {
-                Point2f fullCenter = new((float)(cand.Rotated.Center.X * invScale), (float)(cand.Rotated.Center.Y * invScale));
-                Size2f fullSize = new((float)(cand.Rotated.Size.Width * invScale), (float)(cand.Rotated.Size.Height * invScale));
-                RotatedRect fullRr = new(fullCenter, fullSize, cand.Rotated.Angle);
-
-                Point2f[] fullVerts = fullRr.Points();
-                Point[] fullPoints = new Point[4];
-                for (int p = 0; p < 4; p++)
-                {
-                    fullPoints[p] = new Point(
-                        Math.Clamp((int)Math.Round(fullVerts[p].X), 0, originalW - 1),
-                        Math.Clamp((int)Math.Round(fullVerts[p].Y), 0, originalH - 1)
-                    );
-                }
-
-                double fullArea = (double)fullSize.Width * fullSize.Height;
-                double score = fullArea * Math.Pow(cand.Rectangularity, 3) * Math.Pow(cand.Convexity, 2);
-
-                destination.Add(new CropCandidate(
-                    CvInterop.ToPoints(fullPoints),
-                    CvInterop.ToRectangle(Cv2.BoundingRect(fullPoints)),
-                    score,
-                    CvInterop.ToBox(fullRr),
-                    fullArea,
-                    cand.Rectangularity,
-                    cand.Convexity));
-            }
-        }
-        else
-        {
-            destination.AddRange(candidates);
-        }
     }
 }

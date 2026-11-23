@@ -405,7 +405,6 @@ internal sealed class UndoRedoHistory : IDisposable
         _maxCapacity = maxCapacity;
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
     public void PushDelete(int scanIndex, int index, Mat photoMat, CropCandidate? candidate = null)
     {
         PushAction(new DeletePhotoAction(scanIndex, index, photoMat, candidate));
@@ -415,37 +414,31 @@ internal sealed class UndoRedoHistory : IDisposable
     /// Records the deletion of photo <paramref name="index"/>, capturing its photo, raw copy, box and rotation
     /// from <paramref name="engine"/>. Call before deleting it.
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
     public void PushDelete(int scanIndex, int index, PhotoCropperEngine engine)
     {
         PushAction(DeletePhotoAction.Capture(scanIndex, index, engine));
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
     public void PushRotate(int scanIndex, int index, bool clockwise = true)
     {
         PushAction(new RotatePhotoAction(scanIndex, index, clockwise));
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
     public void PushReplace(int scanIndex, int index, Mat previousMat, Mat newMat, string description = "Crop Refinement", Mat? previousRaw = null, Mat? newRaw = null)
     {
         PushAction(new ReplacePhotoAction(scanIndex, index, previousMat, newMat, description, previousRaw, newRaw));
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
     public void PushAdd(int scanIndex, int index, Mat addedMat, CropCandidate? candidate = null)
     {
         PushAction(new AddPhotoAction(scanIndex, index, addedMat, candidate));
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
     public void PushBatch(int scanIndex, IReadOnlyList<IUndoableAction> actions, string description)
     {
         PushAction(new BatchAction(scanIndex, actions, description));
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Action ownership is transferred to _undoList and disposed on Clear/Dispose/Eviction")]
     public void PushResizeCandidate(
         int scanIndex,
         int candIndex,

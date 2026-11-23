@@ -32,58 +32,71 @@ public sealed class CancellableOperationRunnerTests
     }
 
     [Fact]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "run is awaited before cts is disposed")]
     public async Task RunAsync_WhenCancelled_ShouldNotReturnUntilOperationHasStopped()
     {
-        using var cts = new CancellationTokenSource();
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         bool stillRunningAfterCancel = false;
         bool finished = false;
         int cancellingCalls = 0;
 
-        var run = CancellableOperationRunner.RunAsync(async token =>
+        // Disposed only after the run has been awaited.
+        var cts = new CancellationTokenSource();
+        try
         {
-            started.SetResult();
-            await Task.Delay(Timeout.Infinite, token).ContinueWith(_ => { }, TaskScheduler.Default);
-            // Cleanup after observing cancellation takes a while; the runner must wait for it.
-            stillRunningAfterCancel = true;
-            await Task.Delay(200, CancellationToken.None);
-            finished = true;
-            token.ThrowIfCancellationRequested();
-        }, cts, Grace, () => cancellingCalls++);
+            var run = CancellableOperationRunner.RunAsync(async token =>
+            {
+                started.SetResult();
+                await Task.Delay(Timeout.Infinite, token).ContinueWith(_ => { }, TaskScheduler.Default);
+                // Cleanup after observing cancellation takes a while; the runner must wait for it.
+                stillRunningAfterCancel = true;
+                await Task.Delay(200, CancellationToken.None);
+                finished = true;
+                token.ThrowIfCancellationRequested();
+            }, cts, Grace, () => cancellingCalls++);
 
-        await started.Task;
-        await cts.CancelAsync();
+            await started.Task;
+            await cts.CancelAsync();
 
-        await Should.ThrowAsync<OperationCanceledException>(() => run);
+            await Should.ThrowAsync<OperationCanceledException>(run);
+        }
+        finally
+        {
+            cts.Dispose();
+        }
         stillRunningAfterCancel.ShouldBeTrue();
         finished.ShouldBeTrue("the runner returned before the cancelled operation finished");
         cancellingCalls.ShouldBe(1);
     }
 
     [Fact]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Ownership passes to the runner when the operation is abandoned")]
     public async Task RunAsync_WhenOperationIgnoresCancellation_ShouldAbandonItAfterGracePeriod()
     {
-        var cts = new CancellationTokenSource();
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var run = CancellableOperationRunner.RunAsync(async _ =>
+        // The runner disposes it once the abandoned operation ends; disposing it again here is harmless.
+        var cts = new CancellationTokenSource();
+        try
         {
-            started.SetResult();
-            await release.Task; // ignores the token, like a hung driver
-        }, cts, TimeSpan.FromMilliseconds(200));
+            var run = CancellableOperationRunner.RunAsync(async _ =>
+            {
+                started.SetResult();
+                await release.Task; // ignores the token, like a hung driver
+            }, cts, TimeSpan.FromMilliseconds(200));
 
-        await started.Task;
-        await cts.CancelAsync();
+            await started.Task;
+            await cts.CancelAsync();
 
-        (await run).ShouldBe(OperationOutcome.Abandoned);
+            (await run).ShouldBe(OperationOutcome.Abandoned);
 
-        // The abandoned operation still holds the token, so the runner must not have disposed the CTS yet.
-        Should.NotThrow(() => _ = cts.Token.WaitHandle);
-
-        release.SetResult();
+            // The abandoned operation still holds the token, so the runner must not have disposed the CTS yet.
+            Should.NotThrow(() => _ = cts.Token.WaitHandle);
+        }
+        finally
+        {
+            release.SetResult();
+            cts.Dispose();
+        }
     }
 
     [Fact]

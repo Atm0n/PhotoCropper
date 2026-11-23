@@ -1,12 +1,10 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 
 namespace PhotoCropper.Core.Models;
 
 public readonly record struct CropCandidate
 {
-    [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Performance-critical polygon coordinate buffer")]
-    public Point[] ShapePoints { get; init; }
+    public IReadOnlyList<Point> ShapePoints { get; init; }
     public Rectangle Rect { get; init; }
     public double Score { get; init; }
     public RotatedBox Rotated { get; init; }
@@ -22,7 +20,7 @@ public readonly record struct CropCandidate
     public int OrientationDegrees { get; init; }
 
     public CropCandidate(
-        Point[] shapePoints,
+        IReadOnlyList<Point> shapePoints,
         Rectangle rect,
         double score,
         RotatedBox rotated,

@@ -2,8 +2,13 @@
 
 An intelligent, cross-platform .NET 11 desktop application designed to automatically detect, straighten, and extract multiple photos from a single scanner bed image. Built with Avalonia UI and OpenCvSharp (OpenCV).
 
+![An album page as scanned, and the four restored photos PhotoCropper made from it](docs/images/hero-before-after.webp)
+
+<sub>Sample photos: public domain, see [image credits](docs/images/CREDITS.md).</sub>
+
 ## Documentation
 
+- **[Tutorial](docs/TUTORIAL.md)**: A step-by-step walkthrough with screenshots, from scanning album pages to exporting restored photos.
 - **[Architecture & Design Details](docs/ARCHITECTURE.md)**: Explore high-level system components, auto-tuning pipelines, AI auto-orientation heuristics, and memory management strategies via Mermaid diagrams.
 - **[Changelog](CHANGELOG.md)**: Detailed history of releases and changes (Semantic Versioning).
 
@@ -14,6 +19,12 @@ A project goes through three stages, shown in the stage bar at the top of the wi
 1. **Scan → `RawScans/`**: scan pages with your flatbed scanner (`F5`) or import scan files (drag and drop works too). Each new scan is shown large with the photos found on it outlined, so a crooked or overlapping page can be rescanned in place (or discarded) straight away. Scans are kept exactly as acquired.
 2. **Crops → `Cropped/`**: photos are detected on each scan automatically. Fix the boxes (drag corners, rotate, delete), draw missed photos by hand, rotate, refine edges, or go through every photo full-size in **Review mode**. Each photo is saved as a lossless PNG with geometry fixes only.
 3. **Finish → `Final/`**: restore each photo (colour, dust, repair brush, optional AI fill) in a full-window editor with a before/after split, add metadata, and export as JPEG or PNG with EXIF. Only photos that changed are exported again, and photos cropped elsewhere can be imported straight into this stage.
+
+| 1 Scan | 2 Crops | 3 Finish |
+|---|---|---|
+| [![Scan stage](docs/images/02-scan-stage.webp)](docs/TUTORIAL.md#2-scan-the-pages) | [![Crops stage](docs/images/03-crops-stage.webp)](docs/TUTORIAL.md#3-check-the-crops) | [![Finish photo editor](docs/images/11-finish-editor.webp)](docs/TUTORIAL.md#4-restore-and-finish) |
+
+New to PhotoCropper? The **[tutorial](docs/TUTORIAL.md)** goes through a whole album step by step.
 
 The CLI can run the same stages unattended (`--stage crop|restore`), on loose files or on a project with `--project`, so the app and the CLI can share work. Press `F1` in the app for the full help and shortcuts.
 
@@ -30,7 +41,7 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **`Workspace/`**: Project folder management, the `RawScans/` → `Cropped/` → `Final/` pipeline, raw scan disk-staging, and the crash recovery session (`ProjectWorkspaceService`, `PhotoPipelineService`, `WorkspaceSessionState`, `WorkspaceScanEntry`, `ScanSessionItem`).
   - **`PhotoCropperEngine.cs`**: High-level facade coordinating pipeline execution.
 - **`src/PhotoCropper.Gui` (Avalonia Desktop App, MVVM with CommunityToolkit.Mvvm):**
-  - **`Views/`**: `MainWindow/` (the shell: top bar with the stages and Settings menu, overlays, autosave, keyboard routing, project-level work), `Stages/` (`ScanStageView`, `CropsStageView`, `FinishStageView`, `CompareImageViewer`), `Overlays/` (`ReviewView`, `RefineView`) and `Dialogs/` (`HelpWindow`, `ScannerConfigDialog`, `CustomColorDialog`, `SafeExitPromptDialog`, `ExportSettingsDialog`).
+  - **`Views/`**: `MainWindow/` (the shell: top bar with the stages and Settings menu, overlays, autosave, keyboard routing, project-level work), `Stages/` (`ScanStageView`, `CropsStageView`, `FinishStageView`, `CompareImageViewer`), `Overlays/` (`ReviewView`, `RefineView`) and `Dialogs/` (`HelpWindow`, `ScannerConfigDialog`, `CustomColorDialog`, `ExportSettingsDialog`).
   - **`ViewModels/`**: One view-model per stage and mode (`ScanStageViewModel`, `CropsStageViewModel`, `FinishStageViewModel`, `ReviewViewModel`, `RefineViewModel`), each reaching the window through a small host interface so they are tested without UI. See [Architecture](docs/ARCHITECTURE.md#gui-structure).
   - **`Controls/`**: `CropBoxOverlay`, which draws the detected boxes and their handles over the untouched scan.
   - **`Services/`**: Bounded undo/redo history, theme manager, scanner coordination, localization, settings persistence, and scan session navigation (`ScanSessionManager`).
@@ -70,8 +81,11 @@ The solution consists of four main projects organized under `src/` and `tests/`:
   - **Landscape & Water Scene Heuristics:** Evaluates sky gradients (blue and overcast), horizon textures, ground/vegetation, and water bodies (seas, lakes, rivers) with strict non-landscape guards to prevent false indoor rotations.
 - **Vintage Photo Color & Contrast Restoration (per photo, in the Finish stage):**
   - **Presets:** Faded colour print, Black & white, Sepia, Only clean dust, None. Apply one, tweak it, then "Copy settings to all".
-  - **Several photos at once:** Ctrl+click or Shift+click photos in the grid (or tick their box) to select several; a bar above the grid applies a preset, turns the white-border trim on or off, or exports just those photos. "Copy settings to selected" copies the open photo's settings to them.
+  - **Several photos at once:** Ctrl+click or Shift+click photos in the grid (or tick their box) to select several; a bar above the grid applies a preset, turns automatic restoration, dust removal or the white-border trim on or off for all of them with one checkbox each (a dash means only some have it), or exports just those photos. "Copy settings to selected" copies the open photo's settings to them.
+  - **Photo types:** each photo is labelled black & white, sepia, faded colour or colour, from its colours (a black-and-white print's colour varies along one tint, even when aged or toned; a faded colour print's is mostly one cast). Chips above the grid show one type at a time, and **Suggested by type** gives each selected photo the preset that suits it.
   - **Trim white border (optional):** leaves a print's white or cream border out of the final photo; `Cropped/` keeps the whole print. It only trims when all four sides show a clean, even border (one side may be wider, as on a Polaroid), so photos without one are left whole; the editor preview darkens what will be cut.
+  - **Adjust the trim:** in the editor, **Adjust** shows the trim as a frame whose edges (or corners) you drag, with a magnifier on the edge; **Automatic** goes back to the border found automatically. A frame set by hand is stored per photo as fractions of its size.
+  - **Rotate:** ↺ ↻ in the editor (or R), or "Rotate 90°" for the selected photos, for photos the Crops stage left turned. The cropped photo is turned losslessly and its box on the scan records the turn, so both stages agree; repair strokes and a hand-set trim turn with it.
   - **Automatic restoration** at Gentle, Normal or Strong, with each part optional: colour cast removal (damped gray-world white balance, gains limited to `[0.85, 1.18]`), contrast (levels stretch and CLAHE on lightness only, so colour casts are not amplified) and faded-colour revival (vibrancy that spares skin tones).
   - **Black & white handling:** black-and-white and sepia prints are detected automatically and skip white balance and saturation, keeping their tone; or choose "neutral grey" to remove tinting.
   - **Manual adjustments:** brightness, contrast, warmth, tint and saturation (-100 to 100).
@@ -271,7 +285,7 @@ dotnet run --project src/PhotoCropper.Cli/PhotoCropper.Cli.csproj -- --help
 | `--auto-tune [mode]` | Search for better detection settings: `mismatch` (scans outside `--min/--max-photos`; used when no mode is given), `always`, `low-coverage` or `off` | `low-coverage` with `--project`, otherwise `off` |
 | `--min-coverage <percent>` | What counts as low coverage for `--auto-tune low-coverage` | `50` |
 | `--copy-undetected <dir>` | Copy scans where no photo was found to this folder | — |
-| `-w, --wizard` | Step-by-step interactive setup | — |
+| `-w, --wizard` | Step-by-step interactive setup for the one-step batch, a single stage (crop or restore), or a project | — |
 | `-y, --yes` | Never ask questions (e.g. the post-batch auto-tune prompt) | — |
 | `--no-orient` | Don't turn photos upright automatically (face and landscape detection) | on |
 | `--no-restore` | Don't restore colours and contrast | on |

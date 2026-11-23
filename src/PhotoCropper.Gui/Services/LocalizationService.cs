@@ -21,6 +21,19 @@ internal static class ResourceKeys
     public const string BtnRotateCount = nameof(BtnRotateCount);
     public const string BtnSelectAll = nameof(BtnSelectAll);
     public const string LblMarkedCount = nameof(LblMarkedCount);
+    public const string BtnAdjustTrim = nameof(BtnAdjustTrim);
+    public const string TipAdjustTrim = nameof(TipAdjustTrim);
+    public const string BtnAutoTrim = nameof(BtnAutoTrim);
+    public const string TipAutoTrim = nameof(TipAutoTrim);
+    public const string LblStyleAll = nameof(LblStyleAll);
+    public const string StyleBlackAndWhite = nameof(StyleBlackAndWhite);
+    public const string StyleSepia = nameof(StyleSepia);
+    public const string StyleFadedColor = nameof(StyleFadedColor);
+    public const string StyleColor = nameof(StyleColor);
+    public const string BtnSuggestedPresets = nameof(BtnSuggestedPresets);
+    public const string TipSuggestedPresets = nameof(TipSuggestedPresets);
+    public const string TipStyleFilter = nameof(TipStyleFilter);
+    public const string LblSortingStyles = nameof(LblSortingStyles);
     public const string BtnClearSelection = nameof(BtnClearSelection);
     public const string BtnCancel = nameof(BtnCancel);
     public const string BtnOk = nameof(BtnOk);
@@ -109,6 +122,7 @@ internal static class ResourceKeys
     public const string MsgProjectNameInvalid = nameof(MsgProjectNameInvalid);
     public const string MsgProjectExists = nameof(MsgProjectExists);
     public const string MsgProjectCreateFailed = nameof(MsgProjectCreateFailed);
+    public const string MsgProjectInUse = nameof(MsgProjectInUse);
     public const string BtnImportScans = nameof(BtnImportScans);
     public const string BtnImportPhotos = nameof(BtnImportPhotos);
     public const string ScanStatusNotChecked = nameof(ScanStatusNotChecked);
@@ -140,8 +154,6 @@ internal static class ResourceKeys
     public const string MsgNoPhotoFound = nameof(MsgNoPhotoFound);
     public const string MsgPhotoFound = nameof(MsgPhotoFound);
     public const string MsgPhotoRefitted = nameof(MsgPhotoRefitted);
-    public const string BtnFindPhoto = nameof(BtnFindPhoto);
-    public const string TipFindPhoto = nameof(TipFindPhoto);
     public const string MsgRefineModeHelp = nameof(MsgRefineModeHelp);
     public const string MsgApplyingRefine = nameof(MsgApplyingRefine);
     public const string MsgRefineSuccess = nameof(MsgRefineSuccess);
@@ -168,6 +180,7 @@ internal static class ResourceKeys
     public const string LblQualityMax = nameof(LblQualityMax);
 
     public const string ColorCustom = nameof(ColorCustom);
+    public const string MenuDimOutsideBoxes = nameof(MenuDimOutsideBoxes);
     public const string AppButtonActionBrush = nameof(AppButtonActionBrush);
     public const string AppSubtleCardBrush = nameof(AppSubtleCardBrush);
     public const string AppAccentBrush = nameof(AppAccentBrush);

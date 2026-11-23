@@ -17,6 +17,7 @@ internal sealed partial class FinishStageView : UserControl
         InitializeComponent();
 
         viewer.StrokeCompleted = points => ViewModel?.AddRepairStroke(points);
+        viewer.TrimCompleted = area => ViewModel?.SetManualTrim(area);
         viewer.PropertyChanged += (_, e) =>
         {
             if (e.Property == CompareImageViewer.ZoomProperty) txtZoom.Text = $"{viewer.Zoom * 100:0}%";
@@ -89,6 +90,10 @@ internal sealed partial class FinishStageView : UserControl
                 break;
             case Key.Escape:
                 vm.ClosePreviewCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.R when !vm.IsRepairMode:
+                vm.RotateClockwiseCommand.Execute(null);
                 e.Handled = true;
                 break;
         }

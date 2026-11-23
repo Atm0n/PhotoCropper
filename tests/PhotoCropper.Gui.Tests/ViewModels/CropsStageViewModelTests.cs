@@ -30,15 +30,12 @@ public sealed class CropsStageViewModelTests : IDisposable
         try { Directory.Delete(_dir, recursive: true); } catch (IOException) { }
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The session manager owns and disposes its sessions")]
     private CropsStageViewModel CreateViewModel(int scanCount, int scanSize = 800)
     {
-        for (int i = 0; i < scanCount; i++)
-        {
-            string path = Path.Combine(_dir, $"scan_{i + 1:0000}.png");
-            TestImageFactory.CreateStandardTwoPhotoScan(path, scanSize, scanSize);
-            _sessions.Add(new ScanSessionItem(path, new DetectionOptions()));
-        }
+        var paths = Enumerable.Range(1, scanCount).Select(i => Path.Combine(_dir, $"scan_{i:0000}.png")).ToList();
+        foreach (string path in paths) TestImageFactory.CreateStandardTwoPhotoScan(path, scanSize, scanSize);
+        // The session manager owns (and disposes) the sessions.
+        _sessions.AddRange([.. paths.Select(path => new ScanSessionItem(path, new DetectionOptions()))]);
         return new CropsStageViewModel(_host, _sessions, _undo, () => _settings, () => _settingsSaves++)
         {
             OptionsDebounce = TimeSpan.FromMilliseconds(30),
@@ -59,6 +56,21 @@ public sealed class CropsStageViewModelTests : IDisposable
         vm.ScanCounterText.ShouldBe(Counter(1, 2));
         vm.CoverageText.ShouldNotBeEmpty();
         _sessions.Sessions[0].IsAutoTuned.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task LoadCurrentScan_WhileTheScanStagePreparesTheSameScan_ListsEachPhotoOnce()
+    {
+        // Opening a project: the Scan stage's preview and Crops both prepare the first scan, auto-tuning it.
+        _settings.AutoTuneOnScanChange = true;
+        using var vm = CreateViewModel(1);
+        var session = _sessions.Sessions[0];
+
+        await Task.WhenAll(vm.PrepareScanAsync(session, CancellationToken.None), vm.LoadCurrentScanAsync());
+
+        var engine = session.Engine.ShouldNotBeNull();
+        engine.DetectedPhotos.Count.ShouldBe(engine.AcceptedCandidates.Count);
+        vm.Photos.Count.ShouldBe(engine.AcceptedCandidates.Count);
     }
 
     [Fact]
@@ -180,6 +192,34 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ClickAt_SaysWhetherItWasOnABox()
+    {
+        // A click that isn't on a box finds the photo there (the view does that when ClickAt says so).
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+
+        vm.ClickAt(new System.Drawing.PointF(2, 2)).ShouldBeFalse();
+        engine.AcceptedCandidates.Count.ShouldBe(2);
+
+        vm.ClickAt(engine.AcceptedCandidates[1].Rotated.Center).ShouldBeTrue();
+        vm.SelectedPhotoIndex.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task DeleteBoxAt_OnlyOnADeleteBadge()
+    {
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+
+        vm.DeleteBoxAt(engine.AcceptedCandidates[1].Rotated.Center).ShouldBeFalse();
+        engine.AcceptedCandidates.Count.ShouldBe(2);
+
+        vm.DeleteBoxAt(Geometry(engine, 0).DeleteBadge).ShouldBeTrue();
+        engine.AcceptedCandidates.Count.ShouldBe(1);
+        _undo.CanUndo.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task ClickInsideBox_SelectsItsPhoto()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
@@ -212,6 +252,18 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task PressOnACornerOfABoxNotSelected_DrawsInstead()
+    {
+        // Its handles aren't shown, so its corners don't grab: select the box to resize it.
+        var (vm, engine) = await OpenScanWithTwoPhotosAsync();
+        using var _ = vm;
+        vm.SelectPhoto(0);
+
+        vm.PressAt(Geometry(engine, 1).Vertices[2]).ShouldBe(BoxGesture.Draw);
+        vm.SelectedBoxIndex.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task DraggingACorner_ResizesTheBoxAndReExtractsThePhoto()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
@@ -224,6 +276,8 @@ public sealed class CropsStageViewModelTests : IDisposable
         var opposite = geometry.Vertices[(corner + 2) % 4];
         int before = engine.DetectedPhotos[index].Width * engine.DetectedPhotos[index].Height;
 
+        // Only the selected box has handles.
+        vm.SelectPhoto(index);
         vm.PressAt(start).ShouldBe(BoxGesture.Resize);
         // Pull the corner 20 % towards the opposite one: the box shrinks.
         vm.DragTo(new System.Drawing.PointF(start.X + (opposite.X - start.X) * 0.2f, start.Y + (opposite.Y - start.Y) * 0.2f));

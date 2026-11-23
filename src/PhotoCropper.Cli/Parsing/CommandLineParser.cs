@@ -264,77 +264,16 @@ internal static class CommandLineParser
         return false;
     }
 
+    /// <summary>Prints the command line's help, kept in the embedded Help.txt.</summary>
     public static void PrintHelp()
     {
-        Console.WriteLine(
-            """
-            PhotoCropper CLI - finds the photos on scans, crops, straightens and restores them
-
-            Usage:
-              PhotoCropperCli <scans...> [options]                     scan files or folders
-              PhotoCropperCli --project <folder> [scans...] [options]  an app project
-              PhotoCropperCli --wizard                                 guided setup
-
-            Where things go:
-              --project <folder>      Work on a PhotoCropper project (created if missing): new scans are added,
-                                      boxes saved in the app are kept, and Cropped/ and Final/ are written.
-                                      Don't run it on a project that is open in the app.
-              -o, --output <dir>      Output folder (default: <scan folder>/cropped; with --project, Final/)
-              --stage <stage>         all (default): crop and restore; crop: lossless PNGs, no restoration;
-                                      restore: restore existing photos, no detection
-              -r, --recursive         Include subfolders of input folders
-              -f, --format <fmt>      JPEG (default) or PNG
-              -q, --quality <1-100>   JPEG quality (default: 100)
-              -p, --pattern <pat>     File names (default: '{original}_{index}'); tokens: {original}, {index},
-                                      {index:02}, {year}, {date}, {total}
-
-            Finding photos:
-              -s, --sensitivity <0-100>  Detection sensitivity (default: 50)
-              --min-size <percent>    Smallest photo, as % of the scan (default: 1, as in the app)
-              --max-size <percent>    Largest photo, as % of the scan (default: 90)
-              --min-photos <n>        Flag scans with fewer photos (default: 1)
-              --max-photos <n>        Flag scans with more photos (default: no limit)
-              --auto-tune [mode]      Search for better detection settings: mismatch (scans outside
-                                      --min/--max-photos; the mode when none is given), always,
-                                      low-coverage or off. Default: low-coverage with --project, else off
-              --min-coverage <percent>  What counts as low coverage (default: 50)
-              --copy-undetected <dir> Copy scans where no photo was found to this folder
-
-            Photos:
-              --no-restore            Don't restore colours (white balance, contrast, faded colours)
-              --no-dust               Don't remove dust and scratches
-              --trim-borders          Leave out prints' white borders (photos without one are kept whole)
-              --no-orient             Don't turn photos upright automatically
-              --year <YYYY>           Year taken, written to the photos' metadata and {year}
-              --date <YYYY-MM-DD>     Date taken, written to the metadata and {date}
-              --desc <text>           Description written to the metadata
-              --photographer <name>   Photographer written to the metadata
-
-            Other:
-              -j, --threads <n>       Scans processed in parallel (default: half the CPU cores, up to 4)
-              -y, --yes               Never ask questions (e.g. whether to auto-tune afterwards)
-              -v, --verbose           Show every photo found
-              --check-update          Check for a newer version
-              --version               Show the version
-              -h, --help              Show this help
-
-            Examples:
-              PhotoCropperCli D:\Scans -r
-              PhotoCropperCli D:\Scans -o D:\Photos -f PNG --auto-tune
-              PhotoCropperCli --project D:\Albums\Grandma D:\NewScans
-              PhotoCropperCli D:\Scans --stage crop -o D:\Cropped
-              PhotoCropperCli D:\OldPhotos --stage restore --year 1975
-
-            Older option names (--tolerance, --canny-low, --always-auto-tune, --no-restore-colors, ...)
-            still work.
-
-            Acknowledgements & Licenses:
-              PhotoCropper is licensed under GNU General Public License v3.0.
-              AI Face Detection uses YuNet (face_detection_yunet_2023mar.onnx)
-              developed by Shiqi Yu & OpenCV Zoo (Apache License 2.0).
-            """);
-
+        using Stream stream = typeof(CommandLineParser).Assembly.GetManifestResourceStream(HelpResource)
+            ?? throw new InvalidOperationException($"The help text ({HelpResource}) is missing from the program.");
+        using var reader = new StreamReader(stream);
+        Console.Write(reader.ReadToEnd());
     }
+
+    private const string HelpResource = "PhotoCropper.Cli.Help.txt";
 
     public static void PrintVersion()
     {

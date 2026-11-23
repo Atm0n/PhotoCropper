@@ -11,13 +11,11 @@ using PhotoCropper.Core.Workspace;
 
 using PhotoCropper.Gui.Services;
 using PhotoCropper.Gui.ViewModels;
-using System.Diagnostics.CodeAnalysis;
 
 namespace PhotoCropper.Gui;
 
 
-[SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Avalonia Window lifecycle is managed by OnClosed override")]
-internal sealed partial class MainWindow : Window
+internal sealed partial class MainWindow : Window, IDisposable
 {
     private readonly ScanSessionManager _sessionManager = new();
     private int CurrentIndex
@@ -32,7 +30,8 @@ internal sealed partial class MainWindow : Window
     private bool isComparingRaw;
     private readonly CropsStageViewModel _cropsVm;
     private bool _isNavigating => _cropsVm.IsNavigating;
-    private CancellationTokenSource? _activeOperationCts;
+    /// <summary>Cancels the running operation (its token source belongs to the operation, which disposes it).</summary>
+    private Func<Task>? _cancelActiveOperation;
 
     public MainWindow() : this(new Naps2ScannerService())
     {
@@ -105,15 +104,15 @@ internal sealed partial class MainWindow : Window
         txtLoadingText.Text = statusText;
         lblStatus.Text = statusText;
 
-        var cts = timeout.HasValue
+        // Disposed when the operation ends, unless it is abandoned: the runner then owns it.
+        CancellationTokenSource? ownedCts = timeout.HasValue
             ? new CancellationTokenSource(timeout.Value)
             : new CancellationTokenSource();
-        _activeOperationCts = cts;
-
-        bool abandoned = false;
-
         try
         {
+            var cts = ownedCts;
+            _cancelActiveOperation = cts.CancelAsync;
+
             // On cancel, keep the overlay up (showing "Cancelling...") until the operation actually stops,
             // so a second operation can't start on top of it.
             var outcome = await CancellableOperationRunner.RunAsync(action, cts, CancellationGracePeriod, () =>
@@ -126,7 +125,7 @@ internal sealed partial class MainWindow : Window
             {
                 // The operation ignores cancellation (e.g. a hung scanner driver) and was left running;
                 // the runner now owns the CTS. Callers must discard results from a cancelled token.
-                abandoned = true;
+                ownedCts = null;
                 throw new OperationCanceledException(cts.Token);
             }
 
@@ -149,16 +148,11 @@ internal sealed partial class MainWindow : Window
         }
         finally
         {
-            _activeOperationCts = null;
+            _cancelActiveOperation = null;
             btnCancelLoading.IsVisible = false;
             pnlLoadingOverlay.IsVisible = false;
             isLoading = false;
-
-            // An abandoned operation still holds the token, so its source is disposed when it ends.
-            if (!abandoned)
-            {
-                cts.Dispose();
-            }
+            ownedCts?.Dispose();
         }
     }
 
@@ -178,7 +172,7 @@ internal sealed partial class MainWindow : Window
     {
         btnCancelLoading.IsEnabled = false;
         txtLoadingText.Text = LocalizationService.GetString(ResourceKeys.TxtCancelling, "Cancelling...");
-        _activeOperationCts?.Cancel();
+        _cancelActiveOperation?.Invoke();
     }
 
     private async void MenuUndo_Click(object? sender, RoutedEventArgs e) => await PerformUndoAsync();
@@ -351,7 +345,7 @@ internal sealed partial class MainWindow : Window
             {
                 btnCancelLoading.IsEnabled = false;
                 txtLoadingText.Text = LocalizationService.GetString(ResourceKeys.TxtCancelling, "Cancelling...");
-                _activeOperationCts?.CancelAsync();
+                _cancelActiveOperation?.Invoke();
                 e.Handled = true;
                 return true;
             }
@@ -464,12 +458,23 @@ internal sealed partial class MainWindow : Window
         }
 
         SettingsManager.Instance.Save();
+        _projectLock?.Dispose();
 
         base.OnClosed(e);
         ShowScan(null);
         _refineVm.Reject();
         _reviewVm.Close();
         _cropsVm.ClearPhotos();
+        Dispose();
+    }
+
+    private bool _disposed;
+
+    /// <summary>Frees the scanner, the undo history, the open scans and the stages' images. Closing the window does this.</summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
         _scannerService.Dispose();
         undoHistory.Dispose();
         _sessionManager.Dispose();

@@ -62,6 +62,38 @@ public sealed class FolderPipelineMigrationTests : IDisposable
     }
 
     [Fact]
+    public void LoadSession_OldProject_ShouldDetectOrientationAgainUnlessTurnedByHand()
+    {
+        var legacy = new WorkspaceSessionState { Version = "1.0" };
+        var entry = new WorkspaceScanEntry { RelativePath = "RawScans/scan_0001.png" };
+        entry.SetFinalCrops([
+            new WorkspaceCropData { CenterX = 100, CenterY = 100, Width = 80, Height = 60, AutoRotationDegrees = 0 },
+            new WorkspaceCropData { CenterX = 300, CenterY = 100, Width = 80, Height = 60, AutoRotationDegrees = 180, RotationDegrees = 90 },
+        ]);
+        legacy.Scans.Add(entry);
+        Directory.CreateDirectory(_workDir);
+        File.WriteAllText(ProjectWorkspaceService.GetSessionFilePath(_workDir), System.Text.Json.JsonSerializer.Serialize(legacy));
+
+        var crops = ProjectWorkspaceService.LoadSession(_workDir)!.Scans[0].FinalCrops;
+
+        crops[0].AutoRotationDegrees.ShouldBeNull();       // detected again on restore
+        crops[1].AutoRotationDegrees.ShouldBe(180);        // turned by hand: kept as the user saw it
+        crops[1].RotationDegrees.ShouldBe(90);
+    }
+
+    [Fact]
+    public void LoadSession_CurrentProject_ShouldKeepSavedOrientation()
+    {
+        var session = WorkspaceSessionState.CreateNew();
+        var entry = new WorkspaceScanEntry { RelativePath = "RawScans/scan_0001.png" };
+        entry.SetFinalCrops([new WorkspaceCropData { CenterX = 100, CenterY = 100, Width = 80, Height = 60, AutoRotationDegrees = 90 }]);
+        session.Scans.Add(entry);
+        ProjectWorkspaceService.SaveSession(_workDir, session);
+
+        ProjectWorkspaceService.LoadSession(_workDir)!.Scans[0].FinalCrops[0].AutoRotationDegrees.ShouldBe(90);
+    }
+
+    [Fact]
     public void LoadSession_NewProject_ShouldNeverMovePipelineFiles()
     {
         var session = WorkspaceSessionState.CreateNew();

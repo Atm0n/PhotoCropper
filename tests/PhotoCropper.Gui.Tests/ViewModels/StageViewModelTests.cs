@@ -1,4 +1,5 @@
 using OpenCvSharp;
+using PhotoCropper.Core.Extraction;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
@@ -20,7 +21,7 @@ public sealed class StageViewModelTests : IDisposable
         _host = new FakeHost(_workDir, WorkspaceSessionState.CreateNew());
     }
 
-    private ProjectPhoto AddCroppedPhoto(string scanName, bool restoreColors = false)
+    private ProjectPhoto AddCroppedPhoto(string scanName, bool restoreColors = false, Scalar? colour = null)
     {
         string scanPath = Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), scanName);
         using (var scan = new Mat(200, 200, MatType.CV_8UC3)) { scan.SetTo(new Scalar(230, 230, 230)); Cv2.ImWrite(scanPath, scan); }
@@ -28,7 +29,7 @@ public sealed class StageViewModelTests : IDisposable
         _host.Workspace!.Scans.Add(entry);
 
         using var photo = new Mat(40, 60, MatType.CV_8UC3);
-        photo.SetTo(new Scalar(90, 120, 150));
+        photo.SetTo(colour ?? new Scalar(90, 120, 150)); // warm brown: a sepia print
         var crop = new WorkspaceCropData { CenterX = 50, CenterY = 50, Width = 60, Height = 40 };
         var saved = PhotoPipelineService.SaveCroppedPhotos(_workDir, _host.Workspace, entry, [new CroppedPhotoInput(photo, crop)],
             new RestorationSettings { RestoreColors = restoreColors })[0];
@@ -77,6 +78,7 @@ public sealed class StageViewModelTests : IDisposable
         File.Exists(vm.Photos[0].Photo.Final!.GetFullPath(_workDir)).ShouldBeTrue();
         vm.ExportCommand.CanExecute(null).ShouldBeFalse();
         _host.Saves.ShouldBeGreaterThan(0);
+        _host.Notified.ShouldHaveSingleItem().Succeeded.ShouldBeTrue();
     }
 
     [Fact]
@@ -150,7 +152,7 @@ public sealed class StageViewModelTests : IDisposable
         vm.Photos[2].IsMarked = true;
 
         vm.ApplyPresetToMarkedCommand.Execute("bw");
-        vm.SetTrimForMarkedCommand.Execute("on");
+        vm.MarkedTrimWhiteBorders = true;
 
         foreach (int i in new[] { 0, 2 })
         {
@@ -162,8 +164,135 @@ public sealed class StageViewModelTests : IDisposable
         vm.ApplyPresetToMarkedCommand.Execute("sepia");
         vm.Photos[0].Photo.Restoration.ShouldBe(RestorationSettings.Sepia with { TrimWhiteBorders = true });
 
-        vm.SetTrimForMarkedCommand.Execute("off");
+        vm.MarkedTrimWhiteBorders = false;
         vm.Photos[2].TrimWhiteBorders.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void FinishStage_BulkCheckboxes_ShouldShowAllNoneOrSomeAndTurnOnForAll()
+    {
+        for (int i = 1; i <= 3; i++) AddCroppedPhoto($"scan_000{i}.png");
+        using var vm = Finish();
+        vm.Refresh();
+        vm.MarkAllCommand.Execute(null);
+        vm.MarkedRestoreColors.ShouldBe(false);
+
+        vm.Photos[1].RestoreColors = true;              // changed on one card
+        vm.MarkedRestoreColors.ShouldBeNull();          // some: a dash
+
+        vm.MarkedRestoreColors = false;                 // a click on the dash (the checkbox may send false) ...
+        vm.Photos.ShouldAllBe(p => p.RestoreColors);    // ... turns it on for all
+        vm.MarkedRestoreColors.ShouldBe(true);
+
+        vm.MarkedRemoveDust = true;
+        vm.Photos.ShouldAllBe(p => p.RemoveDust);
+        vm.MarkedRemoveDust = false;                    // all had it: off for all
+        vm.Photos.ShouldAllBe(p => !p.RemoveDust);
+
+        vm.Photos[0].IsMarked = false;                  // the state follows the selection
+        vm.Photos[0].RestoreColors = false;
+        vm.MarkedRestoreColors.ShouldBe(true);
+    }
+
+    [Fact]
+    public async Task FinishStage_Rotate_ShouldTurnThePhotoAndTellTheScan()
+    {
+        var photo = AddCroppedPhoto("scan_0001.png");                     // 60 x 40
+        using var vm = Finish();
+        vm.Refresh();
+        await vm.WhenThumbnailsLoaded();
+        vm.SelectedPhoto = vm.Photos[0];
+
+        await vm.RotateClockwiseCommand.ExecuteAsync(null);
+
+        using (var cropped = Cv2.ImRead(photo.Cropped!.GetFullPath(_workDir)))
+        {
+            cropped.Width.ShouldBe(40);
+            cropped.Height.ShouldBe(60);
+        }
+        photo.Crop!.RotationDegrees.ShouldBe(90);
+        _host.CropsChanged.ShouldBe([photo.ScanRelativePath!]);           // Crops reloads the scan's boxes
+        _host.Saves.ShouldBeGreaterThan(0);
+        vm.Photos[0].IsStale.ShouldBeTrue();
+
+        vm.Photos[0].IsMarked = true;                                     // and several at once from the bar
+        await vm.RotateMarkedCommand.ExecuteAsync(null);
+        photo.Crop.RotationDegrees.ShouldBe(180);
+    }
+
+    [Fact]
+    public void FinishStage_ManualTrim_ShouldBelongToItsPhoto()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        AddCroppedPhoto("scan_0002.png");
+        using var vm = Finish();
+        vm.Refresh();
+        vm.SelectedPhoto = vm.Photos[0];
+
+        vm.IsTrimMode = true;                                           // Adjust turns trimming on
+        vm.Photos[0].TrimWhiteBorders.ShouldBeTrue();
+        vm.TrimPreview.ShouldNotBeNull();
+        vm.SetManualTrim(new System.Drawing.RectangleF(0.1f, 0.2f, 0.5f, 0.6f));
+        var manual = vm.Photos[0].ManualTrim.ShouldNotBeNull();
+        manual.Left.ShouldBe(0.1, 1e-6);
+        manual.Bottom.ShouldBe(0.8, 1e-6);
+
+        vm.Photos[0].ApplyPreset("bw");                                  // a preset keeps it
+        vm.Photos[0].ManualTrim.ShouldBe(manual);
+        vm.CopySettingsToAllCommand.Execute(null);                       // other photos get the settings, not the frame
+        vm.Photos[1].TrimWhiteBorders.ShouldBeTrue();
+        vm.Photos[1].ManualTrim.ShouldBeNull();
+
+        vm.ResetTrimCommand.Execute(null);                               // back to automatic
+        vm.Photos[0].ManualTrim.ShouldBeNull();
+        vm.Photos[0].TrimWhiteBorders = false;                           // no trim: nothing to adjust
+        vm.IsTrimMode.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task FinishStage_PhotoTypes_ShouldFilterTheGridAndSuggestPresets()
+    {
+        AddCroppedPhoto("scan_0001.png");                                        // sepia
+        AddCroppedPhoto("scan_0002.png", colour: new Scalar(128, 128, 128));     // black and white
+        AddCroppedPhoto("scan_0003.png");                                        // sepia
+        using var vm = Finish();
+        vm.Refresh();
+        await vm.WhenThumbnailsLoaded();
+
+        vm.Photos.Select(p => p.Style).ShouldBe([PhotoStyle.Sepia, PhotoStyle.BlackAndWhite, PhotoStyle.Sepia]);
+        vm.IsSortingStyles.ShouldBeFalse();
+        vm.StyleFilters.Select(f => (f.Style, f.Count)).ShouldBe([(null, 3), (PhotoStyle.BlackAndWhite, 1), (PhotoStyle.Sepia, 2)]);
+
+        vm.ShowStyleCommand.Execute(vm.StyleFilters.Single(f => f.Style == PhotoStyle.Sepia));
+        vm.VisiblePhotos.Count.ShouldBe(2);
+        vm.VisiblePhotos.ShouldAllBe(p => p.Style == PhotoStyle.Sepia);
+
+        vm.MarkAllCommand.Execute(null);                                          // only the photos shown
+        vm.MarkedCount.ShouldBe(2);
+        vm.Photos[1].IsMarked.ShouldBeFalse();
+
+        vm.ShowStyleCommand.Execute(vm.StyleFilters.First());                     // all again
+        vm.VisiblePhotos.Count.ShouldBe(3);
+        vm.MarkAllCommand.Execute(null);
+        vm.ApplySuggestedToMarkedCommand.Execute(null);
+        vm.Photos[0].Photo.Restoration.ShouldBe(RestorationSettings.Sepia);
+        vm.Photos[1].Photo.Restoration.ShouldBe(RestorationSettings.BlackAndWhite);
+    }
+
+    [Fact]
+    public async Task FinishStage_ChangingType_ShouldUnmarkPhotosItHides()
+    {
+        AddCroppedPhoto("scan_0001.png");
+        AddCroppedPhoto("scan_0002.png", colour: new Scalar(128, 128, 128));
+        using var vm = Finish();
+        vm.Refresh();
+        await vm.WhenThumbnailsLoaded();
+        vm.MarkAllCommand.Execute(null);
+
+        vm.ShowStyleCommand.Execute(vm.StyleFilters.Single(f => f.Style == PhotoStyle.BlackAndWhite));
+
+        vm.MarkedCount.ShouldBe(1);
+        vm.Photos[1].IsMarked.ShouldBeTrue();
     }
 
     [Fact]
@@ -653,10 +782,11 @@ public sealed class StageViewModelTests : IDisposable
 
         vm.Refresh();
 
-        SpinWait.SpinUntil(() => vm.PreviewBoxes != null, TimeSpan.FromSeconds(5)).ShouldBeTrue();
+        // The boxes and the row's count are set one after the other by the background preview: wait for both.
+        string twoPhotos = LocalizationService.Format(ResourceKeys.ScanStatusPhotos, "{0} photos", 2);
+        SpinWait.SpinUntil(() => vm.PreviewBoxes != null && vm.Scans[0].PhotosText == twoPhotos, TimeSpan.FromSeconds(5)).ShouldBeTrue();
         _host.PrepareCalls.ShouldBe(1);
         vm.PreviewBoxes!.Count.ShouldBe(2);
-        vm.Scans[0].PhotosText.ShouldBe(LocalizationService.Format(ResourceKeys.ScanStatusPhotos, "{0} photos", 2));
     }
 
     public void Dispose()
@@ -704,7 +834,11 @@ public sealed class StageViewModelTests : IDisposable
         public FinalRenderOptions GetRenderOptions() => new();
         public async Task<bool> RunBusyAsync(string message, Func<Task> work) { await work(); return true; }
         public void SaveWorkspace() => Saves++;
+        public List<string> CropsChanged { get; } = [];
+        public void ScanCropsChanged(string scanRelativePath) => CropsChanged.Add(scanRelativePath);
         public void ShowStatus(string message) { }
+        public List<(string Message, bool Succeeded)> Notified { get; } = [];
+        public void NotifyExportCompleted(string message, bool succeeded) => Notified.Add((message, succeeded));
         public void OpenFolder(string path) { }
     }
 }

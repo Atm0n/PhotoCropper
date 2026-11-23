@@ -2,6 +2,7 @@ using OpenCvSharp;
 using NAPS2.Images;
 using NAPS2.Images.ImageSharp;
 using NAPS2.Scan;
+using PhotoCropper.Core.Common;
 
 namespace PhotoCropper.Core.Scanning;
 
@@ -110,7 +111,7 @@ public sealed class Naps2ScannerService : IScannerService
                         image.Save(ms, ImageFileFormat.Png);
                         var bytes = ms.ToArray();
                         using var raw = Cv2.ImDecode(bytes, ImreadModes.AnyColor);
-                        var bgrMat = PhotoCropperEngine.NormalizeToBgr(raw);
+                        var bgrMat = ImageIo.NormalizeToBgr(raw);
                         mats.Add(bgrMat);
                     }
                 }

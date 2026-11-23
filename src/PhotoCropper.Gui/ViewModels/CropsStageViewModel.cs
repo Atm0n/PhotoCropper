@@ -263,13 +263,24 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
             string processing = LocalizationService.GetString(ResourceKeys.ProcessingScan, "Processing...");
             await _host.RunBusyAsync($"{processing} {fileName}", async ct =>
             {
-                var engine = await Task.Run(session.Activate, ct);
-                if (ShouldAutoTune(session, engine))
+                // The look-ahead and the Scan stage's preview may be preparing this same scan: wait for them, so two
+                // detections never fill one engine's photos at once (which listed each photo twice).
+                PhotoCropperEngine engine;
+                await _lookaheadLock.WaitAsync(ct);
+                try
                 {
-                    var result = await Task.Run(() => engine.AutoTune(), ct);
-                    if (result.Improved || result.PhotoCount > 0) session.IsModified = true;
+                    engine = await Task.Run(session.Activate, ct);
+                    if (ShouldAutoTune(session, engine))
+                    {
+                        var result = await Task.Run(() => engine.AutoTune(), ct);
+                        if (result.Improved || result.PhotoCount > 0) session.IsModified = true;
+                    }
+                    session.IsAutoTuned = true;
                 }
-                session.IsAutoTuned = true;
+                finally
+                {
+                    _lookaheadLock.Release();
+                }
                 ShowLoaded(engine, fileName);
             });
         }
