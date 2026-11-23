@@ -16,10 +16,10 @@
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
   </PropertyGroup>
 
-  <!-- Publish size. The app is English-only, so the translated resources NuGet packages bring along are dropped,
+  <!-- Publish size. Libraries' own translations are kept only for the app's languages (Assets/i18n: add new ones here too),
        and a single-file exe is compressed (it was ~3x bigger without it). -->
   <PropertyGroup>
-    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <SatelliteResourceLanguages>en;es;ca</SatelliteResourceLanguages>
     <EnableCompressionInSingleFile Condition="'$(PublishSingleFile)' == 'true'">true</EnableCompressionInSingleFile>
   </PropertyGroup>
 
