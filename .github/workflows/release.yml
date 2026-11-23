@@ -89,6 +89,7 @@ jobs:
           TARGET_PLATFORM: ${{ matrix.platform }}
           REF_NAME: ${{ github.ref_name }}
         run: |
+          # No ReadyToRun: it made the two programs ~80 MB bigger for ~0.4 s quicker app start-up.
           # Publish GUI
           dotnet publish src/PhotoCropper.Gui/PhotoCropper.Gui.csproj `
             -c Release `
@@ -96,7 +97,6 @@ jobs:
             --self-contained true `
             -p:PublishSingleFile=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
-            -p:PublishReadyToRun=true `
             -o ./publish/gui/$env:TARGET_RUNTIME
 
           # Publish CLI
@@ -106,7 +106,6 @@ jobs:
             --self-contained true `
             -p:PublishSingleFile=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
-            -p:PublishReadyToRun=true `
             -o ./publish/cli/$env:TARGET_RUNTIME
 
           # Remove any loose PDB symbols, Linux dbg symbols, or XML files from publish directories
