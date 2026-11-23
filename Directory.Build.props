@@ -16,6 +16,21 @@
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
   </PropertyGroup>
 
+  <!-- Publish size. The app is English-only, so the translated resources NuGet packages bring along are dropped,
+       and a single-file exe is compressed (it was ~3x bigger without it). -->
+  <PropertyGroup>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <EnableCompressionInSingleFile Condition="'$(PublishSingleFile)' == 'true'">true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <!-- OpenCV's ffmpeg plugin (~40 MB) only serves VideoCapture/VideoWriter, which the app never uses;
+       OpenCV loads it lazily, so image reading and the dnn face model work without it. -->
+  <Target Name="DropUnusedNativeLibrariesFromPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="$([System.String]::Copy('%(Filename)').StartsWith('opencv_videoio_ffmpeg'))" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="RemoveSymbolsAndDocFromPublish" AfterTargets="Publish" Condition="'$(Configuration)' == 'Release'">
     <ItemGroup>
       <_PublishSymbolsToDelete Include="$(PublishDir)**\*.pdb" />
