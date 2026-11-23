@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-11-23
+
 ### Added
 - **Tutorial** ([docs/TUTORIAL.md](docs/TUTORIAL.md)): a step-by-step walkthrough of a whole album, from scanning to exported photos, with screenshots of every stage. The README now shows the app at the top. All sample photos are public domain.
 - **Rotate in Finish**: ↺ ↻ in the editor (or R), and "Rotate 90°" for the selected photos, for the few photos whose orientation the Crops stage missed. The photo itself turns (losslessly), and so does its box on the scan, so Crops shows it the same way; its repair strokes and hand-set trim turn with it.
