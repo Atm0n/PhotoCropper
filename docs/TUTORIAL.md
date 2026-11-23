@@ -64,11 +64,11 @@ Most scans need nothing. The stage bar's **"3 of 3 scans checked"** only counts 
 by the detector; you don't have to open every one, and scans you never open are cropped automatically when you
 go to Finish.
 
-Look at the thumbnails on the right. In this page, two things are wrong:
+Look at the boxes and the thumbnails on the right. In this page, one thing is wrong: **the church's box cuts off
+its sky** (thumbnail #3). The pale sky was taken for the page. See the next section.
 
-- **#2 is upside down.** Automatic orientation gets most photos right (it looks for faces, sky and landscape),
-  but not all. Select the photo and click **Rotate 90°** (or press `R`) until it's upright.
-- **Box 4 cuts off the church's sky.** The pale sky was taken for the page. See the next section.
+If a photo comes out sideways or upside down, select it and click **Rotate 90°** (or press `R`) until it's
+upright. Automatic orientation gets most photos right (it looks for faces, sky and landscape), but not all.
 
 ### Fix a box that's wrong
 
@@ -88,19 +88,15 @@ boxes are just a thin line around their photo, so their edges stay easy to see).
 
 ### When no photos are found: draw the boxes yourself
 
-Some pages defeat the automatic detection. Here the photos are on a dark grey page, and nothing is found:
+Most pages work even when they're far from plain white. Here the photos are on a dark grey page, and all four
+are found:
 
-![A dark album page with four photos and "No photos detected"](images/04-crops-no-photos.webp)
+![A dark grey album page with all four photos boxed](images/04-crops-dark-page.webp)
 
-First try **Auto-Tune**, which searches for detection settings that work on this scan. If that doesn't help,
-**click and drag** on the scan to draw a box around each photo. The box doesn't have to be exact; you can fix
-its corners afterwards.
-
-![One box drawn by hand around the first photo](images/05-crops-manual-box.webp)
-
-![All four photos boxed by hand](images/06-crops-manual-all.webp)
-
-Here #3 came out sideways; **Rotate 90°** fixes it as before.
+Some pages still defeat the automatic detection. First try **clicking each photo**, as above. Then try
+**Auto-Tune**, which searches for detection settings that work on this scan. If that doesn't help, **click and
+drag** on the scan to draw a box around each photo. The box doesn't have to be exact; you can fix its corners
+afterwards.
 
 ### Photos stuck in sideways
 
