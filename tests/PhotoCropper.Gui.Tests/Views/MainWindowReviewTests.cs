@@ -22,7 +22,7 @@ public sealed class MainWindowReviewTests : IDisposable
     }
 
     [Fact]
-    public void ReviewPhotoItem_RecordProperties_ShouldBeCorrect()
+    public void ReviewPhotoItemRecordPropertiesShouldBeCorrect()
     {
         var item = new ReviewPhotoItem(1, 3);
         item.ScanIndex.ShouldBe(1);
@@ -30,7 +30,7 @@ public sealed class MainWindowReviewTests : IDisposable
     }
 
     [Fact]
-    public void FlattenReviewItems_ShouldMapAllScansAndPhotosCorrectly()
+    public void FlattenReviewItemsShouldMapAllScansAndPhotosCorrectly()
     {
         var options = new DetectionOptions();
         using var s1 = new ScanSessionItem(_scan1, options);
@@ -55,9 +55,6 @@ public sealed class MainWindowReviewTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-        {
-            try { Directory.Delete(_tempDir, true); } catch { }
-        }
+        TestDirectory.TryDelete(_tempDir);
     }
 }

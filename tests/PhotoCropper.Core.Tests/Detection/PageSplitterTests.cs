@@ -33,7 +33,7 @@ public sealed class PageSplitterTests : IDisposable
 
     [Theory]
     [MemberData(nameof(Settings))]
-    public void Split_AWholeLightAlbumPage_ShouldGiveThePhotosOnIt(double tolerance, double minArea)
+    public void SplitAWholeLightAlbumPageShouldGiveThePhotosOnIt(double tolerance, double minArea)
     {
         string path = Path.Combine(_dir, "light_page.png");
         TestImageFactory.CreateLightAlbumPageScan(path);
@@ -52,7 +52,7 @@ public sealed class PageSplitterTests : IDisposable
     }
 
     [Fact]
-    public void Split_ALargeSinglePhoto_ShouldLeaveItWhole()
+    public void SplitALargeSinglePhotoShouldLeaveItWhole()
     {
         // One big photo with structure all over and no paper in it: nothing to look inside.
         using Mat scan = new(2000, 1600, MatType.CV_8UC3, Scalar.All(244));
@@ -68,7 +68,7 @@ public sealed class PageSplitterTests : IDisposable
     }
 
     [Fact]
-    public void LightPageColour_ACreamPageOnTheBed_ShouldGiveItsPaper()
+    public void LightPageColourACreamPageOnTheBedShouldGiveItsPaper()
     {
         string path = Path.Combine(_dir, "light_page_colour.png");
         TestImageFactory.CreateLightAlbumPageScan(path);
@@ -87,7 +87,7 @@ public sealed class PageSplitterTests : IDisposable
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void LightPageColour_NotALightPage_ShouldGiveNothing(bool loosePrints)
+    public void LightPageColourNotALightPageShouldGiveNothing(bool loosePrints)
     {
         // Loose prints on the bed, and a dark grey page: neither is a light page to use as the background.
         string path = Path.Combine(_dir, loosePrints ? "not_light_prints.png" : "not_light_dark_page.png");
@@ -101,7 +101,7 @@ public sealed class PageSplitterTests : IDisposable
     }
 
     [Fact]
-    public void Split_ABoxSmallerThanAPage_ShouldBeLeftAsItIs()
+    public void SplitABoxSmallerThanAPageShouldBeLeftAsItIs()
     {
         string path = Path.Combine(_dir, "light_page_small.png");
         TestImageFactory.CreateLightAlbumPageScan(path);

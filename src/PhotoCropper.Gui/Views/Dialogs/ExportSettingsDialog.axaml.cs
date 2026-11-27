@@ -78,7 +78,7 @@ internal sealed partial class ExportSettingsDialog : Window
         SyncNamingPresetDropdown(settings.FileNamePattern);
 
         // Metadata
-        txtMetadataYear?.Text = settings.DefaultYear?.ToString() ?? "";
+        txtMetadataYear?.Text = settings.DefaultYear?.ToString(CultureInfo.InvariantCulture) ?? "";
         txtMetadataDesc?.Text = settings.DefaultDescription ?? "";
         chkApplyYearToAll?.IsChecked = settings.ApplyYearToAllScans;
 

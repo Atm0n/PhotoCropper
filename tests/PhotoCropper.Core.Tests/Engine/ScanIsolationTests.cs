@@ -19,7 +19,7 @@ public sealed class ScanIsolationTests : IDisposable
     }
 
     [Fact]
-    public void CurrentOptions_ShouldBeIndependentSnapshots()
+    public void CurrentOptionsShouldBeIndependentSnapshots()
     {
         using var engine1 = new PhotoCropperEngine(_scanPath);
         using var engine2 = new PhotoCropperEngine(_scanPath);
@@ -41,7 +41,7 @@ public sealed class ScanIsolationTests : IDisposable
     }
 
     [Fact]
-    public void ApplyOptions_ShouldOnlyModifyTargetEngine()
+    public void ApplyOptionsShouldOnlyModifyTargetEngine()
     {
         using var engine1 = new PhotoCropperEngine(_scanPath);
         using var engine2 = new PhotoCropperEngine(_scanPath);
@@ -67,9 +67,6 @@ public sealed class ScanIsolationTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-        {
-            try { Directory.Delete(_tempDir, true); } catch { }
-        }
+        TestDirectory.TryDelete(_tempDir);
     }
 }

@@ -45,7 +45,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_PrintWithABorder_ShouldBeThePictureInside()
+    public void GetWhiteBorderRectPrintWithABorderShouldBeThePictureInside()
     {
         using var picture = Picture(400, 300, 1);
         using var print = Print(picture, 24, 24, 24, 24);
@@ -57,7 +57,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_PolaroidWithAWideBottomEdge_ShouldLeaveItOut()
+    public void GetWhiteBorderRectPolaroidWithAWideBottomEdgeShouldLeaveItOut()
     {
         using var picture = Picture(300, 300, 2);
         // A Polaroid's proportions: the bottom edge is about a fifth of the print's height.
@@ -81,7 +81,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_PrintOnAnAlbumPage_ShouldLeaveOutPageAndBorder()
+    public void GetWhiteBorderRectPrintOnAnAlbumPageShouldLeaveOutPageAndBorder()
     {
         using var picture = Picture(400, 300, 7);
         using var print = Print(picture, 20, 20, 20, 20);
@@ -94,7 +94,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_WornCorner_ShouldStillFindTheBorder()
+    public void GetWhiteBorderRectWornCornerShouldStillFindTheBorder()
     {
         using var picture = Picture(400, 300, 8);
         using var print = Print(picture, 24, 24, 24, 24);
@@ -108,7 +108,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_PaleBackgroundAlongOneEdge_ShouldBeNull()
+    public void GetWhiteBorderRectPaleBackgroundAlongOneEdgeShouldBeNull()
     {
         // A portrait's pale studio background along the top, and only a light sliver of the scan on the other sides.
         using var picture = Picture(400, 300, 9);
@@ -119,7 +119,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_PhotoWithoutABorder_ShouldBeNull()
+    public void GetWhiteBorderRectPhotoWithoutABorderShouldBeNull()
     {
         using var picture = Picture(400, 300, 3);
 
@@ -127,7 +127,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_BrightSkyAlongOneEdgeOnly_ShouldNotBeTakenForABorder()
+    public void GetWhiteBorderRectBrightSkyAlongOneEdgeOnlyShouldNotBeTakenForABorder()
     {
         // A photo whose top third is overcast sky: light at the top corners, dark at the bottom ones.
         using var photo = Picture(400, 300, 4);
@@ -137,7 +137,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_VignetteFadingToWhite_ShouldNotBeTakenForABorder()
+    public void GetWhiteBorderRectVignetteFadingToWhiteShouldNotBeTakenForABorder()
     {
         // A portrait whose edges fade gradually into white, as old studio portraits do: no clean edge, no border.
         using var photo = Picture(300, 400, 6);
@@ -182,7 +182,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_PrintOnADarkPageInALooseBox_ShouldBeThePictureInside()
+    public void GetWhiteBorderRectPrintOnADarkPageInALooseBoxShouldBeThePictureInside()
     {
         using var picture = Picture(400, 300, 10);
         using var print = Print(picture, 24, 24, 24, 24);
@@ -195,7 +195,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_TiltedPrintOnADarkPage_ShouldStayInsideTheBorder()
+    public void GetWhiteBorderRectTiltedPrintOnADarkPageShouldStayInsideTheBorder()
     {
         using var picture = Picture(400, 300, 11);
         using var print = Print(picture, 24, 24, 24, 24);
@@ -209,7 +209,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_PhotoWithoutABorderOnADarkPage_ShouldBeNull()
+    public void GetWhiteBorderRectPhotoWithoutABorderOnADarkPageShouldBeNull()
     {
         using var picture = Picture(400, 300, 12);
         using var crop = OnDarkPage(picture, 40);
@@ -218,7 +218,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_TiltedPrintInATightBox_ShouldFindThePictureDespiteDarkCorners()
+    public void GetWhiteBorderRectTiltedPrintInATightBoxShouldFindThePictureDespiteDarkCorners()
     {
         // Boxed tightly, a tilted print's border reaches the crop's edges, with wedges of dark page in its corners.
         using var picture = Picture(400, 300, 14);
@@ -233,7 +233,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_DarkVignetteCorners_ShouldNotBeTakenForABorder()
+    public void GetWhiteBorderRectDarkVignetteCornersShouldNotBeTakenForABorder()
     {
         // An old portrait: light all over, darkening into each corner. The dark corners touch the edges like page
         // wedges, but there is no border to find.
@@ -249,7 +249,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void GetWhiteBorderRect_DarkPhotoAroundALightSubject_ShouldBeNull()
+    public void GetWhiteBorderRectDarkPhotoAroundALightSubjectShouldBeNull()
     {
         // Dark all round its edges, with a white wall in the middle: no border, though nothing light touches the edges.
         using var photo = Picture(400, 300, 13);
@@ -281,7 +281,7 @@ public sealed class WhiteBorderTests : IDisposable
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void Render_TrimsTheBorderOnlyWhenAsked(bool trim)
+    public void RenderTrimsTheBorderOnlyWhenAsked(bool trim)
     {
         using var picture = Picture(400, 300, 7);
         using var print = Print(picture, 24, 24, 24, 24);
@@ -293,7 +293,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void Render_TrimsAfterRestoringColours()
+    public void RenderTrimsAfterRestoringColours()
     {
         using var picture = Picture(400, 300, 8);
         using var print = Print(picture, 24, 24, 24, 24);
@@ -309,7 +309,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void RenderKeepingBorder_ShowsTheWholePrintAndReportsThePicture()
+    public void RenderKeepingBorderShowsTheWholePrintAndReportsThePicture()
     {
         using var picture = Picture(400, 300, 9);
         using var print = Print(picture, 24, 24, 24, 24);
@@ -322,7 +322,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void Render_ManualTrim_ShouldKeepExactlyThatArea()
+    public void RenderManualTrimShouldKeepExactlyThatArea()
     {
         using var picture = Picture(400, 300, 10);
         using var print = Print(picture, 24, 24, 24, 24); // 448 x 348
@@ -337,7 +337,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void TrimArea_ShouldStayOnThePhotoAndConvertBothWays()
+    public void TrimAreaShouldStayOnThePhotoAndConvertBothWays()
     {
         new TrimArea { Left = -0.2, Top = 0.5, Right = 1.4, Bottom = 0.5 }.ToRect(200, 100).ShouldBe(new Rect(0, 50, 200, 10));
         var area = TrimArea.FromRect(new Rect(20, 10, 100, 50), 200, 100);
@@ -345,7 +345,7 @@ public sealed class WhiteBorderTests : IDisposable
     }
 
     [Fact]
-    public void Presets_ShouldNotTurnTrimmingOn()
+    public void PresetsShouldNotTurnTrimmingOn()
     {
         foreach (var name in new[] { "faded", "bw", "sepia", "dust", "none" })
         {
@@ -357,7 +357,7 @@ public sealed class WhiteBorderTests : IDisposable
 
     // The CLI's one-step batch trims the extracted photos themselves (and their boxes).
     [Fact]
-    public void Engine_TrimWhiteBorders_ShrinksPhotoAndBoxToThePicture()
+    public void EngineTrimWhiteBordersShrinksPhotoAndBoxToThePicture()
     {
         using var engine = new PhotoCropperEngine(BorderedPrintScan()) { AutoOrientPhotos = false };
         engine.DetectPhotos();

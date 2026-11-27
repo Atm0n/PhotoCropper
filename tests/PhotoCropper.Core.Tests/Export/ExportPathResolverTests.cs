@@ -14,7 +14,7 @@ public sealed class ExportPathResolverTests : IDisposable
     }
 
     [Fact]
-    public void ResolveOutputDirectory_WithCustomOutput_ShouldReturnCustomOutput()
+    public void ResolveOutputDirectoryWithCustomOutputShouldReturnCustomOutput()
     {
         string scanPath = Path.Combine(_tempDir, "sample.jpg");
         string customOutput = Path.Combine(_tempDir, "custom_cropped");
@@ -25,7 +25,7 @@ public sealed class ExportPathResolverTests : IDisposable
     }
 
     [Fact]
-    public void ResolveOutputDirectory_WithWorkspaceDirectory_ShouldReturnWorkspaceFinal()
+    public void ResolveOutputDirectoryWithWorkspaceDirectoryShouldReturnWorkspaceFinal()
     {
         string workDir = Path.Combine(_tempDir, "ProjectWorkDir");
         Directory.CreateDirectory(workDir);
@@ -37,7 +37,7 @@ public sealed class ExportPathResolverTests : IDisposable
     }
 
     [Fact]
-    public void ResolveOutputDirectory_InRawScansFolder_ShouldReturnSiblingFinal()
+    public void ResolveOutputDirectoryInRawScansFolderShouldReturnSiblingFinal()
     {
         string projectDir = Path.Combine(_tempDir, "MyScanProject");
         string rawDir = Path.Combine(projectDir, ProjectWorkspaceService.RawScansFolderName);
@@ -50,7 +50,7 @@ public sealed class ExportPathResolverTests : IDisposable
     }
 
     [Fact]
-    public void ResolveOutputDirectory_DefaultFolder_ShouldReturnChildCropped()
+    public void ResolveOutputDirectoryDefaultFolderShouldReturnChildCropped()
     {
         string scanFolder = Path.Combine(_tempDir, "Photos");
         Directory.CreateDirectory(scanFolder);
@@ -62,7 +62,7 @@ public sealed class ExportPathResolverTests : IDisposable
     }
 
     [Fact]
-    public void IsScanExported_WhenFilesExist_ShouldReturnTrue()
+    public void IsScanExportedWhenFilesExistShouldReturnTrue()
     {
         string scanPath = Path.Combine(_tempDir, "scan_family.jpg");
         string croppedDir = Path.Combine(_tempDir, "cropped");
@@ -77,7 +77,7 @@ public sealed class ExportPathResolverTests : IDisposable
     }
 
     [Fact]
-    public void IsScanExported_WhenNoFilesExist_ShouldReturnFalse()
+    public void IsScanExportedWhenNoFilesExistShouldReturnFalse()
     {
         string scanPath = Path.Combine(_tempDir, "scan_unexported.jpg");
 

@@ -15,7 +15,7 @@ public sealed class FaceModelFileTests : IDisposable
     }
 
     [Fact]
-    public void WriteModelAtomically_ShouldWriteCompleteFileAndLeaveNoTempFiles()
+    public void WriteModelAtomicallyShouldWriteCompleteFileAndLeaveNoTempFiles()
     {
         byte[] model = FakeModel();
         string target = Path.Combine(_tempDir, "model.onnx");
@@ -30,7 +30,7 @@ public sealed class FaceModelFileTests : IDisposable
     }
 
     [Fact]
-    public void WriteModelAtomically_ConcurrentWriters_ShouldEndWithACompleteModel()
+    public void WriteModelAtomicallyConcurrentWritersShouldEndWithACompleteModel()
     {
         // Simulates the GUI and CLI extracting the model at the same moment.
         byte[] model = FakeModel();
@@ -47,7 +47,7 @@ public sealed class FaceModelFileTests : IDisposable
     }
 
     [Fact]
-    public void WriteModelAtomically_ShouldReplaceATruncatedModel()
+    public void WriteModelAtomicallyShouldReplaceATruncatedModel()
     {
         byte[] model = FakeModel();
         string target = Path.Combine(_tempDir, "model.onnx");

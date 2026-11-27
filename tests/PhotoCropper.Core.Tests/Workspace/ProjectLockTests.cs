@@ -13,7 +13,7 @@ public sealed class ProjectLockTests : IDisposable
     }
 
     [Fact]
-    public void TryAcquire_ShouldRefuseAProjectThatIsAlreadyOpen()
+    public void TryAcquireShouldRefuseAProjectThatIsAlreadyOpen()
     {
         using (var first = ProjectLock.TryAcquire(_workDir))
         {
@@ -27,7 +27,7 @@ public sealed class ProjectLockTests : IDisposable
     }
 
     [Fact]
-    public void Dispose_ShouldLeaveNoLockFileBehind()
+    public void DisposeShouldLeaveNoLockFileBehind()
     {
         ProjectLock.TryAcquire(_workDir)!.Dispose();
         File.Exists(Path.Combine(_workDir, ProjectLock.FileName)).ShouldBeFalse();

@@ -53,42 +53,42 @@ public class PhotoStyleClassifierTests
     }
 
     [Fact]
-    public void Classify_GreyPrint_ShouldBeBlackAndWhite()
+    public void ClassifyGreyPrintShouldBeBlackAndWhite()
     {
         using var photo = Monochrome(g => new Scalar(g, g, g));
         PhotoStyleClassifier.Classify(photo).ShouldBe(PhotoStyle.BlackAndWhite);
     }
 
     [Fact]
-    public void Classify_SlightlyYellowedPrint_ShouldStillBeBlackAndWhite()
+    public void ClassifySlightlyYellowedPrintShouldStillBeBlackAndWhite()
     {
         using var photo = Monochrome(g => new Scalar(g * 0.93, g * 0.97, g));
         PhotoStyleClassifier.Classify(photo).ShouldBe(PhotoStyle.BlackAndWhite);
     }
 
     [Fact]
-    public void Classify_WarmTonedPrint_ShouldBeSepia()
+    public void ClassifyWarmTonedPrintShouldBeSepia()
     {
         using var photo = Monochrome(g => new Scalar(g * 0.62, g * 0.82, g));
         PhotoStyleClassifier.Classify(photo).ShouldBe(PhotoStyle.Sepia);
     }
 
     [Fact]
-    public void Classify_ColourPhoto_ShouldBeColour()
+    public void ClassifyColourPhotoShouldBeColour()
     {
         using var photo = Colourful(new Scalar(0, 0, 0), 0);
         PhotoStyleClassifier.Classify(photo).ShouldBe(PhotoStyle.Color);
     }
 
     [Fact]
-    public void Classify_ColourPrintFadedToRed_ShouldBeFadedColour()
+    public void ClassifyColourPrintFadedToRedShouldBeFadedColour()
     {
         using var photo = Colourful(new Scalar(110, 120, 220), 0.6);
         PhotoStyleClassifier.Classify(photo).ShouldBe(PhotoStyle.FadedColor);
     }
 
     [Fact]
-    public void Classify_SingleChannelOrEmpty_ShouldNotThrow()
+    public void ClassifySingleChannelOrEmptyShouldNotThrow()
     {
         using var grey = new Mat(50, 50, MatType.CV_8UC1, Scalar.All(100));
         using var empty = new Mat();
@@ -101,7 +101,7 @@ public class PhotoStyleClassifierTests
     [InlineData(PhotoStyle.Sepia)]
     [InlineData(PhotoStyle.FadedColor)]
     [InlineData(PhotoStyle.Color)]
-    public void SuggestedPreset_ShouldNameARealPreset(PhotoStyle style)
+    public void SuggestedPresetShouldNameARealPreset(PhotoStyle style)
     {
         RestorationSettings.FromPresetName(PhotoStyleClassifier.SuggestedPreset(style)).ShouldNotBeNull();
         PhotoStyleClassifier.SuggestedPreset(PhotoStyle.Unknown).ShouldBeNull();

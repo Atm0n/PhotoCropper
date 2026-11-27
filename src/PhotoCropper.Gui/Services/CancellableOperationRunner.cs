@@ -48,18 +48,10 @@ internal static class CancellableOperationRunner
         {
             onCancelling?.Invoke();
 
-            try
-            {
-                await actionTask.WaitAsync(gracePeriod, CancellationToken.None);
-            }
-            catch (TimeoutException)
-            {
-                // Still running; handled below.
-            }
-            catch (Exception)
-            {
-                // The operation stopped (by cancelling or failing); its outcome is rethrown below.
-            }
+            // Waits for the operation to stop or the grace period to run out, without throwing either way:
+            // a finished operation's outcome is rethrown below, and a still-running one is abandoned.
+            await actionTask.WaitAsync(gracePeriod, CancellationToken.None)
+                .ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext | ConfigureAwaitOptions.SuppressThrowing);
 
             if (!actionTask.IsCompleted)
             {

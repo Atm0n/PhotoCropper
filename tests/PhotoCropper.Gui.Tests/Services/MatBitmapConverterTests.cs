@@ -11,13 +11,13 @@ public sealed class MatBitmapConverterTests
     }
 
     [Fact]
-    public void ToAvaloniaBitmap_NullMat_ShouldThrowArgumentNullException()
+    public void ToAvaloniaBitmapNullMatShouldThrowArgumentNullException()
     {
         Should.Throw<ArgumentNullException>(() => MatBitmapConverter.ToAvaloniaBitmap(null!));
     }
 
     [Fact]
-    public void ToAvaloniaBitmap_3ChannelBgrMat_ShouldConvertToBitmap()
+    public void ToAvaloniaBitmap3ChannelBgrMatShouldConvertToBitmap()
     {
         using var mat = new Mat(100, 200, MatType.CV_8UC3);
         mat.SetTo(new Scalar(128, 64, 32));
@@ -30,7 +30,7 @@ public sealed class MatBitmapConverterTests
     }
 
     [Fact]
-    public void ToAvaloniaBitmap_4ChannelBgraMat_ShouldConvertToBitmap()
+    public void ToAvaloniaBitmap4ChannelBgraMatShouldConvertToBitmap()
     {
         using var mat = new Mat(50, 80, MatType.CV_8UC4);
         mat.SetTo(new Scalar(128, 64, 32, 255));
@@ -43,7 +43,7 @@ public sealed class MatBitmapConverterTests
     }
 
     [Fact]
-    public void ToAvaloniaBitmap_1ChannelGrayMat_ShouldConvertToBitmap()
+    public void ToAvaloniaBitmap1ChannelGrayMatShouldConvertToBitmap()
     {
         using var mat = new Mat(50, 80, MatType.CV_8UC1);
         mat.SetTo(new Scalar(128));

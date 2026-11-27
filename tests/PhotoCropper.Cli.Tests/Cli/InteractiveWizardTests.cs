@@ -17,13 +17,13 @@ public sealed class InteractiveWizardTests : IDisposable
     }
 
     [Fact]
-    public void Run_NullConsole_ShouldThrowArgumentNullException()
+    public void RunNullConsoleShouldThrowArgumentNullException()
     {
         Should.Throw<ArgumentNullException>(() => InteractiveWizard.Run(null!));
     }
 
     [Fact]
-    public void Run_CompleteFlowWithDirectory_AcceptsDefaultsAndReturnsOptions()
+    public void RunCompleteFlowWithDirectoryAcceptsDefaultsAndReturnsOptions()
     {
         using var console = new TestConsole();
         console.Profile.Capabilities.Interactive = true;
@@ -91,7 +91,7 @@ public sealed class InteractiveWizardTests : IDisposable
     }
 
     [Fact]
-    public void Run_UserCancelsAtFinalConfirmation_ShouldReturnNull()
+    public void RunUserCancelsAtFinalConfirmationShouldReturnNull()
     {
         using var console = new TestConsole();
         console.Profile.Capabilities.Interactive = true;
@@ -138,7 +138,7 @@ public sealed class InteractiveWizardTests : IDisposable
     }
 
     [Fact]
-    public void Run_CustomSettings_SetsPngFormatAndCustomParameters()
+    public void RunCustomSettingsSetsPngFormatAndCustomParameters()
     {
         using var console = new TestConsole();
         console.Profile.Capabilities.Interactive = true;
@@ -217,7 +217,7 @@ public sealed class InteractiveWizardTests : IDisposable
     }
 
     [Fact]
-    public void Run_InvalidDate_RePromptsUntilValidDateEntered()
+    public void RunInvalidDateRePromptsUntilValidDateEntered()
     {
         using var console = new TestConsole();
         console.Profile.Capabilities.Interactive = true;
@@ -253,7 +253,7 @@ public sealed class InteractiveWizardTests : IDisposable
     }
 
     [Fact]
-    public void Run_CropOnly_ShouldAskNoRestorationOrFormatQuestions()
+    public void RunCropOnlyShouldAskNoRestorationOrFormatQuestions()
     {
         using var console = new TestConsole();
         console.Profile.Capabilities.Interactive = true;
@@ -276,7 +276,7 @@ public sealed class InteractiveWizardTests : IDisposable
     }
 
     [Fact]
-    public void Run_RestoreOnly_ShouldAskNoDetectionQuestionsAndWriteToRestored()
+    public void RunRestoreOnlyShouldAskNoDetectionQuestionsAndWriteToRestored()
     {
         using var console = new TestConsole();
         console.Profile.Capabilities.Interactive = true;
@@ -303,7 +303,7 @@ public sealed class InteractiveWizardTests : IDisposable
     }
 
     [Fact]
-    public void Run_Project_ShouldAskForTheFolderAndAllowNoNewScans()
+    public void RunProjectShouldAskForTheFolderAndAllowNoNewScans()
     {
         string project = Path.Combine(_tempDir, "Album");
         using var console = new TestConsole();
@@ -330,9 +330,6 @@ public sealed class InteractiveWizardTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-        {
-            try { Directory.Delete(_tempDir, true); } catch { }
-        }
+        TestDirectory.TryDelete(_tempDir);
     }
 }

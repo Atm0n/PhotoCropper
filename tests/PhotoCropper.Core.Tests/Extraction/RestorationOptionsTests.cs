@@ -80,7 +80,7 @@ public sealed class RestorationOptionsTests
     private static double Difference(Mat a, Mat b) => Cv2.Norm(a, b, NormTypes.L1);
 
     [Fact]
-    public void IsMonochrome_ShouldRecogniseGreyAndSepiaButNotColour()
+    public void IsMonochromeShouldRecogniseGreyAndSepiaButNotColour()
     {
         using var grey = TonedGradient(1, 1, 1);
         using var sepia = TonedGradient(0.75, 0.9, 1.0);
@@ -94,7 +94,7 @@ public sealed class RestorationOptionsTests
     }
 
     [Fact]
-    public void Restore_WithNothingToChange_ShouldReturnTheSamePhoto()
+    public void RestoreWithNothingToChangeShouldReturnTheSamePhoto()
     {
         using var photo = TestImageFactory.CreateFadedPhoto();
 
@@ -102,7 +102,7 @@ public sealed class RestorationOptionsTests
     }
 
     [Fact]
-    public void Restore_DefaultSettings_ShouldMatchTheLegacyRestoreColorsCall()
+    public void RestoreDefaultSettingsShouldMatchTheLegacyRestoreColorsCall()
     {
         using var photo = TestImageFactory.CreateFadedPhoto();
 
@@ -113,7 +113,7 @@ public sealed class RestorationOptionsTests
     }
 
     [Fact]
-    public void Restore_NeutralBlackAndWhite_ShouldProduceGreyPixels()
+    public void RestoreNeutralBlackAndWhiteShouldProduceGreyPixels()
     {
         using var sepia = TonedGradient(0.75, 0.9, 1.0);
 
@@ -125,7 +125,7 @@ public sealed class RestorationOptionsTests
     }
 
     [Fact]
-    public void Restore_SepiaPreset_ShouldKeepTheWarmTone()
+    public void RestoreSepiaPresetShouldKeepTheWarmTone()
     {
         using var sepia = TonedGradient(0.75, 0.9, 1.0);
         double warmthBefore = MeanLab(sepia).Val2;
@@ -137,7 +137,7 @@ public sealed class RestorationOptionsTests
     }
 
     [Fact]
-    public void Restore_AutoColorMode_ShouldNotNeutraliseADetectedSepiaPrint()
+    public void RestoreAutoColorModeShouldNotNeutraliseADetectedSepiaPrint()
     {
         using var sepia = TonedGradient(0.75, 0.9, 1.0);
         double warmthBefore = MeanLab(sepia).Val2;
@@ -150,7 +150,7 @@ public sealed class RestorationOptionsTests
     }
 
     [Fact]
-    public void Restore_StrongerStrength_ShouldChangeThePhotoMore()
+    public void RestoreStrongerStrengthShouldChangeThePhotoMore()
     {
         using var photo = FadedColourPrint();
 
@@ -161,7 +161,7 @@ public sealed class RestorationOptionsTests
     }
 
     [Fact]
-    public void Restore_WithoutColourCastRemoval_ShouldKeepTheYellowCast()
+    public void RestoreWithoutColourCastRemovalShouldKeepTheYellowCast()
     {
         using var photo = FadedColourPrint();
         double castBefore = MeanLab(photo).Val2 - 128; // > 0: yellow
@@ -169,7 +169,9 @@ public sealed class RestorationOptionsTests
         using var all = PhotoRestorationService.Restore(photo, new RestorationSettings { RestoreColors = true, ColorMode = PhotoColorMode.Color });
         using var noCastRemoval = PhotoRestorationService.Restore(photo, new RestorationSettings
         {
-            RestoreColors = true, ColorMode = PhotoColorMode.Color, AutoWhiteBalance = false
+            RestoreColors = true,
+            ColorMode = PhotoColorMode.Color,
+            AutoWhiteBalance = false
         });
 
         castBefore.ShouldBeGreaterThan(5);
@@ -181,14 +183,18 @@ public sealed class RestorationOptionsTests
     [InlineData(50, 0, 0, 0, 0)]
     [InlineData(0, 0, 60, 0, 0)]
     [InlineData(0, 0, 0, 60, 0)]
-    public void Restore_ManualAdjustments_ShouldMoveTheMatchingChannel(int brightness, int contrast, int warmth, int tint, int saturation)
+    public void RestoreManualAdjustmentsShouldMoveTheMatchingChannel(int brightness, int contrast, int warmth, int tint, int saturation)
     {
         using var photo = TwoColours(new Scalar(120, 120, 120), new Scalar(90, 110, 130));
         var before = MeanLab(photo);
 
         using var result = PhotoRestorationService.Restore(photo, new RestorationSettings
         {
-            Brightness = brightness, Contrast = contrast, Warmth = warmth, Tint = tint, Saturation = saturation
+            Brightness = brightness,
+            Contrast = contrast,
+            Warmth = warmth,
+            Tint = tint,
+            Saturation = saturation
         });
         var after = MeanLab(result);
 
@@ -198,7 +204,7 @@ public sealed class RestorationOptionsTests
     }
 
     [Fact]
-    public void Restore_SaturationMinus100_ShouldRemoveColour()
+    public void RestoreSaturationMinus100ShouldRemoveColour()
     {
         using var photo = TwoColours(new Scalar(200, 60, 40), new Scalar(40, 160, 200));
 
@@ -214,7 +220,7 @@ public sealed class RestorationOptionsTests
     [InlineData(255, 2)]
     [InlineData(0, 1)]   // dark speck
     [InlineData(80, 1)]  // faint speck
-    public void RemoveDust_ShouldRemoveSpecksOnCleanBackground(int speck, int radius)
+    public void RemoveDustShouldRemoveSpecksOnCleanBackground(int speck, int radius)
     {
         // Regression: the edge guard used to cancel every speck, because a speck's own outline is an edge.
         using var photo = new Mat(200, 200, MatType.CV_8UC3);
@@ -227,7 +233,7 @@ public sealed class RestorationOptionsTests
     }
 
     [Fact]
-    public void RemoveDust_OnAHighResolutionScan_ShouldRemoveLargerSpecks()
+    public void RemoveDustOnAHighResolutionScanShouldRemoveLargerSpecks()
     {
         using var photo = new Mat(1600, 1600, MatType.CV_8UC3);
         photo.SetTo(new Scalar(128, 128, 128));
@@ -239,7 +245,7 @@ public sealed class RestorationOptionsTests
     }
 
     [Fact]
-    public void RemoveDust_ShouldLeaveNaturalEdgesAndLinesUntouched()
+    public void RemoveDustShouldLeaveNaturalEdgesAndLinesUntouched()
     {
         using var photo = new Mat(200, 200, MatType.CV_8UC3);
         photo.SetTo(new Scalar(200, 200, 200));
@@ -252,7 +258,7 @@ public sealed class RestorationOptionsTests
     }
 
     [Fact]
-    public void Restore_OnlyCleanDust_ShouldRemoveDustWithoutTouchingColours()
+    public void RestoreOnlyCleanDustShouldRemoveDustWithoutTouchingColours()
     {
         using var photo = TestImageFactory.CreateBlemishedPhoto();
 
@@ -268,13 +274,13 @@ public sealed class RestorationOptionsTests
     [InlineData("sepia")]
     [InlineData("dust")]
     [InlineData("none")]
-    public void FromPresetName_ShouldKnowEveryPreset(string name)
+    public void FromPresetNameShouldKnowEveryPreset(string name)
     {
         RestorationSettings.FromPresetName(name).ShouldNotBeNull();
     }
 
     [Fact]
-    public void SettingsSavedByOlderVersions_ShouldLoadWithDefaultsForNewOptions()
+    public void SettingsSavedByOlderVersionsShouldLoadWithDefaultsForNewOptions()
     {
         var loaded = JsonSerializer.Deserialize<RestorationSettings>("""{ "RestoreColors": true, "RemoveDust": true }""")!;
 

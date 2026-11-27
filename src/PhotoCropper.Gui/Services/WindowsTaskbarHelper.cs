@@ -43,9 +43,9 @@ internal static class WindowsTaskbarHelper
 
             FlashWindowEx(ref info);
         }
-        catch
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
         {
-            // Non-critical: Ignore platform handle or P/Invoke issues in restricted environments
+            // Non-critical: user32 or FlashWindowEx unavailable in restricted environments
         }
     }
 }

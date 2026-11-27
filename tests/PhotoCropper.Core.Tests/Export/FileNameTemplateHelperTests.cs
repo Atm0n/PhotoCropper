@@ -6,7 +6,7 @@ namespace PhotoCropper.Core.Tests.Export;
 public class FileNameTemplateHelperTests
 {
     [Fact]
-    public void FormatFileName_DefaultPattern_ProducesOriginalAndIndex()
+    public void FormatFileNameDefaultPatternProducesOriginalAndIndex()
     {
         string result = FileNameTemplateHelper.FormatFileName(
             template: null,
@@ -20,7 +20,7 @@ public class FileNameTemplateHelperTests
     }
 
     [Fact]
-    public void FormatFileName_ZeroPadded_ProducesPaddedIndex()
+    public void FormatFileNameZeroPaddedProducesPaddedIndex()
     {
         string result = FileNameTemplateHelper.FormatFileName(
             template: "{original}_{index:02}",
@@ -34,7 +34,7 @@ public class FileNameTemplateHelperTests
     }
 
     [Fact]
-    public void FormatFileName_ThreeDigitPadded_ProducesThreeDigitIndex()
+    public void FormatFileNameThreeDigitPaddedProducesThreeDigitIndex()
     {
         string result = FileNameTemplateHelper.FormatFileName(
             template: "{original}_{index:000}",
@@ -48,7 +48,7 @@ public class FileNameTemplateHelperTests
     }
 
     [Fact]
-    public void FormatFileName_WithYearAndMetadata_IncludesYear()
+    public void FormatFileNameWithYearAndMetadataIncludesYear()
     {
         var metadata = new PhotoExportMetadata
         {
@@ -67,7 +67,7 @@ public class FileNameTemplateHelperTests
     }
 
     [Fact]
-    public void FormatFileName_WithYearPatternButNoMetadataYear_CleansLeadingSeparator()
+    public void FormatFileNameWithYearPatternButNoMetadataYearCleansLeadingSeparator()
     {
         var metadata = new PhotoExportMetadata(); // No year set
 
@@ -84,7 +84,7 @@ public class FileNameTemplateHelperTests
     }
 
     [Fact]
-    public void FormatFileName_WithDateToken_IncludesFormattedDate()
+    public void FormatFileNameWithDateTokenIncludesFormattedDate()
     {
         var metadata = new PhotoExportMetadata
         {
@@ -103,7 +103,7 @@ public class FileNameTemplateHelperTests
     }
 
     [Fact]
-    public void FormatFileName_SanitizesInvalidPathCharacters()
+    public void FormatFileNameSanitizesInvalidPathCharacters()
     {
         string result = FileNameTemplateHelper.FormatFileName(
             template: "{original}_photo:?*{index}",
@@ -120,7 +120,7 @@ public class FileNameTemplateHelperTests
     }
 
     [Fact]
-    public void FormatFileName_TotalToken_ReplacesTotalCount()
+    public void FormatFileNameTotalTokenReplacesTotalCount()
     {
         string result = FileNameTemplateHelper.FormatFileName(
             template: "{original}_photo_{index}_of_{total}",
@@ -134,7 +134,7 @@ public class FileNameTemplateHelperTests
     }
 
     [Fact]
-    public void FormatPreview_GeneratesCleanPreview()
+    public void FormatPreviewGeneratesCleanPreview()
     {
         var meta = new PhotoExportMetadata { Year = 1990 };
         string preview = FileNameTemplateHelper.FormatPreview("{year}_{original}_{index:02}", sampleMetadata: meta);

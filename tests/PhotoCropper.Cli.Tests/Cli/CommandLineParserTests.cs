@@ -5,7 +5,7 @@ namespace PhotoCropper.Cli.Tests.Cli;
 public sealed class CommandLineParserTests
 {
     [Fact]
-    public void CommandLineParser_DefaultOptions_ShouldHaveSensibleDefaults()
+    public void CommandLineParserDefaultOptionsShouldHaveSensibleDefaults()
     {
         var options = CommandLineParser.Parse([]);
         options.Inputs.ShouldBeEmpty();
@@ -27,7 +27,7 @@ public sealed class CommandLineParserTests
     }
 
     [Fact]
-    public void CommandLineParser_ParseAllFlags_ShouldSetCorrectOptions()
+    public void CommandLineParserParseAllFlagsShouldSetCorrectOptions()
     {
         string[] args = [
             "-i", "input1.jpg",
@@ -74,7 +74,7 @@ public sealed class CommandLineParserTests
     }
 
     [Fact]
-    public void CommandLineParser_PositionalInputs_ShouldBeCollected()
+    public void CommandLineParserPositionalInputsShouldBeCollected()
     {
         string[] args = ["scan1.jpg", "scan2.jpg", "scan3.png", "-o", "out_dir"];
         var options = CommandLineParser.Parse(args);
@@ -87,7 +87,7 @@ public sealed class CommandLineParserTests
     }
 
     [Fact]
-    public void CommandLineParser_AlternativeFlagNames_ShouldBeHandled()
+    public void CommandLineParserAlternativeFlagNamesShouldBeHandled()
     {
         string[] args = [
             "--output", "out",
@@ -121,7 +121,7 @@ public sealed class CommandLineParserTests
     }
 
     [Fact]
-    public void CommandLineParser_NamingPatternAndMetadataFlags_ShouldBeParsed()
+    public void CommandLineParserNamingPatternAndMetadataFlagsShouldBeParsed()
     {
         string[] args = [
             "-i", "input.jpg",
@@ -145,7 +145,7 @@ public sealed class CommandLineParserTests
     [InlineData("-w")]
     [InlineData("--wizard")]
     [InlineData("--interactive")]
-    public void CommandLineParser_WizardFlags_ShouldSetInteractiveTrue(string flag)
+    public void CommandLineParserWizardFlagsShouldSetInteractiveTrue(string flag)
     {
         var options = CommandLineParser.Parse([flag]);
         options.Interactive.ShouldBeTrue();
@@ -154,7 +154,7 @@ public sealed class CommandLineParserTests
     [Theory]
     [InlineData("--min-photos", "3", 3)]
     [InlineData("--expected-photos", "4", 4)]
-    public void CommandLineParser_MinPhotosFlag_ShouldSetMinExpectedPhotos(string flag, string value, int expected)
+    public void CommandLineParserMinPhotosFlagShouldSetMinExpectedPhotos(string flag, string value, int expected)
     {
         var options = CommandLineParser.Parse([flag, value]);
         options.MinExpectedPhotos.ShouldBe(expected);
@@ -163,14 +163,14 @@ public sealed class CommandLineParserTests
     [Theory]
     [InlineData("--max-photos", "5", 5)]
     [InlineData("--max-expected-photos", "8", 8)]
-    public void CommandLineParser_MaxPhotosFlag_ShouldSetMaxExpectedPhotos(string flag, string value, int expected)
+    public void CommandLineParserMaxPhotosFlagShouldSetMaxExpectedPhotos(string flag, string value, int expected)
     {
         var options = CommandLineParser.Parse([flag, value]);
         options.MaxExpectedPhotos.ShouldBe(expected);
     }
 
     [Fact]
-    public void CommandLineParser_PrintHelp_ShouldContainCheckUpdateOption()
+    public void CommandLineParserPrintHelpShouldContainCheckUpdateOption()
     {
         using var sw = new StringWriter();
         var originalOut = Console.Out;
@@ -188,7 +188,7 @@ public sealed class CommandLineParserTests
     }
 
     [Fact]
-    public void CommandLineParser_PrintVersion_ShouldContainCurrentVersion()
+    public void CommandLineParserPrintVersionShouldContainCurrentVersion()
     {
         using var sw = new StringWriter();
         var originalOut = Console.Out;
@@ -206,7 +206,7 @@ public sealed class CommandLineParserTests
     }
 
     [Fact]
-    public void CommandLineParser_SensitivityFlag_ShouldMapToTolerance()
+    public void CommandLineParserSensitivityFlagShouldMapToTolerance()
     {
         string[] args = ["--sensitivity", "75"];
         var options = CommandLineParser.Parse(args);
@@ -218,7 +218,7 @@ public sealed class CommandLineParserTests
     }
 
     [Fact]
-    public void CommandLineParser_AutoAdjustLowCoverageFlags_ShouldBeParsed()
+    public void CommandLineParserAutoAdjustLowCoverageFlagsShouldBeParsed()
     {
         string[] args1 = ["--auto-adjust-low-coverage"];
         var options1 = CommandLineParser.Parse(args1);
@@ -236,7 +236,7 @@ public sealed class CommandLineParserTests
     [InlineData("always", false, true, false, false)]
     [InlineData("low-coverage", false, false, true, false)]
     [InlineData("OFF", false, false, false, true)]
-    public void CommandLineParser_AutoTuneMode_ShouldSelectOneMode(string mode, bool mismatch, bool always, bool lowCoverage, bool off)
+    public void CommandLineParserAutoTuneModeShouldSelectOneMode(string mode, bool mismatch, bool always, bool lowCoverage, bool off)
     {
         var options = CommandLineParser.Parse(["--auto-tune", mode, "scans"]);
 
@@ -248,7 +248,7 @@ public sealed class CommandLineParserTests
     }
 
     [Fact]
-    public void CommandLineParser_BareAutoTune_ShouldKeepItsOldMeaningAndNotEatTheInput()
+    public void CommandLineParserBareAutoTuneShouldKeepItsOldMeaningAndNotEatTheInput()
     {
         var options = CommandLineParser.Parse(["--auto-tune", "scans_folder"]);
 
@@ -257,7 +257,7 @@ public sealed class CommandLineParserTests
     }
 
     [Fact]
-    public void CommandLineParser_ShortSwitches_ShouldTurnFeaturesOff()
+    public void CommandLineParserShortSwitchesShouldTurnFeaturesOff()
     {
         var options = CommandLineParser.Parse(["--no-restore", "--no-dust", "--no-orient"]);
 
@@ -267,7 +267,7 @@ public sealed class CommandLineParserTests
     }
 
     [Fact]
-    public void CommandLineParser_UnknownOptionsAndBadValues_ShouldBeIgnoredNotTakenAsInputs()
+    public void CommandLineParserUnknownOptionsAndBadValuesShouldBeIgnoredNotTakenAsInputs()
     {
         var options = CommandLineParser.Parse(["--bogus", "-q", "abc", "scan.jpg"]);
 

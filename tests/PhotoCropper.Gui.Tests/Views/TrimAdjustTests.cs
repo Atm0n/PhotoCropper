@@ -18,14 +18,14 @@ public sealed class TrimAdjustTests
     [InlineData(404, 246, (int)(Edges.Right | Edges.Bottom))]
     [InlineData(250, 150, (int)(Edges.None))]                    // inside: nothing (it pans)
     [InlineData(102, 400, (int)(Edges.None))]                    // in line with an edge but far beyond its end
-    public void EdgesNear_ShouldTakeTheEdgesUnderThePointer(double x, double y, int expected)
+    public void EdgesNearShouldTakeTheEdgesUnderThePointer(double x, double y, int expected)
     {
         // The edges as an int: the enum is internal to the viewer.
         CompareImageViewer.EdgesNear(new Point(x, y), Frame, grab: 10).ShouldBe((Edges)expected);
     }
 
     [Fact]
-    public void MoveEdges_ShouldMoveOnlyTheDraggedEdges()
+    public void MoveEdgesShouldMoveOnlyTheDraggedEdges()
     {
         var moved = CompareImageViewer.MoveEdges(Frame, Edges.Left | Edges.Top, new Point(130, 70), new Size(500, 300));
 
@@ -33,7 +33,7 @@ public sealed class TrimAdjustTests
     }
 
     [Fact]
-    public void MoveEdges_ShouldStayOnThePhotoAndKeepAMinimumSize()
+    public void MoveEdgesShouldStayOnThePhotoAndKeepAMinimumSize()
     {
         var size = new Size(500, 300);
 

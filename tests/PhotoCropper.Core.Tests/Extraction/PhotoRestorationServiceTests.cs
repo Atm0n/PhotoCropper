@@ -6,13 +6,13 @@ namespace PhotoCropper.Core.Tests.Extraction;
 public sealed class PhotoRestorationServiceTests
 {
     [Fact]
-    public void RestoreColors_NullPhoto_ShouldThrowArgumentNullException()
+    public void RestoreColorsNullPhotoShouldThrowArgumentNullException()
     {
         Should.Throw<ArgumentNullException>(() => PhotoRestorationService.RestoreColors(null!));
     }
 
     [Fact]
-    public void RestoreColors_EmptyPhoto_ShouldReturnInput()
+    public void RestoreColorsEmptyPhotoShouldReturnInput()
     {
         using var empty = new Mat();
         var result = PhotoRestorationService.RestoreColors(empty);
@@ -20,7 +20,7 @@ public sealed class PhotoRestorationServiceTests
     }
 
     [Fact]
-    public void RestoreColors_SmallPhoto_ShouldReturnInput()
+    public void RestoreColorsSmallPhotoShouldReturnInput()
     {
         using var small = new Mat(10, 10, MatType.CV_8UC3);
         var result = PhotoRestorationService.RestoreColors(small);
@@ -29,7 +29,7 @@ public sealed class PhotoRestorationServiceTests
     }
 
     [Fact]
-    public void RestoreColors_3ChannelBgr_ShouldEnhanceAndPreserveDimensions()
+    public void RestoreColors3ChannelBgrShouldEnhanceAndPreserveDimensions()
     {
         using var photo = new Mat(100, 100, MatType.CV_8UC3);
         photo.SetTo(new Scalar(120, 140, 160));
@@ -42,7 +42,7 @@ public sealed class PhotoRestorationServiceTests
     }
 
     [Fact]
-    public void RestoreColors_4ChannelBgra_ShouldPreserveAlpha()
+    public void RestoreColors4ChannelBgraShouldPreserveAlpha()
     {
         using var photo = new Mat(50, 50, MatType.CV_8UC4);
         photo.SetTo(new Scalar(100, 150, 200, 128));
@@ -55,13 +55,13 @@ public sealed class PhotoRestorationServiceTests
     }
 
     [Fact]
-    public void InpaintDustAndScratches_NullPhoto_ShouldThrowArgumentNullException()
+    public void InpaintDustAndScratchesNullPhotoShouldThrowArgumentNullException()
     {
         Should.Throw<ArgumentNullException>(() => PhotoRestorationService.InpaintDustAndScratches(null!));
     }
 
     [Fact]
-    public void InpaintDustAndScratches_WithBlemishes_ShouldInpaintBlemishes()
+    public void InpaintDustAndScratchesWithBlemishesShouldInpaintBlemishes()
     {
         using var photo = new Mat(100, 100, MatType.CV_8UC3);
         photo.SetTo(new Scalar(128, 128, 128));

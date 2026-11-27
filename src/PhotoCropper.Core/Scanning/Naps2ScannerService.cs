@@ -40,7 +40,7 @@ public sealed class Naps2ScannerService : IScannerService
                 {
                     _context.SetUpWin32Worker();
                 }
-                catch
+                catch (Exception ex) when (ExpectedErrors.IsScannerError(ex))
                 {
                     // Fall back to native WIA / 64-bit scanning
                 }
@@ -187,7 +187,7 @@ public sealed class Naps2ScannerService : IScannerService
             {
                 throw;
             }
-            catch
+            catch (Exception ex) when (ExpectedErrors.IsScannerError(ex))
             {
                 // TWAIN subsystem not present, timed out, or threw error
             }
@@ -205,7 +205,7 @@ public sealed class Naps2ScannerService : IScannerService
             {
                 throw;
             }
-            catch
+            catch (Exception ex) when (ExpectedErrors.IsScannerError(ex))
             {
                 // WIA service not available, timed out, or threw error
             }
@@ -223,7 +223,7 @@ public sealed class Naps2ScannerService : IScannerService
             {
                 throw;
             }
-            catch
+            catch (Exception ex) when (ExpectedErrors.IsScannerError(ex))
             {
             }
         }
@@ -239,7 +239,7 @@ public sealed class Naps2ScannerService : IScannerService
             {
                 throw;
             }
-            catch
+            catch (Exception ex) when (ExpectedErrors.IsScannerError(ex))
             {
             }
         }
@@ -266,7 +266,7 @@ public sealed class Naps2ScannerService : IScannerService
             {
                 throw;
             }
-            catch
+            catch (Exception ex) when (ExpectedErrors.IsScannerError(ex))
             {
             }
         }
@@ -301,7 +301,7 @@ public sealed class Naps2ScannerService : IScannerService
 
             return null;
         }
-        catch
+        catch (Exception ex) when (ExpectedErrors.IsScannerError(ex))
         {
             return null;
         }
@@ -369,7 +369,7 @@ public sealed class Naps2ScannerService : IScannerService
                     targetPageSize = scanArea;
                 }
             }
-            catch
+            catch (Exception ex) when (ExpectedErrors.IsScannerError(ex))
             {
                 targetPageSize = PageSize.A4;
             }

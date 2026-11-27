@@ -7,6 +7,7 @@ using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
 using PhotoCropper.Gui.ViewModels;
 using System.Diagnostics;
+using PhotoCropper.Core.Common;
 
 namespace PhotoCropper.Gui;
 
@@ -168,7 +169,7 @@ internal sealed partial class MainWindow : IStageHost, ICropsStageHost, IRefineH
                             if (!wasActive) session.Deactivate();
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ExpectedErrors.IsImageError(ex))
                     {
                         Trace.TraceError($"[PhotoCropper] Failed to save crops for '{session.FilePath}': {ex.Message}");
                         failures.Enqueue((session.FilePath, ex.Message));

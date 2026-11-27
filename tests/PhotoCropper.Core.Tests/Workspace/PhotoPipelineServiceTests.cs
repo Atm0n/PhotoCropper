@@ -42,7 +42,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     private string Full(ProjectFile file) => file.GetFullPath(_workDir);
 
     [Fact]
-    public void SaveCroppedPhotos_ShouldAssignStableIdsAndWriteLosslessPngsToCropped()
+    public void SaveCroppedPhotosShouldAssignStableIdsAndWriteLosslessPngsToCropped()
     {
         using var a = Photo(100);
         using var b = Photo(150);
@@ -59,7 +59,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void SaveCroppedPhotos_ReCropWithSlightlyMovedBox_ShouldKeepTheIdAndSettings()
+    public void SaveCroppedPhotosReCropWithSlightlyMovedBoxShouldKeepTheIdAndSettings()
     {
         using var a = Photo(100);
         var first = Save((a, Box(100, 100)))[0];
@@ -74,7 +74,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void SaveCroppedPhotos_UnchangedImage_ShouldNotRewriteTheFile()
+    public void SaveCroppedPhotosUnchangedImageShouldNotRewriteTheFile()
     {
         using var a = Photo(100);
         var first = Save((a, Box(100, 100)))[0];
@@ -86,7 +86,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void SaveCroppedPhotos_RemovedAndNewBoxes_ShouldDeleteOldFilesAndNeverReuseNumbers()
+    public void SaveCroppedPhotosRemovedAndNewBoxesShouldDeleteOldFilesAndNeverReuseNumbers()
     {
         using var a = Photo(100);
         using var b = Photo(150);
@@ -102,7 +102,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void RenderFinal_ShouldWriteFinalWithPatternAndClearStaleness()
+    public void RenderFinalShouldWriteFinalWithPatternAndClearStaleness()
     {
         using var a = Photo(100);
         var photo = Save((a, Box(100, 100)))[0];
@@ -116,7 +116,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void RenderFinals_ShouldWriteEveryPhotoUnderTheNameARenderOneByOneGives()
+    public void RenderFinalsShouldWriteEveryPhotoUnderTheNameARenderOneByOneGives()
     {
         var images = Enumerable.Range(0, 2 * Environment.ProcessorCount + 1).Select(i => Photo(40 + i)).ToList();
         try
@@ -136,7 +136,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void RenderFinals_WithAMissingCroppedFile_ShouldReportItAndWriteTheOthers()
+    public void RenderFinalsWithAMissingCroppedFileShouldReportItAndWriteTheOthers()
     {
         using var a = Photo(100);
         using var b = Photo(150);
@@ -155,7 +155,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void RenderFinals_WithoutAFailureHandler_ShouldThrowAfterWritingThePhotosBeforeIt()
+    public void RenderFinalsWithoutAFailureHandlerShouldThrowAfterWritingThePhotosBeforeIt()
     {
         using var a = Photo(100);
         using var b = Photo(150);
@@ -170,7 +170,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void IsFinalStale_ShouldTurnTrueWhenRestorationOrCroppedPhotoChanges()
+    public void IsFinalStaleShouldTurnTrueWhenRestorationOrCroppedPhotoChanges()
     {
         using var a = Photo(100);
         var photo = Save((a, Box(100, 100)))[0];
@@ -187,7 +187,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void RenderFinal_AgainAfterChange_ShouldReplaceThePreviousFinalFile()
+    public void RenderFinalAgainAfterChangeShouldReplaceThePreviousFinalFile()
     {
         using var a = Photo(100);
         var photo = Save((a, Box(100, 100)))[0];
@@ -200,7 +200,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void RenderFinal_ShouldReplaceFilesNoOtherPhotoOwnsInsteadOfWritingACopy()
+    public void RenderFinalShouldReplaceFilesNoOtherPhotoOwnsInsteadOfWritingACopy()
     {
         // Left in Final/ by an older version, or by an export whose record was lost (e.g. two windows saving).
         string finalDir = ProjectWorkspaceService.GetFinalDirectory(_workDir);
@@ -230,11 +230,11 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     [InlineData("scan_0001_1(1).jpg", false)]
     [InlineData("scan_0001_1 (1).png", false)]
     [InlineData("scan_0001.jpg", false)]
-    public void IsNameOrNumberedCopy_ShouldMatchOnlyTheNameAndItsNumberedCopies(string name, bool expected) =>
+    public void IsNameOrNumberedCopyShouldMatchOnlyTheNameAndItsNumberedCopies(string name, bool expected) =>
         PhotoPipelineService.IsNameOrNumberedCopy(name, "scan_0001_1", ".jpg").ShouldBe(expected);
 
     [Fact]
-    public void RenderFinal_ShouldReplaceItsOwnFileEvenIfItWasEdited()
+    public void RenderFinalShouldReplaceItsOwnFileEvenIfItWasEdited()
     {
         using var a = Photo(100);
         var photo = Save((a, Box(100, 100)))[0];
@@ -248,7 +248,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void RenderFinal_ShouldKeepAnotherPhotosFileUnderTheSameName()
+    public void RenderFinalShouldKeepAnotherPhotosFileUnderTheSameName()
     {
         using var a = Photo(100);
         using var b = Photo(150);
@@ -264,7 +264,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void RenderFinal_ToAnotherFolder_ShouldNotMoveFilesThere()
+    public void RenderFinalToAnotherFolderShouldNotMoveFilesThere()
     {
         string outside = Path.Combine(_workDir, "Elsewhere");
         Directory.CreateDirectory(outside);
@@ -279,7 +279,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void ImportPhoto_ShouldCopyIntoCroppedAndRenderWithItsOwnName()
+    public void ImportPhotoShouldCopyIntoCroppedAndRenderWithItsOwnName()
     {
         string source = Path.Combine(_workDir, "grandma.jpg");
         using (var img = Photo(120)) Cv2.ImWrite(source, img);
@@ -294,7 +294,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void RemoveScanPhotos_ShouldDropRecordsAndPipelineFiles()
+    public void RemoveScanPhotosShouldDropRecordsAndPipelineFiles()
     {
         using var a = Photo(100);
         var photo = Save((a, Box(100, 100)))[0];
@@ -311,7 +311,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     }
 
     [Fact]
-    public void RemoveScanPhotos_ShouldKeepAFinalFileChangedOutsideTheApp()
+    public void RemoveScanPhotosShouldKeepAFinalFileChangedOutsideTheApp()
     {
         using var a = Photo(100);
         var photo = Save((a, Box(100, 100)))[0];
@@ -327,7 +327,7 @@ public sealed class PhotoPipelineServiceTests : IDisposable
     [Theory]
     [InlineData(100, 100, 1.0)]
     [InlineData(400, 400, 0.0)]
-    public void BoxOverlap_ShouldMeasureIntersectionOverUnion(float cx, float cy, double expected)
+    public void BoxOverlapShouldMeasureIntersectionOverUnion(float cx, float cy, double expected)
     {
         PhotoPipelineService.BoxOverlap(Box(100, 100), Box(cx, cy)).ShouldBe(expected, 0.001);
     }

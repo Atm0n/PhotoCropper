@@ -34,7 +34,7 @@ public sealed class RepairBrushTests : IDisposable
     }
 
     [Fact]
-    public void CreateMask_ShouldCoverTheStrokeOnly()
+    public void CreateMaskShouldCoverTheStrokeOnly()
     {
         using var mask = PhotoRepairService.CreateMask(new Size(200, 100), [StrokeAlongScratch()]);
 
@@ -43,7 +43,7 @@ public sealed class RepairBrushTests : IDisposable
     }
 
     [Fact]
-    public void ApplyRepairs_ShouldFillInAPaintedOverScratch()
+    public void ApplyRepairsShouldFillInAPaintedOverScratch()
     {
         using var photo = ScratchedPhoto();
 
@@ -72,7 +72,7 @@ public sealed class RepairBrushTests : IDisposable
     }
 
     [Fact]
-    public void ApplyRepairs_OnAGrainyPhoto_ShouldMatchTheSurroundingGrainInsteadOfLookingBlurred()
+    public void ApplyRepairsOnAGrainyPhotoShouldMatchTheSurroundingGrainInsteadOfLookingBlurred()
     {
         using var damaged = GrainyScratchedPhoto(out var clean);
         using (clean)
@@ -91,7 +91,7 @@ public sealed class RepairBrushTests : IDisposable
     }
 
     [Fact]
-    public void ApplyRepairs_OnASmoothPhoto_ShouldNotAddGrain()
+    public void ApplyRepairsOnASmoothPhotoShouldNotAddGrain()
     {
         using var photo = ScratchedPhoto(); // flat grey: no grain around the scratch
 
@@ -104,7 +104,7 @@ public sealed class RepairBrushTests : IDisposable
     }
 
     [Fact]
-    public void ApplyRepairs_ShouldGiveTheSameResultEveryTime()
+    public void ApplyRepairsShouldGiveTheSameResultEveryTime()
     {
         using var damaged = GrainyScratchedPhoto(out var clean);
         using (clean)
@@ -117,7 +117,7 @@ public sealed class RepairBrushTests : IDisposable
     }
 
     [Fact]
-    public void ApplyRepairs_ShouldKeepTransparency()
+    public void ApplyRepairsShouldKeepTransparency()
     {
         using var photo = ScratchedPhoto(channels: 4);
 
@@ -129,7 +129,7 @@ public sealed class RepairBrushTests : IDisposable
     }
 
     [Fact]
-    public void ApplyRepairs_WithoutStrokes_ShouldReturnTheSameImage()
+    public void ApplyRepairsWithoutStrokesShouldReturnTheSameImage()
     {
         using var photo = ScratchedPhoto();
 
@@ -150,7 +150,7 @@ public sealed class RepairBrushTests : IDisposable
     }
 
     [Fact]
-    public void RenderFinal_ShouldApplyRepairsAndTrackThemForStaleness()
+    public void RenderFinalShouldApplyRepairsAndTrackThemForStaleness()
     {
         using var scratched = ScratchedPhoto();
         var (session, photo) = SavePhoto(scratched);
@@ -171,7 +171,7 @@ public sealed class RepairBrushTests : IDisposable
     }
 
     [Fact]
-    public void RenderFinal_WithRepairsFromAnEarlierCropSize_ShouldNotApplyThem()
+    public void RenderFinalWithRepairsFromAnEarlierCropSizeShouldNotApplyThem()
     {
         using var scratched = ScratchedPhoto();
         var (session, photo) = SavePhoto(scratched);
@@ -188,7 +188,7 @@ public sealed class RepairBrushTests : IDisposable
     }
 
     [Fact]
-    public void Repairs_ShouldSurviveSavingAndLoadingTheSession()
+    public void RepairsShouldSurviveSavingAndLoadingTheSession()
     {
         using var scratched = ScratchedPhoto();
         var (session, photo) = SavePhoto(scratched);

@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using System.Diagnostics;
+using System.ComponentModel;
 
 namespace PhotoCropper.Gui.Services;
 
@@ -19,7 +20,7 @@ internal static class UrlLauncher
                 return;
             }
         }
-        catch
+        catch (Exception ex) when (IsLaunchFailure(ex))
         {
             // Fallback to shell process start
         }
@@ -32,9 +33,13 @@ internal static class UrlLauncher
                 UseShellExecute = true
             });
         }
-        catch
+        catch (Exception ex) when (IsLaunchFailure(ex))
         {
             // Suppress launch failures in headless/sandboxed environments
         }
     }
+
+    /// <summary>No browser or handler to open the link with, or the platform can't start one.</summary>
+    private static bool IsLaunchFailure(Exception ex) =>
+        ex is Win32Exception or InvalidOperationException or PlatformNotSupportedException;
 }

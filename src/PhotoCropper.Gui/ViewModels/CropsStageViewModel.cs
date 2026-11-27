@@ -214,17 +214,23 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
         options.CannyLowThreshold = EdgeThreshold;
         options.CannyHighThreshold = EdgeThreshold * AppConstants.DefaultCannyHighRatio;
 
-#pragma warning disable S6966 // Synchronous cancellation is intended here so debounce immediately drops the in-flight token before disposing in sync
-        _optionsDebounceCts?.Cancel();
-        _optionsDebounceCts?.Dispose();
-#pragma warning restore S6966
-        var cts = new CancellationTokenSource();
-        _optionsDebounceCts = cts;
-
         IsDetectionPending = true;
+
+        // This change takes over before the previous one is cancelled, so a change arriving while that cancel is
+        // awaited supersedes this one in turn. It may then also dispose cts, hence the token is read first.
+        var cts = new CancellationTokenSource();
+        CancellationToken token = cts.Token;
+        var previous = _optionsDebounceCts;
+        _optionsDebounceCts = cts;
         try
         {
-            await Task.Delay(OptionsDebounce, cts.Token);
+            if (previous != null)
+            {
+                await previous.CancelAsync();
+                previous.Dispose();
+            }
+
+            await Task.Delay(OptionsDebounce, token);
             _saveSettings();
             await ReprocessAsync();
         }
@@ -234,7 +240,7 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
         }
         finally
         {
-            if (!cts.IsCancellationRequested) IsDetectionPending = false;
+            if (!token.IsCancellationRequested) IsDetectionPending = false;
         }
     }
 

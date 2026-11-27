@@ -4,6 +4,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using System.Globalization;
 
 namespace PhotoCropper.Gui.Dialogs;
 
@@ -97,9 +98,9 @@ internal sealed partial class CustomColorDialog : Window
             sliderG.Value = color.G;
             sliderB.Value = color.B;
 
-            txtValR.Text = color.R.ToString();
-            txtValG.Text = color.G.ToString();
-            txtValB.Text = color.B.ToString();
+            txtValR.Text = color.R.ToString(CultureInfo.InvariantCulture);
+            txtValG.Text = color.G.ToString(CultureInfo.InvariantCulture);
+            txtValB.Text = color.B.ToString(CultureInfo.InvariantCulture);
 
             string hexStr = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
             txtHex.Text = hexStr;
@@ -132,9 +133,9 @@ internal sealed partial class CustomColorDialog : Window
 
         _currentColor = Color.FromRgb(r, g, b);
 
-        txtValR.Text = r.ToString();
-        txtValG.Text = g.ToString();
-        txtValB.Text = b.ToString();
+        txtValR.Text = r.ToString(CultureInfo.InvariantCulture);
+        txtValG.Text = g.ToString(CultureInfo.InvariantCulture);
+        txtValB.Text = b.ToString(CultureInfo.InvariantCulture);
 
         _isUpdating = true;
         try
@@ -165,9 +166,9 @@ internal sealed partial class CustomColorDialog : Window
                 sliderG.Value = color.G;
                 sliderB.Value = color.B;
 
-                txtValR.Text = color.R.ToString();
-                txtValG.Text = color.G.ToString();
-                txtValB.Text = color.B.ToString();
+                txtValR.Text = color.R.ToString(CultureInfo.InvariantCulture);
+                txtValG.Text = color.G.ToString(CultureInfo.InvariantCulture);
+                txtValB.Text = color.B.ToString(CultureInfo.InvariantCulture);
 
                 UpdatePreviewUi(color);
             }

@@ -20,7 +20,7 @@ public sealed class RestoreStageTests : IDisposable
     }
 
     [Fact]
-    public void RestoreFile_ShouldKeepTheNameAndWriteToTheOutputFolder()
+    public void RestoreFileShouldKeepTheNameAndWriteToTheOutputFolder()
     {
         string source = CreatePhoto("grandpa.png");
         string output = Path.Combine(_tempDir, "restored");
@@ -32,7 +32,7 @@ public sealed class RestoreStageTests : IDisposable
     }
 
     [Fact]
-    public void RestoreFile_WithRestoration_ShouldChangeThePixels()
+    public void RestoreFileWithRestorationShouldChangeThePixels()
     {
         string source = CreatePhoto("faded.png");
         string output = Path.Combine(_tempDir, "out");
@@ -46,7 +46,7 @@ public sealed class RestoreStageTests : IDisposable
     }
 
     [Fact]
-    public void RestoreFile_IntoTheSourceFolder_ShouldNotOverwriteTheSource()
+    public void RestoreFileIntoTheSourceFolderShouldNotOverwriteTheSource()
     {
         string source = CreatePhoto("photo.jpg");
         byte[] original = File.ReadAllBytes(source);
@@ -58,7 +58,7 @@ public sealed class RestoreStageTests : IDisposable
     }
 
     [Fact]
-    public void RestoreFile_WithMetadata_ShouldEmbedIt()
+    public void RestoreFileWithMetadataShouldEmbedIt()
     {
         string source = CreatePhoto("photo.png");
 

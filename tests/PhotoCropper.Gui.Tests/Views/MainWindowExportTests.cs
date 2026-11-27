@@ -3,7 +3,7 @@ namespace PhotoCropper.Gui.Tests.Views;
 public sealed class MainWindowExportTests
 {
     [Fact]
-    public void FormatFailedScanList_ShouldListFileNamesWithErrors()
+    public void FormatFailedScanListShouldListFileNamesWithErrors()
     {
         (string, string)[] failures =
         [
@@ -17,7 +17,7 @@ public sealed class MainWindowExportTests
     }
 
     [Fact]
-    public void FormatFailedScanList_WhenOverLimit_ShouldTruncateAndShowRemainingCount()
+    public void FormatFailedScanListWhenOverLimitShouldTruncateAndShowRemainingCount()
     {
         var failures = Enumerable.Range(1, 12)
             .Select(i => ($"scan_{i:D4}.png", "Error"))

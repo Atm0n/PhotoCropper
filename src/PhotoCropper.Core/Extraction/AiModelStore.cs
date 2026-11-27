@@ -60,23 +60,27 @@ public static class AiModelStore
             long total = response.Content.Headers.ContentLength ?? expectedSize;
 
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
-            await using (var target = new FileStream(partial, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16, useAsync: true))
+            var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            await using (source.ConfigureAwait(false))
             {
-                byte[] buffer = new byte[1 << 16];
-                long received = 0;
-                double lastReported = -1;
-                int read;
-                while ((read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+                var target = new FileStream(partial, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16, useAsync: true);
+                await using (target.ConfigureAwait(false))
                 {
-                    await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-                    hash.AppendData(buffer, 0, read);
-                    received += read;
-                    double fraction = total > 0 ? Math.Min(1.0, (double)received / total) : 0;
-                    if (fraction - lastReported >= 0.005)
+                    byte[] buffer = new byte[1 << 16];
+                    long received = 0;
+                    double lastReported = -1;
+                    int read;
+                    while ((read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
                     {
-                        progress?.Report(fraction);
-                        lastReported = fraction;
+                        await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                        hash.AppendData(buffer, 0, read);
+                        received += read;
+                        double fraction = total > 0 ? Math.Min(1.0, (double)received / total) : 0;
+                        if (fraction - lastReported >= 0.005)
+                        {
+                            progress?.Report(fraction);
+                            lastReported = fraction;
+                        }
                     }
                 }
             }

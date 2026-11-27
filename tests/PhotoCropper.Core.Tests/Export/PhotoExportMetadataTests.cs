@@ -5,7 +5,7 @@ namespace PhotoCropper.Core.Tests.Export;
 public class PhotoExportMetadataTests
 {
     [Fact]
-    public void EffectiveDate_WhenDateTakenSpecified_ReturnsDateTaken()
+    public void EffectiveDateWhenDateTakenSpecifiedReturnsDateTaken()
     {
         var dt = new DateTime(1968, 5, 20);
         var meta = new PhotoExportMetadata
@@ -18,7 +18,7 @@ public class PhotoExportMetadataTests
     }
 
     [Fact]
-    public void EffectiveDate_WhenOnlyYearSpecified_ReturnsJanFirst()
+    public void EffectiveDateWhenOnlyYearSpecifiedReturnsJanFirst()
     {
         var meta = new PhotoExportMetadata
         {
@@ -33,7 +33,7 @@ public class PhotoExportMetadataTests
     }
 
     [Fact]
-    public void FormattedExifDate_StandardFormat_MatchesExifSpec()
+    public void FormattedExifDateStandardFormatMatchesExifSpec()
     {
         var meta = new PhotoExportMetadata
         {
@@ -44,14 +44,14 @@ public class PhotoExportMetadataTests
     }
 
     [Fact]
-    public void HasMetadata_WhenEmpty_ReturnsFalse()
+    public void HasMetadataWhenEmptyReturnsFalse()
     {
         var meta = new PhotoExportMetadata();
         meta.HasMetadata.ShouldBeFalse();
     }
 
     [Fact]
-    public void HasMetadata_WhenYearOrDescSet_ReturnsTrue()
+    public void HasMetadataWhenYearOrDescSetReturnsTrue()
     {
         var meta = new PhotoExportMetadata { Description = "Family in Madrid" };
         meta.HasMetadata.ShouldBeTrue();
