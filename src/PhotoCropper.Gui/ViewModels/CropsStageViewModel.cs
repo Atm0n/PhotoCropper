@@ -214,8 +214,10 @@ internal sealed partial class CropsStageViewModel : ObservableObject, IDisposabl
         options.CannyLowThreshold = EdgeThreshold;
         options.CannyHighThreshold = EdgeThreshold * AppConstants.DefaultCannyHighRatio;
 
+#pragma warning disable S6966 // Synchronous cancellation is intended here so debounce immediately drops the in-flight token before disposing in sync
         _optionsDebounceCts?.Cancel();
         _optionsDebounceCts?.Dispose();
+#pragma warning restore S6966
         var cts = new CancellationTokenSource();
         _optionsDebounceCts = cts;
 
