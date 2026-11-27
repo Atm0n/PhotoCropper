@@ -19,7 +19,7 @@ for (int i = 1; i < args.Length; i++)
     else if (args[i] == "--seed" && i + 1 < args.Length) seed = int.Parse(args[++i], CultureInfo.InvariantCulture);
     else
     {
-        Console.Error.WriteLine($"Unknown option: {args[i]}");
+        await Console.Error.WriteLineAsync($"Unknown option: {args[i]}");
         return 1;
     }
 }
@@ -35,7 +35,7 @@ for (int i = 0; i < count; i++)
     total += scan.PhotoCount;
 }
 lines.Add($"total {total}");
-File.WriteAllLines(Path.Combine(output, "expected.txt"), lines);
+await File.WriteAllLinesAsync(Path.Combine(output, "expected.txt"), lines);
 
-Console.WriteLine($"Wrote {count} scans with {total} photos to {Path.GetFullPath(output)}");
+await Console.Out.WriteLineAsync($"Wrote {count} scans with {total} photos to {Path.GetFullPath(output)}");
 return 0;

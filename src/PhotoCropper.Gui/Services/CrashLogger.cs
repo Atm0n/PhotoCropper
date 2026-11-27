@@ -18,7 +18,11 @@ internal static class CrashLogger
         get
         {
             string root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            if (string.IsNullOrWhiteSpace(root)) root = Path.GetTempPath();
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                root = !string.IsNullOrWhiteSpace(home) ? home : AppContext.BaseDirectory;
+            }
             return Path.Combine(root, "PhotoCropper", "logs");
         }
     }

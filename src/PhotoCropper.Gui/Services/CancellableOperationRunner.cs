@@ -50,7 +50,7 @@ internal static class CancellableOperationRunner
 
             try
             {
-                await actionTask.WaitAsync(gracePeriod);
+                await actionTask.WaitAsync(gracePeriod, CancellationToken.None);
             }
             catch (TimeoutException)
             {
