@@ -11,8 +11,9 @@
 		<PackageReference Include="OpenCvSharp5.runtime.win" />
 		<PackageReference Include="OpenCvSharp5.official.runtime.linux-x64.headless" />
 		<PackageReference Include="NAPS2.Sdk" />
-		<PackageReference Include="NAPS2.Images.ImageSharp" />
+		<PackageReference Include="NAPS2.Images.Skia" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime" GeneratePathProperty="true" />
+		<PackageReference Include="SkiaSharp.NativeAssets.Linux" />
 	</ItemGroup>
 
 	<!-- License notices travel with every app that references Core (GUI and CLI builds, publish folders, installers). -->

@@ -13,6 +13,9 @@ Components
 MIT License (text in section A)
   - Avalonia, Avalonia.Desktop, Avalonia.Themes.Fluent, Avalonia.Fonts.Inter
       Copyright (c) The AvaloniaUI Project - https://github.com/AvaloniaUI/Avalonia
+  - SkiaSharp
+      Copyright (c) 2015-2016 American Public Media Group
+      Copyright (c) 2016-2026 Xamarin Inc. / Microsoft Corporation - https://github.com/mono/SkiaSharp
   - CommunityToolkit.Mvvm
       Copyright (c) .NET Foundation and Contributors - https://github.com/CommunityToolkit/dotnet
   - .NET runtime and System.Drawing.Common
@@ -31,16 +34,13 @@ Apache License 2.0 (text in section B)
       Copyright (C) OpenCV Foundation and contributors - https://github.com/opencv/opencv
   - Tesseract OCR (statically linked into the Linux OpenCvSharpExtern library)
       Copyright (c) Google Inc. and the Tesseract contributors - https://github.com/tesseract-ocr/tesseract
-  - SixLabors.ImageSharp (Six Labors Split License; used under the Apache License 2.0
-    as part of open-source software)
-      Copyright (c) Six Labors - https://github.com/SixLabors/ImageSharp
   - LaMa inpainting model (lama_fp32.onnx) - NOT included; downloaded only when the
     user turns on AI fill
       Copyright (c) Samsung AI Center (Roman Suvorov et al.) - https://github.com/advimman/lama
       ONNX export by Carve - https://huggingface.co/Carve/LaMa-ONNX
 
 GNU Lesser General Public License v2.1 or later (text in section C)
-  - NAPS2.Sdk, NAPS2.Images.ImageSharp
+  - NAPS2.Sdk, NAPS2.Images.Skia
       Copyright 2009-2026 NAPS2 Contributors - https://github.com/cyanfish/naps2
       The source code of these libraries is available at the address above.
   - FFmpeg (Windows: opencv_videoio_ffmpeg510_64.dll next to the OpenCV library;

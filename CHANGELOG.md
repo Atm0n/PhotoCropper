@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.1] - 2026-11-27
+
+### Changed
+- **Upgraded Avalonia UI to 12.2.0** and **OpenCvSharp to 5.1.0.20261125**.
+- **Migrated scanning image context from ImageSharp to SkiaSharp**: NAPS2 scanner service now uses `NAPS2.Images.Skia` instead of deprecated `NAPS2.Images.ImageSharp`.
+- **Removed SixLabors.ImageSharp**: Scan stage preview decoding now uses SkiaSharp codec directly, dropping all ImageSharp dependencies and transitive CVE maintenance.
+- **Added SkiaSharp Linux native assets** (`SkiaSharp.NativeAssets.Linux` 4.156.0) to ensure smooth scanning and preview operations on Linux.
+- Updated [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) to reflect SkiaSharp (MIT), NAPS2 Skia (LGPL-2.1), and remove ImageSharp.
+
 ## [3.3.0] - 2026-11-23
 
 ### Added
