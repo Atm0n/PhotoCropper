@@ -19,7 +19,7 @@ public sealed class OverlayScaleTests : IDisposable
     }
 
     [Fact]
-    public void OverlayScale_AtReferenceSize_ShouldBeOne()
+    public void OverlayScaleAtReferenceSizeShouldBeOne()
     {
         using var engine = CreateEngine(3500, 2480);
 
@@ -28,7 +28,7 @@ public sealed class OverlayScaleTests : IDisposable
     }
 
     [Fact]
-    public void OverlayScale_ShouldGrowWithResolutionSoHandlesKeepTheirRelativeSize()
+    public void OverlayScaleShouldGrowWithResolutionSoHandlesKeepTheirRelativeSize()
     {
         using var lowRes = CreateEngine(1750, 1240);   // ~150 DPI A4
         using var highRes = CreateEngine(7000, 4960);  // ~600 DPI A4
@@ -38,7 +38,7 @@ public sealed class OverlayScaleTests : IDisposable
     }
 
     [Fact]
-    public void ScaleOverlay_ShouldNeverReturnLessThanOnePixel()
+    public void ScaleOverlayShouldNeverReturnLessThanOnePixel()
     {
         using var tiny = CreateEngine(200, 200);
 

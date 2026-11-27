@@ -18,7 +18,7 @@ public sealed class StartViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_ShouldMakeTheFolderAndOpenIt()
+    public async Task CreateShouldMakeTheFolderAndOpenIt()
     {
         var vm = new StartViewModel(_host);
         vm.Open();
@@ -36,7 +36,7 @@ public sealed class StartViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Open_WhenTheProjectIsOpenInAnotherWindow_ShouldStayAndSaySo()
+    public async Task OpenWhenTheProjectIsOpenInAnotherWindowShouldStayAndSaySo()
     {
         string folder = Path.Combine(_root, "Album");
         Directory.CreateDirectory(folder);
@@ -57,7 +57,7 @@ public sealed class StartViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task RestoreOnly_ShouldOpenTheNewProjectForImporting()
+    public async Task RestoreOnlyShouldOpenTheNewProjectForImporting()
     {
         var vm = new StartViewModel(_host);
         vm.Open();
@@ -73,7 +73,7 @@ public sealed class StartViewModelTests : IDisposable
     [InlineData("bad:name")]
     [InlineData("a/b")]
     [InlineData("..")]
-    public async Task Create_ShouldRefuseNamesThatAreNotFolderNames(string name)
+    public async Task CreateShouldRefuseNamesThatAreNotFolderNames(string name)
     {
         var vm = new StartViewModel(_host);
         vm.NewProjectCommand.Execute(null);
@@ -86,7 +86,7 @@ public sealed class StartViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_ShouldNotReuseAFolderThatExists()
+    public async Task CreateShouldNotReuseAFolderThatExists()
     {
         Directory.CreateDirectory(Path.Combine(_root, "Taken"));
         var vm = new StartViewModel(_host);
@@ -100,7 +100,7 @@ public sealed class StartViewModelTests : IDisposable
     }
 
     [Fact]
-    public void SuggestName_ShouldSkipNamesInUse()
+    public void SuggestNameShouldSkipNamesInUse()
     {
         var day = new DateTime(2026, 11, 18);
         string first = StartViewModel.SuggestName(_root, day);
@@ -110,7 +110,7 @@ public sealed class StartViewModelTests : IDisposable
     }
 
     [Fact]
-    public void Open_ShouldListRecentProjectsWithTheirContents()
+    public void OpenShouldListRecentProjectsWithTheirContents()
     {
         string project = Path.Combine(_root, "Album");
         ProjectWorkspaceService.InitializeWorkspace(project);
@@ -130,7 +130,7 @@ public sealed class StartViewModelTests : IDisposable
     }
 
     [Fact]
-    public void Back_ShouldOnlyLeaveWhenAProjectIsOpen()
+    public void BackShouldOnlyLeaveWhenAProjectIsOpen()
     {
         var vm = new StartViewModel(_host);
         vm.Open();
@@ -145,7 +145,7 @@ public sealed class StartViewModelTests : IDisposable
     }
 
     [Fact]
-    public void RemoveRecent_ShouldForgetTheProjectButKeepItsFolder()
+    public void RemoveRecentShouldForgetTheProjectButKeepItsFolder()
     {
         string project = Path.Combine(_root, "Album");
         Directory.CreateDirectory(project);
@@ -161,7 +161,7 @@ public sealed class StartViewModelTests : IDisposable
     }
 
     [Fact]
-    public void RecentProjects_ShouldKeepTheNewestFirstWithoutDuplicates()
+    public void RecentProjectsShouldKeepTheNewestFirstWithoutDuplicates()
     {
         string a = Path.Combine(_root, "A"), b = Path.Combine(_root, "B");
         IReadOnlyList<string> list = [];

@@ -11,7 +11,7 @@ public sealed class UpdateCheckServiceTests
     [InlineData("3.0.0", 3, 0, 0)]
     [InlineData("v1.2", 1, 2, 0)]
     [InlineData("v2.5.0-preview1", 2, 5, 0)]
-    public void TryParseTagVersion_ValidTags_ShouldParseCorrectly(string tag, int expectedMajor, int expectedMinor, int expectedBuild)
+    public void TryParseTagVersionValidTagsShouldParseCorrectly(string tag, int expectedMajor, int expectedMinor, int expectedBuild)
     {
         bool success = UpdateCheckService.TryParseTagVersion(tag, out Version? version);
 
@@ -28,7 +28,7 @@ public sealed class UpdateCheckServiceTests
     [InlineData("   ")]
     [InlineData("invalid-tag")]
     [InlineData("v-beta")]
-    public void TryParseTagVersion_InvalidTags_ShouldReturnFalse(string? tag)
+    public void TryParseTagVersionInvalidTagsShouldReturnFalse(string? tag)
     {
         bool success = UpdateCheckService.TryParseTagVersion(tag, out Version? version);
 
@@ -37,7 +37,7 @@ public sealed class UpdateCheckServiceTests
     }
 
     [Fact]
-    public void GetCurrentVersion_ShouldReturnNonNullVersion()
+    public void GetCurrentVersionShouldReturnNonNullVersion()
     {
         var version = UpdateCheckService.GetCurrentVersion();
 
@@ -46,7 +46,7 @@ public sealed class UpdateCheckServiceTests
     }
 
     [Fact]
-    public async Task CheckForUpdateAsync_NewerVersionFound_ShouldReturnAvailable()
+    public async Task CheckForUpdateAsyncNewerVersionFoundShouldReturnAvailable()
     {
         var redirectUri = new Uri("https://github.com/Atm0n/PhotoCropper/releases/tag/v9.9.9");
         using var handler = new MockRedirectHandler(HttpStatusCode.Redirect, redirectUri);
@@ -68,7 +68,7 @@ public sealed class UpdateCheckServiceTests
     }
 
     [Fact]
-    public async Task CheckForUpdateAsync_SameVersionFound_ShouldReturnUpToDate()
+    public async Task CheckForUpdateAsyncSameVersionFoundShouldReturnUpToDate()
     {
         var redirectUri = new Uri("https://github.com/Atm0n/PhotoCropper/releases/tag/v2.4.0");
         using var handler = new MockRedirectHandler(HttpStatusCode.Redirect, redirectUri);
@@ -89,7 +89,7 @@ public sealed class UpdateCheckServiceTests
     }
 
     [Fact]
-    public async Task CheckForUpdateAsync_OlderVersionFound_ShouldReturnUpToDate()
+    public async Task CheckForUpdateAsyncOlderVersionFoundShouldReturnUpToDate()
     {
         var redirectUri = new Uri("https://github.com/Atm0n/PhotoCropper/releases/tag/v2.3.0");
         using var handler = new MockRedirectHandler(HttpStatusCode.Redirect, redirectUri);
@@ -107,7 +107,7 @@ public sealed class UpdateCheckServiceTests
     }
 
     [Fact]
-    public async Task CheckForUpdateAsync_GitHubApiSuccess_ShouldReturnAvailableWithHtmlUrl()
+    public async Task CheckForUpdateAsyncGitHubApiSuccessShouldReturnAvailableWithHtmlUrl()
     {
         string json = """
         {
@@ -135,7 +135,7 @@ public sealed class UpdateCheckServiceTests
     }
 
     [Fact]
-    public async Task CheckForUpdateAsync_NetworkError_ShouldReturnFailed()
+    public async Task CheckForUpdateAsyncNetworkErrorShouldReturnFailed()
     {
         using var handler = new ThrowingHandler(new HttpRequestException("Connection refused"));
         using var client = new HttpClient(handler);
@@ -181,7 +181,7 @@ public sealed class UpdateCheckServiceTests
     }
 
     [Fact]
-    public async Task CheckForUpdateAsync_RateLimited_ShouldReturnFailedNotUpToDate()
+    public async Task CheckForUpdateAsyncRateLimitedShouldReturnFailedNotUpToDate()
     {
         using var handler = new StatusHandler(HttpStatusCode.Forbidden, rateLimitRemaining: "0");
         using var client = new HttpClient(handler);
@@ -200,7 +200,7 @@ public sealed class UpdateCheckServiceTests
     [Theory]
     [InlineData(HttpStatusCode.NotFound)]
     [InlineData(HttpStatusCode.InternalServerError)]
-    public async Task CheckForUpdateAsync_HttpError_ShouldReturnFailedWithStatus(HttpStatusCode status)
+    public async Task CheckForUpdateAsyncHttpErrorShouldReturnFailedWithStatus(HttpStatusCode status)
     {
         using var handler = new StatusHandler(status);
         using var client = new HttpClient(handler);
@@ -216,7 +216,7 @@ public sealed class UpdateCheckServiceTests
     }
 
     [Fact]
-    public async Task CheckForUpdateAsync_SuccessWithoutTag_ShouldReturnFailed()
+    public async Task CheckForUpdateAsyncSuccessWithoutTagShouldReturnFailed()
     {
         using var handler = new MockJsonResponseHandler(HttpStatusCode.OK, """{ "name": "no tag here" }""");
         using var client = new HttpClient(handler);

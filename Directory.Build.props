@@ -1,12 +1,11 @@
 ﻿<Project>
   <PropertyGroup>
-    <Version>3.3.1</Version>
+    <Version>3.3.2</Version>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest-All</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <NoWarn>$(NoWarn);CA2007;CA1305;CA1707;CA1031;NETSDK1206</NoWarn>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
   </PropertyGroup>
 

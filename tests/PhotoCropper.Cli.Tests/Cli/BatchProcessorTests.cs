@@ -18,13 +18,13 @@ public sealed class BatchProcessorTests : IDisposable
     }
 
     [Fact]
-    public void Execute_NullOptions_ShouldThrowArgumentNullException()
+    public void ExecuteNullOptionsShouldThrowArgumentNullException()
     {
         Should.Throw<ArgumentNullException>(() => BatchProcessor.Execute(null!, [_scanFile]));
     }
 
     [Fact]
-    public void Execute_NullFiles_ShouldThrowArgumentNullException()
+    public void ExecuteNullFilesShouldThrowArgumentNullException()
     {
         var options = new CliOptions();
         options.Inputs.Add(_scanFile);
@@ -32,7 +32,7 @@ public sealed class BatchProcessorTests : IDisposable
     }
 
     [Fact]
-    public void Execute_StandardScan_ShouldExtractAndReturnSuccess()
+    public void ExecuteStandardScanShouldExtractAndReturnSuccess()
     {
         string outputDir = Path.Combine(_tempDir, "output");
         var options = new CliOptions
@@ -55,7 +55,7 @@ public sealed class BatchProcessorTests : IDisposable
     }
 
     [Fact]
-    public void Execute_EmptyScanList_ShouldReturnSuccess()
+    public void ExecuteEmptyScanListShouldReturnSuccess()
     {
         var options = new CliOptions
         {
@@ -69,7 +69,7 @@ public sealed class BatchProcessorTests : IDisposable
     }
 
     [Fact]
-    public void Execute_WithCustomPatternAndYear_ShouldNameFilesAccordingToPattern()
+    public void ExecuteWithCustomPatternAndYearShouldNameFilesAccordingToPattern()
     {
         string outputDir = Path.Combine(_tempDir, "output_pattern");
         var options = new CliOptions
@@ -96,7 +96,7 @@ public sealed class BatchProcessorTests : IDisposable
     }
 
     [Fact]
-    public void Execute_OverDetectedScan_FlagsAndLogsAudit()
+    public void ExecuteOverDetectedScanFlagsAndLogsAudit()
     {
         string outputDir = Path.Combine(_tempDir, "output_over");
         string copyUndetected = Path.Combine(_tempDir, "review_dir");
@@ -123,9 +123,6 @@ public sealed class BatchProcessorTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-        {
-            try { Directory.Delete(_tempDir, true); } catch { }
-        }
+        TestDirectory.TryDelete(_tempDir);
     }
 }

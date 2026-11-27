@@ -14,7 +14,7 @@ public sealed class PhotoExporterTests : IDisposable
     }
 
     [Fact]
-    public void SavePhotos_WithCleanOldExports_ShouldDeletePreviousFiles()
+    public void SavePhotosWithCleanOldExportsShouldDeletePreviousFiles()
     {
         string outputDir = Path.Combine(_tempDir, "CleanTest");
         Directory.CreateDirectory(outputDir);
@@ -43,7 +43,7 @@ public sealed class PhotoExporterTests : IDisposable
     }
 
     [Fact]
-    public void PhotoExporter_ShouldPreserveDpiAndReportProgress()
+    public void PhotoExporterShouldPreserveDpiAndReportProgress()
     {
         string scanPath = Path.Combine(_tempDir, "dpi_test_scan.jpg");
         using (Mat scan = new(300, 300, MatType.CV_8UC3))
@@ -82,7 +82,7 @@ public sealed class PhotoExporterTests : IDisposable
     }
 
     [Fact]
-    public void SavePhotos_PNG_ShouldCreateLosslessFiles()
+    public void SavePhotosPNGShouldCreateLosslessFiles()
     {
         string scanPath = Path.Combine(_tempDir, "png_test_scan.jpg");
         using (Mat scan = new(300, 300, MatType.CV_8UC3))
@@ -102,7 +102,7 @@ public sealed class PhotoExporterTests : IDisposable
     }
 
     [Fact]
-    public void SavePhotos_AndEngine_ShouldSupportUnicodeAndAccentedPaths()
+    public void SavePhotosAndEngineShouldSupportUnicodeAndAccentedPaths()
     {
         string unicodeScanPath = Path.Combine(_tempDir, "IMG_2026_còpia (24) - 日本語_тест.jpg");
         using (Mat scan = new(200, 200, MatType.CV_8UC3))
@@ -131,7 +131,7 @@ public sealed class PhotoExporterTests : IDisposable
     }
 
     [Fact]
-    public void SavePhotos_WhenSourceIsInRawScansDirectory_ShouldExportToFinalSiblingDirectory()
+    public void SavePhotosWhenSourceIsInRawScansDirectoryShouldExportToFinalSiblingDirectory()
     {
         string workspaceDir = Path.Combine(_tempDir, "workspace");
         string rawScansDir = Path.Combine(workspaceDir, "RawScans");
@@ -161,7 +161,7 @@ public sealed class PhotoExporterTests : IDisposable
     }
 
     [Fact]
-    public void SavePhotos_WithCustomPatternAndMetadata_ShouldProduceFormattedNameAndEmbedExif()
+    public void SavePhotosWithCustomPatternAndMetadataShouldProduceFormattedNameAndEmbedExif()
     {
         string scanFile = Path.Combine(_tempDir, "vintage_scan.jpg");
         using (Mat scan = new(100, 100, MatType.CV_8UC3))
@@ -209,7 +209,7 @@ public sealed class PhotoExporterTests : IDisposable
     }
 
     [Fact]
-    public void ResolveUniqueExportPath_WhenTargetClaimedOrExists_ShouldDisambiguate()
+    public void ResolveUniqueExportPathWhenTargetClaimedOrExistsShouldDisambiguate()
     {
         // The claim registry is process-wide; this folder is unique to the test, so no other test touches these names.
         string testFile = Path.Combine(_tempDir, "collision_test.jpg");
@@ -232,7 +232,7 @@ public sealed class PhotoExporterTests : IDisposable
     }
 
     [Fact]
-    public void SavePhotos_ConcurrentScansWithSameNamingPattern_ShouldExportAllPhotosWithoutCollision()
+    public void SavePhotosConcurrentScansWithSameNamingPatternShouldExportAllPhotosWithoutCollision()
     {
         string exportDir = Path.Combine(_tempDir, "concurrent_export");
 
@@ -264,9 +264,6 @@ public sealed class PhotoExporterTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-        {
-            try { Directory.Delete(_tempDir, true); } catch { }
-        }
+        TestDirectory.TryDelete(_tempDir);
     }
 }

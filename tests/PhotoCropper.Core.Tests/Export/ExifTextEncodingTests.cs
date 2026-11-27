@@ -12,7 +12,7 @@ public sealed class ExifTextEncodingTests
         haystack.AsSpan().IndexOf(needle) >= 0;
 
     [Fact]
-    public void TextFieldBytes_ShouldKeepNonAsciiCharacters()
+    public void TextFieldBytesShouldKeepNonAsciiCharacters()
     {
         byte[] bytes = ExifMetadataWriter.TextFieldBytes("Josep Martí");
 
@@ -20,7 +20,7 @@ public sealed class ExifTextEncodingTests
     }
 
     [Fact]
-    public void InjectJpegMetadata_ShouldWriteNonAsciiArtistAndDescriptionIntact()
+    public void InjectJpegMetadataShouldWriteNonAsciiArtistAndDescriptionIntact()
     {
         var metadata = new PhotoExportMetadata { Photographer = "Núria Puig", Description = "Festa a Sant Martí" };
 
@@ -32,7 +32,7 @@ public sealed class ExifTextEncodingTests
     }
 
     [Fact]
-    public void UserCommentBytes_AsciiText_ShouldUseAsciiCharacterCode()
+    public void UserCommentBytesAsciiTextShouldUseAsciiCharacterCode()
     {
         byte[] bytes = ExifMetadataWriter.UserCommentBytes("Grandparents");
 
@@ -41,7 +41,7 @@ public sealed class ExifTextEncodingTests
     }
 
     [Fact]
-    public void UserCommentBytes_NonAsciiText_ShouldUseUnicodeCharacterCode()
+    public void UserCommentBytesNonAsciiTextShouldUseUnicodeCharacterCode()
     {
         byte[] bytes = ExifMetadataWriter.UserCommentBytes("Martí");
 

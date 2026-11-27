@@ -65,15 +65,15 @@ public static class UpdateCheckService
             request.Headers.Add("User-Agent", "PhotoCropper");
             request.Headers.Add("Accept", "application/vnd.github.v3+json");
 
-            using var response = await client.SendAsync(request, cancellationToken);
+            using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
             string? tag = null;
             Uri? downloadUri = null;
 
             if (response.IsSuccessStatusCode)
             {
-                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                using var doc = await System.Text.Json.JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+                using var doc = await System.Text.Json.JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
                 var root = doc.RootElement;
 
                 if (root.TryGetProperty("tag_name", out var tagElem))
@@ -115,7 +115,7 @@ public static class UpdateCheckService
 
             return UpdateCheckResult.Failed(activeVersion, $"Could not read the latest release version (tag: '{tag ?? "none"}').");
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException or System.Text.Json.JsonException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException or System.Text.Json.JsonException or InvalidOperationException)
         {
             return UpdateCheckResult.Failed(activeVersion, ex.Message);
         }

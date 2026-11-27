@@ -37,7 +37,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     }
 
     [Fact]
-    public void MapPhotoCropToScan_Unrotated_ShouldOffsetFromBoxCorner()
+    public void MapPhotoCropToScanUnrotatedShouldOffsetFromBoxCorner()
     {
         var mapped = PhotoCropper.Core.Detection.CropGeometry.MapPhotoCropToScan(Box, 0, new Size(160, 80), new Rect(10, 10, 100, 50));
 
@@ -49,7 +49,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     [InlineData(90, 80, 160, 500, 520)]   // left half of a CW-rotated photo = bottom half of the box
     [InlineData(180, 160, 80, 540, 500)]  // left half of an upside-down photo = right half of the box
     [InlineData(270, 80, 160, 500, 480)]  // left half of a CCW-rotated photo = top half of the box
-    public void MapPhotoCropToScan_Rotated_ShouldMapLeftHalfToTheMatchingSideOfTheBox(
+    public void MapPhotoCropToScanRotatedShouldMapLeftHalfToTheMatchingSideOfTheBox(
         int rotation, int shownWidth, int shownHeight, float expectedCx, float expectedCy)
     {
         var leftHalf = new Rect(0, 0, shownWidth / 2, shownHeight);
@@ -66,7 +66,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
-    public void RefinedCrop_SavedAndRestored_ShouldReproduceTheRefinedPhoto(int userQuarterTurns)
+    public void RefinedCropSavedAndRestoredShouldReproduceTheRefinedPhoto(int userQuarterTurns)
     {
         using var engine = new PhotoCropperEngine(_scanPath) { AutoOrientPhotos = false };
         engine.RestoreFromSavedCrops([new WorkspaceCropData { CenterX = 500, CenterY = 500, Width = 160, Height = 80 }]);
@@ -98,7 +98,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     }
 
     [Fact]
-    public void ApplyCropToPhoto_ShouldRedrawTheBoxAtTheRefinedArea()
+    public void ApplyCropToPhotoShouldRedrawTheBoxAtTheRefinedArea()
     {
         using var engine = new PhotoCropperEngine(_scanPath) { AutoOrientPhotos = false };
         engine.RestoreFromSavedCrops([new WorkspaceCropData { CenterX = 500, CenterY = 500, Width = 160, Height = 80 }]);
@@ -109,7 +109,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     }
 
     [Fact]
-    public void RestoreFromSavedCrops_WithSavedOrientation_ShouldReuseItInsteadOfDetecting()
+    public void RestoreFromSavedCropsWithSavedOrientationShouldReuseItInsteadOfDetecting()
     {
         using var engine = new PhotoCropperEngine(_scanPath) { AutoOrientPhotos = true };
 
@@ -123,7 +123,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     [Theory]
     [InlineData(null, 90)] // an old project's photo, its orientation forgotten when it was upgraded: detected again
     [InlineData(0, 0)]     // a saved orientation is reused as it is
-    public void RestoreFromSavedCrops_WithoutSavedOrientation_ShouldDetectIt(int? saved, int expected)
+    public void RestoreFromSavedCropsWithoutSavedOrientationShouldDetectIt(int? saved, int expected)
     {
         // A landscape photo lying on its side on a white scan.
         string scanPath = Path.Combine(_tempDir, "turned_landscape.png");
@@ -142,7 +142,7 @@ public sealed class RefinementPersistenceTests : IDisposable
     }
 
     [Fact]
-    public void AddManualCrop_ShouldKeepPhotosRawCopiesAndBoxesAligned()
+    public void AddManualCropShouldKeepPhotosRawCopiesAndBoxesAligned()
     {
         using var engine = new PhotoCropperEngine(_scanPath);
         engine.DetectPhotos();

@@ -7,7 +7,7 @@ namespace PhotoCropper.Core.Tests.Export;
 public class ExifMetadataWriterTests
 {
     [Fact]
-    public void BuildExifApp1Segment_ContainsValidHeaders()
+    public void BuildExifApp1SegmentContainsValidHeaders()
     {
         var metadata = new PhotoExportMetadata
         {
@@ -45,7 +45,7 @@ public class ExifMetadataWriterTests
     }
 
     [Fact]
-    public void InjectJpegMetadata_InsertsApp1AfterSOI()
+    public void InjectJpegMetadataInsertsApp1AfterSOI()
     {
         // Minimal fake JPEG (SOI + EOI)
         byte[] fakeJpeg = [0xFF, 0xD8, 0xFF, 0xD9];
@@ -66,7 +66,7 @@ public class ExifMetadataWriterTests
     }
 
     [Fact]
-    public void BuildPngTextChunk_CreatesValidChunk()
+    public void BuildPngTextChunkCreatesValidChunk()
     {
         byte[] chunk = ExifMetadataWriter.BuildPngTextChunk("Creation Time", "1985-06-12");
 
@@ -83,7 +83,7 @@ public class ExifMetadataWriterTests
     }
 
     [Fact]
-    public void InjectPngMetadata_InjectsTextChunksAfterIhdr()
+    public void InjectPngMetadataInjectsTextChunksAfterIhdr()
     {
         // Minimal fake PNG: 8 bytes sig + 25 bytes IHDR + 12 bytes IEND = 45 bytes
         byte[] fakePng = new byte[45];

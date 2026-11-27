@@ -6,7 +6,7 @@ namespace PhotoCropper.Core.Tests.Scanning;
 public sealed class ScannerServiceTests
 {
     [Fact]
-    public void ScannerModels_DefaultValues_AreExpected()
+    public void ScannerModelsDefaultValuesAreExpected()
     {
         var options = new ScannerOptions();
         options.Dpi.ShouldBe(300);
@@ -30,7 +30,7 @@ public sealed class ScannerServiceTests
     [InlineData("Default", ScannerPageSize.Auto, "Auto")]
     [InlineData("UnknownValue", ScannerPageSize.Auto, "Auto")]
     [InlineData(null, ScannerPageSize.Auto, "Auto")]
-    public void ScannerPageSizeExtensions_Conversions_AreExpected(string? input, ScannerPageSize expectedEnum, string expectedSetting)
+    public void ScannerPageSizeExtensionsConversionsAreExpected(string? input, ScannerPageSize expectedEnum, string expectedSetting)
     {
         var parsed = ScannerPageSizeExtensions.ToScannerPageSize(input);
         parsed.ShouldBe(expectedEnum);
@@ -38,7 +38,7 @@ public sealed class ScannerServiceTests
     }
 
     [Fact]
-    public void ScannerDeviceInfo_ToString_FormatsCorrectly()
+    public void ScannerDeviceInfoToStringFormatsCorrectly()
     {
         var device = new ScannerDeviceInfo
         {
@@ -51,7 +51,7 @@ public sealed class ScannerServiceTests
     }
 
     [Fact]
-    public async Task Naps2ScannerService_LifecycleAndDeviceEnumeration_CompletesWithoutError()
+    public async Task Naps2ScannerServiceLifecycleAndDeviceEnumerationCompletesWithoutError()
     {
         using var service = new Naps2ScannerService();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
@@ -66,7 +66,7 @@ public sealed class ScannerServiceTests
     /// (test:0 and test:1); the Linux CI job turns it on, elsewhere this test is skipped.
     /// </summary>
     [Fact]
-    public async Task Naps2ScannerService_OnLinux_ListsSanesTestScanners()
+    public async Task Naps2ScannerServiceOnLinuxListsSanesTestScanners()
     {
         const string saneBackends = "/etc/sane.d/dll.conf";
         bool testBackendOn = OperatingSystem.IsLinux() && File.Exists(saneBackends) &&
@@ -84,7 +84,7 @@ public sealed class ScannerServiceTests
     }
 
     [Fact]
-    public async Task Naps2ScannerService_DisposedInstance_ThrowsObjectDisposedException()
+    public async Task Naps2ScannerServiceDisposedInstanceThrowsObjectDisposedException()
     {
         var service = new Naps2ScannerService();
         service.Dispose();
@@ -101,7 +101,7 @@ public sealed class ScannerServiceTests
     }
 
     [Fact]
-    public async Task Naps2ScannerService_ScanAsync_WithNonExistentDevice_ThrowsScannerNotFoundException()
+    public async Task Naps2ScannerServiceScanAsyncWithNonExistentDeviceThrowsScannerNotFoundException()
     {
         using var service = new Naps2ScannerService();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -124,7 +124,7 @@ public sealed class ScannerServiceTests
     }
 
     [Fact]
-    public async Task Naps2ScannerService_ScanToDirectoryAsync_WithNonExistentDevice_ThrowsScannerNotFoundException()
+    public async Task Naps2ScannerServiceScanToDirectoryAsyncWithNonExistentDeviceThrowsScannerNotFoundException()
     {
         using var service = new Naps2ScannerService();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -159,7 +159,7 @@ public sealed class ScannerServiceTests
     }
 
     [Fact]
-    public async Task Naps2ScannerService_ScanAsync_WhenPreCancelled_ThrowsOperationCanceledException()
+    public async Task Naps2ScannerServiceScanAsyncWhenPreCancelledThrowsOperationCanceledException()
     {
         using var service = new Naps2ScannerService();
         using var cts = new CancellationTokenSource();

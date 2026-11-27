@@ -1,0 +1,1 @@
+Usage: PhotoCropper.SampleScans <output folder> [--count N (default 3)] [--seed S (default 1)]

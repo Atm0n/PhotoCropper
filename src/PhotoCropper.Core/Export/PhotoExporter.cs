@@ -16,7 +16,7 @@ public static class PhotoExporter
             byte[] fileBytes = File.ReadAllBytes(sourceFilePath);
             return ExtractDpiFromBytes(fileBytes);
         }
-        catch
+        catch (Exception ex) when (ExpectedErrors.IsFileError(ex))
         {
             return (300, 300);
         }

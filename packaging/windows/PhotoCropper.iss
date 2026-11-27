@@ -3,7 +3,7 @@
 
 #define MyAppName "PhotoCropper"
 #ifndef MyAppVersion
-  #define MyAppVersion "3.3.1"
+  #define MyAppVersion "3.3.2"
 #endif
 #define MyAppPublisher "Atm0n"
 #define MyAppURL "https://github.com/Atm0n/PhotoCropper"

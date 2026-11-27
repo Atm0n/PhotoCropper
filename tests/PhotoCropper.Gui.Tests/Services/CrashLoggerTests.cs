@@ -20,7 +20,7 @@ public sealed class CrashLoggerTests : IDisposable
     }
 
     [Fact]
-    public void WriteCrashLog_ShouldWriteReportWithSourceAndStackTrace()
+    public void WriteCrashLogShouldWriteReportWithSourceAndStackTrace()
     {
         string? path = CrashLogger.WriteCrashLog(Thrown(), "UI thread", _tempDir);
 
@@ -32,7 +32,7 @@ public sealed class CrashLoggerTests : IDisposable
     }
 
     [Fact]
-    public void WriteCrashLog_ShouldKeepOnlyTheMostRecentReports()
+    public void WriteCrashLogShouldKeepOnlyTheMostRecentReports()
     {
         for (int i = 0; i < CrashLogger.MaxLogFiles + 5; i++)
         {
@@ -48,7 +48,7 @@ public sealed class CrashLoggerTests : IDisposable
     }
 
     [Fact]
-    public void WriteCrashLog_WhenAnOldReportCannotBeDeleted_ShouldStillReturnTheNewReportPath()
+    public void WriteCrashLogWhenAnOldReportCannotBeDeletedShouldStillReturnTheNewReportPath()
     {
         string locked = Path.Combine(_tempDir, "crash-locked.log");
         File.WriteAllText(locked, "old");
@@ -77,7 +77,7 @@ public sealed class CrashLoggerTests : IDisposable
     }
 
     [Fact]
-    public void WriteCrashLog_WhenDirectoryIsUnusable_ShouldReturnNullInsteadOfThrowing()
+    public void WriteCrashLogWhenDirectoryIsUnusableShouldReturnNullInsteadOfThrowing()
     {
         // A file where the directory should be makes CreateDirectory fail.
         string blocker = Path.Combine(_tempDir, "not-a-directory");

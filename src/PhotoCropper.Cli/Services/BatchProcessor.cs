@@ -161,7 +161,7 @@ internal static class BatchProcessor
                             AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [yellow]⚠ 0 photos[/] [bold white]{fileName}[/]");
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ExpectedErrors.IsImageError(ex))
                     {
                         Interlocked.Increment(ref errors);
                         AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [bold red]✗ FAILED[/] [bold white]{fileName}[/]: [red]{Markup.Escape(ex.Message)}[/]");
@@ -254,7 +254,7 @@ internal static class BatchProcessor
                             AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [grey]Still 0 photos[/] [bold white]{fileName}[/]");
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ExpectedErrors.IsImageError(ex))
                     {
                         remainingUndetected.Add(scanPath);
                         AnsiConsole.MarkupLine($"[grey][[{DateTime.Now:HH:mm:ss}]][/] [bold red]✗ FAILED[/] [bold white]{fileName}[/]: [red]{Markup.Escape(ex.Message)}[/]");

@@ -76,7 +76,7 @@ public static class FaceOrientationService
             }
             return modelPath;
         }
-        catch
+        catch (Exception ex) when (ExpectedErrors.IsFileError(ex))
         {
             return null;
         }
@@ -171,8 +171,9 @@ public static class FaceOrientationService
             // Input size and score threshold are set per call before detecting.
             return FaceDetectorYN.Create(modelPath, string.Empty, new Size(320, 320), 0.45f, 0.3f, 5000);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is OpenCVException or OpenCvSharpException or DllNotFoundException or EntryPointNotFoundException)
         {
+            // A model OpenCV rejects, or a native build without the face detector: orientation just goes without faces.
             System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not load face detection model: {ex.Message}");
             return null;
         }
@@ -284,7 +285,7 @@ public static class FaceOrientationService
 
             return ScoreFaceData(faces, scoreThreshold);
         }
-        catch
+        catch (Exception ex) when (ex is OpenCVException or OpenCvSharpException)
         {
             return 0f;
         }

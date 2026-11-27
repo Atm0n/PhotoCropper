@@ -6,6 +6,7 @@ using Spectre.Console;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
+using PhotoCropper.Core.Common;
 
 namespace PhotoCropper.Cli.Services;
 
@@ -188,7 +189,7 @@ internal static class ProjectProcessor
                     console.MarkupLine($"  {tag} [white]{Markup.Escape(name)}[/] → {photos} photo(s)");
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ExpectedErrors.IsImageError(ex))
             {
                 results[i] = new ScanResult(name, ScanOutcome.Failed, 0, ex.Message);
                 console.MarkupLine($"  [red]✗[/] [white]{Markup.Escape(name)}[/]: {Markup.Escape(ex.Message)}");

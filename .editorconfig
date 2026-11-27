@@ -4,3 +4,7 @@ root = true
 # An object passed to the constructor of a disposable type (a handler to HttpClient, bitmaps to a result that
 # disposes them) is owned, and disposed, by what it was passed to.
 dotnet_code_quality.CA2000.dispose_ownership_transfer_at_constructor = true
+
+# ConfigureAwait only matters in libraries, whose callers may have a synchronization context. The apps (the Avalonia
+# GUI above all, whose continuations must come back to the UI thread) and the test runners keep the default.
+dotnet_code_quality.CA2007.output_kind = DynamicallyLinkedLibrary

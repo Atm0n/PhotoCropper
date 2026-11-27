@@ -1,4 +1,5 @@
 using PhotoCropper.Core.IO;
+using PhotoCropper.TestHelpers;
 
 namespace PhotoCropper.Core.Tests.IO;
 
@@ -24,13 +25,13 @@ public sealed class ImageFileCollectorTests : IDisposable
     [InlineData("data.txt", false)]
     [InlineData("", false)]
     [InlineData(null, false)]
-    public void IsSupportedImageFile_ShouldMatchExpectedExtensions(string? fileName, bool expected)
+    public void IsSupportedImageFileShouldMatchExpectedExtensions(string? fileName, bool expected)
     {
         ImageFileCollector.IsSupportedImageFile(fileName).ShouldBe(expected);
     }
 
     [Fact]
-    public void CollectFiles_ShouldFilterAndOrderImagesRecursively()
+    public void CollectFilesShouldFilterAndOrderImagesRecursively()
     {
         string subDir = Path.Combine(_tempDir, "sub");
         Directory.CreateDirectory(subDir);
@@ -55,7 +56,7 @@ public sealed class ImageFileCollectorTests : IDisposable
     }
 
     [Fact]
-    public void CollectFiles_NonRecursive_ShouldOnlyCollectTopLevel()
+    public void CollectFilesNonRecursiveShouldOnlyCollectTopLevel()
     {
         string subDir = Path.Combine(_tempDir, "sub");
         Directory.CreateDirectory(subDir);
@@ -74,7 +75,7 @@ public sealed class ImageFileCollectorTests : IDisposable
     }
 
     [Fact]
-    public void CollectFiles_GivenFiles_ShouldKeepOnlyImagesWhateverTheExtensionsCase()
+    public void CollectFilesGivenFilesShouldKeepOnlyImagesWhateverTheExtensionsCase()
     {
         string jpg = Path.Combine(_tempDir, "photo1.JPG");
         string png = Path.Combine(_tempDir, "photo2.png");
@@ -87,7 +88,7 @@ public sealed class ImageFileCollectorTests : IDisposable
     }
 
     [Fact]
-    public void CollectFiles_SameFileGivenTwiceAndThroughItsFolder_ShouldListItOnce()
+    public void CollectFilesSameFileGivenTwiceAndThroughItsFolderShouldListItOnce()
     {
         string photo = Path.Combine(_tempDir, "duplicate.jpeg");
         File.WriteAllText(photo, "dummy");
@@ -98,7 +99,7 @@ public sealed class ImageFileCollectorTests : IDisposable
     }
 
     [Fact]
-    public void CollectFiles_MissingPath_ShouldBeSkipped()
+    public void CollectFilesMissingPathShouldBeSkipped()
     {
         var collected = ImageFileCollector.CollectFiles([Path.Combine(_tempDir, "does_not_exist.jpg")], recursive: false);
 
@@ -107,15 +108,6 @@ public sealed class ImageFileCollectorTests : IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, recursive: true);
-            }
-        }
-        catch
-        {
-        }
+        TestDirectory.TryDelete(_tempDir);
     }
 }

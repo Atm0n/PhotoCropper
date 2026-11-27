@@ -11,7 +11,7 @@ public class AutoOrientationServiceTests
     [InlineData(90)]
     [InlineData(180)]
     [InlineData(270)]
-    public void DetectLandscapeRotation_SkyAndVegetation_ShouldReturnCorrectRotation(int expectedRotation)
+    public void DetectLandscapeRotationSkyAndVegetationShouldReturnCorrectRotation(int expectedRotation)
     {
         // Act
         using Mat landscape = TestImageFactory.CreateSkyLandscapePhoto(orientation: expectedRotation);
@@ -26,7 +26,7 @@ public class AutoOrientationServiceTests
     [InlineData(90)]
     [InlineData(180)]
     [InlineData(270)]
-    public void DetectLandscapeRotation_SkyAndWater_ShouldReturnCorrectRotation(int expectedRotation)
+    public void DetectLandscapeRotationSkyAndWaterShouldReturnCorrectRotation(int expectedRotation)
     {
         // Arrange
         // BGR Blue Sky (same as TestImageFactory)
@@ -67,7 +67,7 @@ public class AutoOrientationServiceTests
     }
 
     [Fact]
-    public void DetectLandscapeRotation_AmbiguousScene_ShouldReturnZero()
+    public void DetectLandscapeRotationAmbiguousSceneShouldReturnZero()
     {
         // Arrange
         using Mat mat = new Mat(200, 200, MatType.CV_8UC3);
@@ -81,7 +81,7 @@ public class AutoOrientationServiceTests
     }
 
     [Fact]
-    public void DetectLandscapeRotation_OvercastSkyAndGround_ShouldDetectOrientation()
+    public void DetectLandscapeRotationOvercastSkyAndGroundShouldDetectOrientation()
     {
         // Overcast / Cloudy White Sky: S <= 45, V >= 165
         // BGR(200, 200, 200) -> V=200, S=0 (Cloudy white)
@@ -105,7 +105,7 @@ public class AutoOrientationServiceTests
     [InlineData(0)]
     [InlineData(90)]
     [InlineData(180)]
-    public void DetectRequiredRotation_ThenOrientPhoto_ShouldLeaveThePhotoUpright(int turned)
+    public void DetectRequiredRotationThenOrientPhotoShouldLeaveThePhotoUpright(int turned)
     {
         using Mat photo = TestImageFactory.CreateSkyLandscapePhoto(200, 200, turned);
         AutoOrientationService.DetectRequiredRotation(photo).ShouldBe(turned);
@@ -115,7 +115,7 @@ public class AutoOrientationServiceTests
     }
 
     [Fact]
-    public void DetectRequiredRotation_ShouldHandleBgraAndGreyscale()
+    public void DetectRequiredRotationShouldHandleBgraAndGreyscale()
     {
         // 4 channels: extracted photos have transparent margins.
         using Mat bgra = new(200, 200, MatType.CV_8UC4, new Scalar(200, 100, 50, 255));
@@ -132,21 +132,21 @@ public class AutoOrientationServiceTests
     [InlineData(-1.0, 20.7, 1.0, -20.7)]   // Paris street: weakly "sideways"
     [InlineData(56.6, -61.8, -56.6, 61.8)] // crowd at a fair: sideways barely beats upright
     [InlineData(0.0, 0.0, 0.0, 0.0)]       // indoors, no sky or vegetation
-    public void ChooseLandscapeRotation_WeakOrNarrowEvidence_ShouldKeepThePhotoAsPlaced(double up, double cw, double flip, double ccw) =>
+    public void ChooseLandscapeRotationWeakOrNarrowEvidenceShouldKeepThePhotoAsPlaced(double up, double cw, double flip, double ccw) =>
         AutoOrientationService.ChooseLandscapeRotation([up, cw, flip, ccw]).ShouldBe(0);
 
     [Theory]
     [InlineData(255.0, -66.2, -255.0, 66.2, 0)]  // valley under a sky, upright
     [InlineData(-10.7, 70.6, 10.7, -70.6, 90)]   // farm under a sky, lying on its side
     [InlineData(-246.1, -20.7, 246.1, 20.7, 180)] // church under a sky, upside down
-    public void ChooseLandscapeRotation_ClearSky_ShouldTurnItUpright(double up, double cw, double flip, double ccw, int expected) =>
+    public void ChooseLandscapeRotationClearSkyShouldTurnItUpright(double up, double cw, double flip, double ccw, int expected) =>
         AutoOrientationService.ChooseLandscapeRotation([up, cw, flip, ccw]).ShouldBe(expected);
 
     [Theory]
     [InlineData("faded-fair.jpg")]
     [InlineData("fair-crowd.jpg")]
     [InlineData("paris-street.jpg")]
-    public void DetectRequiredRotation_UprightPhotoWithoutClearSkyOrFaces_ShouldKeepItUpright(string file)
+    public void DetectRequiredRotationUprightPhotoWithoutClearSkyOrFacesShouldKeepItUpright(string file)
     {
         using Mat photo = LoadPhoto(file);
         AutoOrientationService.DetectRequiredRotation(photo).ShouldBe(0);
@@ -157,7 +157,7 @@ public class AutoOrientationServiceTests
     [InlineData("valley-landscape.jpg", 180)]
     [InlineData("couple-portrait.jpg", 90)]
     [InlineData("couple-portrait.jpg", 270)]
-    public void DetectRequiredRotation_TurnedPhotoWithSkyOrFaces_ShouldTurnItBack(string file, int turned)
+    public void DetectRequiredRotationTurnedPhotoWithSkyOrFacesShouldTurnItBack(string file, int turned)
     {
         using Mat upright = LoadPhoto(file);
         using Mat photo = new();

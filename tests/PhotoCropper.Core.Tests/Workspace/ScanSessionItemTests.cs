@@ -17,7 +17,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_InitialState_ShouldBeInactive()
+    public void ScanSessionItemInitialStateShouldBeInactive()
     {
         var options = new DetectionOptions { BackgroundTolerance = 30.0 };
         using var item = new ScanSessionItem(_scanPath, options);
@@ -30,7 +30,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_WithSavedCrops_ShouldRestoreCrops()
+    public void ScanSessionItemWithSavedCropsShouldRestoreCrops()
     {
         var options = new DetectionOptions();
         var savedCrops = new List<PhotoCropper.Core.Workspace.WorkspaceCropData>
@@ -53,7 +53,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_WithEmptySavedCrops_ShouldKeepTheScanEmpty()
+    public void ScanSessionItemWithEmptySavedCropsShouldKeepTheScanEmpty()
     {
         // Every photo was deleted and that was saved: reopening must not detect them again.
         using var item = new ScanSessionItem(_scanPath, new DetectionOptions(), isSaved: true, isModified: false, savedCrops: []);
@@ -65,7 +65,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanEntry_SetFinalCrops_ShouldMarkAnEmptyListAsSaved()
+    public void ScanEntrySetFinalCropsShouldMarkAnEmptyListAsSaved()
     {
         var entry = new WorkspaceScanEntry();
         entry.HasSavedCrops.ShouldBeFalse();
@@ -78,7 +78,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanEntry_FromAnOlderSession_ShouldCountOnlyANonEmptyListAsSaved()
+    public void ScanEntryFromAnOlderSessionShouldCountOnlyANonEmptyListAsSaved()
     {
         var old = System.Text.Json.JsonSerializer.Deserialize<WorkspaceScanEntry>("""{"RelativePath":"a.png","FinalCrops":[]}""")!;
         old.HasSavedCrops.ShouldBeFalse();
@@ -89,7 +89,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_Activate_ShouldInstantiateEngineAndDetectPhotos()
+    public void ScanSessionItemActivateShouldInstantiateEngineAndDetectPhotos()
     {
         var options = new DetectionOptions { BackgroundTolerance = 30.0 };
         using var item = new ScanSessionItem(_scanPath, options);
@@ -104,7 +104,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_Deactivate_ShouldDisposeEngineAndRetainPhotoCount()
+    public void ScanSessionItemDeactivateShouldDisposeEngineAndRetainPhotoCount()
     {
         var options = new DetectionOptions { BackgroundTolerance = 30.0 };
         using var item = new ScanSessionItem(_scanPath, options);
@@ -122,7 +122,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_Reactivate_ShouldRestoreEngine()
+    public void ScanSessionItemReactivateShouldRestoreEngine()
     {
         var options = new DetectionOptions { BackgroundTolerance = 30.0 };
         using var item = new ScanSessionItem(_scanPath, options);
@@ -137,7 +137,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_TrackingProperties_ShouldReflectAssignedState()
+    public void ScanSessionItemTrackingPropertiesShouldReflectAssignedState()
     {
         var options = new DetectionOptions { BackgroundTolerance = 30.0 };
         using var defaultItem = new ScanSessionItem(_scanPath, options);
@@ -153,7 +153,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_DeactivateIfUnmodified_ShouldOnlyDeactivateWhenNotModified()
+    public void ScanSessionItemDeactivateIfUnmodifiedShouldOnlyDeactivateWhenNotModified()
     {
         var options = new DetectionOptions { BackgroundTolerance = 30.0 };
         using var modifiedItem = new ScanSessionItem(_scanPath, options, isSaved: false, isModified: true);
@@ -170,7 +170,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_Metadata_ShouldStoreAndPersistMetadata()
+    public void ScanSessionItemMetadataShouldStoreAndPersistMetadata()
     {
         var options = new DetectionOptions();
         using var item = new ScanSessionItem(_scanPath, options);
@@ -187,7 +187,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_ConcurrentActivation_ShouldBeThreadSafe()
+    public void ScanSessionItemConcurrentActivationShouldBeThreadSafe()
     {
         var options = new DetectionOptions { BackgroundTolerance = 30.0 };
         using var item = new ScanSessionItem(_scanPath, options);
@@ -203,7 +203,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_WithSavedCrops_ShouldRestoreRotations()
+    public void ScanSessionItemWithSavedCropsShouldRestoreRotations()
     {
         var options = new DetectionOptions();
         var savedCrops = new List<PhotoCropper.Core.Workspace.WorkspaceCropData>
@@ -220,7 +220,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_ReloadFromSavedCrops_ShouldDropAnEditedCopyForTheNewBoxes()
+    public void ScanSessionItemReloadFromSavedCropsShouldDropAnEditedCopyForTheNewBoxes()
     {
         var box = new PhotoCropper.Core.Workspace.WorkspaceCropData { CenterX = 100, CenterY = 100, Width = 80, Height = 60, Angle = 0 };
         using var item = new ScanSessionItem(_scanPath, new DetectionOptions(), isSaved: true, isModified: false, savedCrops: [box]);
@@ -240,7 +240,7 @@ public sealed class ScanSessionItemTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionItem_ReloadFromSavedCrops_ShouldLeaveABusyScanLoaded()
+    public void ScanSessionItemReloadFromSavedCropsShouldLeaveABusyScanLoaded()
     {
         using var item = new ScanSessionItem(_scanPath, new DetectionOptions());
         item.Activate();
@@ -254,9 +254,6 @@ public sealed class ScanSessionItemTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-        {
-            try { Directory.Delete(_tempDir, true); } catch { }
-        }
+        TestDirectory.TryDelete(_tempDir);
     }
 }

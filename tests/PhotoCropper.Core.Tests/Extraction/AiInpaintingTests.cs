@@ -64,7 +64,7 @@ public sealed class AiInpaintingTests : IDisposable
     }
 
     [Fact]
-    public void AiStroke_ShouldReplaceOnlyThePaintedArea()
+    public void AiStrokeShouldReplaceOnlyThePaintedArea()
     {
         AiInpainting.ModelOverride = _fake;
         using var photo = Grey();
@@ -78,7 +78,7 @@ public sealed class AiInpaintingTests : IDisposable
     }
 
     [Fact]
-    public void AiStroke_ShouldKeepTransparencyAndWorkOnGreyscale()
+    public void AiStrokeShouldKeepTransparencyAndWorkOnGreyscale()
     {
         AiInpainting.ModelOverride = _fake;
         using var withAlpha = Grey(channels: 4);
@@ -94,7 +94,7 @@ public sealed class AiInpaintingTests : IDisposable
     }
 
     [Fact]
-    public void AiStroke_WithoutTheModel_ShouldFallBackToQuickFill()
+    public void AiStrokeWithoutTheModelShouldFallBackToQuickFill()
     {
         AiInpainting.ModelOverride = null;
         AiInpainting.IsAvailable.ShouldBeFalse();
@@ -107,7 +107,7 @@ public sealed class AiInpaintingTests : IDisposable
     }
 
     [Fact]
-    public void RepeatedRenders_ShouldReuseTheModelsResult()
+    public void RepeatedRendersShouldReuseTheModelsResult()
     {
         AiInpainting.ModelOverride = _fake;
         using var photo = Grey();
@@ -120,7 +120,7 @@ public sealed class AiInpaintingTests : IDisposable
     }
 
     [Fact]
-    public void MixedStrokes_ShouldUseTheModelOnlyForAiStrokes()
+    public void MixedStrokesShouldUseTheModelOnlyForAiStrokes()
     {
         AiInpainting.ModelOverride = _fake;
         using var photo = Grey();
@@ -133,7 +133,7 @@ public sealed class AiInpaintingTests : IDisposable
     }
 
     [Fact]
-    public void FindAreas_ShouldGroupNearbyDamageAndKeepDistantDamageApart()
+    public void FindAreasShouldGroupNearbyDamageAndKeepDistantDamageApart()
     {
         using var mask = new Mat(1000, 1000, MatType.CV_8UC1, Scalar.All(0));
         Cv2.Circle(mask, new Point(100, 100), 10, new Scalar(255), -1);
@@ -149,7 +149,7 @@ public sealed class AiInpaintingTests : IDisposable
     }
 
     [Fact]
-    public void Fingerprint_ShouldChangeWithTheMethodButNotForExistingQuickStrokes()
+    public void FingerprintShouldChangeWithTheMethodButNotForExistingQuickStrokes()
     {
         var photo = new ProjectPhoto { Id = "p", RepairImageWidth = 100, RepairImageHeight = 100 };
         photo.Repairs.Add(Stroke(RepairMethod.Quick, 0.01f, 0.5f, 0.5f));
@@ -161,7 +161,7 @@ public sealed class AiInpaintingTests : IDisposable
     }
 
     [Fact]
-    public void Method_ShouldSurviveSavingAndLoading()
+    public void MethodShouldSurviveSavingAndLoading()
     {
         var stroke = Stroke(RepairMethod.Ai, 0.01f, 0.5f, 0.5f);
 
@@ -180,7 +180,7 @@ public sealed class AiInpaintingTests : IDisposable
     }
 
     [Fact]
-    public async Task Download_ShouldInstallAVerifiedFile()
+    public async Task DownloadShouldInstallAVerifiedFile()
     {
         byte[] body = new byte[300_000];
         RandomNumberGenerator.Fill(body);
@@ -199,7 +199,7 @@ public sealed class AiInpaintingTests : IDisposable
     }
 
     [Fact]
-    public async Task Download_WithTheWrongChecksum_ShouldInstallNothing()
+    public async Task DownloadWithTheWrongChecksumShouldInstallNothing()
     {
         byte[] body = new byte[1000];
         string target = Path.Combine(_modelDir, "model.onnx");
@@ -223,7 +223,7 @@ public sealed class AiInpaintingTests : IDisposable
     /// a hole in a smooth gradient should be filled with the gradient.
     /// </summary>
     [Fact]
-    public void RealModel_ShouldContinueTheSurroundings()
+    public void RealModelShouldContinueTheSurroundings()
     {
         string? dir = Environment.GetEnvironmentVariable("PHOTOCROPPER_LAMA_DIR");
         Assert.SkipWhen(string.IsNullOrEmpty(dir) || !File.Exists(Path.Combine(dir, AiModelStore.LamaFileName)),

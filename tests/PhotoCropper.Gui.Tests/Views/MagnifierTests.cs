@@ -38,7 +38,7 @@ public sealed class MagnifierTests
     }
 
     [Fact]
-    public void Render_MagnifiesTheScanAroundThePointWithTheBoxAsAThinLine()
+    public void RenderMagnifiesTheScanAroundThePointWithTheBoxAsAThinLine()
     {
         TestAppBuilder.EnsureInitialized();
         using var scan = Scan();
@@ -59,7 +59,7 @@ public sealed class MagnifierTests
     }
 
     [Fact]
-    public void Render_AfterItsImageWasDisposed_ShouldNotThrow()
+    public void RenderAfterItsImageWasDisposedShouldNotThrow()
     {
         // The crash from the Finish editor: a preview rendered again mid-drag disposes the bitmap the magnifier shows.
         TestAppBuilder.EnsureInitialized();
@@ -72,7 +72,7 @@ public sealed class MagnifierTests
     }
 
     [Fact]
-    public void ReplaceSource_ShouldDrawTheNewRendering()
+    public void ReplaceSourceShouldDrawTheNewRendering()
     {
         TestAppBuilder.EnsureInitialized();
         using var old = Scan();
@@ -88,7 +88,7 @@ public sealed class MagnifierTests
     }
 
     [Fact]
-    public void Render_PastTheScanEdgeShowsTheBackdrop()
+    public void RenderPastTheScanEdgeShowsTheBackdrop()
     {
         TestAppBuilder.EnsureInitialized();
         using var scan = Scan();

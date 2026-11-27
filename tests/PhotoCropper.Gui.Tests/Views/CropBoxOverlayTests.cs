@@ -18,7 +18,7 @@ public sealed class CropBoxOverlayTests
     };
 
     [Fact]
-    public void Geometry_PutsDeleteBadgeOnTopRightCorner()
+    public void GeometryPutsDeleteBadgeOnTopRightCorner()
     {
         var geometry = CropBoxGeometry.For(Box(), new System.Drawing.Size(1000, 800), overlayScale: 1.0);
 
@@ -27,7 +27,7 @@ public sealed class CropBoxOverlayTests
     }
 
     [Fact]
-    public void Geometry_RotationHandleDistanceScalesWithOverlay()
+    public void GeometryRotationHandleDistanceScalesWithOverlay()
     {
         var size = new System.Drawing.Size(1000, 800);
 
@@ -58,7 +58,7 @@ public sealed class CropBoxOverlayTests
     }
 
     [Fact]
-    public void Render_TheSelectedBox_HasItsBadgesAndALineJustOutsideIt()
+    public void RenderTheSelectedBoxHasItsBadgesAndALineJustOutsideIt()
     {
         using var bitmap = Render(selected: 0);
 
@@ -70,7 +70,7 @@ public sealed class CropBoxOverlayTests
     }
 
     [Fact]
-    public void Render_ABoxNotSelected_IsOnlyALine()
+    public void RenderABoxNotSelectedIsOnlyALine()
     {
         using var bitmap = Render(selected: -1);
 
@@ -80,7 +80,7 @@ public sealed class CropBoxOverlayTests
     }
 
     [Fact]
-    public void Render_DimmingOutside_DarkensTheScanButNotTheBox()
+    public void RenderDimmingOutsideDarkensTheScanButNotTheBox()
     {
         using var bitmap = Render(selected: -1, dim: true);
 
@@ -90,7 +90,7 @@ public sealed class CropBoxOverlayTests
     }
 
     [Fact]
-    public void Render_WithoutDimming_LeavesTheScanClear()
+    public void RenderWithoutDimmingLeavesTheScanClear()
     {
         using var bitmap = Render(selected: -1);
 

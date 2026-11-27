@@ -7,7 +7,7 @@ public sealed class CancellableOperationRunnerTests
     private static readonly TimeSpan Grace = TimeSpan.FromSeconds(2);
 
     [Fact]
-    public async Task RunAsync_WhenOperationFinishes_ShouldReturnCompleted()
+    public async Task RunAsyncWhenOperationFinishesShouldReturnCompleted()
     {
         using var cts = new CancellationTokenSource();
         bool ran = false;
@@ -23,7 +23,7 @@ public sealed class CancellableOperationRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_WhenOperationFails_ShouldRethrowItsException()
+    public async Task RunAsyncWhenOperationFailsShouldRethrowItsException()
     {
         using var cts = new CancellationTokenSource();
 
@@ -32,7 +32,7 @@ public sealed class CancellableOperationRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_WhenCancelled_ShouldNotReturnUntilOperationHasStopped()
+    public async Task RunAsyncWhenCancelledShouldNotReturnUntilOperationHasStopped()
     {
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         bool stillRunningAfterCancel = false;
@@ -69,7 +69,7 @@ public sealed class CancellableOperationRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_WhenOperationIgnoresCancellation_ShouldAbandonItAfterGracePeriod()
+    public async Task RunAsyncWhenOperationIgnoresCancellationShouldAbandonItAfterGracePeriod()
     {
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -100,7 +100,7 @@ public sealed class CancellableOperationRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_WhenTimeoutElapses_ShouldBehaveLikeCancel()
+    public async Task RunAsyncWhenTimeoutElapsesShouldBehaveLikeCancel()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
 

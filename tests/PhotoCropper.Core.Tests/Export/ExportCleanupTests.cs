@@ -44,7 +44,7 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
-    public void ReExport_ShouldKeepUnrelatedFilesSharingThePrefix()
+    public void ReExportShouldKeepUnrelatedFilesSharingThePrefix()
     {
         string scan = CreateScan("IMG.jpg");
         string[] unrelated =
@@ -65,7 +65,7 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
-    public void ReExport_ShouldReplacePreviousExportsInsteadOfAddingDuplicates()
+    public void ReExportShouldReplacePreviousExportsInsteadOfAddingDuplicates()
     {
         string scan = CreateScan("scan_0001.jpg");
         Touch("scan_0001_1.jpg");
@@ -82,7 +82,7 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
-    public void ReExport_ShouldNotTouchOtherScansExports()
+    public void ReExportShouldNotTouchOtherScansExports()
     {
         string scan = CreateScan("scan_1.jpg");
         string otherScanExport = Touch("scan_10_1.jpg");
@@ -94,7 +94,7 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
-    public void ReExport_WithPatternWithoutOriginal_ShouldNotDeleteAnything()
+    public void ReExportWithPatternWithoutOriginalShouldNotDeleteAnything()
     {
         // "{year}_{index:02}" names can't be attributed to one scan, so they might belong to another one.
         string scan = CreateScan("scan_0001.jpg");
@@ -110,7 +110,7 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
-    public void ReExport_IntoScanFolderWithOriginalOnlyPattern_ShouldNeverDeleteTheSourceScan()
+    public void ReExportIntoScanFolderWithOriginalOnlyPatternShouldNeverDeleteTheSourceScan()
     {
         string scan = CreateScan("scan_0001.jpg", _outputDir);
         using var photo = Photo();
@@ -122,7 +122,7 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
-    public void ReExport_AfterPatternChange_ShouldReplaceRecordedFiles()
+    public void ReExportAfterPatternChangeShouldReplaceRecordedFiles()
     {
         string scan = CreateScan("scan_0001.jpg");
         using var photo = Photo();
@@ -136,7 +136,7 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
-    public void ReExport_ShouldKeepRecordedFileThatWasChangedSinceExport()
+    public void ReExportShouldKeepRecordedFileThatWasChangedSinceExport()
     {
         string scan = CreateScan("scan_0001.jpg");
         using var photo = Photo();
@@ -152,7 +152,7 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
-    public void ReExport_ToDifferentFolder_ShouldKeepRecordedFilesInTheOldFolder()
+    public void ReExportToDifferentFolderShouldKeepRecordedFilesInTheOldFolder()
     {
         string scan = CreateScan("scan_0001.jpg");
         string newOutput = Path.Combine(_tempDir, "out2");
@@ -165,7 +165,7 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
-    public void ReExport_WithRecord_ShouldNotDeleteFilesOfAnotherScanWithTheSameBaseName()
+    public void ReExportWithRecordShouldNotDeleteFilesOfAnotherScanWithTheSameBaseName()
     {
         // "photo.jpg" from two folders export into the same folder; B's photo lands on "photo_1 (1).jpg".
         string scanA = CreateScan("photo.jpg", Directory.CreateDirectory(Path.Combine(_tempDir, "a")).FullName);
@@ -182,7 +182,7 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
-    public void ReExport_WithoutRecordAndNameMatchingOff_ShouldDeleteNothing()
+    public void ReExportWithoutRecordAndNameMatchingOffShouldDeleteNothing()
     {
         string scan = CreateScan("scan_0001.jpg");
         string existing = Touch("scan_0001_1.jpg");
@@ -194,7 +194,7 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
-    public void SavePhotos_WhenAWriteFailsPartway_ShouldReportTheFilesAlreadyWritten()
+    public void SavePhotosWhenAWriteFailsPartwayShouldReportTheFilesAlreadyWritten()
     {
         string scan = CreateScan("scan_0001.jpg");
         // A directory where the second photo's file would go makes that write fail.
@@ -211,7 +211,7 @@ public sealed class ExportCleanupTests : IDisposable
     }
 
     [Fact]
-    public void FindPreviousExports_ShouldMatchYearPatternExactly()
+    public void FindPreviousExportsShouldMatchYearPatternExactly()
     {
         var metadata = new PhotoExportMetadata { Year = 1975 };
         string ours = Touch("1975_scan_0001_01.jpg");

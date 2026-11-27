@@ -58,10 +58,6 @@ internal sealed partial class HelpWindow : Window
                 txtUpdateStatus.Text = string.Format(System.Globalization.CultureInfo.CurrentCulture, template, verStr);
             }
         }
-        catch (Exception ex)
-        {
-            txtUpdateStatus.Text = ex.Message;
-        }
         finally
         {
             btnCheckUpdates.IsEnabled = true;

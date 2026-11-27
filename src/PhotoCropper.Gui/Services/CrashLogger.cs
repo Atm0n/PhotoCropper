@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
+using PhotoCropper.Core.Common;
 
 namespace PhotoCropper.Gui.Services;
 
@@ -18,7 +19,11 @@ internal static class CrashLogger
         get
         {
             string root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            if (string.IsNullOrWhiteSpace(root)) root = Path.GetTempPath();
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                root = !string.IsNullOrWhiteSpace(home) ? home : AppContext.BaseDirectory;
+            }
             return Path.Combine(root, "PhotoCropper", "logs");
         }
     }
@@ -42,14 +47,14 @@ internal static class CrashLogger
             {
                 PruneOldLogs(dir);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ExpectedErrors.IsFileError(ex))
             {
                 System.Diagnostics.Trace.TraceWarning($"[PhotoCropper] Could not prune old crash logs: {ex.Message}");
             }
 
             return path;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedErrors.IsFileError(ex))
         {
             System.Diagnostics.Trace.TraceError($"[PhotoCropper] Could not write crash log: {ex.Message}. Original error: {exception}");
             return null;

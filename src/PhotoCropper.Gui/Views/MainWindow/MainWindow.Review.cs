@@ -1,6 +1,7 @@
 using Avalonia.Interactivity;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.ViewModels;
+using PhotoCropper.Core.Common;
 
 namespace PhotoCropper.Gui;
 
@@ -59,7 +60,7 @@ internal sealed partial class MainWindow : IReviewHost
             await NavigateToScanIndexAsync(scanIndex);
             if (CurrentIndex == scanIndex) _cropsVm.SelectPhoto(Math.Max(0, photoIndex));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedErrors.IsImageError(ex))
         {
             System.Diagnostics.Trace.TraceError($"[PhotoCropper] Opening the reviewed scan failed: {ex}");
         }

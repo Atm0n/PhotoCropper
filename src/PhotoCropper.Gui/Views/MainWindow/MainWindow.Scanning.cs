@@ -5,6 +5,7 @@ using PhotoCropper.Core.Scanning;
 using PhotoCropper.Core.Workspace;
 using PhotoCropper.Gui.Services;
 using System.Diagnostics;
+using PhotoCropper.Core.Common;
 
 namespace PhotoCropper.Gui;
 
@@ -31,7 +32,7 @@ internal sealed partial class MainWindow
         {
             _scannerService.Dispose();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedErrors.IsScannerError(ex))
         {
             Trace.TraceWarning($"[PhotoCropper] Scanner service disposal failed: {ex.GetType().Name}: {ex.Message}");
         }
@@ -182,8 +183,9 @@ internal sealed partial class MainWindow
             ShowScannerError(notFoundTitle, notFoundDetails);
             return [];
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedErrors.IsScannerError(ex) || ExpectedErrors.IsImageError(ex))
         {
+            // The scanner failed, or staging the scanned pages did (disk full, an image OpenCV couldn't encode).
             ResetScannerService();
             string failedTemplate = LocalizationService.Format(ResourceKeys.MsgScanFailed, "Scanning failed: {0}", ex.Message);
             string errorTitle = LocalizationService.GetString(ResourceKeys.TitleScannerError, "Scanner Communication Error");
@@ -251,7 +253,7 @@ internal sealed partial class MainWindow
                 _availableScanners.AddRange(safeDevices);
             });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExpectedErrors.IsScannerError(ex) || ex is ObjectDisposedException)
         {
             // Scanner enumeration can fail on unsupported platforms or if the NAPS2 worker is unavailable.
             Trace.TraceWarning($"[PhotoCropper] Scanner enumeration failed: {ex.GetType().Name}: {ex.Message}");

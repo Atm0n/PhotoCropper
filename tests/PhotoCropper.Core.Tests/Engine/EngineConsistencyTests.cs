@@ -33,7 +33,7 @@ public sealed class EngineConsistencyTests : IDisposable
         a.Size() == b.Size() && a.Channels() == b.Channels() && Cv2.Norm(a, b, NormTypes.L1) == 0;
 
     [Fact]
-    public void DetectPhotos_AfterRotation_ShouldClearStaleRotations()
+    public void DetectPhotosAfterRotationShouldClearStaleRotations()
     {
         using var engine = new PhotoCropperEngine(_scanPath);
         engine.DetectPhotos();
@@ -46,7 +46,7 @@ public sealed class EngineConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void RestoreFromSavedCrops_WhenACropCannotBeExtracted_ShouldKeepPhotosCandidatesAndRotationsAligned()
+    public void RestoreFromSavedCropsWhenACropCannotBeExtractedShouldKeepPhotosCandidatesAndRotationsAligned()
     {
         // The first crop is too small to extract and is dropped; the others must keep their own box and rotation.
         using var engine = CreateEngineWithCrops(
@@ -72,7 +72,7 @@ public sealed class EngineConsistencyTests : IDisposable
     [InlineData("standard")]
     [InlineData("flush")]
     [InlineData("corner")]
-    public void RestoreFromSavedCrops_OfDetectedBoxes_ShouldGiveTheSamePixels(string kind)
+    public void RestoreFromSavedCropsOfDetectedBoxesShouldGiveTheSamePixels(string kind)
     {
         // Reopening a project restores the saved boxes; the photos must come out exactly as detected, or the
         // project's cropped files are rewritten and their final photos rendered again for nothing.
@@ -99,7 +99,7 @@ public sealed class EngineConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void RestoreFromSavedCrops_WithNegativeRotation_ShouldNormalizeToClockwiseSteps()
+    public void RestoreFromSavedCropsWithNegativeRotationShouldNormalizeToClockwiseSteps()
     {
         using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80, rotation: -90));
 
@@ -107,7 +107,7 @@ public sealed class EngineConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void ApplyGrabHandleResize_ShouldKeepUserRotation()
+    public void ApplyGrabHandleResizeShouldKeepUserRotation()
     {
         using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80));
         engine.RotatePhoto(0);
@@ -121,7 +121,7 @@ public sealed class EngineConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void ApplyGrabHandleResize_ShouldKeepRawCopyUnrestored()
+    public void ApplyGrabHandleResizeShouldKeepRawCopyUnrestored()
     {
         using var engine = new PhotoCropperEngine(_scanPath) { AutoOrientPhotos = false, RestoreVintageColors = true };
         engine.RestoreFromSavedCrops([Crop(500, 500, 160, 80)]);
@@ -136,7 +136,7 @@ public sealed class EngineConsistencyTests : IDisposable
     [Theory]
     [InlineData(-1)]
     [InlineData(5)]
-    public void ApplyGrabHandleResize_OutOfRange_ShouldDoNothing(int index)
+    public void ApplyGrabHandleResizeOutOfRangeShouldDoNothing(int index)
     {
         using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80));
 
@@ -145,7 +145,7 @@ public sealed class EngineConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void ApplyGrabHandleResize_WhenBoxIsTooSmall_ShouldReportFailureAndKeepThePhoto()
+    public void ApplyGrabHandleResizeWhenBoxIsTooSmallShouldReportFailureAndKeepThePhoto()
     {
         using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80));
         var sizeBefore = engine.DetectedPhotos[0].Size();
@@ -160,7 +160,7 @@ public sealed class EngineConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void ApplyGrabHandleResize_WhenExtracted_ShouldReportSuccess()
+    public void ApplyGrabHandleResizeWhenExtractedShouldReportSuccess()
     {
         using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80));
 
@@ -168,7 +168,7 @@ public sealed class EngineConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void InsertPhoto_ShouldRestoreRotationAndRawCopy()
+    public void InsertPhotoShouldRestoreRotationAndRawCopy()
     {
         using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80), Crop(900, 900, 120, 60));
         using var photo = engine.DetectedPhotos[1].Clone();
@@ -182,7 +182,7 @@ public sealed class EngineConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void ApplyCropToPhoto_ShouldCropRawCopyToo()
+    public void ApplyCropToPhotoShouldCropRawCopyToo()
     {
         using var engine = CreateEngineWithCrops(Crop(500, 500, 160, 80));
 
@@ -193,7 +193,7 @@ public sealed class EngineConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void DeletePhoto_ShouldNotMutatePreviouslyReturnedCandidateList()
+    public void DeletePhotoShouldNotMutatePreviouslyReturnedCandidateList()
     {
         using var engine = new PhotoCropperEngine(_scanPath);
         engine.DetectPhotos();

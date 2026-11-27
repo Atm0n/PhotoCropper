@@ -6,7 +6,7 @@ namespace PhotoCropper.Core.Tests.Detection;
 public sealed class BackgroundAnalyzerTests
 {
     [Fact]
-    public void SampleBackgroundColor_WhiteBackground_ShouldReturnHighValue()
+    public void SampleBackgroundColorWhiteBackgroundShouldReturnHighValue()
     {
         using Mat whiteBgr = new(500, 500, MatType.CV_8UC3);
         whiteBgr.SetTo(new Scalar(255, 255, 255));
@@ -18,7 +18,7 @@ public sealed class BackgroundAnalyzerTests
     }
 
     [Fact]
-    public void SampleBackgroundColor_DarkBackground_ShouldReturnLowValue()
+    public void SampleBackgroundColorDarkBackgroundShouldReturnLowValue()
     {
         using Mat darkBgr = new(500, 500, MatType.CV_8UC3);
         darkBgr.SetTo(new Scalar(20, 20, 20));
@@ -30,7 +30,7 @@ public sealed class BackgroundAnalyzerTests
     }
 
     [Fact]
-    public void FindBedAroundPage_PageOnLightBed_ShouldTakeTheBedAndThePagesEdge()
+    public void FindBedAroundPagePageOnLightBedShouldTakeTheBedAndThePagesEdge()
     {
         string dir = PhotoCropper.TestHelpers.TestImageFactory.CreateTempDirectory("BedAroundPage");
         try
@@ -58,7 +58,7 @@ public sealed class BackgroundAnalyzerTests
     }
 
     [Fact]
-    public void FindBedAroundPage_PhotosOnTheBed_ShouldFindNothing()
+    public void FindBedAroundPagePhotosOnTheBedShouldFindNothing()
     {
         using Mat scan = new(1000, 800, MatType.CV_8UC3, new Scalar(240, 240, 240));
         Cv2.Rectangle(scan, new Rect(100, 100, 300, 200), new Scalar(60, 90, 120), -1);
@@ -71,7 +71,7 @@ public sealed class BackgroundAnalyzerTests
     }
 
     [Fact]
-    public void SamplePixelBackgroundColor_ShouldSampleLocalNeighborhood()
+    public void SamplePixelBackgroundColorShouldSampleLocalNeighborhood()
     {
         using Mat bgr = new(100, 100, MatType.CV_8UC3);
         bgr.SetTo(new Scalar(255, 255, 255));
@@ -82,7 +82,7 @@ public sealed class BackgroundAnalyzerTests
     }
 
     [Fact]
-    public void HsvToBgr_ShouldConvertAccurately()
+    public void HsvToBgrShouldConvertAccurately()
     {
         // White in HSV (0, 0, 255)
         Scalar whiteHsv = new(0, 0, 255);
@@ -94,7 +94,7 @@ public sealed class BackgroundAnalyzerTests
     }
 
     [Fact]
-    public void CreateBackgroundMask_ShouldIsolateBackgroundPixels()
+    public void CreateBackgroundMaskShouldIsolateBackgroundPixels()
     {
         using Mat bgr = new(200, 200, MatType.CV_8UC3);
         bgr.SetTo(new Scalar(255, 255, 255)); // White background
@@ -112,7 +112,7 @@ public sealed class BackgroundAnalyzerTests
     }
 
     [Fact]
-    public void SampleBackgroundColor_WithScannerBezel_ShouldIgnoreBezelAndSampleBed()
+    public void SampleBackgroundColorWithScannerBezelShouldIgnoreBezelAndSampleBed()
     {
         using Mat bgr = new(1000, 1000, MatType.CV_8UC3);
         bgr.SetTo(new Scalar(255, 255, 255)); // White bed
@@ -132,7 +132,7 @@ public sealed class BackgroundAnalyzerTests
     }
 
     [Fact]
-    public void DetectBezelMargins_WithPerimeterBezel_ShouldAccuratelyDetectThickness()
+    public void DetectBezelMarginsWithPerimeterBezelShouldAccuratelyDetectThickness()
     {
         using Mat bgr = new(1000, 1000, MatType.CV_8UC3);
         bgr.SetTo(new Scalar(255, 255, 255)); // White bed
@@ -152,7 +152,7 @@ public sealed class BackgroundAnalyzerTests
     }
 
     [Fact]
-    public void DetectBezelMargins_WithoutBezel_ShouldReturnZeroes()
+    public void DetectBezelMarginsWithoutBezelShouldReturnZeroes()
     {
         using Mat bgr = new(1000, 1000, MatType.CV_8UC3);
         bgr.SetTo(new Scalar(255, 255, 255)); // White bed

@@ -18,7 +18,7 @@ public sealed class FolderPipelineMigrationTests : IDisposable
     }
 
     [Fact]
-    public void LoadSession_OldProject_ShouldMoveExportsFromCroppedToFinal()
+    public void LoadSessionOldProjectShouldMoveExportsFromCroppedToFinal()
     {
         WriteLegacySessionJson("""{ "Version": "1.0", "Scans": [] }""");
         File.WriteAllText(Cropped("scan_0001_1.jpg"), "old export");
@@ -31,7 +31,7 @@ public sealed class FolderPipelineMigrationTests : IDisposable
     }
 
     [Fact]
-    public void LoadSession_SessionWithoutVersion_ShouldBeTreatedAsOldAndMigrated()
+    public void LoadSessionSessionWithoutVersionShouldBeTreatedAsOldAndMigrated()
     {
         WriteLegacySessionJson("""{ "Scans": [] }""");
         File.WriteAllText(Cropped("photo.jpg"), "old export");
@@ -42,7 +42,7 @@ public sealed class FolderPipelineMigrationTests : IDisposable
     }
 
     [Fact]
-    public void LoadSession_OldProject_ShouldUpdateExportRecordsToTheNewLocation()
+    public void LoadSessionOldProjectShouldUpdateExportRecordsToTheNewLocation()
     {
         File.WriteAllText(Path.Combine(_workDir, "placeholder"), "");
         Directory.CreateDirectory(ProjectWorkspaceService.GetCroppedDirectory(_workDir));
@@ -62,7 +62,7 @@ public sealed class FolderPipelineMigrationTests : IDisposable
     }
 
     [Fact]
-    public void LoadSession_OldProject_ShouldDetectOrientationAgainUnlessTurnedByHand()
+    public void LoadSessionOldProjectShouldDetectOrientationAgainUnlessTurnedByHand()
     {
         var legacy = new WorkspaceSessionState { Version = "1.0" };
         var entry = new WorkspaceScanEntry { RelativePath = "RawScans/scan_0001.png" };
@@ -82,7 +82,7 @@ public sealed class FolderPipelineMigrationTests : IDisposable
     }
 
     [Fact]
-    public void LoadSession_CurrentProject_ShouldKeepSavedOrientation()
+    public void LoadSessionCurrentProjectShouldKeepSavedOrientation()
     {
         var session = WorkspaceSessionState.CreateNew();
         var entry = new WorkspaceScanEntry { RelativePath = "RawScans/scan_0001.png" };
@@ -94,7 +94,7 @@ public sealed class FolderPipelineMigrationTests : IDisposable
     }
 
     [Fact]
-    public void LoadSession_NewProject_ShouldNeverMovePipelineFiles()
+    public void LoadSessionNewProjectShouldNeverMovePipelineFiles()
     {
         var session = WorkspaceSessionState.CreateNew();
         ProjectWorkspaceService.SaveSession(_workDir, session);
@@ -108,7 +108,7 @@ public sealed class FolderPipelineMigrationTests : IDisposable
     }
 
     [Fact]
-    public void SaveSession_ShouldStampCurrentVersionEvenOnASessionCreatedWithNew()
+    public void SaveSessionShouldStampCurrentVersionEvenOnASessionCreatedWithNew()
     {
         // GUI code creates sessions with "new WorkspaceSessionState()"; saving must not leave them looking old.
         ProjectWorkspaceService.SaveSession(_workDir, new WorkspaceSessionState());
@@ -121,7 +121,7 @@ public sealed class FolderPipelineMigrationTests : IDisposable
     }
 
     [Fact]
-    public void ReconstructSession_WithoutSessionFile_ShouldMigrateOldExports()
+    public void ReconstructSessionWithoutSessionFileShouldMigrateOldExports()
     {
         ProjectWorkspaceService.InitializeWorkspace(_workDir);
         File.WriteAllText(Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), "scan_0001.png"), "scan");

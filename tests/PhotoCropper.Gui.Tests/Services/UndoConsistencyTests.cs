@@ -31,7 +31,7 @@ public sealed class UndoConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void UndoCounterClockwiseRotation_ShouldRestoreOrientationRawCopyAndRotationState()
+    public void UndoCounterClockwiseRotationShouldRestoreOrientationRawCopyAndRotationState()
     {
         using var history = new UndoRedoHistory();
         using var engine = CreateEngineWithOneLandscapeCrop();
@@ -52,7 +52,7 @@ public sealed class UndoConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void UndoClockwiseRotation_ShouldResetPersistedRotation()
+    public void UndoClockwiseRotationShouldResetPersistedRotation()
     {
         using var history = new UndoRedoHistory();
         using var engine = CreateEngineWithOneLandscapeCrop();
@@ -66,7 +66,7 @@ public sealed class UndoConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void ResizeCandidateAction_ShouldNotChangeWhenCallerListIsMutatedLater()
+    public void ResizeCandidateActionShouldNotChangeWhenCallerListIsMutatedLater()
     {
         using var history = new UndoRedoHistory();
         using var engine = new PhotoCropperEngine(_scanPath);
@@ -90,7 +90,7 @@ public sealed class UndoConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void UndoDeleteOfRotatedPhoto_ShouldRestoreItsRotationAndRawCopy()
+    public void UndoDeleteOfRotatedPhotoShouldRestoreItsRotationAndRawCopy()
     {
         using var history = new UndoRedoHistory();
         using var engine = CreateEngineWithOneLandscapeCrop();
@@ -107,7 +107,7 @@ public sealed class UndoConsistencyTests : IDisposable
     }
 
     [Fact]
-    public void UndoRefinement_ShouldRestoreRawCopy()
+    public void UndoRefinementShouldRestoreRawCopy()
     {
         using var history = new UndoRedoHistory();
         using var engine = CreateEngineWithOneLandscapeCrop();
