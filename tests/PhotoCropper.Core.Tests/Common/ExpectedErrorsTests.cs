@@ -57,6 +57,9 @@ public sealed class ExpectedErrorsTests
         new IOException("worker pipe broken"),
         new Win32Exception(5), // an ExternalException, like the COMException WIA throws (reserved, so not built here)
         new HttpRequestException("eSCL unreachable"),
+        new DllNotFoundException("TWAINDSM.dll"),
+        new EntryPointNotFoundException("DSM_Entry"),
+        new BadImageFormatException("32-bit driver"),
         new Grpc.Core.RpcException(Grpc.Core.Status.DefaultCancelled),
     };
 

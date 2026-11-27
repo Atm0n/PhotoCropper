@@ -24,7 +24,8 @@ public static class ExpectedErrors
 
     /// <summary>
     /// A scanner, its driver or the NAPS2 worker failed or isn't there: NAPS2's own errors, a driver that timed out,
-    /// a COM/Win32 error from WIA or TWAIN, a broken worker pipe, or a network scanner that can't be reached.
+    /// a COM/Win32 error from WIA or TWAIN, a driver library that is missing or of the wrong bitness (no TWAIN DSM
+    /// installed, a 32-bit driver in a 64-bit process), a broken worker pipe, or a network scanner that can't be reached.
     /// </summary>
     public static bool IsScannerError(Exception exception) =>
         exception is ScanDriverException
@@ -32,6 +33,9 @@ public static class ExpectedErrors
             or TimeoutException
             or IOException
             or ExternalException
+            or DllNotFoundException
+            or EntryPointNotFoundException
+            or BadImageFormatException
             or HttpRequestException
             or Grpc.Core.RpcException;
 }
