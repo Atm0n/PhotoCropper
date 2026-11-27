@@ -9,7 +9,7 @@ public sealed class ExportPathClaimTests : IDisposable
     private readonly string _tempDir = TestImageFactory.CreateTempDirectory("ExportPathClaimTests");
 
     [Fact]
-    public void SavePhotos_ShouldReleaseClaimsOnceFilesAreWritten()
+    public void SavePhotosShouldReleaseClaimsOnceFilesAreWritten()
     {
         string scan = Path.Combine(_tempDir, "claim_scan.jpg");
         File.WriteAllBytes(scan, [0xFF, 0xD8, 0xFF, 0xD9]);
@@ -33,7 +33,7 @@ public sealed class ExportPathClaimTests : IDisposable
     }
 
     [Fact]
-    public void ResolveUniqueExportPath_AfterRelease_ShouldHandOutTheSameNameAgain()
+    public void ResolveUniqueExportPathAfterReleaseShouldHandOutTheSameNameAgain()
     {
         string target = Path.Combine(_tempDir, "released.jpg");
 

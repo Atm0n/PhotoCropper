@@ -40,7 +40,7 @@ public sealed class ReviewAndRefineViewModelTests : IDisposable
     // ---- review ----
 
     [Fact]
-    public void Open_StartsOnTheSelectedPhotoOfTheCurrentScan()
+    public void OpenStartsOnTheSelectedPhotoOfTheCurrentScan()
     {
         _host.CurrentScanIndex = 1;
         var vm = new ReviewViewModel(_host, _undo);
@@ -55,7 +55,7 @@ public sealed class ReviewAndRefineViewModelTests : IDisposable
     }
 
     [Fact]
-    public void Next_PassesTheEndSlideThenWrapsToTheFirstPhoto()
+    public void NextPassesTheEndSlideThenWrapsToTheFirstPhoto()
     {
         _host.CurrentScanIndex = 1;
         var vm = new ReviewViewModel(_host, _undo);
@@ -72,7 +72,7 @@ public sealed class ReviewAndRefineViewModelTests : IDisposable
     }
 
     [Fact]
-    public void Rotate_TurnsThePhotoAndIsUndoableOnlyForTheOpenScan()
+    public void RotateTurnsThePhotoAndIsUndoableOnlyForTheOpenScan()
     {
         var vm = new ReviewViewModel(_host, _undo);
         vm.Open(selectedPhotoIndex: 0);
@@ -92,7 +92,7 @@ public sealed class ReviewAndRefineViewModelTests : IDisposable
     }
 
     [Fact]
-    public void Delete_RemovesThePhotoAndRenumbersTheRestOfItsScan()
+    public void DeleteRemovesThePhotoAndRenumbersTheRestOfItsScan()
     {
         var vm = new ReviewViewModel(_host, _undo);
         vm.Open(selectedPhotoIndex: 0);
@@ -106,7 +106,7 @@ public sealed class ReviewAndRefineViewModelTests : IDisposable
     }
 
     [Fact]
-    public void DeletingEveryPhoto_ClosesReview()
+    public void DeletingEveryPhotoClosesReview()
     {
         var vm = new ReviewViewModel(_host, _undo);
         vm.Open(selectedPhotoIndex: 0);
@@ -118,7 +118,7 @@ public sealed class ReviewAndRefineViewModelTests : IDisposable
     }
 
     [Fact]
-    public void Escape_ClosesOnThePhotoShown()
+    public void EscapeClosesOnThePhotoShown()
     {
         var vm = new ReviewViewModel(_host, _undo);
         vm.Open(selectedPhotoIndex: 0);
@@ -135,7 +135,7 @@ public sealed class ReviewAndRefineViewModelTests : IDisposable
     // ---- refine ----
 
     [Fact]
-    public void Refine_StartsFromThePhotosSuggestedRefinement()
+    public void RefineStartsFromThePhotosSuggestedRefinement()
     {
         var engine = _scans[0].Engine!;
         var vm = new RefineViewModel(_host, _undo);
@@ -152,7 +152,7 @@ public sealed class ReviewAndRefineViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task AcceptingARefinement_RecropsThePhotoInOneUndoStep()
+    public async Task AcceptingARefinementRecropsThePhotoInOneUndoStep()
     {
         var engine = _scans[0].Engine!;
         var vm = new RefineViewModel(_host, _undo);
@@ -172,7 +172,7 @@ public sealed class ReviewAndRefineViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task CancellingARefinement_LeavesThePhotoAlone()
+    public async Task CancellingARefinementLeavesThePhotoAlone()
     {
         var engine = _scans[0].Engine!;
         var before = engine.DetectedPhotos[0].Size();

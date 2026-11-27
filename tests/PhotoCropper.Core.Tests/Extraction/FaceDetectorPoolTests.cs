@@ -21,7 +21,7 @@ public sealed class FaceDetectorPoolTests
     }
 
     [Fact]
-    public void DetectFaceRotation_RepeatedCalls_ShouldReuseOneDetector()
+    public void DetectFaceRotationRepeatedCallsShouldReuseOneDetector()
     {
         FaceOrientationService.ReleaseCachedDetectors();
         using var photo = Photo();
@@ -35,7 +35,7 @@ public sealed class FaceDetectorPoolTests
     }
 
     [Fact]
-    public void DetectFaceRotation_ManyParallelCalls_ShouldKeepThePoolBounded()
+    public void DetectFaceRotationManyParallelCallsShouldKeepThePoolBounded()
     {
         FaceOrientationService.ReleaseCachedDetectors();
         using var photo = Photo();
@@ -48,7 +48,7 @@ public sealed class FaceDetectorPoolTests
     }
 
     [Fact]
-    public void ReleaseCachedDetectors_ShouldEmptyThePool()
+    public void ReleaseCachedDetectorsShouldEmptyThePool()
     {
         using var photo = Photo();
         FaceOrientationService.DetectFaceRotation(photo);

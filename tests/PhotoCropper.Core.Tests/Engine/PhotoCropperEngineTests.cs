@@ -17,7 +17,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void RestoreFromSavedCrops_ShouldBypassDetectionAndLoadCrops()
+    public void RestoreFromSavedCropsShouldBypassDetectionAndLoadCrops()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
 
@@ -36,7 +36,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void AutoTune_AfterDetecting_GivesTheSameBoxesAsDetectingWithItsSettings()
+    public void AutoTuneAfterDetectingGivesTheSameBoxesAsDetectingWithItsSettings()
     {
         using var tuned = new PhotoCropperEngine(_standardScanPath);
         tuned.DetectPhotos();
@@ -51,7 +51,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void AutoTune_AfterABoxWasDeleted_DetectsAgain()
+    public void AutoTuneAfterABoxWasDeletedDetectsAgain()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         cropper.DetectPhotos();
@@ -66,7 +66,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void Constructor_ShouldLoadImage()
+    public void ConstructorShouldLoadImage()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         cropper.Original.Empty().ShouldBeFalse();
@@ -74,7 +74,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DetectPhotos_StandardScan_ShouldFindTwoPhotos()
+    public void DetectPhotosStandardScanShouldFindTwoPhotos()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         cropper.DetectPhotos();
@@ -84,7 +84,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void RotatePhoto_ShouldSwapDimensions()
+    public void RotatePhotoShouldSwapDimensions()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         cropper.DetectPhotos();
@@ -100,7 +100,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void RotatePhoto_FourTimes_ShouldRestoreDimensions()
+    public void RotatePhotoFourTimesShouldRestoreDimensions()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         cropper.DetectPhotos();
@@ -115,7 +115,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DeletePhoto_ShouldDecreaseCount()
+    public void DeletePhotoShouldDecreaseCount()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         cropper.DetectPhotos();
@@ -127,7 +127,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DeletePhoto_InvalidIndex_ShouldNotCrash()
+    public void DeletePhotoInvalidIndexShouldNotCrash()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         cropper.DetectPhotos();
@@ -144,7 +144,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     [InlineData(1950, 1950, 200, 200, true)]  // Clamped out of bounds
     [InlineData(10, 10, 2, 2, false)]         // Too small
     [InlineData(80, 80, 450, 450, true)]      // Snaps to Photo 1
-    public void AddManualCrop_VariousCases(int x, int y, int w, int h, bool expectedAdded)
+    public void AddManualCropVariousCases(int x, int y, int w, int h, bool expectedAdded)
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         cropper.AddManualCrop(new System.Drawing.Rectangle(x, y, w, h));
@@ -160,7 +160,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void GetRefinedCropRect_ShouldRemoveMargins()
+    public void GetRefinedCropRectShouldRemoveMargins()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
 
@@ -179,7 +179,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DetectPhotos_WithPhotoInCorner_ShouldDetectSuccessfully()
+    public void DetectPhotosWithPhotoInCornerShouldDetectSuccessfully()
     {
         string path = Path.Combine(_tempDir, "corner_scan.jpg");
         TestImageFactory.CreateCornerPhotoScan(path);
@@ -191,7 +191,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DetectPhotos_HighResolution_ShouldDetectSuccessfully()
+    public void DetectPhotosHighResolutionShouldDetectSuccessfully()
     {
         string path = Path.Combine(_tempDir, "highres_scan.jpg");
         TestImageFactory.CreateHighResScan(path);
@@ -203,7 +203,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DetectPhotos_TiltedAdjacent_ShouldDetectWithoutOverlapConflict()
+    public void DetectPhotosTiltedAdjacentShouldDetectWithoutOverlapConflict()
     {
         string path = Path.Combine(_tempDir, "tilted_adjacent.jpg");
         TestImageFactory.CreateTiltedAdjacentScan(path);
@@ -215,7 +215,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DetectPhotos_DarkBackground_ShouldDetectSuccessfully()
+    public void DetectPhotosDarkBackgroundShouldDetectSuccessfully()
     {
         string path = Path.Combine(_tempDir, "dark_scan.jpg");
         TestImageFactory.CreateDarkBackgroundScan(path);
@@ -231,7 +231,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     [Theory]
     [InlineData(4, 0.05)] // a tight tolerance and large minimum, as a user may have set
     [InlineData(30, 0.01)] // the defaults
-    public void DetectPhotos_DarkAlbumPageOnLightBed_ShouldFindEveryPhoto(double tolerance, double minArea)
+    public void DetectPhotosDarkAlbumPageOnLightBedShouldFindEveryPhoto(double tolerance, double minArea)
     {
         string path = Path.Combine(_tempDir, "album_page.png");
         TestImageFactory.CreateAlbumPageOnBedScan(path);
@@ -253,7 +253,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     [Theory]
     [InlineData(4, 0.05)]
     [InlineData(30, 0.01)]
-    public void DetectPhotos_PrintReachingTheEdgeWithALightPart_ShouldKeepItsWholeBox(double tolerance, double minArea)
+    public void DetectPhotosPrintReachingTheEdgeWithALightPartShouldKeepItsWholeBox(double tolerance, double minArea)
     {
         // Prints on the bed, not a page: the white floor where one runs off the scan's edge isn't bed to paint out.
         string path = Path.Combine(_tempDir, "prints_to_edge.png");
@@ -274,7 +274,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DetectPhotos_FlushScanEdge_ShouldDetectSuccessfully()
+    public void DetectPhotosFlushScanEdgeShouldDetectSuccessfully()
     {
         string path = Path.Combine(_tempDir, "flush_scan.jpg");
         TestImageFactory.CreateFlushEdgeScan(path);
@@ -288,7 +288,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DetectPhotos_CloselySpaced_ShouldSeparatePhotos()
+    public void DetectPhotosCloselySpacedShouldSeparatePhotos()
     {
         string path = Path.Combine(_tempDir, "close_photos.jpg");
         TestImageFactory.CreateCloselySpacedScan(path, gap: 20);
@@ -300,7 +300,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DetectPhotos_UltraClosePhotos_ShouldNotMergeIntoOneBigImage()
+    public void DetectPhotosUltraClosePhotosShouldNotMergeIntoOneBigImage()
     {
         string path = Path.Combine(_tempDir, "ultra_close.jpg");
         TestImageFactory.CreateCloselySpacedScan(path, gap: 12);
@@ -317,7 +317,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void SetCustomBackgroundFromPixel_ShouldSampleCorrectlyAndOverrideBackground()
+    public void SetCustomBackgroundFromPixelShouldSampleCorrectlyAndOverrideBackground()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
 
@@ -341,7 +341,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void ApplyOptions_AndCurrentOptions_ShouldRoundtrip()
+    public void ApplyOptionsAndCurrentOptionsShouldRoundtrip()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         var options = new Models.DetectionOptions
@@ -376,14 +376,14 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void ApplyOptions_Null_ShouldThrowArgumentNullException()
+    public void ApplyOptionsNullShouldThrowArgumentNullException()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         Should.Throw<ArgumentNullException>(() => cropper.ApplyOptions(null!));
     }
 
     [Fact]
-    public void RotatePhoto_OutOfBounds_ShouldNotThrow()
+    public void RotatePhotoOutOfBoundsShouldNotThrow()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         Should.NotThrow(() => cropper.RotatePhoto(-1));
@@ -391,7 +391,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void GetRefinedCropRect_OutOfBounds_ShouldReturnEmpty()
+    public void GetRefinedCropRectOutOfBoundsShouldReturnEmpty()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         cropper.GetRefinedCropRect(-1).ShouldBe(System.Drawing.Rectangle.Empty);
@@ -399,7 +399,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void ApplyCropToPhoto_OutOfBounds_ShouldNotThrow()
+    public void ApplyCropToPhotoOutOfBoundsShouldNotThrow()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         Should.NotThrow(() => cropper.ApplyCropToPhoto(-1, new System.Drawing.Rectangle(0, 0, 10, 10)));
@@ -408,7 +408,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DetectPhotos_ScannerWithBezel_ShouldDetectAllPhotos()
+    public void DetectPhotosScannerWithBezelShouldDetectAllPhotos()
     {
         string bezelScanPath = Path.Combine(_tempDir, "bezel_scan.jpg");
         TestImageFactory.CreateScannerBezelScan(bezelScanPath, bezelThickness: 15);
@@ -420,7 +420,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DetectPhotos_SlightlyTiltedPhoto_ShouldDetectInclinationAndStraighten()
+    public void DetectPhotosSlightlyTiltedPhotoShouldDetectInclinationAndStraighten()
     {
         string tiltedScanPath = Path.Combine(_tempDir, "tilted_scan.jpg");
         using (Mat scan = new(2000, 2000, MatType.CV_8UC3))
@@ -447,7 +447,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void NormalizeToBgr_DifferentChannels_ShouldAlwaysReturn3Channels()
+    public void NormalizeToBgrDifferentChannelsShouldAlwaysReturn3Channels()
     {
         using var grayMat = new Mat(50, 50, MatType.CV_8UC1);
         grayMat.SetTo(new Scalar(100));
@@ -468,7 +468,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void DetectPhotos_GrayscaleScan_ShouldDetectPhotosWithoutThrowing()
+    public void DetectPhotosGrayscaleScanShouldDetectPhotosWithoutThrowing()
     {
         string grayScanPath = Path.Combine(_tempDir, "gray_scan.png");
         using (Mat scan = new(1000, 1000, MatType.CV_8UC1))
@@ -485,7 +485,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void ApplyGrabHandleResize_ShouldExtractPhotoAndReplaceInList()
+    public void ApplyGrabHandleResizeShouldExtractPhotoAndReplaceInList()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
         cropper.DetectPhotos();
@@ -513,7 +513,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void RestoreFromSavedCrops_EmptyList_ShouldNotCrash()
+    public void RestoreFromSavedCropsEmptyListShouldNotCrash()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
 
@@ -524,7 +524,7 @@ public sealed class PhotoCropperEngineTests : IDisposable
     }
 
     [Fact]
-    public void SetCustomBackgroundFromPixel_OutsideBounds_ShouldNotThrow()
+    public void SetCustomBackgroundFromPixelOutsideBoundsShouldNotThrow()
     {
         using var cropper = new PhotoCropperEngine(_standardScanPath);
 
@@ -535,9 +535,6 @@ public sealed class PhotoCropperEngineTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-        {
-            try { Directory.Delete(_tempDir, true); } catch { }
-        }
+        TestDirectory.TryDelete(_tempDir);
     }
 }

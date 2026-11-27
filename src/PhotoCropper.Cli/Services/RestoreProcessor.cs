@@ -5,6 +5,7 @@ using PhotoCropper.Core.Workspace;
 using Spectre.Console;
 using System.Diagnostics;
 using System.Globalization;
+using PhotoCropper.Core.Common;
 
 namespace PhotoCropper.Cli.Services;
 
@@ -54,7 +55,7 @@ internal static class RestoreProcessor
                             AnsiConsole.MarkupLine($"  [green]✓[/] {Markup.Escape(Path.GetFileName(path))} → {Markup.Escape(written.Path)}");
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ExpectedErrors.IsImageError(ex))
                     {
                         Interlocked.Increment(ref errors);
                         AnsiConsole.MarkupLine($"  [red]✗[/] {Markup.Escape(Path.GetFileName(path))}: {Markup.Escape(ex.Message)}");

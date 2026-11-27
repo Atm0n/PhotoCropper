@@ -7,7 +7,7 @@ using PhotoCropper.TestHelpers;
 
 if (args.Length == 0 || args[0] is "-h" or "--help")
 {
-    Console.WriteLine("Usage: PhotoCropper.SampleScans <output folder> [--count N (default 3)] [--seed S (default 1)]");
+    await PrintHelpAsync();
     return args.Length == 0 ? 1 : 0;
 }
 
@@ -39,3 +39,13 @@ await File.WriteAllLinesAsync(Path.Combine(output, "expected.txt"), lines);
 
 await Console.Out.WriteLineAsync($"Wrote {count} scans with {total} photos to {Path.GetFullPath(output)}");
 return 0;
+
+// The usage text lives in Help.txt (embedded), like the CLI's, rather than as a literal here.
+static async Task PrintHelpAsync()
+{
+    const string helpResource = "PhotoCropper.SampleScans.Help.txt";
+    using Stream stream = typeof(Program).Assembly.GetManifestResourceStream(helpResource)
+        ?? throw new InvalidOperationException($"The help text ({helpResource}) is missing from the program.");
+    using var reader = new StreamReader(stream);
+    await Console.Out.WriteAsync(await reader.ReadToEndAsync());
+}

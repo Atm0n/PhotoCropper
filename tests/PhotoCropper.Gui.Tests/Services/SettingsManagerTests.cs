@@ -15,7 +15,7 @@ public sealed class SettingsManagerTests : IDisposable
     }
 
     [Fact]
-    public void SettingsManager_DefaultInitialization()
+    public void SettingsManagerDefaultInitialization()
     {
         var manager = new SettingsManager(_settingsPath);
         manager.Load();
@@ -49,7 +49,7 @@ public sealed class SettingsManagerTests : IDisposable
     }
 
     [Fact]
-    public void SettingsManager_SaveAndLoad_ShouldPersistValues()
+    public void SettingsManagerSaveAndLoadShouldPersistValues()
     {
         var manager = new SettingsManager(_settingsPath);
         manager.Load();
@@ -113,7 +113,7 @@ public sealed class SettingsManagerTests : IDisposable
     }
 
     [Fact]
-    public void DetectionOptions_GetBoundingBoxColorBgr_ShouldReturnCorrectBgrScalars()
+    public void DetectionOptionsGetBoundingBoxColorBgrShouldReturnCorrectBgrScalars()
     {
         var options = new Core.Models.DetectionOptions { BoundingBoxColor = "Red" };
         options.GetBoundingBoxColorBgr().V2.ShouldBe(255); // Red channel in BGR
@@ -145,7 +145,7 @@ public sealed class SettingsManagerTests : IDisposable
     }
 
     [Fact]
-    public void SettingsManager_ResetDetectionDefaults_ShouldOnlyResetDetectionParameters()
+    public void SettingsManagerResetDetectionDefaultsShouldOnlyResetDetectionParameters()
     {
         var manager = new SettingsManager(_settingsPath);
         manager.Load();
@@ -187,7 +187,7 @@ public sealed class SettingsManagerTests : IDisposable
     }
 
     [Fact]
-    public void SettingsManager_GracefulDegradation_OnCorruptJson()
+    public void SettingsManagerGracefulDegradationOnCorruptJson()
     {
         File.WriteAllText(_settingsPath, "{ INVALID JSON CORRUPTED TEXT ]");
 
@@ -202,9 +202,6 @@ public sealed class SettingsManagerTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-        {
-            try { Directory.Delete(_tempDir, true); } catch { }
-        }
+        TestDirectory.TryDelete(_tempDir);
     }
 }

@@ -7,9 +7,11 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<IsPackable>false</IsPackable>
-		<!-- A developer tool: its few console messages are not translated. -->
-		<NoWarn>$(NoWarn);CA1303</NoWarn>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Help.txt" LogicalName="PhotoCropper.SampleScans.Help.txt" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\tests\PhotoCropper.TestHelpers\PhotoCropper.TestHelpers.csproj" />

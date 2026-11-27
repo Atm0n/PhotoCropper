@@ -7,7 +7,7 @@ namespace PhotoCropper.Core.Tests.Extraction;
 public class FaceOrientationServiceTests
 {
     [Fact]
-    public void IsModelAvailable_ShouldBeTrue_WhenEmbeddedModelExists()
+    public void IsModelAvailableShouldBeTrueWhenEmbeddedModelExists()
     {
         // Act
         bool isAvailable = FaceOrientationService.IsModelAvailable;
@@ -17,14 +17,14 @@ public class FaceOrientationServiceTests
     }
 
     [Fact]
-    public void DetectFaceRotation_NullPhoto_ThrowsArgumentNullException()
+    public void DetectFaceRotationNullPhotoThrowsArgumentNullException()
     {
         // Act & Assert
         Should.Throw<ArgumentNullException>(() => FaceOrientationService.DetectFaceRotation(null!));
     }
 
     [Fact]
-    public void DetectFaceRotation_EmptyPhoto_ReturnsMinusOne()
+    public void DetectFaceRotationEmptyPhotoReturnsMinusOne()
     {
         // Arrange
         using Mat photo = new();
@@ -37,7 +37,7 @@ public class FaceOrientationServiceTests
     }
 
     [Fact]
-    public void DetectFaceRotation_TooSmallPhoto_ReturnsMinusOne()
+    public void DetectFaceRotationTooSmallPhotoReturnsMinusOne()
     {
         // Arrange
         using Mat photo = new Mat(10, 10, MatType.CV_8UC3);
@@ -51,7 +51,7 @@ public class FaceOrientationServiceTests
     }
 
     [Fact]
-    public void DetectFaceRotation_NoFaceFound_ReturnsMinusOne()
+    public void DetectFaceRotationNoFaceFoundReturnsMinusOne()
     {
         // Arrange - create a blank black image large enough to process
         using Mat photo = new Mat(200, 200, MatType.CV_8UC3);
@@ -65,7 +65,7 @@ public class FaceOrientationServiceTests
     }
 
     [Fact]
-    public void ScoreFaceData_EmptyMat_ReturnsZero()
+    public void ScoreFaceDataEmptyMatReturnsZero()
     {
         // Arrange
         using Mat faces = new();
@@ -78,7 +78,7 @@ public class FaceOrientationServiceTests
     }
 
     [Fact]
-    public void ScoreFaceData_MockUprightFace_ReturnsScore()
+    public void ScoreFaceDataMockUprightFaceReturnsScore()
     {
         // Arrange
         // Create a 1D array to simulate YuNet output for 1 face (15 columns)
@@ -116,7 +116,7 @@ public class FaceOrientationServiceTests
     }
 
     [Fact]
-    public void ScoreFaceData_SidewaysFace_ReturnsZero()
+    public void ScoreFaceDataSidewaysFaceReturnsZero()
     {
         // Arrange
         float[] mockData = new float[15];
@@ -161,6 +161,6 @@ public class FaceOrientationServiceTests
     [InlineData(0f, 0.77f, 0f, 0f, 90)]    // a real face, lying on its side
     [InlineData(0.80f, 0.64f, 0f, 0f, 0)]  // upright wins when both look like faces
     [InlineData(0.51f, 0.49f, 2.19f, 0.73f, 180)] // a family, upside down
-    public void ChooseFaceRotation_ShouldTurnOnlyForConfidentFaces(float up, float cw, float flip, float ccw, int expected) =>
+    public void ChooseFaceRotationShouldTurnOnlyForConfidentFaces(float up, float cw, float flip, float ccw, int expected) =>
         FaceOrientationService.ChooseFaceRotation([up, cw, flip, ccw], 0.45f).ShouldBe(expected);
 }

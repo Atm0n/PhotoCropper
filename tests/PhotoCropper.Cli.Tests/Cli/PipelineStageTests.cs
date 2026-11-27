@@ -15,26 +15,26 @@ public sealed class PipelineStageTests : IDisposable
     [InlineData("crop", nameof(PipelineStage.Crop))]
     [InlineData("RESTORE", nameof(PipelineStage.Restore))]
     [InlineData("all", nameof(PipelineStage.All))]
-    public void Parse_Stage_ShouldSetTheStage(string value, string expected)
+    public void ParseStageShouldSetTheStage(string value, string expected)
     {
         CommandLineParser.Parse(["--stage", value]).Stage.ToString().ShouldBe(expected);
     }
 
     [Fact]
-    public void Parse_UnknownStage_ShouldFallBackToAll()
+    public void ParseUnknownStageShouldFallBackToAll()
     {
         CommandLineParser.Parse(["--stage", "polish"]).Stage.ShouldBe(PipelineStage.All);
     }
 
     [Fact]
-    public void Parse_Pattern_ShouldBeMarkedAsSpecified()
+    public void ParsePatternShouldBeMarkedAsSpecified()
     {
         CommandLineParser.Parse(["-p", "{original}"]).FileNamePatternSpecified.ShouldBeTrue();
         CommandLineParser.Parse([]).FileNamePatternSpecified.ShouldBeFalse();
     }
 
     [Fact]
-    public void CropStage_ShouldWriteLosslessPngsWithoutRestoration()
+    public void CropStageShouldWriteLosslessPngsWithoutRestoration()
     {
         string scan = Path.Combine(_tempDir, "scan01.jpg");
         TestImageFactory.CreateStandardTwoPhotoScan(scan);
@@ -58,7 +58,7 @@ public sealed class PipelineStageTests : IDisposable
     }
 
     [Fact]
-    public void RestoreStage_ShouldRestoreEachPhotoKeepingItsName()
+    public void RestoreStageShouldRestoreEachPhotoKeepingItsName()
     {
         string input = Directory.CreateDirectory(Path.Combine(_tempDir, "photos")).FullName;
         foreach (string name in new[] { "a.png", "b.png" })
@@ -77,7 +77,7 @@ public sealed class PipelineStageTests : IDisposable
     }
 
     [Fact]
-    public void Parse_TrimBorders_ShouldBeOffUnlessAsked()
+    public void ParseTrimBordersShouldBeOffUnlessAsked()
     {
         CommandLineParser.Parse([]).TrimBorders.ShouldBeFalse();
         CommandLineParser.Parse(["--trim-borders"]).TrimBorders.ShouldBeTrue();
@@ -86,7 +86,7 @@ public sealed class PipelineStageTests : IDisposable
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void AllStages_WithTrimBorders_ShouldLeaveOutThePrintsBorder(bool trim)
+    public void AllStagesWithTrimBordersShouldLeaveOutThePrintsBorder(bool trim)
     {
         var scan = SampleScanFactory.CreateBorderedPrintScan(Path.Combine(_tempDir, "print.png"), seed: 3);
         string output = Path.Combine(_tempDir, trim ? "trimmed" : "whole");
@@ -104,7 +104,7 @@ public sealed class PipelineStageTests : IDisposable
     }
 
     [Fact]
-    public void CropStage_ShouldKeepTheWholePrintEvenWithTrimBorders()
+    public void CropStageShouldKeepTheWholePrintEvenWithTrimBorders()
     {
         var scan = SampleScanFactory.CreateBorderedPrintScan(Path.Combine(_tempDir, "print.png"), seed: 4);
         string output = Path.Combine(_tempDir, "cropped");
@@ -117,7 +117,7 @@ public sealed class PipelineStageTests : IDisposable
     }
 
     [Fact]
-    public void RestoreStage_WithTrimBorders_ShouldLeaveOutThePrintsBorder()
+    public void RestoreStageWithTrimBordersShouldLeaveOutThePrintsBorder()
     {
         var scan = SampleScanFactory.CreateBorderedPrintScan(Path.Combine(_tempDir, "print.png"), seed: 5, x: 0, y: 0);
         string input = Directory.CreateDirectory(Path.Combine(_tempDir, "prints")).FullName;

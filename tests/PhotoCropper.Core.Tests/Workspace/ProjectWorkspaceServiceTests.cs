@@ -14,7 +14,7 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public void InitializeWorkspace_ShouldCreateDirectories()
+    public void InitializeWorkspaceShouldCreateDirectories()
     {
         string workDir = Path.Combine(_tempDir, "Project1");
         ProjectWorkspaceService.InitializeWorkspace(workDir);
@@ -25,7 +25,7 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public void GetNextScanFileName_EmptyDirectory_ShouldReturnScan0001()
+    public void GetNextScanFileNameEmptyDirectoryShouldReturnScan0001()
     {
         string workDir = Path.Combine(_tempDir, "Project2");
         string next = ProjectWorkspaceService.GetNextScanFileName(workDir);
@@ -34,7 +34,7 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public void GetNextScanFileName_ExistingFiles_ShouldIncrement()
+    public void GetNextScanFileNameExistingFilesShouldIncrement()
     {
         string workDir = Path.Combine(_tempDir, "Project3");
         ProjectWorkspaceService.InitializeWorkspace(workDir);
@@ -49,7 +49,7 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public void StageRawScanFromMat_ShouldWritePngFile()
+    public void StageRawScanFromMatShouldWritePngFile()
     {
         string workDir = Path.Combine(_tempDir, "Project4");
         using Mat mat = new(200, 200, MatType.CV_8UC3);
@@ -62,7 +62,7 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public void StageRawScanFromFile_ShouldCopyFile()
+    public void StageRawScanFromFileShouldCopyFile()
     {
         string workDir = Path.Combine(_tempDir, "Project5");
         string sourceFile = Path.Combine(_tempDir, "source.jpg");
@@ -79,7 +79,7 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public void SaveSession_And_LoadSession_ShouldRoundtrip()
+    public void SaveSessionAndLoadSessionShouldRoundtrip()
     {
         string workDir = Path.Combine(_tempDir, "Project6");
         var state = new WorkspaceSessionState();
@@ -105,7 +105,7 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public void HasRecoverableSession_WithSessionFile_ShouldReturnTrue()
+    public void HasRecoverableSessionWithSessionFileShouldReturnTrue()
     {
         string workDir = Path.Combine(_tempDir, "Project7");
         var state = new WorkspaceSessionState();
@@ -116,7 +116,7 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public void HasRecoverableSession_WithEmptyDir_ShouldReturnFalse()
+    public void HasRecoverableSessionWithEmptyDirShouldReturnFalse()
     {
         string workDir = Path.Combine(_tempDir, "Project8");
         ProjectWorkspaceService.InitializeWorkspace(workDir);
@@ -125,7 +125,7 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public void ReconstructSessionFromRawFiles_ShouldIndexExistingFiles()
+    public void ReconstructSessionFromRawFilesShouldIndexExistingFiles()
     {
         string workDir = Path.Combine(_tempDir, "Project9");
         ProjectWorkspaceService.InitializeWorkspace(workDir);
@@ -142,7 +142,7 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public void ReconstructSessionFromRawFiles_WithExistingCroppedPhotos_ShouldMarkProcessed()
+    public void ReconstructSessionFromRawFilesWithExistingCroppedPhotosShouldMarkProcessed()
     {
         string workDir = Path.Combine(_tempDir, "Project9B");
         ProjectWorkspaceService.InitializeWorkspace(workDir);
@@ -168,7 +168,7 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public void DeleteScan_ShouldRemoveFileAndSessionEntry()
+    public void DeleteScanShouldRemoveFileAndSessionEntry()
     {
         string workDir = Path.Combine(_tempDir, "Project10");
         ProjectWorkspaceService.InitializeWorkspace(workDir);
@@ -199,9 +199,6 @@ public sealed class ProjectWorkspaceServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-        {
-            try { Directory.Delete(_tempDir, true); } catch { }
-        }
+        TestDirectory.TryDelete(_tempDir);
     }
 }

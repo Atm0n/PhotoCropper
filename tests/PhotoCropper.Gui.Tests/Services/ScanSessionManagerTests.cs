@@ -29,7 +29,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void Move_ShouldReorderAndKeepTheSameScanSelected()
+    public void MoveShouldReorderAndKeepTheSameScanSelected()
     {
         using var manager = new ScanSessionManager();
         manager.AddRange(Sessions(new DetectionOptions(), _scan1, _scan2, _scan3));
@@ -42,7 +42,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_InitialState_ShouldBeEmpty()
+    public void ScanSessionManagerInitialStateShouldBeEmpty()
     {
         using var manager = new ScanSessionManager();
 
@@ -54,7 +54,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_AddAndAddRange_ShouldUpdateCountAndNavigation()
+    public void ScanSessionManagerAddAndAddRangeShouldUpdateCountAndNavigation()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -75,7 +75,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_MoveNextAndPrevious_ShouldClamp()
+    public void ScanSessionManagerMoveNextAndPreviousShouldClamp()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -104,7 +104,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_MoveTo_ShouldValidateBounds()
+    public void ScanSessionManagerMoveToShouldValidateBounds()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -122,7 +122,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_Navigation_ShouldDeactivateUnmodifiedSession()
+    public void ScanSessionManagerNavigationShouldDeactivateUnmodifiedSession()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -146,7 +146,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_SessionDeactivated_ShouldFireWithCorrectIndexWhenUnmodifiedSessionDeactivated()
+    public void ScanSessionManagerSessionDeactivatedShouldFireWithCorrectIndexWhenUnmodifiedSessionDeactivated()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -169,7 +169,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_SessionDeactivated_ShouldNotFireForModifiedSession()
+    public void ScanSessionManagerSessionDeactivatedShouldNotFireForModifiedSession()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -193,7 +193,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_RemoveCurrent_ShouldAdjustIndexCorrectly()
+    public void ScanSessionManagerRemoveCurrentShouldAdjustIndexCorrectly()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -224,7 +224,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_ReplaceAll_ShouldDisposeOldAndResetIndex()
+    public void ScanSessionManagerReplaceAllShouldDisposeOldAndResetIndex()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -241,7 +241,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_SessionModified_ShouldReportEveryEditOfATrackedScan()
+    public void ScanSessionManagerSessionModifiedShouldReportEveryEditOfATrackedScan()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -262,7 +262,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_SessionModified_ShouldStopForRemovedScans()
+    public void ScanSessionManagerSessionModifiedShouldStopForRemovedScans()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -280,7 +280,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_FindByPath_ShouldFindMatchingSessionCaseInsensitive()
+    public void ScanSessionManagerFindByPathShouldFindMatchingSessionCaseInsensitive()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -296,7 +296,7 @@ public sealed class ScanSessionManagerTests : IDisposable
     }
 
     [Fact]
-    public void ScanSessionManager_Clear_ShouldResetState()
+    public void ScanSessionManagerClearShouldResetState()
     {
         using var manager = new ScanSessionManager();
         var options = new DetectionOptions();
@@ -312,9 +312,6 @@ public sealed class ScanSessionManagerTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-        {
-            try { Directory.Delete(_tempDir, true); } catch { }
-        }
+        TestDirectory.TryDelete(_tempDir);
     }
 }

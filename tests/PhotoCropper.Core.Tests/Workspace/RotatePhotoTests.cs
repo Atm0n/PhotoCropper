@@ -35,7 +35,7 @@ public sealed class RotatePhotoTests : IDisposable
     }
 
     [Fact]
-    public void RotatePhoto_ShouldTurnTheFileAndRecordTheTurnOnTheScan()
+    public void RotatePhotoShouldTurnTheFileAndRecordTheTurnOnTheScan()
     {
         var (scan, photos) = CreateProject();
         var photo = photos[0];
@@ -54,7 +54,7 @@ public sealed class RotatePhotoTests : IDisposable
     }
 
     [Fact]
-    public void RotatePhoto_ThenRestoringTheScan_ShouldGiveTheSamePhoto()
+    public void RotatePhotoThenRestoringTheScanShouldGiveTheSamePhoto()
     {
         // What the Crops stage does next time it opens the scan: restore its photos from the saved boxes.
         var (scan, photos) = CreateProject();
@@ -70,7 +70,7 @@ public sealed class RotatePhotoTests : IDisposable
     }
 
     [Fact]
-    public void RotatePhoto_FourTimes_ShouldGiveTheOriginalBack()
+    public void RotatePhotoFourTimesShouldGiveTheOriginalBack()
     {
         var (_, photos) = CreateProject();
         string path = photos[0].Cropped!.GetFullPath(_workDir);
@@ -83,7 +83,7 @@ public sealed class RotatePhotoTests : IDisposable
     }
 
     [Fact]
-    public void RotatePhoto_ShouldTurnRepairStrokesAndTheHandSetTrim()
+    public void RotatePhotoShouldTurnRepairStrokesAndTheHandSetTrim()
     {
         var (_, photos) = CreateProject();
         var photo = photos[0];

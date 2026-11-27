@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using PhotoCropper.Core.Scanning;
 using PhotoCropper.Gui.Services;
+using PhotoCropper.Core.Common;
 
 namespace PhotoCropper.Gui.Dialogs;
 
@@ -157,7 +158,7 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
         {
             // Dialog closed or refresh cancelled
         }
-        catch
+        catch (Exception ex) when (ExpectedErrors.IsScannerError(ex) || ex is ObjectDisposedException)
         {
             if (!_disposed)
             {
@@ -230,9 +231,13 @@ internal sealed partial class ScannerConfigDialog : Window, IDisposable
                 });
             }
         }
-        catch
+        catch (OperationCanceledException)
         {
-            // Leave default auto label if querying dimensions fails
+            // Dialog closed before the scanner answered: leave the default auto label
+        }
+        catch (ObjectDisposedException)
+        {
+            // The scanner service was replaced (reset after an error) while it was being asked
         }
     }
 

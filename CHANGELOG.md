@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Errors that point to a bug are no longer hidden**: the CLI's batch, project and restore runs, saving crops and scanning still report a file, image or scanner that fails and carry on, but an unexpected error now stops with its details instead of being listed as one more failed file.
+
 ## [3.3.1] - 2026-11-27
 
 ### Changed

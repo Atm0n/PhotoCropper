@@ -46,7 +46,7 @@ public sealed class CropsStageViewModelTests : IDisposable
         LocalizationService.Format(ResourceKeys.ScanCounter, "Scan {0} of {1}", scan, of);
 
     [Fact]
-    public async Task LoadCurrentScan_ShowsTheScanAndItsCounterAndCoverage()
+    public async Task LoadCurrentScanShowsTheScanAndItsCounterAndCoverage()
     {
         using var vm = CreateViewModel(2);
 
@@ -59,7 +59,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadCurrentScan_WhileTheScanStagePreparesTheSameScan_ListsEachPhotoOnce()
+    public async Task LoadCurrentScanWhileTheScanStagePreparesTheSameScanListsEachPhotoOnce()
     {
         // Opening a project: the Scan stage's preview and Crops both prepare the first scan, auto-tuning it.
         _settings.AutoTuneOnScanChange = true;
@@ -74,7 +74,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Navigation_MovesBetweenScansAndStopsAtTheEnds()
+    public async Task NavigationMovesBetweenScansAndStopsAtTheEnds()
     {
         using var vm = CreateViewModel(2);
         await vm.LoadCurrentScanAsync();
@@ -93,7 +93,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task SliderChanges_AreSavedAtOnceButDetectOnlyOnceAfterThePause()
+    public async Task SliderChangesAreSavedAtOnceButDetectOnlyOnceAfterThePause()
     {
         using var vm = CreateViewModel(1);
         await vm.LoadCurrentScanAsync();
@@ -116,7 +116,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ShowOptions_UpdatesTheControlsWithoutRedetecting()
+    public async Task ShowOptionsUpdatesTheControlsWithoutRedetecting()
     {
         using var vm = CreateViewModel(1);
         await vm.LoadCurrentScanAsync();
@@ -133,7 +133,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Lookahead_PreparesTheNextScanInTheBackground()
+    public async Task LookaheadPreparesTheNextScanInTheBackground()
     {
         using var vm = CreateViewModel(3);
         await vm.LoadCurrentScanAsync();
@@ -149,7 +149,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void LookaheadPlan_PreparesScansAheadAndOneBehind()
+    public void LookaheadPlanPreparesScansAheadAndOneBehind()
     {
         LookaheadPlan.ScansToPrepare(10, 0, ahead: 4, behind: 4).ShouldBe([1, 2, 3, 4, 6]);
         LookaheadPlan.ScansToPrepare(3, 2, ahead: 4, behind: 4).ShouldBe([0, 1]);
@@ -157,7 +157,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void LookaheadPlan_ReleasesScansFarFromTheCurrentOneAroundTheList()
+    public void LookaheadPlanReleasesScansFarFromTheCurrentOneAroundTheList()
     {
         LookaheadPlan.ScansToRelease(20, 0, ahead: 4).ShouldBe([6, 7, 8, 9, 10, 11, 12, 13, 14]);
         LookaheadPlan.ScansToRelease(10, 0, ahead: 4).ShouldBeEmpty();
@@ -178,7 +178,7 @@ public sealed class CropsStageViewModelTests : IDisposable
         CropBoxGeometry.For(engine.AcceptedCandidates[index], new System.Drawing.Size(engine.Original.Width, engine.Original.Height), engine.OverlayScale);
 
     [Fact]
-    public async Task ClickOnDeleteBadge_DeletesThatPhotoAndCanBeUndone()
+    public async Task ClickOnDeleteBadgeDeletesThatPhotoAndCanBeUndone()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -192,7 +192,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ClickAt_SaysWhetherItWasOnABox()
+    public async Task ClickAtSaysWhetherItWasOnABox()
     {
         // A click that isn't on a box finds the photo there (the view does that when ClickAt says so).
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
@@ -206,7 +206,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteBoxAt_OnlyOnADeleteBadge()
+    public async Task DeleteBoxAtOnlyOnADeleteBadge()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -220,7 +220,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ClickInsideBox_SelectsItsPhoto()
+    public async Task ClickInsideBoxSelectsItsPhoto()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -232,7 +232,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task DraggingTheRotationHandle_TurnsTheBoxAndRecordsUndo()
+    public async Task DraggingTheRotationHandleTurnsTheBoxAndRecordsUndo()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -252,7 +252,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task PressOnACornerOfABoxNotSelected_DrawsInstead()
+    public async Task PressOnACornerOfABoxNotSelectedDrawsInstead()
     {
         // Its handles aren't shown, so its corners don't grab: select the box to resize it.
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
@@ -264,7 +264,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task DraggingACorner_ResizesTheBoxAndReExtractsThePhoto()
+    public async Task DraggingACornerResizesTheBoxAndReExtractsThePhoto()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -289,7 +289,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task TapOnTheTopRightCorner_DeletesTheBox()
+    public async Task TapOnTheTopRightCornerDeletesTheBox()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -301,7 +301,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task DrawingARectangle_AddsAManualCropAndSelectsIt()
+    public async Task DrawingARectangleAddsAManualCropAndSelectsIt()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -315,7 +315,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task PickingABackgroundColor_AutoTunesDetectionForIt()
+    public async Task PickingABackgroundColorAutoTunesDetectionForIt()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -334,7 +334,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ResettingTheBackgroundColor_DetectsWithTheAutomaticBackground()
+    public async Task ResettingTheBackgroundColorDetectsWithTheAutomaticBackground()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -351,7 +351,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     // ---- photo list ----
 
     [Fact]
-    public async Task OpeningAScan_ListsItsPhotosAndShowsTheFirst()
+    public async Task OpeningAScanListsItsPhotosAndShowsTheFirst()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -367,7 +367,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task DeletingThePhotoInTheCarousel_RemovesItAndItsBox()
+    public async Task DeletingThePhotoInTheCarouselRemovesItAndItsBox()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -384,7 +384,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task GridSelection_DrivesTheLabelsAndBatchDeleteIsOneUndoStep()
+    public async Task GridSelectionDrivesTheLabelsAndBatchDeleteIsOneUndoStep()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -405,7 +405,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task SelectingOneGridPhoto_MakesItTheSelectedPhoto()
+    public async Task SelectingOneGridPhotoMakesItTheSelectedPhoto()
     {
         var (vm, _) = await OpenScanWithTwoPhotosAsync();
         using var __ = vm;
@@ -418,7 +418,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task RotatingTheSelectedPhoto_TurnsItAndKeepsItShown()
+    public async Task RotatingTheSelectedPhotoTurnsItAndKeepsItShown()
     {
         var (vm, engine) = await OpenScanWithTwoPhotosAsync();
         using var _ = vm;
@@ -434,7 +434,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task HoldToCompare_SwapsTheShownPhotoForTheOriginalAndBack()
+    public async Task HoldToCompareSwapsTheShownPhotoForTheOriginalAndBack()
     {
         var (vm, _) = await OpenScanWithTwoPhotosAsync();
         using var __ = vm;
@@ -449,7 +449,7 @@ public sealed class CropsStageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ResizeFromCorner_KeepsTheOppositeCorner()
+    public void ResizeFromCornerKeepsTheOppositeCorner()
     {
         var box = new CropCandidate
         {

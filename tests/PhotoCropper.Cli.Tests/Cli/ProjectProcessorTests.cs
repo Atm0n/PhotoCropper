@@ -31,7 +31,7 @@ public sealed class ProjectProcessorTests : IDisposable
     }
 
     [Fact]
-    public void Run_NewProject_ShouldAddTheScansAndWriteEveryStage()
+    public void RunNewProjectShouldAddTheScansAndWriteEveryStage()
     {
         using var console = new TestConsole();
 
@@ -56,7 +56,7 @@ public sealed class ProjectProcessorTests : IDisposable
     }
 
     [Fact]
-    public void Run_Again_ShouldKeepSavedBoxesAndWriteNothingNew()
+    public void RunAgainShouldKeepSavedBoxesAndWriteNothingNew()
     {
         using var console = new TestConsole();
         ProjectProcessor.Run(Options(PipelineStage.All, _inbox), _project, console);
@@ -79,7 +79,7 @@ public sealed class ProjectProcessorTests : IDisposable
         .Select(f => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(f)))));
 
     [Fact]
-    public void Run_ShouldUseBoxesEditedInTheApp()
+    public void RunShouldUseBoxesEditedInTheApp()
     {
         using var console = new TestConsole();
         ProjectProcessor.Run(Options(PipelineStage.Crop, _inbox), _project, console);
@@ -98,7 +98,7 @@ public sealed class ProjectProcessorTests : IDisposable
     }
 
     [Fact]
-    public void Run_ScanWithNothingFound_ShouldStayFlaggedAndBeTriedAgain()
+    public void RunScanWithNothingFoundShouldStayFlaggedAndBeTriedAgain()
     {
         string blank = Path.Combine(_tempDir, "blank");
         Directory.CreateDirectory(blank);
@@ -118,7 +118,7 @@ public sealed class ProjectProcessorTests : IDisposable
     }
 
     [Fact]
-    public void Run_CropStage_ShouldNotWriteFinalPhotos()
+    public void RunCropStageShouldNotWriteFinalPhotos()
     {
         using var console = new TestConsole();
 
@@ -131,7 +131,7 @@ public sealed class ProjectProcessorTests : IDisposable
     }
 
     [Fact]
-    public void Run_RestoreStage_ShouldOnlyRenderMissingFinals()
+    public void RunRestoreStageShouldOnlyRenderMissingFinals()
     {
         using var console = new TestConsole();
         ProjectProcessor.Run(Options(PipelineStage.Crop, _inbox), _project, console);
@@ -143,7 +143,7 @@ public sealed class ProjectProcessorTests : IDisposable
     }
 
     [Fact]
-    public void Parse_Project_ShouldSetTheFolderAndKeepInputs()
+    public void ParseProjectShouldSetTheFolderAndKeepInputs()
     {
         var options = CommandLineParser.Parse(["--project", _project, _inbox, "--stage", "crop"]);
 

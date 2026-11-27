@@ -6,7 +6,7 @@ namespace PhotoCropper.Core.Tests.Extraction;
 public sealed class EdgeRefinementServiceTests
 {
     [Fact]
-    public void GetRefinedCropRect_ShouldTrimOuterWhiteMargins()
+    public void GetRefinedCropRectShouldTrimOuterWhiteMargins()
     {
         // 1000x1000 photo with 80px white margin around a dark center
         using Mat photo = new(1000, 1000, MatType.CV_8UC3);

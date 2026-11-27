@@ -14,7 +14,7 @@ public sealed class ExportMetadataResolverTests
     };
 
     [Fact]
-    public void Resolve_WhenNotApplyingDefaults_ShouldReturnScanMetadataUnchanged()
+    public void ResolveWhenNotApplyingDefaultsShouldReturnScanMetadataUnchanged()
     {
         var scan = ScanMetadata();
 
@@ -24,7 +24,7 @@ public sealed class ExportMetadataResolverTests
     }
 
     [Fact]
-    public void Resolve_WhenApplyingDefaults_ShouldOverrideYearAndDescription()
+    public void ResolveWhenApplyingDefaultsShouldOverrideYearAndDescription()
     {
         var result = ExportMetadataResolver.Resolve(ScanMetadata(), applyDefaultsToAllScans: true, 1990, "Default");
 
@@ -33,7 +33,7 @@ public sealed class ExportMetadataResolverTests
     }
 
     [Fact]
-    public void Resolve_WhenApplyingDefaults_ShouldKeepPhotographer()
+    public void ResolveWhenApplyingDefaultsShouldKeepPhotographer()
     {
         var result = ExportMetadataResolver.Resolve(ScanMetadata(), applyDefaultsToAllScans: true, 1990, "Default");
 
@@ -41,7 +41,7 @@ public sealed class ExportMetadataResolverTests
     }
 
     [Fact]
-    public void Resolve_WhenDateConflictsWithDefaultYear_ShouldDropDateSoDefaultYearIsEmbedded()
+    public void ResolveWhenDateConflictsWithDefaultYearShouldDropDateSoDefaultYearIsEmbedded()
     {
         var result = ExportMetadataResolver.Resolve(ScanMetadata(), applyDefaultsToAllScans: true, 1990, null);
 
@@ -50,7 +50,7 @@ public sealed class ExportMetadataResolverTests
     }
 
     [Fact]
-    public void Resolve_WhenDateAgreesWithDefaultYear_ShouldKeepExactDate()
+    public void ResolveWhenDateAgreesWithDefaultYearShouldKeepExactDate()
     {
         var result = ExportMetadataResolver.Resolve(ScanMetadata(), applyDefaultsToAllScans: true, 1975, null);
 
@@ -58,7 +58,7 @@ public sealed class ExportMetadataResolverTests
     }
 
     [Fact]
-    public void Resolve_WhenNoDefaultYear_ShouldKeepExactDate()
+    public void ResolveWhenNoDefaultYearShouldKeepExactDate()
     {
         var result = ExportMetadataResolver.Resolve(ScanMetadata(), applyDefaultsToAllScans: true, null, null);
 

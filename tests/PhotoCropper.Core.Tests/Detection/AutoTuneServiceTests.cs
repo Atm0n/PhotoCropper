@@ -7,20 +7,20 @@ namespace PhotoCropper.Core.Tests.Detection;
 public sealed class AutoTuneServiceTests
 {
     [Fact]
-    public void Tune_NullSource_ShouldThrowArgumentNullException()
+    public void TuneNullSourceShouldThrowArgumentNullException()
     {
         Should.Throw<ArgumentNullException>(() => AutoTuneService.Tune(null!, new DetectionOptions()));
     }
 
     [Fact]
-    public void Tune_NullOptions_ShouldThrowArgumentNullException()
+    public void TuneNullOptionsShouldThrowArgumentNullException()
     {
         using var mat = new Mat(100, 100, MatType.CV_8UC3);
         Should.Throw<ArgumentNullException>(() => AutoTuneService.Tune(mat, null!));
     }
 
     [Fact]
-    public void Tune_SyntheticScan_ShouldReturnResult()
+    public void TuneSyntheticScanShouldReturnResult()
     {
         using var scan = new Mat(400, 400, MatType.CV_8UC3);
         scan.SetTo(new Scalar(250, 250, 250)); // light background
@@ -42,7 +42,7 @@ public sealed class AutoTuneServiceTests
     }
 
     [Fact]
-    public void Tune_WithExpectedBounds_ShouldTargetSpecifiedRange()
+    public void TuneWithExpectedBoundsShouldTargetSpecifiedRange()
     {
         using var scan = new Mat(400, 400, MatType.CV_8UC3);
         scan.SetTo(new Scalar(250, 250, 250));
@@ -63,7 +63,7 @@ public sealed class AutoTuneServiceTests
     }
 
     [Fact]
-    public void Tune_BlankImage_ReturnsZeroCandidates()
+    public void TuneBlankImageReturnsZeroCandidates()
     {
         // Edge case: all passes return 0 candidates
         using var scan = new Mat(400, 400, MatType.CV_8UC3);
@@ -78,7 +78,7 @@ public sealed class AutoTuneServiceTests
     }
 
     [Fact]
-    public void CalculateScore_WithinExpectedBounds_RanksHigherThanOutsideBounds()
+    public void CalculateScoreWithinExpectedBoundsRanksHigherThanOutsideBounds()
     {
         // Scoring: does a better result rank higher?
         using var scan = new Mat(400, 400, MatType.CV_8UC3);
@@ -107,7 +107,7 @@ public sealed class AutoTuneServiceTests
     }
 
     [Fact]
-    public void SweepCoverage_ShouldDefineExpectedParameterCombinations()
+    public void SweepCoverageShouldDefineExpectedParameterCombinations()
     {
         // Sweep coverage: does it try all parameter combos?
         AutoTuneService.SweepTolerances.Length.ShouldBeGreaterThan(0);

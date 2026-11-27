@@ -5,27 +5,27 @@ namespace PhotoCropper.Gui.Tests.Services;
 public sealed class LocalizationServiceTests
 {
     [Fact]
-    public void GetString_WhenApplicationNotInitialized_ShouldReturnFallback()
+    public void GetStringWhenApplicationNotInitializedShouldReturnFallback()
     {
         string result = LocalizationService.GetString("NonExistentKey", "Fallback Text");
         result.ShouldBe("Fallback Text");
     }
 
     [Fact]
-    public void Format_WhenApplicationNotInitialized_ShouldFormatFallback()
+    public void FormatWhenApplicationNotInitializedShouldFormatFallback()
     {
         string result = LocalizationService.Format("NonExistentKey", "Hello {0} of {1}", 1, 5);
         result.ShouldBe("Hello 1 of 5");
     }
 
     [Fact]
-    public void GetString_WithNullKey_ShouldThrow()
+    public void GetStringWithNullKeyShouldThrow()
     {
         Should.Throw<ArgumentNullException>(() => LocalizationService.GetString(null!));
     }
 
     [Fact]
-    public void Format_WithNullFallbackTemplate_ShouldThrow()
+    public void FormatWithNullFallbackTemplateShouldThrow()
     {
         Should.Throw<ArgumentNullException>(() => LocalizationService.Format("Key", null!));
     }
@@ -34,7 +34,7 @@ public sealed class LocalizationServiceTests
     [InlineData("en-US")]
     [InlineData("es-ES")]
     [InlineData("ca-ES")]
-    public void ResourceKeys_AllDeclaredKeysShouldExistInLanguageDictionaries(string langCode)
+    public void ResourceKeysAllDeclaredKeysShouldExistInLanguageDictionaries(string langCode)
     {
         string axamlPath = Path.Combine(
             AppContext.BaseDirectory,
@@ -63,7 +63,7 @@ public sealed class LocalizationServiceTests
     }
 
     [Fact]
-    public void GetAvailableLanguages_ShouldContainExpectedLanguages()
+    public void GetAvailableLanguagesShouldContainExpectedLanguages()
     {
         var languages = LocalizationService.GetAvailableLanguages();
 
@@ -79,7 +79,7 @@ public sealed class LocalizationServiceTests
     [InlineData("en-US", "en-US")]
     [InlineData("invalid-code", "en-US")]
     [InlineData("", "en-US")]
-    public void SetLanguage_ShouldUpdateCurrentLanguageAndPersist(string inputCode, string expectedResult)
+    public void SetLanguageShouldUpdateCurrentLanguageAndPersist(string inputCode, string expectedResult)
     {
         LocalizationService.SetLanguage(inputCode);
 
@@ -88,7 +88,7 @@ public sealed class LocalizationServiceTests
     }
 
     [Fact]
-    public void Initialize_WithPreferredLanguage_ShouldUsePreferred()
+    public void InitializeWithPreferredLanguageShouldUsePreferred()
     {
         LocalizationService.Initialize("ca-ES");
 
@@ -97,7 +97,7 @@ public sealed class LocalizationServiceTests
     }
 
     [Fact]
-    public void Initialize_WithUnknownPreferredLanguage_ShouldFallbackToDefault()
+    public void InitializeWithUnknownPreferredLanguageShouldFallbackToDefault()
     {
         var originalCulture = System.Globalization.CultureInfo.CurrentCulture;
         try
@@ -117,7 +117,7 @@ public sealed class LocalizationServiceTests
     [InlineData("en-US")]
     [InlineData("es-ES")]
     [InlineData("ca-ES")]
-    public void NamingAndMetadataKeys_ShouldExistInAllLanguages(string langCode)
+    public void NamingAndMetadataKeysShouldExistInAllLanguages(string langCode)
     {
         string[] requiredKeys = [
             "LblFileNamePattern",

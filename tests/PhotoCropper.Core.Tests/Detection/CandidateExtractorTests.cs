@@ -6,7 +6,7 @@ namespace PhotoCropper.Core.Tests.Detection;
 public sealed class CandidateExtractorTests
 {
     [Fact]
-    public void ExtractCandidates_ShouldExtractQuadrilaterals()
+    public void ExtractCandidatesShouldExtractQuadrilaterals()
     {
         using Mat mask = new(500, 500, MatType.CV_8UC1);
         mask.SetTo(new Scalar(0));
@@ -21,7 +21,7 @@ public sealed class CandidateExtractorTests
     }
 
     [Fact]
-    public void ExtractCandidates_ShouldRejectThinLines()
+    public void ExtractCandidatesShouldRejectThinLines()
     {
         using Mat mask = new(500, 500, MatType.CV_8UC1);
         mask.SetTo(new Scalar(0));
@@ -34,7 +34,7 @@ public sealed class CandidateExtractorTests
     }
 
     [Fact]
-    public void ExtractCandidates_ShouldRejectIncompleteNonRectangularShapes()
+    public void ExtractCandidatesShouldRejectIncompleteNonRectangularShapes()
     {
         using Mat mask = new(500, 500, MatType.CV_8UC1);
         mask.SetTo(new Scalar(0));
@@ -50,7 +50,7 @@ public sealed class CandidateExtractorTests
     }
 
     [Fact]
-    public void ExtractCandidates_ShouldRejectUniformLidShadowArtifacts()
+    public void ExtractCandidatesShouldRejectUniformLidShadowArtifacts()
     {
         using Mat mask = new(500, 500, MatType.CV_8UC1);
         mask.SetTo(new Scalar(0));

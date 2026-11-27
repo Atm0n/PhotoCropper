@@ -5,7 +5,7 @@ namespace PhotoCropper.Gui.Tests.Services;
 public sealed class CoordinateMapperTests
 {
     [Fact]
-    public void ComputeNormalizedRect_TopLeftToBottomRight_ShouldProducePositiveDimensions()
+    public void ComputeNormalizedRectTopLeftToBottomRightShouldProducePositiveDimensions()
     {
         var p1 = new Avalonia.Point(50, 60);
         var p2 = new Avalonia.Point(150, 200);
@@ -19,7 +19,7 @@ public sealed class CoordinateMapperTests
     }
 
     [Fact]
-    public void ComputeNormalizedRect_BottomRightToTopLeft_ShouldProduceSamePositiveRect()
+    public void ComputeNormalizedRectBottomRightToTopLeftShouldProduceSamePositiveRect()
     {
         var p1 = new Avalonia.Point(150, 200);
         var p2 = new Avalonia.Point(50, 60);
@@ -33,7 +33,7 @@ public sealed class CoordinateMapperTests
     }
 
     [Fact]
-    public void MapUiRectToImageRect_ValidScaling_ShouldMapCoordinatesAccurately()
+    public void MapUiRectToImageRectValidScalingShouldMapCoordinatesAccurately()
     {
         var uiRect = new Avalonia.Rect(25, 25, 50, 50);
         var imageBounds = new Avalonia.Rect(0, 0, 100, 100);
@@ -48,7 +48,7 @@ public sealed class CoordinateMapperTests
     }
 
     [Fact]
-    public void MapUiRectToImageRect_OutOfBounds_ShouldClampToImageDimensions()
+    public void MapUiRectToImageRectOutOfBoundsShouldClampToImageDimensions()
     {
         var uiRect = new Avalonia.Rect(-50, -50, 200, 200);
         var imageBounds = new Avalonia.Rect(0, 0, 100, 100);
@@ -63,7 +63,7 @@ public sealed class CoordinateMapperTests
     }
 
     [Fact]
-    public void MapUiRectToImageRect_EmptyOrZeroImageBounds_ShouldReturnEmptyRectangle()
+    public void MapUiRectToImageRectEmptyOrZeroImageBoundsShouldReturnEmptyRectangle()
     {
         var uiRect = new Avalonia.Rect(10, 10, 50, 50);
         var imageBounds = new Avalonia.Rect(0, 0, 0, 0);
@@ -75,7 +75,7 @@ public sealed class CoordinateMapperTests
     }
 
     [Fact]
-    public void MapUiPointToImagePixel_CenterPoint_ShouldMapCorrectly()
+    public void MapUiPointToImagePixelCenterPointShouldMapCorrectly()
     {
         var uiPoint = new Avalonia.Point(50, 50);
         var imageBounds = new Avalonia.Rect(0, 0, 100, 100);
@@ -88,7 +88,7 @@ public sealed class CoordinateMapperTests
     }
 
     [Fact]
-    public void MapUiPointToImagePixel_OutOfBoundsPoint_ShouldClampWithinPixelRange()
+    public void MapUiPointToImagePixelOutOfBoundsPointShouldClampWithinPixelRange()
     {
         var uiPoint = new Avalonia.Point(200, 200);
         var imageBounds = new Avalonia.Rect(0, 0, 100, 100);
@@ -101,7 +101,7 @@ public sealed class CoordinateMapperTests
     }
 
     [Fact]
-    public void MapUiPointToImagePixel_ZeroImageBounds_ShouldReturnEmptyPoint()
+    public void MapUiPointToImagePixelZeroImageBoundsShouldReturnEmptyPoint()
     {
         var uiPoint = new Avalonia.Point(50, 50);
         var imageBounds = new Avalonia.Rect(0, 0, 0, 0);

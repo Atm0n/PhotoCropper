@@ -6,7 +6,7 @@ namespace PhotoCropper.Gui.Tests.Views;
 public sealed class MainWindowKeyboardTests
 {
     [Fact]
-    public void IsTextInputActive_WhenFocusedElementIsTextBox_ReturnsTrue()
+    public void IsTextInputActiveWhenFocusedElementIsTextBoxReturnsTrue()
     {
         TestAppBuilder.EnsureInitialized();
 
@@ -16,7 +16,7 @@ public sealed class MainWindowKeyboardTests
     }
 
     [Fact]
-    public void IsTextInputActive_WhenSourceElementIsTextBox_ReturnsTrue()
+    public void IsTextInputActiveWhenSourceElementIsTextBoxReturnsTrue()
     {
         TestAppBuilder.EnsureInitialized();
 
@@ -26,7 +26,7 @@ public sealed class MainWindowKeyboardTests
     }
 
     [Fact]
-    public void IsTextInputActive_WhenSourceElementIsChildOfTextBox_ReturnsTrue()
+    public void IsTextInputActiveWhenSourceElementIsChildOfTextBoxReturnsTrue()
     {
         TestAppBuilder.EnsureInitialized();
 
@@ -43,7 +43,7 @@ public sealed class MainWindowKeyboardTests
     }
 
     [Fact]
-    public void IsTextInputActive_WhenFocusedElementIsButton_ReturnsFalse()
+    public void IsTextInputActiveWhenFocusedElementIsButtonReturnsFalse()
     {
         TestAppBuilder.EnsureInitialized();
 
@@ -53,7 +53,7 @@ public sealed class MainWindowKeyboardTests
     }
 
     [Fact]
-    public void IsTextInputActive_WhenBothNull_ReturnsFalse()
+    public void IsTextInputActiveWhenBothNullReturnsFalse()
     {
         TestAppBuilder.EnsureInitialized();
 

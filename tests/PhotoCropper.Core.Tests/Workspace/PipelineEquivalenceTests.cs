@@ -18,7 +18,7 @@ public sealed class PipelineEquivalenceTests : IDisposable
     [InlineData(false, false)]
     [InlineData(true, false)]
     [InlineData(true, true)]
-    public void PipelineFinal_ShouldMatchTheEnginesRestoredPhoto(bool restoreColors, bool removeDust)
+    public void PipelineFinalShouldMatchTheEnginesRestoredPhoto(bool restoreColors, bool removeDust)
     {
         ProjectWorkspaceService.InitializeWorkspace(_workDir);
         string scanPath = Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), "scan_0001.png");

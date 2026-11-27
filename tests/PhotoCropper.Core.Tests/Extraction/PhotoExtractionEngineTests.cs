@@ -6,7 +6,7 @@ namespace PhotoCropper.Core.Tests.Extraction;
 public sealed class PhotoExtractionEngineTests
 {
     [Fact]
-    public void RegularizeNearRightAngles_ShouldSnapNearStraightAnglesPreservingDimensions()
+    public void RegularizeNearRightAnglesShouldSnapNearStraightAnglesPreservingDimensions()
     {
         // 1. Horizontal rectangle near 0 deg: Size2f(600, 400), Angle=0.8
         RotatedRect hRect = new(new Point2f(500, 500), new Size2f(600, 400), 0.8f);
@@ -37,7 +37,7 @@ public sealed class PhotoExtractionEngineTests
     }
 
     [Fact]
-    public void ExtractPhotoFromContour_ShouldPreserveNaturalOrientation()
+    public void ExtractPhotoFromContourShouldPreserveNaturalOrientation()
     {
         // 1. Vertical photo on scan: 300 wide, 500 high
         using Mat scanMat = new(800, 800, MatType.CV_8UC3);

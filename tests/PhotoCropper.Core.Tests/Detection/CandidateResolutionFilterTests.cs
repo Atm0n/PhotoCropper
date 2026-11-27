@@ -12,7 +12,7 @@ namespace PhotoCropper.Core.Tests.Detection;
 public sealed class CandidateResolutionFilterTests
 {
     [Fact]
-    public void FilterCandidates_ShouldDiscardCompositeCandidateInFavorOfChildren()
+    public void FilterCandidatesShouldDiscardCompositeCandidateInFavorOfChildren()
     {
         // Parent candidate spanning 1000x500
         Point[] parentPts = [new Point(0, 0), new Point(1000, 0), new Point(1000, 500), new Point(0, 500)];
@@ -34,7 +34,7 @@ public sealed class CandidateResolutionFilterTests
     }
 
     [Fact]
-    public void FilterCandidates_ShouldPreserveSeparatedCandidates()
+    public void FilterCandidatesShouldPreserveSeparatedCandidates()
     {
         Point[] pts1 = [new Point(0, 0), new Point(400, 0), new Point(400, 400), new Point(0, 400)];
         var cand1 = new CropCandidate(pts1, new Rect(0, 0, 400, 400), 160000, new RotatedRect(new Point2f(200, 200), new Size2f(400, 400), 0), 160000, 0.98, 0.99);
@@ -47,7 +47,7 @@ public sealed class CandidateResolutionFilterTests
     }
 
     [Fact]
-    public void CalculatePolygonIntersectionArea_DisjointRects_ReturnsZero()
+    public void CalculatePolygonIntersectionAreaDisjointRectsReturnsZero()
     {
         Point[] pts1 = [new Point(0, 0), new Point(100, 0), new Point(100, 100), new Point(0, 100)];
         Point[] pts2 = [new Point(200, 200), new Point(300, 200), new Point(300, 300), new Point(200, 300)];
@@ -60,7 +60,7 @@ public sealed class CandidateResolutionFilterTests
     }
 
     [Fact]
-    public void CalculatePolygonIntersectionArea_OverlappingRects_ReturnsAccurateArea()
+    public void CalculatePolygonIntersectionAreaOverlappingRectsReturnsAccurateArea()
     {
         Point[] pts1 = [new Point(0, 0), new Point(100, 0), new Point(100, 100), new Point(0, 100)];
         Point[] pts2 = [new Point(50, 50), new Point(150, 50), new Point(150, 150), new Point(50, 150)];
@@ -74,7 +74,7 @@ public sealed class CandidateResolutionFilterTests
     }
 
     [Fact]
-    public void FilterCandidates_ShouldRejectExcessiveOverlapInFavorOfHigherScore()
+    public void FilterCandidatesShouldRejectExcessiveOverlapInFavorOfHigherScore()
     {
         Point[] pts1 = [new Point(0, 0), new Point(200, 0), new Point(200, 200), new Point(0, 200)];
         var cand1 = new CropCandidate(pts1, new Rect(0, 0, 200, 200), 40000, new RotatedRect(new Point2f(100, 100), new Size2f(200, 200), 0), 40000, 0.99, 0.99);

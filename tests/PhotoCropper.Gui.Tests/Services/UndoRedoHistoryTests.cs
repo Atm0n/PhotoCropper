@@ -19,7 +19,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     }
 
     [Fact]
-    public void UndoRedoHistory_InitialState_ShouldHaveEmptyStacks()
+    public void UndoRedoHistoryInitialStateShouldHaveEmptyStacks()
     {
         using var history = new UndoRedoHistory();
         history.CanUndo.ShouldBeFalse();
@@ -27,7 +27,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     }
 
     [Fact]
-    public void UndoRedoHistory_PushDelete_ShouldUndoAndRedo()
+    public void UndoRedoHistoryPushDeleteShouldUndoAndRedo()
     {
         using var history = new UndoRedoHistory();
         using var engine = new PhotoCropperEngine(_scanPath);
@@ -66,7 +66,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     }
 
     [Fact]
-    public void UndoRedoHistory_PushRotate_ShouldUndoAndRedo()
+    public void UndoRedoHistoryPushRotateShouldUndoAndRedo()
     {
         using var history = new UndoRedoHistory();
         using var engine = new PhotoCropperEngine(_scanPath);
@@ -98,7 +98,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     }
 
     [Fact]
-    public void UndoRedoHistory_PushAdd_ShouldUndoAndRedo()
+    public void UndoRedoHistoryPushAddShouldUndoAndRedo()
     {
         using var history = new UndoRedoHistory();
         using var engine = new PhotoCropperEngine(_scanPath);
@@ -126,7 +126,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     }
 
     [Fact]
-    public void UndoRedoHistory_PushReplace_ShouldUndoAndRedo()
+    public void UndoRedoHistoryPushReplaceShouldUndoAndRedo()
     {
         using var history = new UndoRedoHistory();
         using var engine = new PhotoCropperEngine(_scanPath);
@@ -156,7 +156,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     }
 
     [Fact]
-    public void UndoRedoHistory_Clear_ShouldResetAllStacks()
+    public void UndoRedoHistoryClearShouldResetAllStacks()
     {
         using var history = new UndoRedoHistory();
         using Mat dummy = new(10, 10, MatType.CV_8UC3);
@@ -169,7 +169,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     }
 
     [Fact]
-    public void UndoRedoHistory_PushBatch_ShouldUndoAndRedoBatchActions()
+    public void UndoRedoHistoryPushBatchShouldUndoAndRedoBatchActions()
     {
         using var history = new UndoRedoHistory();
         using var engine = new PhotoCropperEngine(_scanPath);
@@ -210,7 +210,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     }
 
     [Fact]
-    public void UndoRedoHistory_PushBatch_BatchDelete_ShouldUndoAndRedoInDescendingOrder()
+    public void UndoRedoHistoryPushBatchBatchDeleteShouldUndoAndRedoInDescendingOrder()
     {
         using var history = new UndoRedoHistory();
         using var engine = new PhotoCropperEngine(_scanPath);
@@ -258,7 +258,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     }
 
     [Fact]
-    public void UndoRedoHistory_BoundedCapacity_ShouldEvictAndDisposeOldestActions()
+    public void UndoRedoHistoryBoundedCapacityShouldEvictAndDisposeOldestActions()
     {
         const int capacity = 3;
         using var history = new UndoRedoHistory(capacity);
@@ -288,7 +288,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     }
 
     [Fact]
-    public void UndoRedoHistory_InvalidateScan_ShouldRemoveUndoEntriesForThatScan()
+    public void UndoRedoHistoryInvalidateScanShouldRemoveUndoEntriesForThatScan()
     {
         using var history = new UndoRedoHistory();
 
@@ -306,7 +306,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     }
 
     [Fact]
-    public void UndoRedoHistory_InvalidateScan_ShouldAlsoClearRedoEntriesForThatScan()
+    public void UndoRedoHistoryInvalidateScanShouldAlsoClearRedoEntriesForThatScan()
     {
         using var history = new UndoRedoHistory();
         using var engine = new PhotoCropperEngine(_scanPath);
@@ -329,7 +329,7 @@ public sealed class UndoRedoHistoryTests : IDisposable
     }
 
     [Fact]
-    public void UndoRedoHistory_InvalidateScan_WhenNoEntriesForScan_ShouldLeaveOtherEntriesIntact()
+    public void UndoRedoHistoryInvalidateScanWhenNoEntriesForScanShouldLeaveOtherEntriesIntact()
     {
         using var history = new UndoRedoHistory();
         history.PushRotate(0, 0);
@@ -345,9 +345,6 @@ public sealed class UndoRedoHistoryTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-        {
-            try { Directory.Delete(_tempDir, true); } catch { }
-        }
+        TestDirectory.TryDelete(_tempDir);
     }
 }

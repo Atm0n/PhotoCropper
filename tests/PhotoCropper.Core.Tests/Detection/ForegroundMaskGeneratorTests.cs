@@ -6,7 +6,7 @@ namespace PhotoCropper.Core.Tests.Detection;
 public sealed class ForegroundMaskGeneratorTests
 {
     [Fact]
-    public void GeneratePrecomputedEdgeMap_ShouldProduceBinaryEdgeMap()
+    public void GeneratePrecomputedEdgeMapShouldProduceBinaryEdgeMap()
     {
         using Mat source = new(300, 300, MatType.CV_8UC3);
         source.SetTo(new Scalar(255, 255, 255));
@@ -21,7 +21,7 @@ public sealed class ForegroundMaskGeneratorTests
     }
 
     [Fact]
-    public void PopulateForegroundMask_ShouldGenerateCombinedForeground()
+    public void PopulateForegroundMaskShouldGenerateCombinedForeground()
     {
         using Mat source = new(300, 300, MatType.CV_8UC3);
         source.SetTo(new Scalar(255, 255, 255));
@@ -50,7 +50,7 @@ public sealed class ForegroundMaskGeneratorTests
     }
 
     [Fact]
-    public void PopulateOtsuForegroundMask_ShouldGenerateOtsuMask()
+    public void PopulateOtsuForegroundMaskShouldGenerateOtsuMask()
     {
         using Mat source = new(300, 300, MatType.CV_8UC3);
         source.SetTo(new Scalar(255, 255, 255));

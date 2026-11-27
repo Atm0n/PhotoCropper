@@ -40,7 +40,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void FinishStage_Refresh_ShouldListCroppedPhotos()
+    public void FinishStageRefreshShouldListCroppedPhotos()
     {
         AddCroppedPhoto("scan_0001.png");
         AddCroppedPhoto("scan_0002.png");
@@ -54,7 +54,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void FinishStage_WithoutProject_ShouldShowNoProject()
+    public void FinishStageWithoutProjectShouldShowNoProject()
     {
         using var vm = Finish(new FakeHost(null, null));
 
@@ -66,7 +66,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_Export_ShouldWriteFinalsAndClearStaleness()
+    public async Task FinishStageExportShouldWriteFinalsAndClearStaleness()
     {
         AddCroppedPhoto("scan_0001.png");
         using var vm = Finish();
@@ -82,7 +82,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_ChangingRestoration_ShouldMarkStaleAndSaveImmediately()
+    public async Task FinishStageChangingRestorationShouldMarkStaleAndSaveImmediately()
     {
         AddCroppedPhoto("scan_0001.png");
         using var vm = Finish();
@@ -103,7 +103,7 @@ public sealed class StageViewModelTests : IDisposable
         new(host ?? _host) { ChangeDebounce = TimeSpan.Zero, FullQualityDelay = TimeSpan.Zero };
 
     [Fact]
-    public void FinishStage_CopySettingsToAll_ShouldGiveEveryPhotoTheSelectedPhotosSettings()
+    public void FinishStageCopySettingsToAllShouldGiveEveryPhotoTheSelectedPhotosSettings()
     {
         AddCroppedPhoto("scan_0001.png");
         AddCroppedPhoto("scan_0002.png");
@@ -120,7 +120,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void FinishStage_CtrlAndShiftClick_ShouldMarkPhotosForTheBulkActions()
+    public void FinishStageCtrlAndShiftClickShouldMarkPhotosForTheBulkActions()
     {
         for (int i = 1; i <= 4; i++) AddCroppedPhoto($"scan_000{i}.png");
         using var vm = Finish();
@@ -143,7 +143,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void FinishStage_BulkActions_ShouldChangeOnlyTheMarkedPhotos()
+    public void FinishStageBulkActionsShouldChangeOnlyTheMarkedPhotos()
     {
         for (int i = 1; i <= 3; i++) AddCroppedPhoto($"scan_000{i}.png");
         using var vm = Finish();
@@ -169,7 +169,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void FinishStage_BulkCheckboxes_ShouldShowAllNoneOrSomeAndTurnOnForAll()
+    public void FinishStageBulkCheckboxesShouldShowAllNoneOrSomeAndTurnOnForAll()
     {
         for (int i = 1; i <= 3; i++) AddCroppedPhoto($"scan_000{i}.png");
         using var vm = Finish();
@@ -195,7 +195,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_Rotate_ShouldTurnThePhotoAndTellTheScan()
+    public async Task FinishStageRotateShouldTurnThePhotoAndTellTheScan()
     {
         var photo = AddCroppedPhoto("scan_0001.png");                     // 60 x 40
         using var vm = Finish();
@@ -221,7 +221,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void FinishStage_ManualTrim_ShouldBelongToItsPhoto()
+    public void FinishStageManualTrimShouldBelongToItsPhoto()
     {
         AddCroppedPhoto("scan_0001.png");
         AddCroppedPhoto("scan_0002.png");
@@ -250,7 +250,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_PhotoTypes_ShouldFilterTheGridAndSuggestPresets()
+    public async Task FinishStagePhotoTypesShouldFilterTheGridAndSuggestPresets()
     {
         AddCroppedPhoto("scan_0001.png");                                        // sepia
         AddCroppedPhoto("scan_0002.png", colour: new Scalar(128, 128, 128));     // black and white
@@ -280,7 +280,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_ChangingType_ShouldUnmarkPhotosItHides()
+    public async Task FinishStageChangingTypeShouldUnmarkPhotosItHides()
     {
         AddCroppedPhoto("scan_0001.png");
         AddCroppedPhoto("scan_0002.png", colour: new Scalar(128, 128, 128));
@@ -296,7 +296,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_ExportSelected_ShouldWriteOnlyTheMarkedPhotos()
+    public async Task FinishStageExportSelectedShouldWriteOnlyTheMarkedPhotos()
     {
         AddCroppedPhoto("scan_0001.png");
         AddCroppedPhoto("scan_0002.png");
@@ -312,7 +312,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_RepairStroke_ShouldBeStoredWithTheBrushSizeAndPhotoSize()
+    public async Task FinishStageRepairStrokeShouldBeStoredWithTheBrushSizeAndPhotoSize()
     {
         AddCroppedPhoto("scan_0001.png");
         using var vm = Finish();
@@ -350,7 +350,7 @@ public sealed class StageViewModelTests : IDisposable
     [InlineData(true, true, RepairMethod.Ai)]
     [InlineData(false, true, RepairMethod.Quick)]
     [InlineData(true, false, RepairMethod.Quick)] // AI chosen but not downloaded yet
-    public async Task FinishStage_NewStrokes_ShouldUseTheChosenFillMethod(bool useAi, bool installed, RepairMethod expected)
+    public async Task FinishStageNewStrokesShouldUseTheChosenFillMethod(bool useAi, bool installed, RepairMethod expected)
     {
         AddCroppedPhoto("scan_0001.png");
         using var vm = FinishWithAi(installed);
@@ -366,7 +366,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void FinishStage_ChoosingAiFill_ShouldLoadTheModelInTheBackground()
+    public void FinishStageChoosingAiFillShouldLoadTheModelInTheBackground()
     {
         using var vm = FinishWithAi(installed: true);
 
@@ -376,7 +376,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_DownloadAiModel_ShouldInstallItAndHideTheOffer()
+    public async Task FinishStageDownloadAiModelShouldInstallItAndHideTheOffer()
     {
         using var vm = FinishWithAi(installed: false);
         vm.UseAiFill = true;
@@ -392,7 +392,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_FailedAiDownload_ShouldShowWhy()
+    public async Task FinishStageFailedAiDownloadShouldShowWhy()
     {
         using var vm = FinishWithAi(installed: false, download: (_, _) => throw new InvalidDataException("corrupted"));
         vm.CheckAiModelInstalled = () => false;
@@ -406,7 +406,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_CancelledAiDownload_ShouldNotBeAnError()
+    public async Task FinishStageCancelledAiDownloadShouldNotBeAnError()
     {
         using var vm = FinishWithAi(installed: false, download: (_, token) => Task.Delay(Timeout.Infinite, token));
         vm.CheckAiModelInstalled = () => false;
@@ -424,7 +424,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void FinishStage_NextAndPreviousPhoto_ShouldStepThroughThePhotosAndWrapAround()
+    public void FinishStageNextAndPreviousPhotoShouldStepThroughThePhotosAndWrapAround()
     {
         AddCroppedPhoto("scan_0001.png");
         AddCroppedPhoto("scan_0002.png");
@@ -443,7 +443,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void FinishStage_NextPhoto_WithTheEditorClosed_ShouldDoNothing()
+    public void FinishStageNextPhotoWithTheEditorClosedShouldDoNothing()
     {
         AddCroppedPhoto("scan_0001.png");
         using var vm = Finish();
@@ -455,7 +455,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishPhoto_UndoAndClearRepairs()
+    public async Task FinishPhotoUndoAndClearRepairs()
     {
         AddCroppedPhoto("scan_0001.png");
         using var vm = Finish();
@@ -473,7 +473,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_RepairsFromAnEarlierCropSize_ShouldBeFlagged()
+    public async Task FinishStageRepairsFromAnEarlierCropSizeShouldBeFlagged()
     {
         var photo = AddCroppedPhoto("scan_0001.png");
         photo.RepairImageWidth = 999;
@@ -489,7 +489,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_CopySettingsToAll_ShouldNotCopyRepairs()
+    public async Task FinishStageCopySettingsToAllShouldNotCopyRepairs()
     {
         AddCroppedPhoto("scan_0001.png");
         AddCroppedPhoto("scan_0002.png");
@@ -505,7 +505,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void FinishPhoto_Presets_ShouldReplaceAllSettings()
+    public void FinishPhotoPresetsShouldReplaceAllSettings()
     {
         AddCroppedPhoto("scan_0001.png");
         using var vm = Finish();
@@ -522,7 +522,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void FinishPhoto_SettingsShouldUpdateTheRecord()
+    public void FinishPhotoSettingsShouldUpdateTheRecord()
     {
         AddCroppedPhoto("scan_0001.png");
         using var vm = Finish();
@@ -548,7 +548,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_RapidChanges_ShouldBeSavedOnceAfterTheDelay()
+    public async Task FinishStageRapidChangesShouldBeSavedOnceAfterTheDelay()
     {
         AddCroppedPhoto("scan_0001.png");
         using var vm = new FinishStageViewModel(_host) { ChangeDebounce = TimeSpan.FromMilliseconds(80), FullQualityDelay = TimeSpan.Zero };
@@ -564,7 +564,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_SelectingAPhoto_ShouldShowTheSameImageBeforeAndAfterWithoutRestoration()
+    public async Task FinishStageSelectingAPhotoShouldShowTheSameImageBeforeAndAfterWithoutRestoration()
     {
         AddCroppedPhoto("scan_0001.png");
         using var vm = Finish();
@@ -580,7 +580,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_TurningRestorationOn_ShouldRenderASeparateAfterImage()
+    public async Task FinishStageTurningRestorationOnShouldRenderASeparateAfterImage()
     {
         AddCroppedPhoto("scan_0001.png");
         using var vm = Finish();
@@ -597,7 +597,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_ClosePreview_ShouldClearTheSelectionAndImages()
+    public async Task FinishStageClosePreviewShouldClearTheSelectionAndImages()
     {
         AddCroppedPhoto("scan_0001.png");
         using var vm = Finish();
@@ -614,7 +614,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FinishStage_Refresh_ShouldKeepThePreviewedPhotoSelected()
+    public async Task FinishStageRefreshShouldKeepThePreviewedPhotoSelected()
     {
         AddCroppedPhoto("scan_0001.png");
         AddCroppedPhoto("scan_0002.png");
@@ -630,7 +630,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ScanStage_Refresh_ShouldShowCountsFromSavedCropsAndFlagEmptyScans()
+    public void ScanStageRefreshShouldShowCountsFromSavedCropsAndFlagEmptyScans()
     {
         AddCroppedPhoto("scan_0001.png");
         string emptyScan = Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), "scan_0002.png");
@@ -648,7 +648,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ScanStage_OpenScan_ShouldAskTheHostToOpenItInCrops()
+    public void ScanStageOpenScanShouldAskTheHostToOpenItInCrops()
     {
         var vm = new ScanStageViewModel(_host);
 
@@ -658,7 +658,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ScanStage_Discard_ShouldNeedASecondClickOnTheSameCard()
+    public async Task ScanStageDiscardShouldNeedASecondClickOnTheSameCard()
     {
         var vm = new ScanStageViewModel(_host);
         var row = new ScanRowViewModel(2, "scan.png", "1 photos", false);
@@ -673,7 +673,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ScanStage_DiscardConfirmation_ShouldMoveToTheLastClickedCard()
+    public async Task ScanStageDiscardConfirmationShouldMoveToTheLastClickedCard()
     {
         var vm = new ScanStageViewModel(_host);
         var first = new ScanRowViewModel(0, "a.png", "", false);
@@ -690,7 +690,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ScanStage_Rescan_ShouldAskTheHostToRescanThatScan()
+    public async Task ScanStageRescanShouldAskTheHostToRescanThatScan()
     {
         var vm = new ScanStageViewModel(_host);
         var row = new ScanRowViewModel(4, "scan.png", "", false);
@@ -704,7 +704,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ScanStage_Refresh_ShouldLoadScanThumbnails()
+    public void ScanStageRefreshShouldLoadScanThumbnails()
     {
         string scanPath = Path.Combine(ProjectWorkspaceService.GetRawScansDirectory(_workDir), "scan_0009.png");
         using (var scan = new Mat(300, 400, MatType.CV_8UC3)) { scan.SetTo(new Scalar(200, 180, 160)); Cv2.ImWrite(scanPath, scan); }
@@ -726,7 +726,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ScanStage_Refresh_ShouldSelectANewScanAsSoonAsItArrives()
+    public void ScanStageRefreshShouldSelectANewScanAsSoonAsItArrives()
     {
         AddScan("scan_0001.png");
         AddScan("scan_0002.png");
@@ -750,7 +750,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ScanStage_Preview_ShouldOutlineSavedBoxesWithoutDetecting()
+    public void ScanStagePreviewShouldOutlineSavedBoxesWithoutDetecting()
     {
         string path = AddScan("scan_0001.png", width: 400, height: 200);
         _host.Workspace!.Scans.Add(new WorkspaceScanEntry
@@ -774,7 +774,7 @@ public sealed class StageViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ScanStage_Preview_ShouldAskTheCropsStageToFindPhotosOnANewScan()
+    public void ScanStagePreviewShouldAskTheCropsStageToFindPhotosOnANewScan()
     {
         AddScan("scan_0001.png");
         _host.PreparedBoxes[0] = [new WorkspaceCropData { CenterX = 200, CenterY = 150, Width = 80, Height = 60 }, new WorkspaceCropData { CenterX = 60, CenterY = 60, Width = 40, Height = 40 }];

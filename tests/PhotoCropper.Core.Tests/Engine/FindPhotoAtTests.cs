@@ -26,7 +26,7 @@ public sealed class FindPhotoAtTests : IDisposable
     }
 
     [Fact]
-    public void ClickOnAMissedPhoto_AddsItsBox()
+    public void ClickOnAMissedPhotoAddsItsBox()
     {
         using var engine = new PhotoCropperEngine(_scanPath) { AutoOrientPhotos = false };
         engine.DetectPhotos();
@@ -43,7 +43,7 @@ public sealed class FindPhotoAtTests : IDisposable
     }
 
     [Fact]
-    public void ClickInsideALooseBox_FitsItToThePhoto()
+    public void ClickInsideALooseBoxFitsItToThePhoto()
     {
         using var engine = new PhotoCropperEngine(_scanPath) { AutoOrientPhotos = false };
         engine.RestoreFromSavedCrops([new WorkspaceCropData { CenterX = 310, CenterY = 290, Width = 480, Height = 470 }]);
@@ -58,7 +58,7 @@ public sealed class FindPhotoAtTests : IDisposable
     }
 
     [Fact]
-    public void ClickOnTheBackground_ChangesNothing()
+    public void ClickOnTheBackgroundChangesNothing()
     {
         using var engine = new PhotoCropperEngine(_scanPath) { AutoOrientPhotos = false };
         engine.DetectPhotos();
@@ -79,7 +79,7 @@ public sealed class FindPhotoAtTests : IDisposable
     [InlineData(0, true)]
     [InlineData(1, true)]
     [InlineData(2, true)]
-    public void ClickOnAPhotoOnAnAlbumPage_FindsThatPhotoNotThePage(int photo, bool othersBoxed)
+    public void ClickOnAPhotoOnAnAlbumPageFindsThatPhotoNotThePage(int photo, bool othersBoxed)
     {
         var album = SampleScanFactory.CreateAlbumPage(Path.Combine(_tempDir, "album.png"), seed: 40);
         using var engine = new PhotoCropperEngine(album.Path) { AutoOrientPhotos = false };
@@ -97,7 +97,7 @@ public sealed class FindPhotoAtTests : IDisposable
     // A print whose white border is the bed's colour, stuck on torn album paper: against the bed only the picture
     // stands out; against the paper the whole print does, border included.
     [Fact]
-    public void ClickOnAWhiteBorderedPrintOnPaper_IncludesItsBorder()
+    public void ClickOnAWhiteBorderedPrintOnPaperIncludesItsBorder()
     {
         var scan = SampleScanFactory.CreatePrintOnPaper(Path.Combine(_tempDir, "print.png"), seed: 1);
         using var engine = new PhotoCropperEngine(scan.Path) { AutoOrientPhotos = false };

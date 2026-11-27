@@ -18,29 +18,23 @@ internal sealed partial class MainWindow
             settings.LastUpdateCheckUtc = DateTime.UtcNow;
             SettingsManager.Instance.Save();
 
+            // A failed check comes back as a result (and is ignored here); anything else is logged by the continuation.
             _ = Task.Run(async () =>
             {
-                try
+                var result = await UpdateCheckService.CheckForUpdateAsync(cancellationToken: CancellationToken.None);
+                if (result.IsUpdateAvailable && result.Tag != null && result.ReleaseUri != null)
                 {
-                    var result = await UpdateCheckService.CheckForUpdateAsync(cancellationToken: CancellationToken.None);
-                    if (result.IsUpdateAvailable && result.Tag != null && result.ReleaseUri != null)
+                    var releaseUri = result.ReleaseUri;
+                    Dispatcher.UIThread.Post(() =>
                     {
-                        var releaseUri = result.ReleaseUri;
-                        Dispatcher.UIThread.Post(() =>
-                        {
-                            string template = LocalizationService.GetString("TxtUpdateAvailable", "PhotoCropper {0} is available!");
-                            string msg = string.Format(System.Globalization.CultureInfo.CurrentCulture, template, result.Tag);
-                            _notificationService.ShowInformation(
-                                "PhotoCropper",
-                                msg,
-                                TimeSpan.FromSeconds(8),
-                                onClick: () => _ = UrlLauncher.OpenUrlAsync(this, releaseUri));
-                        });
-                    }
-                }
-                catch
-                {
-                    // Ignore background update check failures
+                        string template = LocalizationService.GetString("TxtUpdateAvailable", "PhotoCropper {0} is available!");
+                        string msg = string.Format(System.Globalization.CultureInfo.CurrentCulture, template, result.Tag);
+                        _notificationService.ShowInformation(
+                            "PhotoCropper",
+                            msg,
+                            TimeSpan.FromSeconds(8),
+                            onClick: () => _ = UrlLauncher.OpenUrlAsync(this, releaseUri));
+                    });
                 }
             }, CancellationToken.None).ContinueWith(t => System.Diagnostics.Trace.TraceError(t.Exception?.ToString()), CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
         }
