@@ -1,4 +1,5 @@
 using Avalonia.Media.Imaging;
+using SkiaSharp;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PhotoCropper.Core.Models;
 using PhotoCropper.Core.Workspace;
@@ -168,12 +169,12 @@ internal sealed partial class ScanStageViewModel
     /// <summary>Decodes a scan at preview size, with its full pixel size (which the outlines are measured in).</summary>
     private static (Bitmap Bitmap, Size Size) DecodePreview(string path)
     {
-        var info = SixLabors.ImageSharp.Image.Identify(path);
+        using var codec = SKCodec.Create(path);
         using var stream = File.OpenRead(path);
-        var bitmap = info.Width >= info.Height
-            ? Bitmap.DecodeToWidth(stream, Math.Min(PreviewSize, info.Width))
-            : Bitmap.DecodeToHeight(stream, Math.Min(PreviewSize, info.Height));
-        return (bitmap, new Size(info.Width, info.Height));
+        var bitmap = codec.Info.Width >= codec.Info.Height
+            ? Bitmap.DecodeToWidth(stream, Math.Min(PreviewSize, codec.Info.Width))
+            : Bitmap.DecodeToHeight(stream, Math.Min(PreviewSize, codec.Info.Height));
+        return (bitmap, new Size(codec.Info.Width, codec.Info.Height));
     }
 
     /// <summary>The scan's boxes if they are already known: open in the editor, or saved in the project.</summary>
