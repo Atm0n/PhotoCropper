@@ -169,7 +169,9 @@ public sealed class RestorationOptionsTests
         using var all = PhotoRestorationService.Restore(photo, new RestorationSettings { RestoreColors = true, ColorMode = PhotoColorMode.Color });
         using var noCastRemoval = PhotoRestorationService.Restore(photo, new RestorationSettings
         {
-            RestoreColors = true, ColorMode = PhotoColorMode.Color, AutoWhiteBalance = false
+            RestoreColors = true,
+            ColorMode = PhotoColorMode.Color,
+            AutoWhiteBalance = false
         });
 
         castBefore.ShouldBeGreaterThan(5);
@@ -188,7 +190,11 @@ public sealed class RestorationOptionsTests
 
         using var result = PhotoRestorationService.Restore(photo, new RestorationSettings
         {
-            Brightness = brightness, Contrast = contrast, Warmth = warmth, Tint = tint, Saturation = saturation
+            Brightness = brightness,
+            Contrast = contrast,
+            Warmth = warmth,
+            Tint = tint,
+            Saturation = saturation
         });
         var after = MeanLab(result);
 

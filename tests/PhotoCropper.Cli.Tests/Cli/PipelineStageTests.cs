@@ -92,8 +92,14 @@ public sealed class PipelineStageTests : IDisposable
         string output = Path.Combine(_tempDir, trim ? "trimmed" : "whole");
         var options = new CliOptions
         {
-            OutputDirectory = output, Format = "PNG", NonInteractive = true, Threads = 1,
-            AutoOrient = false, RestoreColors = false, RemoveDust = false, TrimBorders = trim,
+            OutputDirectory = output,
+            Format = "PNG",
+            NonInteractive = true,
+            Threads = 1,
+            AutoOrient = false,
+            RestoreColors = false,
+            RemoveDust = false,
+            TrimBorders = trim,
         };
 
         BatchProcessor.Execute(options, [scan.Path]).ShouldBe(0);
